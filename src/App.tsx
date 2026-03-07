@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import SubjectPage from './Pages/Subject/Subject.tsx';
+import SubjectHomePage from './Pages/Subject/SubjectHome.tsx';
 import LoginPage from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -15,7 +15,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/subject" element={<SubjectPage />} />
+            <Route path="/subject-Home" element={<SubjectHomePage />} />
           </Route>
         </Route>
 
