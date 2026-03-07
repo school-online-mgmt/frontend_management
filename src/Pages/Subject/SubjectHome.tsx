@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, BookOpen, Search, Trash2, RefreshCcw, MoreHorizontal, ArrowRight } from 'lucide-react';
 import api from '../../api/api.ts';
-import CreateSubject from './CreateSubject';
+import CreateSubject from '../../components/CreateSubject.tsx';
 
 const SubjectPage = () => {
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -114,11 +114,8 @@ const SubjectPage = () => {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider">ID</th>
+                  <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider">Slug</th>
                   <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider">Subject Name</th>
-                  <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider">Code</th>
-                  <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider">Assigned Teacher</th>
-                  <th className="p-4 text-slate-500 text-sm font-semibold uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -139,14 +136,6 @@ const SubjectPage = () => {
                           <BookOpen size={20} />
                         </div>
                         {subject.name}
-                      </td>
-                      <td className="p-4">
-                        <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">
-                          {subject.code || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="p-4 text-slate-600 font-medium">
-                        {subject.teacher || <span className="text-slate-400 italic">Unassigned</span>}
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end items-center gap-2">

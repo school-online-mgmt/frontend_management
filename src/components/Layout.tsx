@@ -11,7 +11,7 @@ const Layout = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/subject', label: 'Subjects', icon: BookOpen },
+    { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
   ];
 
   return (
