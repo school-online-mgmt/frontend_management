@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, BookOpen, Search, Trash2, RefreshCcw, MoreHorizontal, ArrowRight } from 'lucide-react';
+import { Plus, BookOpen, Search, RefreshCcw, ArrowRight } from 'lucide-react';
 import api from '../../api/api.ts';
 import CreateSubject from '../../components/CreateSubject.tsx';
 
@@ -43,18 +43,6 @@ const SubjectPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this subject?")) {
-      try {
-        await api.deleteSubject(id);
-        await fetchSubjects();
-      } catch (error) {
-        console.error("Delete failed:", error);
-        alert("Failed to delete. This subject might be assigned to active courses.");
-      }
-    }
-  };
-
   return (
     <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
       {isModalOpen && (
@@ -71,7 +59,7 @@ const SubjectPage = () => {
         </div>
         <div className="flex gap-3">
           <button 
-            className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
             onClick={fetchSubjects}
             disabled={isLoading}
           >
@@ -79,7 +67,7 @@ const SubjectPage = () => {
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button 
-            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all hover:-translate-y-0.5 flex items-center gap-2"
             onClick={() => setIsModalOpen(true)}
           >
             <Plus size={18} />
@@ -130,25 +118,12 @@ const SubjectPage = () => {
                 ) : subjects.length > 0 ? (
                   subjects.map((subject: any) => (
                     <tr key={subject.id} className="hover:bg-slate-50/50 transition-colors duration-150 group">
-                      <td className="p-4 font-mono text-slate-500 font-medium">#{subject.id}</td>
+                      <td className="p-4 font-mono text-slate-500 font-medium">#{subject.slug}</td>
                       <td className="p-4 font-semibold text-slate-800 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center ring-1 ring-inset ring-black/5">
                           <BookOpen size={20} />
                         </div>
                         {subject.name}
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex justify-end items-center gap-2">
-                          <button 
-                            className="p-2 text-slate-400 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
-                            onClick={() => handleDelete(subject.id)}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                          <button className="p-2 text-slate-400 rounded-lg hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                            <MoreHorizontal size={16} />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))
