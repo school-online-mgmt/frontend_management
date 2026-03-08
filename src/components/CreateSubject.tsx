@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Save, BookOpen, User, Code } from 'lucide-react';
 import api from '../api/api.ts';
 
 interface CreateSubjectProps {
