@@ -48,5 +48,87 @@ class API {
     const response = await apiClient.delete(`/management/subject/${id}/delete`);
     return response.data;
   };
+
+  // Course APIs-----------
+  // Get all courses
+  getCourses = async () => {
+    const response = await apiClient.get("/management/course");
+    return response.data;
+  };
+
+// Get course by id OR slug
+  getCourseById = async (id_or_slug: string) => {
+    const response = await apiClient.get(
+        `/management/course/${id_or_slug}`
+    );
+    return response.data;
+  };
+
+// Create course
+  createCourse = async (courseData: {
+    slug: string;
+    name: string;
+    description?: string;
+    className?: string;
+  }) => {
+    const response = await apiClient.put(
+        "/management/course/create",
+        courseData
+    );
+    return response.data;
+  };
+
+// Update course
+  updateCourse = async (
+      id: string,
+      courseData: {
+        slug?: string;
+        name?: string;
+        description?: string;
+        className?: string;
+      }
+  ) => {
+    const response = await apiClient.patch(
+        `/management/course/${id}/update`,
+        courseData
+    );
+    return response.data;
+  };
+
+// Delete course
+  deleteCourse = async (id: string) => {
+    const response = await apiClient.delete(
+        `/management/course/${id}/delete`
+    );
+    return response.data;
+  };
+
+
+// Add subject to course
+  addSubjectToCourse = async (
+      courseId: string,
+      subjectId: string
+  ) => {
+    const response = await apiClient.post(
+        `/management/course/${courseId}/addSubject`,
+        { subjectId }
+    );
+    return response.data;
+  };
+
+
+// Remove subject from course
+  removeSubjectFromCourse = async (
+      courseId: string,
+      subjectId: string
+  ) => {
+    const response = await apiClient.delete(
+        `/management/course/${courseId}/removeSubject`,
+        {
+          data: { subjectId },
+        }
+    );
+    return response.data;
+  };
 }
 export default new API();
