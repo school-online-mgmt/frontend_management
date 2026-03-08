@@ -107,6 +107,14 @@ const Subject = () => {
                         <p className="text-sm text-slate-500">Slug</p>
                         <p className="font-mono text-slate-700">{subject.slug}</p>
                     </div>
+                    
+                    {/* Added Description field here */}
+                    <div className="col-span-2">
+                        <p className="text-sm text-slate-500">Description</p>
+                        <p className="text-slate-700">
+                            {subject.description || "No description provided."}
+                        </p>
+                    </div>
                 </div>
             </div>
 
