@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Loader2, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
 import api from '../../api/api.ts';
 import ConfirmModal from '../../components/common/ConfirmModal.tsx';
 
