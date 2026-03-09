@@ -126,7 +126,10 @@ const Subject = () => {
                     ) : (
                         subject.courseSubjects?.map((cs: any) => (
                             <div key={cs.course.id} className="flex justify-between items-center p-4">
-                                <span className="font-medium">{cs.course.name}</span>
+                                <span
+                                    onClick={() => navigate(`/course/${cs.course.id}`)}
+                                    className="font-medium hover:underline cursor-pointer"
+                                >{cs.course.name}</span>
                             </div>
                         ))
                     )}
