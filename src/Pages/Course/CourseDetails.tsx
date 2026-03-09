@@ -14,11 +14,14 @@ const CourseDetails = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isDeleteCourseActive, setIsDeleteCourseActive] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<{ id: string; name: string; } | null>(null);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
     } | null>(null);
+
+    const isCourseInUse = course?.courseSubjects?.length > 0;
 
     const fetchCourse = async () => {
         try {
@@ -70,6 +73,28 @@ const CourseDetails = () => {
         }
     };
 
+    const confirmDeleteCourse = async () => {
+
+        try {
+
+            await api.deleteCourse(course.id);
+
+            showMessage(
+                "success",
+                `${course.name} deleted successfully`
+            );
+
+            setTimeout(() => {
+                navigate("/course-home");
+            }, 1200);
+
+        } catch {
+
+            showMessage("error", "Failed to delete course");
+
+        }
+    };
+
     if (isLoading) return <div className="p-10">Loading...</div>;
 
     return (
@@ -97,6 +122,17 @@ const CourseDetails = () => {
                 />
             )}
 
+            {isDeleteCourseActive && (
+                <ConfirmModal
+                    title="Delete Course"
+                    message={`Are you sure you want to delete ${course.name}? This action cannot be undone.`}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={confirmDeleteCourse}
+                    onCancel={() => setIsDeleteCourseActive(false)}
+                />
+            )}
+
             {/* Back Navigation */}
             <div className="flex items-center gap-2">
                 <button
@@ -108,10 +144,26 @@ const CourseDetails = () => {
                 </button>
             </div>
 
-            {/* Page Title */}
-            <div>
-                <h1 className="text-3xl font-bold">{course.name}</h1>
-                <p className="text-slate-500"> Course details and configuration </p>
+            {/* Page Header */}
+            <div className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-3xl font-bold">{course.name}</h1>
+                    <p className="text-slate-500"> Course details and configuration </p>
+                </div>
+                <button
+                    onClick={() => setIsDeleteCourseActive(true)}
+                    disabled={isCourseInUse}
+                    className={`px-3 py-1.5 border rounded-xl flex items-center gap-2 transition
+                        ${
+                        isCourseInUse
+                            ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                            : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                    }`}
+                >
+                    <Trash2 size={16} />
+                    {isCourseInUse ? "Course in use" : "Delete Course"}
+                </button>
+
             </div>
 
             {message && (
@@ -185,7 +237,12 @@ const CourseDetails = () => {
                                 key={cs.subject.id}
                                 className="flex justify-between items-center p-4"
                             >
-                                <span className="font-medium"> {cs.subject.name} </span>
+                                <span
+                                    onClick={() => navigate(`/subject/${cs.subject.slug}`)}
+                                    className="font-medium hover:underline cursor-pointer"
+                                >
+                                    {cs.subject.name}
+                                </span>
                                 <button
                                     onClick={() => openDeleteModal(cs.subject.id, cs.subject.name)}
                                     className="text-red-600 hover:text-red-800"
