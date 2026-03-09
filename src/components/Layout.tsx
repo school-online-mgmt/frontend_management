@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, LogOut, School } from 'lucide-react';
+import {LayoutDashboard, BookOpen, LogOut, School, GraduationCap} from 'lucide-react';
 
 const Layout = () => {
   const location = useLocation();
@@ -12,6 +12,7 @@ const Layout = () => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
+    { path: '/course-home', label: 'Courses', icon: GraduationCap },
   ];
 
   return (
