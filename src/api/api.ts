@@ -69,7 +69,7 @@ class API {
     slug: string;
     name: string;
     description?: string;
-    className?: string;
+    classId?: string;
   }) => {
     const response = await apiClient.put(
         "/management/course/create",
@@ -85,7 +85,7 @@ class API {
         slug?: string;
         name?: string;
         description?: string;
-        className?: string;
+        classId?: string;
       }
   ) => {
     const response = await apiClient.patch(
@@ -128,6 +128,11 @@ class API {
           data: { subjectId },
         }
     );
+    return response.data;
+  };
+  // Get all Sections
+  getSections = async () => {
+    const response = await apiClient.get("/management/section");
     return response.data;
   };
 }

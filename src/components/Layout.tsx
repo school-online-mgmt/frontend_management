@@ -13,6 +13,7 @@ const Layout = () => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
     { path: '/course-home', label: 'Courses', icon: GraduationCap },
+    { path: '/section-home', label: 'sections', icon: GraduationCap },
   ];
 
   return (

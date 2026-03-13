@@ -6,7 +6,7 @@ const CreateCourse = ({ onClose, onRefresh }: any) => {
     const [slug, setSlug] = useState("");
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [className, setClassName] = useState("");
+    const [classId, setClassId] = useState("");
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -17,7 +17,7 @@ const CreateCourse = ({ onClose, onRefresh }: any) => {
         }
         try {
             setIsSubmitting(true);
-            await api.createCourse({ slug, name, description, className });
+            await api.createCourse({ slug, name, description, classId });
             onRefresh();
             onClose();
         } catch (error: any) {
@@ -63,8 +63,8 @@ const CreateCourse = ({ onClose, onRefresh }: any) => {
                     />
                     <input
                         placeholder="Class Name"
-                        value={className}
-                        onChange={(e) => setClassName(e.target.value)}
+                        value={classId}
+                        onChange={(e) => setClassId(e.target.value)}
                         className="w-full border border-slate-200 p-2 rounded-lg"
                     />
                     <textarea
