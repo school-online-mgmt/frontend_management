@@ -14,6 +14,7 @@ const Layout = () => {
     { path: '/teacher-home', label: 'Teachers', icon: Users }, // Added Teachers here
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
     { path: '/course-home', label: 'Courses', icon: GraduationCap },
+    { path: '/section-home', label: 'sections', icon: GraduationCap },
   ];
 
   return (

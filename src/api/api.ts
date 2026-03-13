@@ -21,7 +21,6 @@ apiClient.interceptors.response.use(
   }
 );
 class API {
-   
   // --- Authentication APIs ---
   login = async (phone: string, password: string) => {
     const response = await apiClient.post('/management/auth/login', {phone, password});
@@ -70,7 +69,7 @@ class API {
     slug: string;
     name: string;
     description?: string;
-    className?: string;
+    classId?: string;
   }) => {
     const response = await apiClient.put(
         "/management/course/create",
@@ -86,7 +85,7 @@ class API {
         slug?: string;
         name?: string;
         description?: string;
-        className?: string;
+        classId?: string;
       }
   ) => {
     const response = await apiClient.patch(
@@ -131,8 +130,13 @@ class API {
     );
     return response.data;
   };
+  // Get all Sections
+  getSections = async () => {
+    const response = await apiClient.get("/management/section");
+    return response.data;
+  };
 
-//Get all Teachers 
+//Get all Teachers
 getTeachers = async () => {
     const response = await apiClient.get('/management/teacher');
     return response.data;
@@ -145,11 +149,11 @@ getTeacherById = async (id: string) => {
   };
 
 //Create Teacher
-createTeacher = async (teacherData: { 
-    name: string; 
-    gender: string; 
-    age: number; 
-    qualification: string 
+createTeacher = async (teacherData: {
+    name: string;
+    gender: string;
+    age: number;
+    qualification: string
   }) => {
     const response = await apiClient.post('/management/teacher/create', teacherData);
     return response.data;

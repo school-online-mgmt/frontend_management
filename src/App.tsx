@@ -9,6 +9,7 @@ import CourseHome from "./Pages/Course/CourseHome.tsx";
 import CourseDetails from "./Pages/Course/CourseDetails.tsx";
 import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
 import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
+import SectionHome from "./Pages/Section/SectionHome.tsx";
 
 function App() {
   return (
@@ -20,18 +21,15 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            
-            {/* Subject Routes */}
             <Route path="/subject-Home" element={<SubjectHomePage />} />
-            <Route path="/subject/:slug" element={<Subject />} /> 
-            
-            {/* Course Routes */}
+             <Route path="/subject/:slug" element={<Subject />} /> 
             <Route path="/course-Home" element={<CourseHome />} />
             <Route path="/course/:courseId" element={<CourseDetails />} />
-            
+
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />
             <Route path="/teacher/:id" element={<TeacherDetails />} />
+            <Route path="/section-home" element={<SectionHome />} />
           </Route>
         </Route>
 
