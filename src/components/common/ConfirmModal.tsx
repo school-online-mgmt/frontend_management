@@ -2,6 +2,7 @@ import React from "react";
 
 type ConfirmModalProps = {
     title: string;
+    message?: string;
     confirmText?: string;
     cancelText?: string;
     loading?: boolean;
@@ -16,6 +17,7 @@ const ConfirmModal =
           confirmText = "Confirm",
           cancelText = "Cancel",
           loading = false,
+          message,
           onConfirm,
           onCancel,
         children
@@ -30,9 +32,12 @@ const ConfirmModal =
                 className="bg-white rounded-xl w-[440px] p-6 space-y-4 shadow-lg"
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 className="text-lg font-semibold">
+                <h2 className="text-xl font-semibold">
                     {title}
                 </h2>
+                {message && (
+                    <span className="mt-2 block text-sm text-red-600">{message}</span>
+                )}
                 {children && (
                     <div className="space-y-3 pt-2">{children}</div>
                 )}
