@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users } from 'lucide-react';
+import {LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users} from 'lucide-react';
 
 const Layout = () => {
   const location = useLocation();
@@ -13,8 +13,8 @@ const Layout = () => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/teacher-home', label: 'Teachers', icon: Users }, // Added Teachers here
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
-    { path: '/course-home', label: 'Courses', icon: GraduationCap },
-    { path: '/section-home', label: 'sections', icon: GraduationCap },
+    { path: '/course-Home', label: 'Courses', icon: GraduationCap },
+    { path: '/class-Home', label: 'Classes', icon: Users },
   ];
 
   return (
@@ -41,10 +41,10 @@ const Layout = () => {
           <nav className="space-y-1.5">
             {navItems.map((item) => {
               // Logic to handle active state for exact paths or child routes
-              const isActive = location.pathname === item.path || 
+              const isActive = location.pathname === item.path ||
                                (item.path === '/dashboard' && location.pathname === '/') ||
                                (location.pathname.startsWith(item.path.split('-')[0])); // Helps keep parent active on detail pages
-                               
+
               return (
                 <Link
                   key={item.path}
@@ -84,6 +84,7 @@ const Layout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8FAFC] relative">
+        {/* Header/Top Bar could go here if needed, but we'll keep it simple */}
         <div className="min-h-full">
           <Outlet />
         </div>

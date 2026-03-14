@@ -10,6 +10,8 @@ import CourseDetails from "./Pages/Course/CourseDetails.tsx";
 import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
 import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
 import SectionHome from "./Pages/Section/SectionHome.tsx";
+import ClassHome from "./Pages/Class/ClassHome.tsx";
+import ClassDetails from "./Pages/Class/ClassDetails.tsx";
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />
             <Route path="/teacher/:id" element={<TeacherDetails />} />
+            <Route path="/class-Home" element={<ClassHome />} />
+            <Route path="/class/:classId" element={<ClassDetails />} />
             <Route path="/section-home" element={<SectionHome />} />
           </Route>
         </Route>
