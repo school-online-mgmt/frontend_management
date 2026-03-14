@@ -11,6 +11,7 @@ const Layout = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/teacher-home', label: 'Teachers', icon: Users }, // Added Teachers here
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
     { path: '/course-Home', label: 'Courses', icon: GraduationCap },
     { path: '/class-Home', label: 'Classes', icon: Users },
@@ -39,7 +40,11 @@ const Layout = () => {
 
           <nav className="space-y-1.5">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
+              // Logic to handle active state for exact paths or child routes
+              const isActive = location.pathname === item.path ||
+                               (item.path === '/dashboard' && location.pathname === '/') ||
+                               (location.pathname.startsWith(item.path.split('-')[0])); // Helps keep parent active on detail pages
+
               return (
                 <Link
                   key={item.path}

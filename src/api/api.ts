@@ -172,11 +172,28 @@ class API {
     return response.data;
   };
 
-// ---------Teachers APIs------------
-
-  getTeachers = async () => {
-    const response = await apiClient.get("/management/teacher");
+//Get all Teachers
+getTeachers = async () => {
+    const response = await apiClient.get('/management/teacher');
     return response.data;
-  }
+  };
+
+//Get Teacher by id
+getTeacherById = async (id: string) => {
+    const response = await apiClient.get(`/management/teacher/${id}`);
+    return response.data;
+  };
+
+//Create Teacher
+createTeacher = async (teacherData: {
+    name: string;
+    gender: string;
+    age: number;
+    qualification: string
+  }) => {
+    const response = await apiClient.post('/management/teacher/create', teacherData);
+    return response.data;
+  };
+
 }
 export default new API();

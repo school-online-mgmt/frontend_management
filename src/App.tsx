@@ -7,6 +7,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import CourseHome from "./Pages/Course/CourseHome.tsx";
 import CourseDetails from "./Pages/Course/CourseDetails.tsx";
+import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
+import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
 import SectionHome from "./Pages/Section/SectionHome.tsx";
 import ClassHome from "./Pages/Class/ClassHome.tsx";
 import ClassDetails from "./Pages/Class/ClassDetails.tsx";
@@ -25,6 +27,10 @@ function App() {
              <Route path="/subject/:slug" element={<Subject />} /> 
             <Route path="/course-Home" element={<CourseHome />} />
             <Route path="/course/:courseId" element={<CourseDetails />} />
+
+            {/* Teacher Routes */}
+            <Route path="/teacher-home" element={<TeacherHome />} />
+            <Route path="/teacher/:id" element={<TeacherDetails />} />
             <Route path="/class-Home" element={<ClassHome />} />
             <Route path="/class/:classId" element={<ClassDetails />} />
             <Route path="/section-home" element={<SectionHome />} />
