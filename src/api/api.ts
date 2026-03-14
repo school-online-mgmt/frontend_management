@@ -49,7 +49,7 @@ class API {
     return response.data;
   };
 
-  // Course APIs-----------
+  // --------Course APIs-----------
   // Get all courses
   getCourses = async () => {
     const response = await apiClient.get("/management/course");
@@ -130,10 +130,53 @@ class API {
     );
     return response.data;
   };
+
+  // ----------Classes APIs----------
+
+  // Get All Classes
+  getClasses = async () => {
+    const response = await apiClient.get("/management/class");
+    return response.data;
+  };
+
+  // Get Class By ID or Slug
+  getClassById = async (id: string) => {
+    const response = await apiClient.get(`/management/class/${id}`);
+    return response.data;
+  };
+
+  // Create class
+  createClass = async (data: any) => {
+    const response = await apiClient.put("/management/class/create", data);
+    return response.data;
+  };
+
+  // Add section to class
+  createSection = async (
+    classId: string,
+    sectionData :{
+      name: string;
+      slug: string;
+      teacherId?: string;
+}) => {
+    const response = await apiClient.post(
+        `/management/class/${classId}/createSection`, sectionData
+    );
+    return response.data;
+  };
+
+  // -----------Section APIs------------
   // Get all Sections
   getSections = async () => {
     const response = await apiClient.get("/management/section");
     return response.data;
   };
+
+// ---------Teachers APIs------------
+
+  getTeachers = async () => {
+    const response = await apiClient.get("/management/teacher");
+    return response.data;
+  }
 }
 export default new API();

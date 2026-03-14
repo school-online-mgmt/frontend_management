@@ -1,22 +1,24 @@
+import React from "react";
+
 type ConfirmModalProps = {
     title: string;
-    message: string;
     confirmText?: string;
     cancelText?: string;
     loading?: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    children?: React.ReactNode;
 };
 
 const ConfirmModal =
     ({
           title,
-          message,
           confirmText = "Confirm",
           cancelText = "Cancel",
           loading = false,
           onConfirm,
-          onCancel
+          onCancel,
+        children
       }: ConfirmModalProps) => {
 
     return (
@@ -31,9 +33,9 @@ const ConfirmModal =
                 <h2 className="text-lg font-semibold">
                     {title}
                 </h2>
-                <p className="text-slate-600">
-                    {message}
-                </p>
+                {children && (
+                    <div className="space-y-3 pt-2">{children}</div>
+                )}
                 <div className="flex justify-end gap-3 pt-2">
                     <button
                         disabled={loading}
@@ -47,7 +49,7 @@ const ConfirmModal =
                         onClick={onConfirm}
                         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                     >
-                        {loading ? "Removing..." : confirmText}
+                        {loading ? "Processing..." : confirmText}
                     </button>
                 </div>
             </div>
