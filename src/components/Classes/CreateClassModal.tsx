@@ -52,7 +52,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
             <input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Class"
+                placeholder="Class Name"
                 className="w-full border rounded-lg p-2"
             />
         </ConfirmModal>

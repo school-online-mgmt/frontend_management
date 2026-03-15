@@ -10,6 +10,8 @@ const CourseHome = () => {
     const [courses, setCourses] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
 
     const navigate = useNavigate();
 
@@ -36,7 +38,21 @@ const CourseHome = () => {
                 <CreateCourse
                     onClose={() => setIsCreateModalOpen(false)}
                     onRefresh={fetchCourses}
+                    setMessage={setMessage}
+                    setMessageType={setMessageType}
                 />
+            )}
+
+            {message && (
+                <div
+                    className={`p-4 rounded-xl border ${
+                        messageType === "success"
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                            : "bg-red-50 border-red-200 text-red-700"
+                    }`}
+                >
+                    {message}
+                </div>
             )}
 
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
@@ -48,6 +64,7 @@ const CourseHome = () => {
                         Create, view and manage courses
                     </p>
                 </div>
+
                 <div className="flex gap-3">
                     <button
                         onClick={fetchCourses}
@@ -67,6 +84,7 @@ const CourseHome = () => {
                     </button>
                 </div>
             </header>
+
 
             <main>
                 <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">

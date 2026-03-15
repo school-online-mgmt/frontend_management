@@ -1,27 +1,62 @@
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import api from "../../api/api.ts";
 
-const CreateCourse = ({ onClose, onRefresh }: any) => {
+const CreateCourse = ({
+      onClose, onRefresh, setMessage, setMessageType }: any) => {
 
     const [slug, setSlug] = useState("");
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [classId, setClassId] = useState("");
+    const [classes, setClasses] =useState<any[]>([]);
+    const [sessionId, setSessionId] = useState("");
+    const [sessions, setSessions] = useState<any[]>([]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const fetchSessions = async () => {
+        try {
+            const data = await api.getSessions();
+            setSessions(data || []);
+        } catch (error) {
+            console.error("Failed to load sessions", error);
+        }
+    };
+
+    const fetchClasses = async () => {
+        try {
+            const data = await api.getClasses();
+            setClasses(data.classes || []);
+        } catch (error) {
+            console.error("Failed to load classes", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchClasses();
+        fetchSessions();
+    }, []);
+
     const handleSubmit = async () => {
-        if (!slug || !name) {
-            alert("Slug and Name are required");
+
+        if (!slug || !name || !classId || !sessionId) {
+            setMessage("Slug, Name, Class and Session are required");
+            setMessageType("error");
             return;
         }
+
         try {
             setIsSubmitting(true);
-            await api.createCourse({ slug, name, description, classId });
+            await api.createCourse({slug, name, description, classId, sessionId});
+
+            setMessage(`Course ${name} created successfully`);
+            setMessageType("success");
+
             onRefresh();
             onClose();
         } catch (error: any) {
-            alert(error?.response?.data?.message || "Failed to create course");
+            setMessage(error?.response?.data?.message || "Failed to create course");
+            setMessageType("error");
         } finally {
             setIsSubmitting(false);
         }
@@ -48,6 +83,7 @@ const CreateCourse = ({ onClose, onRefresh }: any) => {
                     </button>
                 </div>
 
+                {/*Course Slug*/}
                 <div className="space-y-3">
                     <input
                         placeholder="Course Slug"
@@ -55,18 +91,46 @@ const CreateCourse = ({ onClose, onRefresh }: any) => {
                         onChange={(e) => setSlug(e.target.value)}
                         className="w-full border border-slate-200 p-2 rounded-lg"
                     />
+
+                    {/*Course Name*/}
                     <input
                         placeholder="Course Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full border border-slate-200 p-2 rounded-lg"
                     />
-                    <input
-                        placeholder="Class Name"
+
+                    {/*Session (Academic year)*/}
+                    <select
+                        value={sessionId}
+                        onChange={(e) => setSessionId(e.target.value)}
+                        className="w-full border border-slate-200 p-2 rounded-lg"
+                    >
+                        <option value="">Select Session</option>
+
+                        {sessions.map((session) => (
+                            <option key={session.id} value={session.id}>
+                                {session.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/*Class*/}
+                    <select
                         value={classId}
                         onChange={(e) => setClassId(e.target.value)}
                         className="w-full border border-slate-200 p-2 rounded-lg"
-                    />
+                    >
+                        <option value="">Select Class</option>
+
+                        {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                                {cls.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/*Course Description*/}
                     <textarea
                         placeholder="Description"
                         value={description}

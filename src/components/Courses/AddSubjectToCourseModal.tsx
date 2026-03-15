@@ -9,29 +9,35 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
     useEffect(() => {
         const loadSubjects = async () => {
             const data = await api.getSubjects();
-            setSubjects(data || []);
+            setSubjects(data.subjects || []);
         };
 
         loadSubjects();
     }, []);
 
     const existingIds =
-        course.courseSubjects?.map((cs: any) => cs.subject.id) || [];
+        course.subjects?.map((subject: any) => subject.id) || [];
 
     const availableSubjects = subjects.filter(
-        (s: any) => !existingIds.includes(s.id)
+        (s: any) => s.sessionId === course.sessionId && !existingIds.includes(s.id)
     );
 
     const handleAdd = async () => {
         try {
             const response = await api.addSubjectToCourse(course.id, subjectId);
-            const { courseData, subjectData } = response.responseData;
-            showMessage(
-                "success",
-                `${subjectData?.name} added to ${courseData.name}`
-            );
+            if (response?.courseSubject) {
+                showMessage(
+                    "success",
+                    "Subject added successfully"
+                );
             onRefresh();
             onClose();
+            } else {
+                showMessage(
+                    "error",
+                    "Failed to add subject"
+                );
+            }
         } catch {
             alert("Failed to add subject");
         }

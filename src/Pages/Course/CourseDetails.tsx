@@ -1,10 +1,11 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import api from "../../api/api";
 import AddSubjectToCourseModal from "../../components/Courses/AddSubjectToCourseModal";
 import ConfirmModal from "../../components/common/ConfirmModal.tsx";
+import BackButton from "../../components/common/BackButton.tsx";
 
 const CourseDetails = () => {
 
@@ -22,7 +23,7 @@ const CourseDetails = () => {
         text: string;
     } | null>(null);
 
-    const isCourseInUse = course?.courseSubjects?.length > 0;
+    const isCourseInUse = course?.subjects?.length > 0;
 
     const fetchCourse = async () => {
         try {
@@ -136,13 +137,7 @@ const CourseDetails = () => {
 
             {/* Back Navigation */}
             <div className="flex items-center gap-2">
-                <button
-                    onClick={() => navigate("/course-home")}
-                    className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition"
-                >
-                    <ArrowLeft size={20} />
-                    <span className="font-medium">Back to Courses</span>
-                </button>
+                <BackButton />
             </div>
 
             {/* Page Header */}
@@ -192,15 +187,19 @@ const CourseDetails = () => {
                     </div>
                     <div>
                         <p className="text-sm text-slate-500">Slug</p>
-                        <p className="font-mono text-slate-700">{course.slug}</p>
+                        <p className="font-mono text-slate-700">{course.class?.slug}</p>
                     </div>
                     <div>
                         <p className="text-sm text-slate-500">Class</p>
-                        <p className="font-medium">{course.className || "-"}</p>
+                        <p className="font-medium">{course.class?.name || "-"}</p>
                     </div>
                     <div>
                         <p className="text-sm text-slate-500">Total Subjects in Course</p>
-                        <p className="font-medium"> {course.courseSubjects?.length || 0} </p>
+                        <p className="font-medium"> {course.subjects?.length || 0} </p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-slate-500">Session</p>
+                        <p className="font-medium">{course.session?.name || "-"}</p>
                     </div>
                 </div>
 
@@ -228,24 +227,24 @@ const CourseDetails = () => {
 
                 <div className="divide-y">
 
-                    {course.courseSubjects.length === 0 ? (
+                    {course.subjects?.length === 0 ? (
                         <p className="p-6 text-slate-500">
                             No subjects added yet
                         </p>
                     ) : (
-                        course.courseSubjects.map((cs: any) => (
+                        course.subjects.map((subject: any) => (
                             <div
-                                key={cs.subject.id}
+                                key={subject.id}
                                 className="flex justify-between items-center p-4"
                             >
                                 <span
-                                    onClick={() => navigate(`/subject/${cs.subject.slug}`)}
+                                    // onClick={() => navigate(`/subject/${cs.subject.slug}`)}
                                     className="font-medium hover:underline cursor-pointer"
                                 >
-                                    {cs.subject.name}
+                                    {subject.name}
                                 </span>
                                 <button
-                                    onClick={() => openDeleteModal(cs.subject.id, cs.subject.name)}
+                                    onClick={() => openDeleteModal(subject.id, subject.name)}
                                     className="text-red-600 hover:text-red-800"
                                 >
                                     <Trash2 size={18} />
