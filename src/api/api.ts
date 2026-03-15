@@ -40,10 +40,10 @@ class API {
     const response = await apiClient.get(`/management/subject/${id}`);
     return response.data;
   };
-  createSubject = async (subjectData: { name: string, slug: string, bookName: string }) => {
+  createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string }) => {
     const response = await apiClient.post('/management/subject/create', subjectData);
     return response.data;
-  };
+};
   deleteSubject = async (id: string) => {
     const response = await apiClient.delete(`/management/subject/${id}/delete`);
     return response.data;
@@ -169,8 +169,8 @@ class API {
   // Get all Sections
   getSections = async () => {
     const response = await apiClient.get("/management/section");
-    return response.data;
-  };
+    return response.data.sections;
+};
 
 //Get all Teachers
 getTeachers = async () => {
@@ -195,5 +195,29 @@ createTeacher = async (teacherData: {
     return response.data;
   };
 
+//get All Sessions
+getSessions= async () => {
+    const response = await apiClient.get("/management/session");
+    return response.data.sessions;
+};
+
+addTeacherToSubject = async (subjectId: string, body: { teacherId: string, sectionId: string, sessionId: string }) => {
+    const response = await apiClient.post(`/management/subject/${subjectId}/addTeacher`, body);
+    return response.data;
+};
+
+removeTeacherFromSubject = async (subjectId: string, body: { teacherId: string }) => {
+    const response = await apiClient.delete(`/management/subject/${subjectId}/removeTeacher`, { data: body });
+    return response.data;
+};
+
+getSubjectTeachers = async (subjectId: string) => {
+    const response = await apiClient.get(`/management/subject/${subjectId}/teachers`);
+    return response.data;
+};
+getTeacherSubjects = async (teacherId: string) => {
+    const response = await apiClient.get(`/management/teacher/${teacherId}/subjects`);
+    return response.data;
+};
 }
 export default new API();
