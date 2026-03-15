@@ -14,9 +14,8 @@ const TeacherHome = () => {
     const fetchTeachers = async () => {
         setIsLoading(true);
         try {
-            // This calls your TeacherRouter.get("/")
-            const data = await api.getTeachers(); 
-            setTeachers(Array.isArray(data) ? data : []);
+            const data = await api.getTeachers();
+            setTeachers(Array.isArray(data) ? data : data?.teachers || []);
         } catch (error) {
             console.error("Error fetching teachers", error);
             setTeachers([]);
@@ -31,7 +30,6 @@ const TeacherHome = () => {
 
     return (
         <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
-            {/* Modal for creating a teacher */}
             {isCreateModalOpen && (
                 <CreateTeacher
                     onClose={() => setIsCreateModalOpen(false)}
@@ -99,7 +97,6 @@ const TeacherHome = () => {
                                     teachers.map((teacher: any) => (
                                         <tr
                                             key={teacher.id}
-                                            // Matches TeacherRouter.get("/:id")
                                             onClick={() => navigate(`/teacher/${teacher.id}`)}
                                             className="hover:bg-slate-50 cursor-pointer transition"
                                         >
