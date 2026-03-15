@@ -48,17 +48,7 @@ const ClassHome = () => {
 
     return (
         <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
-            {message && (
-                <div
-                    className={`p-3 rounded-lg text-sm ${
-                        message.type === "success"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-red-50 text-red-700"
-                    }`}
-                >
-                    {message.text}
-                </div>
-            )}
+
 
             {showCreateModal && (
                 <CreateClassModal
@@ -70,8 +60,18 @@ const ClassHome = () => {
                 />
             )}
 
+            {message && (
+                <div
+                    className={`p-3 rounded-lg text-sm ${
+                        message.type === "success"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
+                    }`}
+                >
+                    {message.text}
+                </div>
+            )}
             <header className="flex justify-between items-end mb-10">
-
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">
                         Class Management

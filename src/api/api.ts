@@ -67,10 +67,11 @@ class API {
   createCourse = async (courseData: {
     slug: string;
     name: string;
-    description?: string;
-    classId?: string;
+    description: string;
+    classId: string;
+    sessionId: string;
   }) => {
-    const response = await apiClient.put(
+    const response = await apiClient.post(
         "/management/course/create",
         courseData
     );
@@ -146,7 +147,7 @@ class API {
 
   // Create class
   createClass = async (data: any) => {
-    const response = await apiClient.put("/management/class/create", data);
+    const response = await apiClient.post("/management/class/create", data);
     return response.data;
   };
 
