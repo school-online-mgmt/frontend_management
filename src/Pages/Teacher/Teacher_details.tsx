@@ -15,7 +15,7 @@ const TeacherDetails = () => {
     const fetchAssignedSubjects = async (teacherId: string) => {
         try {
             const data = await api.getTeacherSubjects(teacherId);
-            setAssignedSubjects(Array.isArray(data) ? data : []);
+            setAssignedSubjects(Array.isArray(data) ? data : data?.subjects || []);
         } catch (err) {
             console.error("Error fetching assigned subjects", err);
         }
@@ -26,8 +26,9 @@ const TeacherDetails = () => {
         setError(null);
         try {
             const data = await api.getTeacherById(id!);
-            setTeacher(data);
-            await fetchAssignedSubjects(data.id);
+            const teacher = data?.teacher || data;
+            setTeacher(teacher);
+            await fetchAssignedSubjects(teacher.id);
         } catch (err) {
             setError("Failed to load teacher details");
         } finally {
