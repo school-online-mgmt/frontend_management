@@ -17,7 +17,7 @@ const SubjectPage = () => {
         setIsLoading(true);
         try {
             const data = await api.getSubjects();
-            setSubjects(Array.isArray(data) ? data : data?.subjects || []);
+            setSubjects(data);
         } catch (error) {
             console.error("Error fetching subjects", error);
             setSubjects([]);
