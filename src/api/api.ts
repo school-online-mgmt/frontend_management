@@ -267,6 +267,11 @@ getStudents = async () => {
     return response.data;
 };
 
+getStudentById = async (id: string) => {
+    const response = await apiClient.get(`/management/student/${id}`);
+    return response.data;
+};
+
 admitStudent = async (studentId: string, data: { sessionId: string, classId: string, sectionId: string, courseId: string, admissionId: string, rollNo: string, transportOpted: boolean, transportZoneId?: string }) => {
     const response = await apiClient.post(`/management/student/admit/${studentId}`, data);
     return response.data;

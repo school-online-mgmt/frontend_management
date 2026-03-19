@@ -112,13 +112,15 @@ const ApplicantDetails: React.FC = () => {
           </div>
         </div>
         <div className="mt-6">
-          <button
-            onClick={acceptApplication}
-            disabled={accepting}
-            className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {accepting ? 'Accepting...' : 'Accept Application'}
-          </button>
+          {applicant.status === 'APPLIED' && (
+            <button
+              onClick={acceptApplication}
+              disabled={accepting}
+              className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
+            >
+              {accepting ? 'Accepting...' : 'Accept Application'}
+            </button>
+          )}
         </div>
       </div>
     </div>

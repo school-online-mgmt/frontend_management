@@ -16,6 +16,7 @@ import StudentHome from "./Pages/Student/StudentHome.tsx";
 import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
 import ApplicantDetails from "./Pages/Applicants/ApplicantDetails.tsx";
+import StudentDetails from "./Pages/Students/StudentDetails.tsx";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/section-home" element={<SectionHome />} />
             <Route path="/student-home" element={<StudentHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
+            <Route path="/student/:id" element={<StudentDetails />} />
           </Route>
         </Route>
 
