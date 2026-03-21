@@ -25,8 +25,8 @@ const CreateCourse = ({
 
     const fetchClasses = async () => {
         try {
-            const data = await api.getClasses();
-            setClasses(data.classes || []);
+            const classes = await api.getClasses();
+            setClasses(classes || []);
         } catch (error) {
             console.error("Failed to load classes", error);
         }

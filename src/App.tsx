@@ -17,6 +17,8 @@ import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
 import ApplicantDetails from "./Pages/Applicants/ApplicantDetails.tsx";
 import StudentDetails from "./Pages/Students/StudentDetails.tsx";
+import ExamHome from "./Pages/Exam/ExamHome.tsx";
+import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
              <Route path="/subject/:slug" element={<Subject />} /> 
             <Route path="/course-Home" element={<CourseHome />} />
             <Route path="/course/:courseId" element={<CourseDetails />} />
+            <Route path="/exam-home" element={<ExamHome />} />
+            <Route path="/exam/:examId" element={<ExamDetails />} />
 
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />
