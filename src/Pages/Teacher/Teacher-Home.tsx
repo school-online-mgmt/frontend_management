@@ -15,7 +15,7 @@ const TeacherHome = () => {
         setIsLoading(true);
         try {
             const data = await api.getTeachers();
-            setTeachers(Array.isArray(data) ? data : data?.teachers || []);
+            setTeachers(data);
         } catch (error) {
             console.error("Error fetching teachers", error);
             setTeachers([]);

@@ -34,7 +34,7 @@ class API {
   // --- Subject APIs ---
   getSubjects = async () => {
     const response = await apiClient.get('/management/subject');
-    return response.data;
+    return response.data.subjects;
   };
   getSubjectById = async (id: string) => {
     const response = await apiClient.get(`/management/subject/${id}`);
@@ -52,7 +52,7 @@ class API {
   // Get all courses
   getCourses = async () => {
     const response = await apiClient.get("/management/course");
-    return response.data;
+    return response.data.courses;
   };
 
 // Get course by id OR slug
@@ -136,7 +136,7 @@ class API {
   // Get All Classes
   getClasses = async () => {
     const response = await apiClient.get("/management/class");
-    return response.data;
+    return response.data.classes;
   };
 
   // Get Class By ID or Slug
@@ -175,7 +175,7 @@ class API {
 //Get all Teachers
 getTeachers = async () => {
     const response = await apiClient.get('/management/teacher');
-    return response.data;
+    return response.data.teachers;
   };
 
 //Get Teacher by id
@@ -225,5 +225,56 @@ updateSubject = async (id: string, data: { name: string, slug: string, bookName:
     return response.data;
 };
 
+// --- Student APIs ---
+getAppliedStudents = async () => {
+    const response = await apiClient.get('/management/student/applied');
+    return response.data;
+};
+
+updateStudent = async (id: string, data: { sessionId: string, transportOpted: boolean, transportZoneId?: string, admissionId: string, rollNo: string, classId: string, sectionId: string, courseId: string }) => {
+    const response = await apiClient.put(`/management/student/${id}`, data);
+    return response.data;
+};
+
+confirmStudentAdmission = async (applicantId: string, data: { sessionId: string, classId: string, sectionId: string, courseId: string, admissionId: string, rollNo: string, transportOpted: boolean, transportZoneId?: string }) => {
+    const response = await apiClient.post(`/management/student/confirm/${applicantId}`, data);
+    return response.data;
+};
+
+// New methods for applicants and students
+getApplicants = async () => {
+    const response = await apiClient.get('/management/student/applied');
+    return response.data;
+};
+
+getApplicantById = async (applicantId: string) => {
+    const response = await apiClient.get(`/management/student/applied/${applicantId}`);
+    return response.data;
+};
+
+searchApplicants = async (query: string) => {
+    const response = await apiClient.get(`/management/student/search?query=${encodeURIComponent(query)}`);
+    return response.data;
+};
+
+acceptApplication = async (applicantId: string) => {
+    const response = await apiClient.post(`/management/student/accept/${applicantId}`);
+    return response.data;
+};
+
+getStudents = async () => {
+    const response = await apiClient.get('/management/student/');
+    return response.data;
+};
+
+getStudentById = async (id: string) => {
+    const response = await apiClient.get(`/management/student/${id}`);
+    return response.data;
+};
+
+admitStudent = async (studentId: string, data: { sessionId: string, classId: string, sectionId: string, courseId: string, admissionId: string, rollNo: string, transportOpted: boolean, transportZoneId?: string }) => {
+    const response = await apiClient.post(`/management/student/admit/${studentId}`, data);
+    return response.data;
+};
 }
 export default new API();

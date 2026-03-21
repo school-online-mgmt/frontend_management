@@ -11,6 +11,8 @@ const Layout = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/applicants-home', label: 'Applicants', icon: Users },
+    { path: '/students-home', label: 'Students', icon: Users },
     { path: '/teacher-home', label: 'Teachers', icon: Users }, // Added Teachers here
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
     { path: '/course-Home', label: 'Courses', icon: GraduationCap },

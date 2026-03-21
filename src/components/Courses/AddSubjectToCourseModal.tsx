@@ -9,7 +9,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
     useEffect(() => {
         const loadSubjects = async () => {
             const data = await api.getSubjects();
-            setSubjects(data.subjects || []);
+            setSubjects(data || []);
         };
 
         loadSubjects();
