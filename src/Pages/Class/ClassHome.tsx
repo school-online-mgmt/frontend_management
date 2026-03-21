@@ -32,8 +32,8 @@ const ClassHome = () => {
         setIsLoading(true);
 
         try {
-            const data = await api.getClasses();
-            setClasses(data.classes || []);
+            const classes = await api.getClasses();
+            setClasses(classes || []);
         } catch (err) {
             console.error(err);
             setClasses([]);

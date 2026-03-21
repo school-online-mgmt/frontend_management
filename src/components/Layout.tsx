@@ -17,6 +17,7 @@ const Layout = () => {
     { path: '/subject-Home', label: 'Subjects', icon: BookOpen },
     { path: '/course-Home', label: 'Courses', icon: GraduationCap },
     { path: '/class-Home', label: 'Classes', icon: Users },
+    { path: '/exam-home', label: 'Exams', icon: BookOpen },
   ];
 
   return (

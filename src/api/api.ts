@@ -32,8 +32,16 @@ class API {
   };
 
   // --- Subject APIs ---
-  getSubjects = async () => {
-    const response = await apiClient.get('/management/subject');
+  getSubjects = async (payload?:{
+      courseId?: string;
+      classId?: string;
+      sessionId?: string;
+      active?: boolean;
+      onlyWithTeacher?: boolean;
+  }) => {
+    const response = await apiClient.get('/management/subject',{
+        params: payload
+    });
     return response.data.subjects;
   };
   getSubjectById = async (id: string) => {
@@ -50,8 +58,12 @@ class API {
 };
   // --------Course APIs-----------
   // Get all courses
-  getCourses = async () => {
-    const response = await apiClient.get("/management/course");
+  getCourses = async (payload?:{
+      sessionId?:string
+  }) => {
+      const response = await apiClient.get("/management/course", {
+          params: payload
+      });
     return response.data.courses;
   };
 
@@ -276,5 +288,76 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     const response = await apiClient.post(`/management/student/admit/${studentId}`, data);
     return response.data;
 };
+
+    // Get all exams
+    getExams = async (payload: {
+            sessionId: string,
+            classId: string,
+            courseId?: string,
+            examTerm?: string
+        }) => {
+        const res = await apiClient.get("/management/exam",{
+            params: payload});
+        return res.data;
+    };
+
+    // Get Exam By ID
+    getExamById = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}`);
+        return res.data;
+    };
+
+    // Create Exam
+    createExam = async (payload: {
+        examTerm: string;
+        examName: string;
+        sessionId: string;
+        subjectIds: string[];
+        fullMarks: number;
+    }) => {
+        const res = await apiClient.post("/management/exam/create", payload);
+        return res.data;
+    };
+
+    // Update Exam
+    updateExam = async (examId: string, payload: any) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/update`, payload);
+        return res.data;
+    };
+    // Schedule exam
+    scheduleExam = async (
+        examId: string,
+        payload: { examDate: Date }
+    ) => {
+        const res = await apiClient.patch(
+            `/management/exam/${examId}/scheduleExam`,
+            payload
+        );
+        return res.data;
+    };
+
+    // Add syllabus (teacher/principal)
+    addSyllabus = async (
+        examId: string,
+        payload: { syllabus: string }
+    ) => {
+        const res = await apiClient.patch(
+            `/management/exam/${examId}/addSyllabus`,
+            payload
+        );
+        return res.data;
+    };
+
+    // Add question paper (teacher/principal)
+    addQuestionPaper = async (
+        examId: string,
+        payload: { questionPaper: string }
+    ) => {
+        const res = await apiClient.patch(
+            `/management/exam/${examId}/addQuestionPaper`,
+            payload
+        );
+        return res.data;
+    };
 }
 export default new API();
