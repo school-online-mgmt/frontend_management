@@ -118,6 +118,16 @@ const CreateExamModal = ({
         }
     };
 
+    const allSelected = subjects.length > 0 && subjectIds.length === subjects.length;
+
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            setSubjectIds([]);
+        } else {
+            setSubjectIds(subjects.map(s => s.id));
+        }
+    };
+
     const handleSubmit = async () => {
 
         if (!examName || !examTerm || !sessionId || subjectIds.length === 0 || !fullMarks) {
@@ -250,16 +260,27 @@ const CreateExamModal = ({
                     ) : loadingSubjects ? (
                         <p className="text-sm text-slate-500">Loading subjects...</p>
                     ) : subjects.length ? (
-                        subjects.map((s) => (
-                            <label key={s.id} className="flex gap-2 text-sm">
+                        <>
+                            <label className="flex gap-2 text-sm font-medium border-b pb-2 mb-2">
                                 <input
                                     type="checkbox"
-                                    checked={subjectIds.includes(s.id)}
-                                    onChange={() => toggleSubject(s.id)}
+                                    checked={allSelected}
+                                    onChange={toggleSelectAll}
                                 />
-                                {s.name}
+                                Select All
                             </label>
-                        ))
+
+                            {subjects.map((s) => (
+                                <label key={s.id} className="flex gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={subjectIds.includes(s.id)}
+                                        onChange={() => toggleSubject(s.id)}
+                                    />
+                                    {s.name}
+                                </label>
+                            ))}
+                        </>
                     ) : (
                         <p className="text-sm text-slate-400">No subjects with assigned teacher available</p>
                     )}
