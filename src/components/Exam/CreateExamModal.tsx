@@ -11,18 +11,16 @@ const CreateExamModal = ({
     const [examName, setExamName] = useState("");
     const [examTerm, setExamTerm] = useState("");
     const [sessionId, setSessionId] = useState("");
-    const [classId, setClassId] = useState("");
-    const [courseId, setCourseId] = useState("");
+    const [filterType, setFilterType] = useState<"class" | "course" | "subject" | "">("");
+    const [filterOptions, setFilterOptions] = useState<any[]>([]);
+    const [selectedFilterValue, setSelectedFilterValue] = useState("");
 
-    const [mode, setMode] = useState<"course" | "class">("class");
     const [subjects, setSubjects] = useState<any[]>([]);
     const [subjectIds, setSubjectIds] = useState<string[]>([]);
 
     const [fullMarks, setFullMarks] = useState<number | "">("");
 
     const [sessions, setSessions] = useState<any[]>([]);
-    const [classes, setClasses] = useState<any[]>([]);
-    const [courses, setCourses] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [loadingSubjects, setLoadingSubjects] = useState(false);
@@ -36,52 +34,36 @@ const CreateExamModal = ({
         load();
     }, []);
 
-    // Load Classes
     useEffect(() => {
-        if (!sessionId) return;
+        if (!sessionId || !filterType) return;
 
-        const loadClasses = async () => {
-            const data = await api.getClasses();
-            setClasses(data || []);
+        const loadOptions = async () => {
+            let data = [];
+
+            if (filterType === "class") {
+                data = await api.getClasses();
+            } else if (filterType === "course") {
+                data = await api.getCourses({ sessionId });
+            } else if (filterType === "subject") {
+                data = await api.getSubjects({ sessionId });
+            }
+
+            setFilterOptions(data || []);
         };
 
-        loadClasses();
+        loadOptions();
 
-        setClassId("");
-        setCourseId("");
+        // reset
+        setSelectedFilterValue("");
         setSubjects([]);
         setSubjectIds([]);
 
-    }, [sessionId]);
-
-    useEffect(() => {
-        if (!classId || !sessionId) return;
-
-        const loadCourses = async () => {
-            const data = await api.getCourses({ sessionId });
-            setCourses((data || []).filter((c: any) => c.classId === classId));
-        };
-
-        loadCourses();
-
-        setCourseId("");
-        setSubjects([]);
-        setSubjectIds([]);
-
-    }, [classId]);
-
-    // Reset when mode changes
-    useEffect(() => {
-        setSubjects([]);
-        setSubjectIds([]);
-        setCourseId("");
-
-    }, [mode]);
+    }, [sessionId, filterType]);
 
     // Fetch Subjects
     useEffect(() => {
 
-        if (!sessionId || !classId) return;
+        if (!sessionId || !filterType || !selectedFilterValue) return;
 
         const fetchSubjects = async () => {
             setLoadingSubjects(true);
@@ -89,11 +71,23 @@ const CreateExamModal = ({
             try {
                 let data;
 
-                if (mode === "course") {
-                    if (!courseId) return;
-                    data = await api.getSubjects({ courseId, sessionId, onlyWithTeacher : true });
+                if (filterType === "class") {
+                    data = await api.getSubjects({
+                        classId: selectedFilterValue,
+                        sessionId,
+                        onlyWithTeacher: true
+                    });
+                } else if (filterType === "course") {
+                    data = await api.getSubjects({
+                        courseId: selectedFilterValue,
+                        sessionId,
+                        onlyWithTeacher: true
+                    });
                 } else {
-                    data = await api.getSubjects({ classId, sessionId, onlyWithTeacher : true });
+                    data = await api.getSubjects({
+                        sessionId,
+                        onlyWithTeacher: true
+                    });
                 }
 
                 setSubjects(data || []);
@@ -108,7 +102,7 @@ const CreateExamModal = ({
 
         fetchSubjects();
 
-    }, [mode, courseId, classId, sessionId]);
+    }, [filterType, selectedFilterValue, sessionId]);
 
     const toggleSubject = (id: string) => {
         if (subjectIds.includes(id)) {
@@ -118,14 +112,9 @@ const CreateExamModal = ({
         }
     };
 
-    const allSelected = subjects.length > 0 && subjectIds.length === subjects.length;
 
-    const toggleSelectAll = () => {
-        if (allSelected) {
-            setSubjectIds([]);
-        } else {
-            setSubjectIds(subjects.map(s => s.id));
-        }
+    const selectAllSubjects = () => {
+        setSubjectIds(subjects.map(s => s.id));
     };
 
     const handleSubmit = async () => {
@@ -168,12 +157,23 @@ const CreateExamModal = ({
 
                 <h2>Create Exam</h2>
 
-                {/* Exam Name */}
-                <input
-                    placeholder="Exam Name"
-                   value={examName}
-                   onChange={(e) => setExamName(e.target.value)}
-                   className="w-full border p-2"/>
+                {/* Session */}
+                <select
+                    value={sessionId}
+                    onChange={(e) => {
+                        setSessionId(e.target.value);
+                        setFilterType("");
+                        setFilterOptions([]);
+                        setSubjects([]);
+                        setSubjectIds([]);
+                    }}
+                    className="w-full border p-2 rounded-lg"
+                >
+                    <option value="">Select Session</option>
+                    {sessions.map((session) => (
+                        <option key={session.id} value={session.id}>{session.name}</option>
+                    ))}
+                </select>
 
                 {/*Exam Term*/}
                 <select
@@ -186,104 +186,105 @@ const CreateExamModal = ({
                     <option value="TERM3">TERM3</option>
                 </select>
 
-                {/*Session*/}
+                {/* Exam Name */}
+                <input
+                    placeholder="Exam Name"
+                    value={examName}
+                    onChange={(e) => setExamName(e.target.value)}
+                    className="w-full border p-2"
+                />
+
+
+                {/* Filter Type */}
                 <select
-                    value={sessionId}
-                    onChange={(e) => setSessionId(e.target.value)}
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    disabled={!sessionId}
                     className="w-full border p-2 rounded-lg"
                 >
-                    <option value="">Select Session</option>
-                    {sessions.map((session) => (
-                        <option key={session.id} value={session.id}>{session.name}</option>
+                    <option value="">Filter By</option>
+                    <option value="class">Class</option>
+                    <option value="course">Course</option>
+                    <option value="subject">Subject</option>
+                </select>
+
+                {/* Dynamic Dropdown */}
+                <select
+                    value={selectedFilterValue}
+                    onChange={(e) => setSelectedFilterValue(e.target.value)}
+                    disabled={!filterType}
+                    className="w-full border p-2 rounded-lg"
+                >
+                    <option value="">Select {filterType}</option>
+                    {filterOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                            {item.name}
+                        </option>
                     ))}
                 </select>
 
-                {/* Subject Source */}
-                <div className="flex gap-4 text-sm items-center">
-                    <span className="text-slate-500">Subject Source:</span>
+                {/*Subjects Section*/}
+                <div className="border p-3 rounded-lg">
 
-                    <label className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            checked={mode === "class"}
-                            onChange={() => setMode("class")}
-                            disabled={!sessionId}
-                        />
-                        From Class
-                    </label>
+                    {/* Select All */}
+                    {subjects.length > 0 && (
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-slate-500">
+                                {subjectIds.length} selected
+                            </span>
 
-                    <label className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            checked={mode === "course"}
-                            onChange={() => setMode("course")}
-                            disabled={!sessionId}
-                        />
-                        From Course
-                    </label>
-                </div>
-
-                {/* Class */}
-                    <select
-                        value={classId}
-                        onChange={(e) => setClassId(e.target.value)}
-                        disabled={!sessionId}
-                        className="w-full border p-2 rounded-lg"
-                    >
-                        <option value="">Select Class</option>
-                        {classes.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
-
-                {/* Course */}
-                {mode === "course" && (
-                    <select
-                        value={courseId}
-                        onChange={(e) => setCourseId(e.target.value)}
-                        disabled={!classId}
-                        className="w-full border p-2 rounded-lg"
-                    >
-                        <option value="">Select Course</option>
-                        {courses.map((course) => (
-                            <option key={course.id} value={course.id}>{course.name}</option>
-                        ))}
-                    </select>
-                )}
-
-                {/* Subjects */}
-                <div className="border p-3 rounded-lg max-h-40 overflow-y-auto">
-                    {mode === "class" && !classId ? (
-                        <p className="text-sm text-slate-400">Select class first</p>
-                    ) : mode === "course" && !courseId ? (
-                        <p className="text-sm text-slate-400">Select course to load subjects</p>
-                    ) : loadingSubjects ? (
-                        <p className="text-sm text-slate-500">Loading subjects...</p>
-                    ) : subjects.length ? (
-                        <>
-                            <label className="flex gap-2 text-sm font-medium border-b pb-2 mb-2">
-                                <input
-                                    type="checkbox"
-                                    checked={allSelected}
-                                    onChange={toggleSelectAll}
-                                />
+                            <button
+                                onClick={selectAllSubjects}
+                                disabled={subjectIds.length === subjects.length}
+                                className="text-sm text-emerald-600 hover:underline"
+                            >
                                 Select All
-                            </label>
-
-                            {subjects.map((s) => (
-                                <label key={s.id} className="flex gap-2 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={subjectIds.includes(s.id)}
-                                        onChange={() => toggleSubject(s.id)}
-                                    />
-                                    {s.name}
-                                </label>
-                            ))}
-                        </>
-                    ) : (
-                        <p className="text-sm text-slate-400">No subjects with assigned teacher available</p>
+                            </button>
+                        </div>
                     )}
+
+                    {/* Selected */}
+                    <div className="flex flex-wrap gap-2">
+                        {subjectIds.length === 0 && (
+                            <p className="text-sm text-slate-400">No subjects selected</p>
+                        )}
+                        {subjects
+                            .filter(s => subjectIds.includes(s.id))
+                            .map(s => (
+                                <div
+                                    key={s.id}
+                                    className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
+                                >
+                                    {s.name}
+                                    <button onClick={() => toggleSubject(s.id)}>✕</button>
+                                </div>
+                            ))}
+                    </div>
+
+                    <div className="border-t my-3" />
+
+                    {/* Available */}
+                    <div className="max-h-32 overflow-y-auto">
+                        {loadingSubjects ? (
+                            <p className="text-sm text-slate-500">Loading subjects...</p>
+                        ) : subjects.length ? (
+                            subjects
+                                .filter(s => !subjectIds.includes(s.id))
+                                .map(s => (
+                                    <div
+                                        key={s.id}
+                                        onClick={() => toggleSubject(s.id)}
+                                        className="text-sm p-2 cursor-pointer hover:bg-slate-100 rounded"
+                                    >
+                                        {s.name}
+                                    </div>
+                                ))
+                        ) : (
+                            <p className="text-sm text-slate-400">
+                                No subjects with assigned teacher available
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 {/*Full Marks*/}
