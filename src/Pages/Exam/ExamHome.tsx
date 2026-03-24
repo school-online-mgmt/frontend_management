@@ -3,21 +3,48 @@ import { Plus, RefreshCcw, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateExamModal from "../../components/Exam/CreateExamModal";
+import useAuth from "../../hooks/useAuth";
+
+// ── Status badge helper ─────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+    AWAITING_SYLLABUS_UPDATE: {
+        label: "Awaiting Syllabus",
+        className: "bg-amber-100 text-amber-700 border border-amber-200",
+    },
+    AWAITING_DATE_SCHEDULING: {
+        label: "Awaiting Scheduling",
+        className: "bg-blue-100 text-blue-700 border border-blue-200",
+    },
+    PUBLISHED: {
+        label: "Published",
+        className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+    },
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+    const cfg = STATUS_CONFIG[status] ?? {
+        label: status,
+        className: "bg-slate-100 text-slate-600 border border-slate-200",
+    };
+    return (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
+            {cfg.label}
+        </span>
+    );
+};
+// ───────────────────────────────────────────────────────────────────────────
 
 const ExamHome = () => {
+    const { role } = useAuth();
 
     const [sessions, setSessions] = useState<any[]>([]);
     const [selectedSession, setSelectedSession] = useState("");
 
-    // const [classes, setClasses] = useState<any[]>([]);
-    // const [selectedClass, setSelectedClass] = useState("");
-    //
-    // const [courses, setCourses] = useState<any[]>([]);
-    // const [selectedCourse, setSelectedCourse] = useState("");
+    const [classes, setClasses] = useState<any[]>([]);
+    const [selectedClass, setSelectedClass] = useState("");
 
-    const [filterType, setFilterType] = useState<"class" | "course" | "subject" | "">("");
-    const [filterOptions, setFilterOptions] = useState<any[]>([]);
-    const [selectedFilterValue, setSelectedFilterValue] = useState("");
+    const [courses, setCourses] = useState<any[]>([]);
+    const [selectedCourse, setSelectedCourse] = useState("");
 
     const [terms, setTerms] = useState<string[]>([]);
     const [selectedTerm, setSelectedTerm] = useState("");
@@ -31,11 +58,7 @@ const ExamHome = () => {
 
     const navigate = useNavigate();
 
-    const TERM_LABELS: Record<string, string> = {
-        TERM1: "Term 1",
-        TERM2: "Term 2",
-        TERM3: "Term 3",
-    };
+    const canCreate = role === "PRINCIPAL" || role === "SUPER_ADMIN";
 
     // Load Sessions
     useEffect(() => {
@@ -47,59 +70,29 @@ const ExamHome = () => {
         loadSessions();
     }, []);
 
-    // Load filter dropdowns as per filter type
-    useEffect(() => {
-        if (!selectedSession || !filterType) return;
-
-        const loadOptions = async () => {
-            let data = [];
-
-            if (filterType === "class") {
-                data = await api.getClasses();
-            } else if (filterType === "course") {
-                data = await api.getCourses({ sessionId: selectedSession });
-            } else if (filterType === "subject") {
-                data = await api.getSubjects({ sessionId: selectedSession });
-            }
-
-            setFilterOptions(data || []);
-        };
-
-        loadOptions();
-    }, [selectedSession, filterType]);
-
     // Fetch classes
-    // useEffect(() => {
-    //     const loadClasses = async () => {
-    //         const classes = await api.getClasses();
-    //         setClasses(classes || []);
-    //     };
-    //     loadClasses();
-    // }, []);
+    useEffect(() => {
+        const loadClasses = async () => {
+            const data = await api.getClasses();
+            setClasses(data || []);
+        };
+        loadClasses();
+    }, []);
 
     // Fetch Exams
     const fetchExams = async () => {
-        if (!selectedSession || !filterType || !selectedFilterValue) return;
+        if (!selectedSession || !selectedClass) return;
 
         setIsLoading(true);
         try {
-            const params: any = {
+            const data = await api.getExams({
                 sessionId: selectedSession,
-                examTerm: selectedTerm || undefined,
-            };
-
-            if (filterType === "class") {
-                params.classId = selectedFilterValue;
-            } else if (filterType === "course") {
-                params.courseId = selectedFilterValue;
-            } else if (filterType === "subject") {
-                params.subjectId = selectedFilterValue;
-            }
-
-            const data = await api.getExams(params);
-            console.log(data);
+                classId: selectedClass,
+                courseId: selectedCourse || undefined,
+                examTerm: selectedTerm || undefined,});
 
             setExams(data.exams || []);
+            setCourses(data.filters?.courses || []);
             setTerms(data.filters?.terms || []);
         } catch {
             setExams([]);
@@ -108,28 +101,29 @@ const ExamHome = () => {
         }
     };
 
-    // // Load classes when session changes
-    // useEffect(() => {
-    //     if (!selectedSession) return;
-    //
-    //     setSelectedClass("");
-    //     setSelectedCourse("");
-    //     setSelectedTerm("");
-    //     setExams([]);
-    //
-    // }, [selectedSession]);
-    //
-    // // Fetch exams only when class is selected
-    // useEffect(() => {
-    //     if (!selectedSession || !selectedClass) return;
-    //     fetchExams();
-    // }, [selectedClass, selectedCourse, selectedTerm]);
-
-    // Trigger exam fetch
+    // Load classes when session changes
     useEffect(() => {
-        if (!selectedFilterValue) return;
+        if (!selectedSession) return;
+
+        setSelectedClass("");
+        setSelectedCourse("");
+        setSelectedTerm("");
+        setExams([]);
+
+    }, [selectedSession]);
+
+    // Fetch exams only when class is selected
+    useEffect(() => {
+        if (!selectedSession || !selectedClass) return;
         fetchExams();
-    }, [selectedFilterValue, selectedTerm]);
+    }, [selectedClass, selectedCourse, selectedTerm]);
+
+    // Auto-dismiss messages
+    useEffect(() => {
+        if (!message) return;
+        const t = setTimeout(() => setMessage(null), 5000);
+        return () => clearTimeout(t);
+    }, [message]);
 
     return (
         <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
@@ -155,239 +149,172 @@ const ExamHome = () => {
                 </div>
             )}
 
-            {/*Header Section*/}
+            {/* Header */}
             <header className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-bold">Exam Management</h1>
-                    <p className="text-slate-500">Manage exams</p>
+                    <p className="text-slate-500 mt-1">View and manage exam papers</p>
                 </div>
-
                 <div className="flex gap-3">
                     <button
                         onClick={fetchExams}
-                        disabled={!selectedFilterValue}
-                        className="px-3 py-1.5 border rounded-xl flex gap-2 disabled:opacity-50"
+                        disabled={!selectedSession || !selectedClass}
+                        className="px-3 py-1.5 border rounded-xl flex gap-2 items-center disabled:opacity-50 hover:bg-slate-50"
                     >
                         <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
                         Refresh
                     </button>
-
-                    <button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 flex items-center gap-2"
-                    >
-                        <Plus size={18} />
-                        Create Exam
-                    </button>
+                    {canCreate && (
+                        <button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl shadow hover:bg-emerald-700 flex items-center gap-2"
+                        >
+                            <Plus size={18} />
+                            Create Exam
+                        </button>
+                    )}
                 </div>
             </header>
 
             {/* Filter Bar */}
-            {/*<div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">*/}
-
-            {/*    /!* Session *!/*/}
-            {/*    <select*/}
-            {/*        value={selectedSession}*/}
-            {/*        onChange={(e) => {*/}
-            {/*            setSelectedSession(e.target.value);*/}
-            {/*            setSelectedClass("");*/}
-            {/*            setSelectedCourse("");*/}
-            {/*            setSelectedTerm("");*/}
-            {/*        }}*/}
-            {/*        className="border p-2 rounded-lg"*/}
-            {/*    >*/}
-            {/*        <option value="">Select Session</option>*/}
-            {/*        {sessions.map((s) => (*/}
-            {/*            <option key={s.id} value={s.id}>{s.name}</option>*/}
-            {/*        ))}*/}
-            {/*    </select>*/}
-
-            {/*    /!* Class *!/*/}
-            {/*    <select*/}
-            {/*        value={selectedClass}*/}
-            {/*        onChange={(e) => {*/}
-            {/*            setSelectedClass(e.target.value);*/}
-            {/*            setSelectedCourse("");*/}
-            {/*            setSelectedTerm("");*/}
-            {/*        }}*/}
-            {/*        disabled={!selectedSession}*/}
-            {/*        className="border p-2 rounded-lg"*/}
-            {/*    >*/}
-            {/*        <option value="">Select Class</option>*/}
-            {/*        {classes.map((c) => (*/}
-            {/*            <option key={c.id} value={c.id}>{c.name}</option>*/}
-            {/*        ))}*/}
-            {/*    </select>*/}
-
-            {/*    /!* Course *!/*/}
-            {/*    <select*/}
-            {/*        value={selectedCourse}*/}
-            {/*        onChange={(e) => setSelectedCourse(e.target.value)}*/}
-            {/*        disabled={!selectedClass}*/}
-            {/*        className="border p-2 rounded-lg"*/}
-            {/*    >*/}
-            {/*        <option value="">All Courses</option>*/}
-            {/*        {courses.map((c) => (*/}
-            {/*            <option key={c.id} value={c.id}>{c.name}</option>*/}
-            {/*        ))}*/}
-            {/*    </select>*/}
-
-            {/*    /!* Term *!/*/}
-            {/*    <select*/}
-            {/*        value={selectedTerm}*/}
-            {/*        onChange={(e) => setSelectedTerm(e.target.value)}*/}
-            {/*        disabled={!selectedClass}*/}
-            {/*        className="border p-2 rounded-lg"*/}
-            {/*    >*/}
-            {/*        <option value="">All Terms</option>*/}
-            {/*        {terms.map((t) => (*/}
-            {/*            <option key={t} value={t}>{t}</option>*/}
-            {/*        ))}*/}
-            {/*    </select>*/}
-            {/*</div>*/}
-
-            <div className="bg-white p-4 rounded-2xl border flex gap-4">
-
-                {/* Session */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-wrap items-center gap-3">
                 <select
                     value={selectedSession}
                     onChange={(e) => {
                         setSelectedSession(e.target.value);
-                        setFilterType("");
-                        setFilterOptions([]);
-                        setSelectedFilterValue("");
-                        setTerms([]);
+                        setSelectedClass("");
+                        setSelectedCourse("");
                         setSelectedTerm("");
                     }}
-                    className="border p-2 rounded-lg"
+                    className="border p-2 rounded-lg text-sm"
                 >
                     <option value="">Select Session</option>
-                    {sessions.map((s) => (
+                    {sessions.map(s => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                 </select>
 
-                {/* Filter Type */}
                 <select
-                    value={filterType}
+                    value={selectedClass}
                     onChange={(e) => {
-                        setFilterType(e.target.value as any);
-                        setFilterOptions([]);
-                        setSelectedFilterValue("");
-                        setTerms([]);
+                        setSelectedClass(e.target.value);
+                        setSelectedCourse("");
                         setSelectedTerm("");
                     }}
                     disabled={!selectedSession}
-                    className="border p-2 rounded-lg"
+                    className="border p-2 rounded-lg text-sm disabled:opacity-50"
                 >
-                    <option value="">Filter By</option>
-                    <option value="class">Class</option>
-                    <option value="course">Course</option>
-                    <option value="subject">Subject</option>
-                </select>
-
-                {/* Dynamic Dropdown */}
-                <select
-                    value={selectedFilterValue}
-                    onChange={(e) => setSelectedFilterValue(e.target.value)}
-                    disabled={!filterType}
-                    className="border p-2 rounded-lg"
-                >
-                    <option value="">Select {filterType}</option>
-                    {filterOptions.map((item) => (
-                        <option key={item.id} value={item.id}>
-                            {item.name}
-                        </option>
+                    <option value="">Select Class</option>
+                    {classes.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                 </select>
 
-                {/* Terms */}
+                <select
+                    value={selectedCourse}
+                    onChange={(e) => setSelectedCourse(e.target.value)}
+                    disabled={!selectedClass}
+                    className="border p-2 rounded-lg text-sm disabled:opacity-50"
+                >
+                    <option value="">All Courses</option>
+                    {courses.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
+
                 <select
                     value={selectedTerm}
                     onChange={(e) => setSelectedTerm(e.target.value)}
-                    disabled={!terms.length}
-                    className="border p-2 rounded-lg"
+                    disabled={!selectedClass}
+                    className="border p-2 rounded-lg text-sm disabled:opacity-50"
                 >
                     <option value="">All Terms</option>
-                    {terms.map((t) => (
-                        <option key={t} value={t}>
-                            {TERM_LABELS[t] || t} {/* ✅ only change */}
-                        </option>
+                    {terms.map(t => (
+                        <option key={t} value={t}>{t}</option>
                     ))}
                 </select>
             </div>
 
-
-                {/*Exams Table*/}
-            <div className="bg-white rounded-2xl border p-4">
-                <table className="w-full text-left">
-                    <thead>
-                    <tr>
-                        <th className="p-4">Exam</th>
-                        <th className="p-4">Term</th>
-                        <th className="p-4">Class</th>
-                        <th className="p-4">Course</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Date</th>
-                    </tr>
+            {/* Exams Table */}
+            <div className="bg-white rounded-2xl border overflow-hidden">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 border-b">
+                        <tr>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Exam</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Subject</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Term</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Class</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Course</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
+                            <th className="px-4 py-3 font-semibold text-slate-600">Exam Date</th>
+                        </tr>
                     </thead>
-
                     <tbody>
-                    {!selectedSession ? (
-                        <tr>
-                            <td colSpan={4} className="p-10 text-center text-slate-500">
-                                Please select a session to begin
-                            </td>
-                        </tr>
-
-                    ) : !filterType ? (
-                        <tr>
-                            <td colSpan={5} className="p-10 text-center text-slate-500">
-                                Select a filter type ( By class/course/subject) to view exams
-                            </td>
-                        </tr>
-
-                    ) : !selectedFilterValue ? (
-                        <tr>
-                            <td colSpan={5} className="p-10 text-center text-slate-500">
-                                Please select a {filterType}
-                            </td>
-                        </tr>
-
-                    ) : isLoading ? (
-                        <tr>
-                            <td colSpan={5} className="p-10 text-center">Loading...</td>
-                        </tr>
-
-                    ) : exams.length ? (
-                        exams.map((exam) => (
-                            <tr
-                                key={exam.id}
-                                onClick={() => navigate(`/exam/${exam.id}`)}
-                                className="hover:bg-slate-50 cursor-pointer"
-                            >
-                                <td className="p-4 flex gap-3 items-center">
-                                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-                                        <BookOpen size={18}/>
-                                    </div>
-                                    {exam.examName}
-                                </td>
-
-                                <td className="p-4">{exam.examTerm}</td>
-                                <td className="p-4">{exam.class.name}</td>
-                                <td className="p-4">{exam.course.name}</td>
-                                <td className="p-4">{exam.status}</td>
-
-                                <td className="p-4">
-                                    {exam.examDate
-                                        ? new Date(exam.examDate).toLocaleString()
-                                        : "-"}
+                        {!selectedSession ? (
+                            <tr>
+                                <td colSpan={7} className="p-10 text-center text-slate-400">
+                                    Please select a session to begin
                                 </td>
                             </tr>
-                        ))
-                    ) : (
-                        <tr><td colSpan={5} className="p-10 text-center">No exams found</td></tr>
-                    )}
+                        ) : !selectedClass ? (
+                            <tr>
+                                <td colSpan={7} className="p-10 text-center text-slate-400">
+                                    Select a class to view exams
+                                </td>
+                            </tr>
+                        ) : isLoading ? (
+                            <tr>
+                                <td colSpan={7} className="p-10 text-center text-slate-400">
+                                    <div className="flex justify-center">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600" />
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : exams.length ? (
+                            exams.map(exam => (
+                                <tr
+                                    key={exam.id}
+                                    onClick={() => navigate(`/exam/${exam.id}`)}
+                                    className="hover:bg-slate-50 cursor-pointer border-b last:border-0"
+                                >
+                                    <td className="px-4 py-3">
+                                        <div className="flex gap-3 items-center">
+                                            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
+                                                <BookOpen size={16} className="text-emerald-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-slate-800">{exam.examName}</p>
+                                                <p className="text-xs text-slate-400">Marks: {exam.fullMarks}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700">{exam.subjectName ?? "—"}</td>
+                                    <td className="px-4 py-3">
+                                        <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 font-medium">
+                                            {exam.examTerm}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700">{exam.className ?? "—"}</td>
+                                    <td className="px-4 py-3 text-slate-700">{exam.courseName ?? "—"}</td>
+                                    <td className="px-4 py-3">
+                                        <StatusBadge status={exam.status} />
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                        {exam.examDate
+                                            ? new Date(exam.examDate).toLocaleDateString(undefined, {
+                                                day: "numeric", month: "short", year: "numeric",
+                                            })
+                                            : "—"}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="p-10 text-center text-slate-400">
+                                    No exam papers found for the selected filters
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -396,3 +323,4 @@ const ExamHome = () => {
 };
 
 export default ExamHome;
+

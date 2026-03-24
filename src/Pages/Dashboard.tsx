@@ -1,137 +1,285 @@
-import { Users, BookOpen, GraduationCap, Calendar, TrendingUp, Clock, ArrowRight } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Calendar, TrendingUp, Clock, Activity, BarChart3, PieChart, FileText } from 'lucide-react';
+import Button from '../components/common/Button';
+import { Card, CardHeader, CardTitle, CardContent, Badge } from '../components/common/FormComponents';
 
 const Dashboard = () => {
   const stats = [
-    { title: 'Total Students', value: '1,245', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+12%' },
-    { title: 'Active Subjects', value: '42', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+5%' },
-    { title: 'Teachers', value: '86', icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-50', trend: '+2%' },
-    { title: 'Events This Month', value: '12', icon: Calendar, color: 'text-orange-600', bg: 'bg-orange-50', trend: '+8%' },
+    { 
+      title: 'Total Students', 
+      value: '1,245', 
+      icon: Users, 
+      color: 'text-blue-600', 
+      bgIcon: 'bg-blue-100',
+      trend: '+12%',
+      trendPositive: true,
+      period: 'vs last month'
+    },
+    { 
+      title: 'Active Teachers', 
+      value: '86', 
+      icon: GraduationCap, 
+      color: 'text-purple-600', 
+      bgIcon: 'bg-purple-100',
+      trend: '+2%',
+      trendPositive: true,
+      period: 'vs last month'
+    },
+    { 
+      title: 'Active Subjects', 
+      value: '42', 
+      icon: BookOpen, 
+      color: 'text-emerald-600', 
+      bgIcon: 'bg-emerald-100',
+      trend: '+5%',
+      trendPositive: true,
+      period: 'vs last month'
+    },
+    { 
+      title: 'Ongoing Exams', 
+      value: '12', 
+      icon: Activity, 
+      color: 'text-orange-600', 
+      bgIcon: 'bg-orange-100',
+      trend: '+8%',
+      trendPositive: true,
+      period: 'this month'
+    },
   ];
 
   const recentActivities = [
-    { id: 1, action: 'New student enrollment', time: '2 hours ago', user: 'Admin', type: 'enrollment' },
-    { id: 2, action: 'Updated Math syllabus', time: '4 hours ago', user: 'Sarah Johnson', type: 'update' },
-    { id: 3, action: 'Parent-teacher meeting scheduled', time: 'Yesterday', user: 'Principal', type: 'meeting' },
-    { id: 4, action: 'System maintenance completed', time: '2 days ago', user: 'System', type: 'system' },
+    { 
+      id: 1, 
+      action: 'New student enrollment', 
+      description: 'John Doe enrolled in 10th Grade',
+      time: '2 hours ago', 
+      user: 'Admin', 
+      type: 'enrollment',
+      icon: Users
+    },
+    { 
+      id: 2, 
+      action: 'Updated Math syllabus', 
+      description: 'Chapter 1-5 added to curriculum',
+      time: '4 hours ago', 
+      user: 'Sarah Johnson', 
+      type: 'update',
+      icon: FileText
+    },
+    { 
+      id: 3, 
+      action: 'Parent-teacher meeting scheduled', 
+      description: 'Meeting on March 28, 2026 at 3 PM',
+      time: 'Yesterday', 
+      user: 'Principal', 
+      type: 'meeting',
+      icon: Calendar
+    },
+    { 
+      id: 4, 
+      action: 'Exam paper published', 
+      description: 'Biology Term 1 exam published',
+      time: '2 days ago', 
+      user: 'System', 
+      type: 'system',
+      icon: BookOpen
+    },
   ];
 
   return (
-    <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-slate-500 mt-2 text-lg">Welcome back to the school management portal.</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-medium shadow-sm hover:bg-slate-50 transition-colors">
-            Export Report
-          </button>
-          <button className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all hover:-translate-y-0.5">
-            + New Event
-          </button>
-        </div>
-      </header>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="group bg-white p-6 rounded-2xl shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] border border-slate-100 hover:border-emerald-100 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-transparent to-slate-50 rounded-bl-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
-            
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className={`p-3.5 rounded-xl ${stat.bg} ${stat.color} ring-1 ring-inset ring-black/5`}>
-                <stat.icon size={22} strokeWidth={2} />
-              </div>
-              <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                <TrendingUp size={12} /> {stat.trend}
-              </span>
-            </div>
-            
-            <div className="relative z-10">
-              <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-1">{stat.title}</h3>
-              <p className="text-3xl font-bold text-slate-800 tracking-tight">{stat.value}</p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-emerald-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+            <p className="text-slate-600 mt-2 text-lg">Welcome back! Here's what's happening in your school.</p>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Chart Area */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] border border-slate-100">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-xl font-bold text-slate-800">Attendance Overview</h2>
-              <p className="text-slate-400 text-sm mt-1">Weekly student participation metrics</p>
-            </div>
-            <select className="bg-slate-50 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer hover:bg-white">
-              <option>This Week</option>
-              <option>Last Week</option>
-              <option>This Month</option>
-            </select>
-          </div>
-          
-          <div className="h-72 flex items-end justify-between gap-4 px-2">
-            {[65, 45, 75, 55, 85, 95, 60].map((height, i) => (
-              <div key={i} className="w-full flex flex-col justify-end group h-full relative">
-                <div className="w-full bg-slate-100 rounded-t-xl relative overflow-hidden h-full">
-                  <div 
-                    className="absolute bottom-0 left-0 right-0 bg-emerald-500 rounded-t-xl transition-all duration-700 ease-out group-hover:bg-emerald-400 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-white/20"></div>
-                  </div>
-                </div>
-                <span className="text-center text-xs font-semibold text-slate-400 mt-3 group-hover:text-emerald-600 transition-colors">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
-                </span>
-                
-                {/* Tooltip */}
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl whitespace-nowrap z-20">
-                  {height}% Attendance
-                  <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
-                </div>
-              </div>
-            ))}
+          <div className="flex gap-3 flex-wrap">
+            <Button variant="secondary" icon={<FileText size={18} />}>
+              Export Report
+            </Button>
+            <Button variant="primary" icon={<Calendar size={18} />}>
+              New Event
+            </Button>
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white p-8 rounded-3xl shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] border border-slate-100 flex flex-col">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-bold text-slate-800">Recent Activity</h2>
-            <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-emerald-600 transition-colors">
-              <ArrowRight size={18} />
-            </button>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {stats.map((stat, index) => {
+            const StatIcon = stat.icon;
+            return (
+              <Card key={index} hoverable bordered>
+                <CardContent>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`p-3 rounded-lg ${stat.bgIcon}`}>
+                      <StatIcon className={`${stat.color}`} size={24} />
+                    </div>
+                    <Badge variant={stat.trendPositive ? 'success' : 'danger'}>
+                      <TrendingUp size={12} />
+                      {stat.trend}
+                    </Badge>
+                  </div>
+                  <p className="text-slate-600 text-sm font-medium uppercase tracking-wide mb-1">{stat.title}</p>
+                  <p className="text-3xl font-bold text-slate-900 mb-1">{stat.value}</p>
+                  <p className="text-xs text-slate-500">{stat.period}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           
-          <div className="space-y-8 relative flex-1">
-            {/* Timeline Line */}
-            <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-slate-100"></div>
-            
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex gap-5 relative group">
-                <div className="relative z-10 mt-1">
-                  <div className="w-10 h-10 rounded-full bg-white border-4 border-slate-50 flex items-center justify-center shadow-sm group-hover:border-emerald-50 group-hover:scale-110 transition-all duration-300">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 group-hover:bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
+          {/* Attendance Chart */}
+          <div className="lg:col-span-2">
+            <Card hoverable bordered>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 size={20} />
+                      Attendance Overview
+                    </CardTitle>
+                    <p className="text-slate-500 text-sm mt-2">Weekly student participation metrics</p>
                   </div>
+                  <select className="px-4 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 hover:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
+                    <option>This Week</option>
+                    <option>Last Week</option>
+                    <option>This Month</option>
+                  </select>
                 </div>
-                <div className="flex-1 pt-1">
-                  <p className="text-slate-800 font-semibold text-sm group-hover:text-emerald-700 transition-colors">{activity.action}</p>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                      <Clock size={10} /> {activity.time}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">by {activity.user}</span>
-                  </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72 flex items-end justify-between gap-3 px-2">
+                  {[65, 45, 75, 55, 85, 95, 60].map((height, i) => (
+                    <div key={i} className="flex-1 group relative">
+                      <div className="h-full bg-slate-100 rounded-t-lg overflow-hidden relative">
+                        <div 
+                          className="absolute inset-0 bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-lg transition-all duration-300 group-hover:shadow-lg group-hover:shadow-emerald-500/30"
+                          style={{ height: `${height}%` }}
+                        />
+                        <div className="absolute inset-0 bg-white/5 rounded-t-lg" />
+                      </div>
+                      <span className="block text-center text-xs font-semibold text-slate-500 mt-3 group-hover:text-emerald-600 transition-colors">
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
+                      </span>
+                      
+                      {/* Tooltip */}
+                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl">
+                        {height}% Attendance
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activities */}
+          <Card hoverable bordered className="flex flex-col">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock size={20} />
+                  Recent Activity
+                </CardTitle>
               </div>
-            ))}
-          </div>
+            </CardHeader>
+            <CardContent className="flex-1 space-y-4 overflow-y-auto max-h-96">
+              {recentActivities.map((activity) => {
+                const Icon = activity.icon;
+                return (
+                  <div key={activity.id} className="pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                    <div className="flex gap-3">
+                      <div className="mt-1 w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Icon size={16} className="text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{activity.action}</p>
+                        <p className="text-xs text-slate-600 mt-0.5">{activity.description}</p>
+                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                          <span>{activity.user}</span>
+                          <span>•</span>
+                          <span>{activity.time}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Charts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          <button className="w-full mt-8 py-3.5 text-sm font-bold text-emerald-700 bg-emerald-50/80 border border-emerald-100 rounded-xl hover:bg-emerald-100 hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-900/5 transition-all duration-300 flex items-center justify-center gap-2 group">
-            View All Activity
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </button>
+          {/* Student Distribution */}
+          <Card hoverable bordered>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart size={20} />
+                Student Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[
+                  { label: '10th Grade', value: 345, percentage: 28, color: 'bg-emerald-500' },
+                  { label: '9th Grade', value: 298, percentage: 24, color: 'bg-blue-500' },
+                  { label: '8th Grade', value: 267, percentage: 21, color: 'bg-purple-500' },
+                  { label: 'Other Classes', value: 335, percentage: 27, color: 'bg-orange-500' },
+                ].map((item, index) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                      <span className="text-sm font-bold text-slate-900">{item.value}</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${item.color} transition-all duration-500`}
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-500 mt-1">{item.percentage}%</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Performance Metrics */}
+          <Card hoverable bordered>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity size={20} />
+                Key Metrics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {[
+                  { label: 'Enrollment Rate', value: '94%', trend: '+3%' },
+                  { label: 'Teacher Attendance', value: '98%', trend: '+2%' },
+                  { label: 'Exam Completion', value: '87%', trend: '+5%' },
+                  { label: 'Parent Satisfaction', value: '92%', trend: '+4%' },
+                ].map((metric, index) => (
+                  <div key={index} className="flex items-center justify-between pb-6 border-b border-slate-100 last:border-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">{metric.label}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-slate-900">{metric.value}</p>
+                      <p className="text-xs text-emerald-600 font-semibold mt-1">{metric.trend}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

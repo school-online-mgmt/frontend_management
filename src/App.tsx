@@ -17,6 +17,7 @@ import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
 import ApplicantDetails from "./Pages/Applicants/ApplicantDetails.tsx";
 import StudentDetails from "./Pages/Students/StudentDetails.tsx";
+import StudentAdmission from "./Pages/StudentAdmission.tsx";
 import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 
@@ -30,6 +31,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/student-admission" element={<StudentAdmission />} />
             <Route path="/applicants-home" element={<ApplicantsHome />} />
             <Route path="/students-home" element={<StudentsHome />} />
             <Route path="/subject-Home" element={<SubjectHomePage />} />
