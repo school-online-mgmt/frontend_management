@@ -292,7 +292,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Get all exams
     getExams = async (payload: {
             sessionId: string,
-            classId: string,
+            classId?: string,
             courseId?: string,
             examTerm?: string
         }) => {
