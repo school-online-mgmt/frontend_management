@@ -1,21 +1,7 @@
-import { useState, useEffect } from 'react';
-import api from '../api/api.ts';
+import { useAuthContext } from '../context/AuthContext';
 
 const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const response = await api.checkAuth();
-        setIsAuthenticated(!!response.user.id);
-      } catch (error) {
-        setIsAuthenticated(false);
-      }
-    };
-    verifyAuth();
-  }, []);
-  return isAuthenticated;
+    return useAuthContext();
 };
 
 export default useAuth;

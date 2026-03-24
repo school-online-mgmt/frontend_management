@@ -1,22 +1,26 @@
+import React from "react";
+
 type ConfirmModalProps = {
     title: string;
-    message: string;
+    message?: string;
     confirmText?: string;
     cancelText?: string;
     loading?: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    children?: React.ReactNode;
 };
 
 const ConfirmModal =
     ({
           title,
-          message,
           confirmText = "Confirm",
           cancelText = "Cancel",
           loading = false,
+          message,
           onConfirm,
-          onCancel
+          onCancel,
+        children
       }: ConfirmModalProps) => {
 
     return (
@@ -28,12 +32,15 @@ const ConfirmModal =
                 className="bg-white rounded-xl w-[440px] p-6 space-y-4 shadow-lg"
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 className="text-lg font-semibold">
+                <h2 className="text-xl font-semibold">
                     {title}
                 </h2>
-                <p className="text-slate-600">
-                    {message}
-                </p>
+                {message && (
+                    <span className="mt-2 block text-sm text-red-600">{message}</span>
+                )}
+                {children && (
+                    <div className="space-y-3 pt-2">{children}</div>
+                )}
                 <div className="flex justify-end gap-3 pt-2">
                     <button
                         disabled={loading}
@@ -47,7 +54,7 @@ const ConfirmModal =
                         onClick={onConfirm}
                         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                     >
-                        {loading ? "Removing..." : confirmText}
+                        {loading ? "Processing..." : confirmText}
                     </button>
                 </div>
             </div>
