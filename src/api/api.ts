@@ -184,28 +184,6 @@ class API {
     return response.data.sections;
 };
 
-//Get all Teachers
-getTeachers = async () => {
-    const response = await apiClient.get('/management/teacher');
-    return response.data.teachers;
-  };
-
-//Get Teacher by id
-getTeacherById = async (id: string) => {
-    const response = await apiClient.get(`/management/teacher/${id}`);
-    return response.data;
-  };
-
-//Create Teacher
-createTeacher = async (teacherData: {
-    name: string;
-    gender: string;
-    age: number;
-    qualification: string
-  }) => {
-    const response = await apiClient.post('/management/teacher/create', teacherData);
-    return response.data;
-  };
 
 //get All Sessions
 getSessions= async () => {
@@ -253,12 +231,7 @@ confirmStudentAdmission = async (applicantId: string, data: { sessionId: string,
     return response.data;
 };
 
-// New methods for applicants and students
-getApplicants = async () => {
-    const response = await apiClient.get('/management/student/applied');
-    return response.data;
-};
-
+// New methods for applicants and students  
 getApplicantById = async (applicantId: string) => {
     const response = await apiClient.get(`/management/student/applied/${applicantId}`);
     return response.data;
@@ -276,11 +249,6 @@ acceptApplication = async (applicantId: string) => {
 
 getStudents = async () => {
     const response = await apiClient.get('/management/student/');
-    return response.data;
-};
-
-getStudentById = async (id: string) => {
-    const response = await apiClient.get(`/management/student/${id}`);
     return response.data;
 };
 
@@ -357,6 +325,96 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
             `/management/exam/${examId}/addQuestionPaper`,
             payload
         );
+        return res.data;
+    };
+
+    // Delete exam paper
+    deleteExam = async (examId: string) => {
+        const res = await apiClient.delete(`/management/exam/${examId}`);
+        return res.data;
+    };
+
+    // ── Student Management APIs ───────────────────────────────────────────────
+    // Get all applicants
+    getApplicants = async () => {
+        const res = await apiClient.get("/management/student/applied");
+        return res.data;
+    };
+
+    // Get student details
+    getStudentById = async (studentId: string) => {
+        const res = await apiClient.get(`/management/student/${studentId}`);
+        return res.data;
+    };
+
+    // Create admission for student
+    createAdmission = async (studentId: string, admissionData: {
+        sessionId: string;
+        classId: string;
+        sectionId: string;
+        courseId: string;
+        rollNo: string;
+        transportOpted: boolean;
+        transportZoneId?: string;
+    }) => {
+        const res = await apiClient.post(`/management/student/${studentId}/admission`, admissionData);
+        return res.data;
+    };
+
+    // Reject application
+    rejectApplication = async (applicantId: string) => {
+        const res = await apiClient.patch(`/management/student/${applicantId}/reject`);
+        return res.data;
+    };
+
+    // Search students
+    searchStudents = async (query: string) => {
+        const res = await apiClient.get("/management/student/search", {
+            params: { query },
+        });
+        return res.data;
+    };
+
+    // ── Teacher Management APIs ──────────────────────────────────────────────
+    // Get all teachers
+    getTeachers = async () => {
+        const res = await apiClient.get("/management/teacher");
+        return res.data;
+    };
+
+    // Get teacher by ID
+    getTeacherById = async (teacherId: string) => {
+        const res = await apiClient.get(`/management/teacher/${teacherId}`);
+        return res.data;
+    };
+
+    // Create teacher (note: different signature than below)
+    createTeacherEntry = async (teacherData: {
+        name: string;
+        gender: string;
+        age: number;
+        qualification: string;
+        phone?: string;
+    }) => {
+        const res = await apiClient.post("/management/teacher/create", teacherData);
+        return res.data;
+    };
+
+    // Update teacher
+    updateTeacher = async (teacherId: string, teacherData: any) => {
+        const res = await apiClient.patch(`/management/teacher/${teacherId}`, teacherData);
+        return res.data;
+    };
+
+    // Delete teacher
+    deleteTeacher = async (teacherId: string) => {
+        const res = await apiClient.delete(`/management/teacher/${teacherId}`);
+        return res.data;
+    };
+
+    // Assign subject to teacher
+    assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
+        const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
         return res.data;
     };
 }

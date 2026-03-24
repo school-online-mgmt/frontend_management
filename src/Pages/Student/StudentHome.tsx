@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { RefreshCcw, User, CheckCircle, Edit } from "lucide-react";
+import { RefreshCcw, CheckCircle, Edit, Users, Mail, Phone } from "lucide-react";
 import api from "../../api/api";
 import UpdateStudentModal from "../../components/Student/UpdateStudentModal";
 import ConfirmAdmissionModal from "../../components/Student/ConfirmAdmissionModal";
+import Button from "../../components/common/Button";
+import { Card, CardContent, Badge, EmptyState } from "../../components/common/FormComponents";
+import { PageWrapper, PageContent, PageHeader, Section } from "../../components/common/PageWrappers";
 
 const StudentHome = () => {
     const [students, setStudents] = useState<any[]>([]);
@@ -11,6 +14,7 @@ const StudentHome = () => {
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+    const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
 
     const fetchStudents = async () => {
         setIsLoading(true);
@@ -43,7 +47,7 @@ const StudentHome = () => {
         if (!selectedApplicant) return;
         try {
             await api.confirmStudentAdmission(selectedApplicant.id, data);
-            fetchStudents(); // Refresh list
+            fetchStudents();
         } catch (error) {
             console.error("Error confirming admission", error);
         } finally {
@@ -52,7 +56,7 @@ const StudentHome = () => {
     };
 
     return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
+        <PageWrapper>
             {isUpdateModalOpen && selectedStudent && (
                 <UpdateStudentModal
                     student={selectedStudent}
@@ -69,114 +73,170 @@ const StudentHome = () => {
                 />
             )}
 
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Student Admissions
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        Review and manage student applications
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={fetchStudents}
-                        disabled={isLoading}
-                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm hover:bg-slate-50 flex items-center gap-2 transition"
-                    >
-                        <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
-                        Refresh
-                    </button>
-                </div>
-            </header>
+            <PageContent>
+                <PageHeader
+                    title="Student Admissions"
+                    subtitle="Review and manage student applications"
+                    actions={
+                        <Button
+                            variant="secondary"
+                            icon={<RefreshCcw size={18} />}
+                            isLoading={isLoading}
+                            onClick={fetchStudents}
+                        >
+                            Refresh
+                        </Button>
+                    }
+                />
 
-            <main>
-                <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                        <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                            <User size={20} className="text-slate-400" />
-                            Applied Students
-                        </h2>
+                <Section>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="text-sm text-slate-600">
+                            Found <span className="font-bold text-slate-900">{students.length}</span> applications
+                        </div>
+                        <div className="flex gap-2 border border-slate-200 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewType('grid')}
+                                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${viewType === 'grid' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                Grid
+                            </button>
+                            <button
+                                onClick={() => setViewType('table')}
+                                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${viewType === 'table' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                Table
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-left">
-                            <thead>
-                                <tr className="border-b border-slate-100">
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Student Name</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Email</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Phone</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Gender</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={5} className="text-center p-16 text-slate-500">
-                                            <RefreshCcw size={18} className="animate-spin inline mr-2" />
-                                            Loading students...
-                                        </td>
-                                    </tr>
-                                ) : students.length > 0 ? (
-                                    students.map((student: any) => (
-                                        <tr
-                                            key={student.id}
-                                            className="hover:bg-slate-50 transition"
-                                        >
-                                            <td className="p-4 font-semibold text-slate-800 flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                                    <User size={20} />
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+                        </div>
+                    ) : students.length === 0 ? (
+                        <EmptyState
+                            icon={<Users size={48} />}
+                            title="No Applications Yet"
+                            description="No student applications have been submitted"
+                        />
+                    ) : viewType === 'grid' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {students.map((student: any) => (
+                                <Card key={student.id} hoverable bordered>
+                                    <CardContent>
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                                                    {(student.firstName?.charAt(0) || 'S').toUpperCase()}
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span>{student.firstName} {student.middleName} {student.lastName}</span>
-                                                    <span className="text-xs font-mono text-slate-400 font-normal">
-                                                        {student.id.split('-')[0]}...
-                                                    </span>
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">
+                                                        {student.firstName} {student.lastName}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500">{student.middleName}</p>
                                                 </div>
-                                            </td>
-                                            <td className="p-4 text-slate-600">
+                                            </div>
+                                            <Badge variant="info">Pending</Badge>
+                                        </div>
+
+                                        <div className="space-y-3 mb-4">
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                <Mail size={14} className="text-slate-400" />
                                                 {student.email}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                <Phone size={14} className="text-slate-400" />
                                                 {student.phone}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                {student.gender}
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <div className="flex gap-2 justify-end">
-                                                    <button
-                                                        onClick={() => handleUpdate(student)}
-                                                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm"
-                                                    >
-                                                        <Edit size={14} />
-                                                        Update
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleConfirm(student)}
-                                                        className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1 text-sm"
-                                                    >
-                                                        <CheckCircle size={14} />
-                                                        Confirm
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-sm mb-4">
+                                            <span className="text-slate-600">Gender: </span>
+                                            <span className="font-semibold text-slate-900">{student.gender}</span>
+                                        </div>
+                                    </CardContent>
+                                    <div className="border-t border-slate-100 px-6 py-3 flex gap-2">
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            icon={<Edit size={14} />}
+                                            onClick={() => handleUpdate(student)}
+                                            fullWidth
+                                        >
+                                            Update
+                                        </Button>
+                                        <Button
+                                            variant="success"
+                                            size="sm"
+                                            icon={<CheckCircle size={14} />}
+                                            onClick={() => handleConfirm(student)}
+                                            fullWidth
+                                        >
+                                            Confirm
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <Card hoverable bordered>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50">
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Student</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Email</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Phone</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Gender</th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={5} className="text-center p-16 text-slate-500">
-                                            No applied students
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </main>
-        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {students.map((student: any) => (
+                                            <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                                            {(student.firstName?.charAt(0) || 'S').toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-slate-900">{student.firstName} {student.lastName}</p>
+                                                            <p className="text-xs text-slate-500">{student.middleName}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{student.email}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{student.phone}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{student.gender}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            onClick={() => handleUpdate(student)}
+                                                        >
+                                                            <Edit size={14} />
+                                                        </Button>
+                                                        <Button
+                                                            variant="success"
+                                                            size="sm"
+                                                            onClick={() => handleConfirm(student)}
+                                                        >
+                                                            <CheckCircle size={14} />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
+                    )}
+                </Section>
+            </PageContent>
+        </PageWrapper>
     );
 };
 

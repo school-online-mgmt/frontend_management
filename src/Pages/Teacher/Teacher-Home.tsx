@@ -1,13 +1,20 @@
 import { useState, useEffect } from "react";
-import { Plus, User, RefreshCcw, GraduationCap, Users } from "lucide-react";
+import { Plus, RefreshCcw, Users, Search, ChevronRight, Phone, Briefcase } from "lucide-react";
 import api from "../../api/api";
 import { useNavigate } from "react-router-dom";
 import CreateTeacher from "../../components/CreateTeacher";
+import Button from "../../components/common/Button";
+import { Card, CardContent, Badge, EmptyState } from "../../components/common/FormComponents";
+import { PageWrapper, PageContent, PageHeader, Section } from "../../components/common/PageWrappers";
+import { Input } from "../../components/common/FormComponents";
 
 const TeacherHome = () => {
     const [teachers, setTeachers] = useState<any[]>([]);
+    const [filteredTeachers, setFilteredTeachers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
 
     const navigate = useNavigate();
 
@@ -15,7 +22,9 @@ const TeacherHome = () => {
         setIsLoading(true);
         try {
             const data = await api.getTeachers();
-            setTeachers(data);
+            const teacherList = Array.isArray(data) ? data : data.teachers || [];
+            setTeachers(teacherList);
+            filterTeachers(teacherList, searchTerm, filterStatus);
         } catch (error) {
             console.error("Error fetching teachers", error);
             setTeachers([]);
@@ -24,121 +33,162 @@ const TeacherHome = () => {
         }
     };
 
+    const filterTeachers = (list: any[], search: string, status: string) => {
+        let filtered = list;
+        
+        if (search) {
+            filtered = filtered.filter(t => 
+                t.name.toLowerCase().includes(search.toLowerCase()) ||
+                t.email?.toLowerCase().includes(search.toLowerCase())
+            );
+        }
+
+        if (status !== "all") {
+            filtered = filtered.filter(t => 
+                status === "active" ? t.isActive : !t.isActive
+            );
+        }
+
+        setFilteredTeachers(filtered);
+    };
+
     useEffect(() => {
         fetchTeachers();
     }, []);
 
+    useEffect(() => {
+        filterTeachers(teachers, searchTerm, filterStatus);
+    }, [searchTerm, filterStatus, teachers]);
+
     return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
-            {isCreateModalOpen && (
-                <CreateTeacher
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onRefresh={fetchTeachers}
+        <PageWrapper>
+            <PageContent>
+                {isCreateModalOpen && (
+                    <CreateTeacher
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onRefresh={fetchTeachers}
+                    />
+                )}
+
+                <PageHeader
+                    title="Teachers Management"
+                    subtitle="Manage your teaching staff and view their assignments"
+                    actions={
+                        <>
+                            <Button 
+                                variant="secondary" 
+                                icon={<RefreshCcw size={18} />}
+                                isLoading={isLoading}
+                                onClick={fetchTeachers}
+                            >
+                                Refresh
+                            </Button>
+                            <Button 
+                                variant="primary" 
+                                icon={<Plus size={18} />}
+                                onClick={() => setIsCreateModalOpen(true)}
+                            >
+                                Add Teacher
+                            </Button>
+                        </>
+                    }
                 />
-            )}
 
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Teacher Management
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        Register, view and manage faculty members
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={fetchTeachers}
-                        disabled={isLoading}
-                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm hover:bg-slate-50 flex items-center gap-2 transition"
-                    >
-                        <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
-                        Refresh
-                    </button>
-
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 flex items-center gap-2 transition"
-                    >
-                        <Plus size={18} />
-                        Add Teacher
-                    </button>
-                </div>
-            </header>
-
-            <main>
-                <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                        <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                            <Users size={20} className="text-slate-400" />
-                            All Teachers
-                        </h2>
+                <Section>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <Input
+                            icon={<Search size={18} />}
+                            placeholder="Search by name or email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <select 
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="px-4 py-3 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                        </select>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-left">
-                            <thead>
-                                <tr className="border-b border-slate-100">
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Teacher Name</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Gender</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500">Age</th>
-                                    <th className="p-4 text-sm font-semibold uppercase text-slate-500 text-right">Qualification</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={4} className="text-center p-16 text-slate-500">
-                                            <RefreshCcw size={18} className="animate-spin inline mr-2" />
-                                            Loading teachers...
-                                        </td>
-                                    </tr>
-                                ) : teachers.length > 0 ? (
-                                    teachers.map((teacher: any) => (
-                                        <tr
-                                            key={teacher.id}
-                                            onClick={() => navigate(`/teacher/${teacher.id}`)}
-                                            className="hover:bg-slate-50 cursor-pointer transition"
-                                        >
-                                            <td className="p-4 font-semibold text-slate-800 flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                                    <User size={20} />
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+                        </div>
+                    ) : filteredTeachers.length === 0 ? (
+                        <EmptyState
+                            icon={<Users size={48} />}
+                            title="No Teachers Found"
+                            description={searchTerm ? "Try adjusting your search terms" : "Add your first teacher to get started"}
+                            action={
+                                <Button 
+                                    variant="primary"
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                >
+                                    Add Teacher
+                                </Button>
+                            }
+                        />
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredTeachers.map((teacher) => (
+                                <Card 
+                                    key={teacher.id} 
+                                    hoverable 
+                                    bordered
+                                    className="cursor-pointer"
+                                    onClick={() => navigate(`/teacher/${teacher.id}`)}
+                                >
+                                    <CardContent className="pb-0">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                                                    {teacher.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span>{teacher.name}</span>
-                                                    <span className="text-xs font-mono text-slate-400 font-normal">
-                                                        {teacher.id.split('-')[0]}...
-                                                    </span>
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">{teacher.name}</p>
+                                                    <p className="text-xs text-slate-500">{teacher.qualification}</p>
                                                 </div>
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                {teacher.gender}
-                                            </td>
-                                            <td className="p-4 text-slate-600">
-                                                {teacher.age}
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">
-                                                    <GraduationCap size={14} />
-                                                    {teacher.qualification}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} className="text-center p-16 text-slate-500">
-                                            No teachers registered yet
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                            </div>
+                                            <Badge variant={teacher.isActive ? "success" : "warning"}>
+                                                {teacher.isActive ? "Active" : "Inactive"}
+                                            </Badge>
+                                        </div>
+
+                                        <div className="space-y-3 mt-4">
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                <Phone size={14} className="text-slate-400" />
+                                                {teacher.phone || "No phone"}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                <Briefcase size={14} className="text-slate-400" />
+                                                {teacher.gender} • {teacher.age} years
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                    <div className="border-t border-slate-100 px-6 py-3 flex items-center justify-between">
+                                        <span className="text-xs font-medium text-slate-600">View Details</span>
+                                        <ChevronRight size={16} className="text-slate-400" />
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </Section>
+
+                <Section>
+                    <div className="bg-white rounded-xl border border-slate-100 p-6">
+                        <p className="text-sm text-slate-600">
+                            Showing <span className="font-semibold text-slate-900">{filteredTeachers.length}</span> of <span className="font-semibold text-slate-900">{teachers.length}</span> teachers
+                        </p>
                     </div>
-                </div>
-            </main>
-        </div>
+                </Section>
+            </PageContent>
+        </PageWrapper>
     );
 };
 
 export default TeacherHome;
+
