@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext.tsx';
 import SubjectHomePage from './Pages/Subject/SubjectHome.tsx';
-import Subject from './Pages/Subject/Subject.tsx'; 
+import SubjectDetails from './Pages/Subject/Subject.tsx';
 import LoginPage from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -24,8 +25,9 @@ import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
         
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
@@ -35,7 +37,7 @@ function App() {
             <Route path="/applicants-home" element={<ApplicantsHome />} />
             <Route path="/students-home" element={<StudentsHome />} />
             <Route path="/subject-Home" element={<SubjectHomePage />} />
-             <Route path="/subject/:slug" element={<Subject />} /> 
+             <Route path="/subject/:slug" element={<SubjectDetails />} /> 
             <Route path="/course-Home" element={<CourseHome />} />
             <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/exam-home" element={<ExamHome />} />
@@ -54,7 +56,8 @@ function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

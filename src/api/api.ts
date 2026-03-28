@@ -9,13 +9,22 @@ const apiClient = axios.create({
   withCredentials: true, // Important for sessions/cookies
 });
 
+// Store the logout callback to be set by AuthProvider
+let logoutCallback: (() => void) | null = null;
+
+export const setLogoutCallback = (callback: () => void) => {
+    logoutCallback = callback;
+};
+
 // Add a response interceptor to handle global errors (like 401 Unauthorized)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Optional: Redirect to login or clear local storage if you were storing tokens
-      // window.location.href = '/login'; 
+      console.warn("Unauthorized - triggering logout");
+      if (logoutCallback) {
+          logoutCallback();
+      }
     }
     return Promise.reject(error);
   }
@@ -28,6 +37,16 @@ class API {
   };
   checkAuth = async () => {
     const response = await apiClient.get('/management/auth/verifyAuth');
+    return response.data;
+  };
+
+  logout = async () => {
+    const response = await apiClient.post('/management/auth/logout');
+    return response.data;
+  };
+
+  refreshToken = async () => {
+    const response = await apiClient.post('/management/auth/refresh');
     return response.data;
   };
 
@@ -247,8 +266,13 @@ acceptApplication = async (applicantId: string) => {
     return response.data;
 };
 
-getStudents = async () => {
-    const response = await apiClient.get('/management/student/');
+getStudents = async (subjectId?: string, sessionId?: string) => {
+    const response = await apiClient.get('/management/student/', {
+        params: {
+            ...(subjectId && { subjectId }),
+            ...(sessionId && { sessionId }),
+        },
+    });
     return response.data;
 };
 
@@ -334,7 +358,38 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
+    // Conduct exam - creates results for all students in subject section
+    conductExam = async (examId: string, payload: { conductedDate: Date }) => {
+        const res = await apiClient.patch(
+            `/management/exam/${examId}/conduct`,
+            payload
+        );
+        return res.data;
+    };
+
+    // Complete attendance marking - transition to AWAITING_RESULT
+    completeAttendance = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/complete-attendance`);
+        return res.data;
+    };
+
+    // Get exam results
+    getExamResults = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/results`);
+        return res.data;
+    };
+
+    // Update result marks (teacher or principal)
+    updateResultMarks = async (resultId: string, payload: { marks: number; remarks?: string }) => {
+        const res = await apiClient.patch(
+            `/management/result/${resultId}/updateMarks`,
+            payload
+        );
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
+
     // Get all applicants
     getApplicants = async () => {
         const res = await apiClient.get("/management/student/applied");

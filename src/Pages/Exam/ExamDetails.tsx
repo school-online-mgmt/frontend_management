@@ -18,23 +18,35 @@ import ConfirmModal from "../../components/common/ConfirmModal";
 const STATUS_CONFIG: Record<string, {
     label: string; className: string; icon: ReactElement | null; description: string;
 }> = {
-    AWAITING_SYLLABUS_UPDATE: {
+    AWAITING_SYLLABUS: {
         label: "Awaiting Syllabus",
         className: "bg-amber-100 text-amber-700 border border-amber-200",
         icon: <Clock size={14} />,
         description: "The assigned teacher needs to submit the syllabus for this exam paper.",
     },
-    AWAITING_DATE_SCHEDULING: {
-        label: "Awaiting Scheduling",
+    AWAITING_EXAM_DATE: {
+        label: "Awaiting Exam Date",
         className: "bg-blue-100 text-blue-700 border border-blue-200",
         icon: <Calendar size={14} />,
-        description: "Syllabus has been submitted. The principal needs to assign an exam date and publish.",
+        description: "Syllabus has been submitted. Schedule the exam date.",
     },
-    PUBLISHED: {
-        label: "Published",
+    EXAM_CONDUCTED: {
+        label: "Exam Conducted",
+        className: "bg-purple-100 text-purple-700 border border-purple-200",
+        icon: <CheckCircle2 size={14} />,
+        description: "The exam has been conducted. Results are being collected.",
+    },
+    AWAITING_RESULT: {
+        label: "Awaiting Results",
+        className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+        icon: <FileText size={14} />,
+        description: "Results are pending submission from teachers.",
+    },
+    COMPLETE: {
+        label: "Complete",
         className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
         icon: <CheckCircle2 size={14} />,
-        description: "This exam paper is published and ready for students.",
+        description: "All results have been submitted and exam is complete.",
     },
 };
 
@@ -66,9 +78,11 @@ const InfoItem = ({ icon, label, value }: { icon: ReactElement; label: string; v
 
 // ─── Workflow step indicator ─────────────────────────────────────────────────
 const STEPS = [
-    { key: "AWAITING_SYLLABUS_UPDATE", label: "Syllabus" },
-    { key: "AWAITING_DATE_SCHEDULING", label: "Scheduling" },
-    { key: "PUBLISHED", label: "Published" },
+    { key: "AWAITING_SYLLABUS", label: "Syllabus" },
+    { key: "AWAITING_EXAM_DATE", label: "Schedule" },
+    { key: "EXAM_CONDUCTED", label: "Conducted" },
+    { key: "AWAITING_RESULT", label: "Results" },
+    { key: "COMPLETE", label: "Complete" },
 ];
 
 const stepIndex = (status: string) => STEPS.findIndex(s => s.key === status);
@@ -110,6 +124,7 @@ const ExamDetails = () => {
     const [exam, setExam] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [completingAttendance, setCompletingAttendance] = useState(false);
 
     const [editOpen, setEditOpen] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -157,6 +172,21 @@ const ExamDetails = () => {
         }
     };
 
+    const handleCompleteAttendance = async () => {
+        try {
+            setCompletingAttendance(true);
+            await api.completeAttendance(examId);
+            setMessage("Exam attendance completed! Status transitioned to AWAITING_RESULT.");
+            setMessageType("success");
+            fetchExam();
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to complete attendance marking");
+            setMessageType("error");
+        } finally {
+            setCompletingAttendance(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -177,16 +207,18 @@ const ExamDetails = () => {
     const statusCfg = STATUS_CONFIG[exam.status] ?? { description: "" };
 
     // ── Action visibility rules ──────────────────────────────────────────────
-    // Add Syllabus: teacher or principal when status is AWAITING_SYLLABUS_UPDATE
-    const canAddSyllabus = exam.status === "AWAITING_SYLLABUS_UPDATE"
+    // Add Syllabus: teacher or principal when status is AWAITING_SYLLABUS
+    const canAddSyllabus = exam.status === "AWAITING_SYLLABUS"
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Add Question Paper: teacher or principal when status is AWAITING_DATE_SCHEDULING
-    const canAddQP = exam.status === "AWAITING_DATE_SCHEDULING"
+    // Add Question Paper: teacher or principal when status is AWAITING_EXAM_DATE
+    const canAddQP = exam.status === "AWAITING_EXAM_DATE"
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Schedule & Publish: principal only when status is AWAITING_DATE_SCHEDULING
-    const canSchedule = exam.status === "AWAITING_DATE_SCHEDULING" && isPrincipalOrAdmin;
+    // Schedule & Publish: principal only when status is AWAITING_EXAM_DATE and no date set yet
+    const canSchedule = exam.status === "AWAITING_EXAM_DATE" 
+        && isPrincipalOrAdmin 
+        && (!exam.examDate || exam.examDate === null);
 
     // Edit / Delete: principal only
 
@@ -256,6 +288,16 @@ const ExamDetails = () => {
                             Edit
                         </button>
                     )}
+                    {exam.status === "EXAM_CONDUCTED" && isPrincipalOrAdmin && (
+                        <button
+                            onClick={handleCompleteAttendance}
+                            disabled={completingAttendance}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                            <CheckCircle2 size={14} />
+                            {completingAttendance ? "Completing..." : "Complete Attendance"}
+                        </button>
+                    )}
                     {isPrincipalOrAdmin && (
                         <button
                             onClick={() => setDeleteOpen(true)}
@@ -301,17 +343,17 @@ const ExamDetails = () => {
             {/* Pending Actions Banner */}
             {(canAddSyllabus || canSchedule) && (
                 <div className={`rounded-2xl border-2 p-5 ${
-                    exam.status === "AWAITING_SYLLABUS_UPDATE"
+                    exam.status === "AWAITING_SYLLABUS"
                         ? "border-amber-200 bg-amber-50"
                         : "border-blue-200 bg-blue-50"
                 }`}>
                     <p className="font-semibold text-slate-800 mb-1">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "⚠️ Action Required: Submit Syllabus"
                             : "📅 Action Required: Schedule Exam"}
                     </p>
                     <p className="text-sm text-slate-600 mb-4">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "Please add the syllabus for this exam paper to proceed to the scheduling stage."
                             : "The syllabus has been submitted. Please set an exam date to publish this paper."}
                     </p>
@@ -356,7 +398,7 @@ const ExamDetails = () => {
                     <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{exam.syllabus}</p>
                 ) : (
                     <p className="text-slate-400 italic text-sm">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "No syllabus submitted yet."
                             : "No syllabus on record."}
                     </p>
@@ -383,7 +425,7 @@ const ExamDetails = () => {
                     <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{exam.questionPaper}</p>
                 ) : (
                     <p className="text-slate-400 italic text-sm">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "Question paper can be added after the syllabus is submitted."
                             : "No question paper uploaded yet."}
                     </p>

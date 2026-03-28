@@ -218,7 +218,7 @@ const CreateExamModal = ({
                     <option value="">Select {filterType}</option>
                     {filterOptions.map((item) => (
                         <option key={item.id} value={item.id}>
-                            {item.name}
+                            {item.description}
                         </option>
                     ))}
                 </select>
@@ -255,7 +255,7 @@ const CreateExamModal = ({
                                     key={s.id}
                                     className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm"
                                 >
-                                    {s.name}
+                                    {s.description}
                                     <button onClick={() => toggleSubject(s.id)}>✕</button>
                                 </div>
                             ))}
@@ -276,7 +276,7 @@ const CreateExamModal = ({
                                         onClick={() => toggleSubject(s.id)}
                                         className="text-sm p-2 cursor-pointer hover:bg-slate-100 rounded"
                                     >
-                                        {s.name}
+                                        {s.description}
                                     </div>
                                 ))
                         ) : (
