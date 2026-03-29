@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import {LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users} from 'lucide-react';
+import {LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users, Bell} from 'lucide-react';
 
 const Layout = () => {
   const location = useLocation();
@@ -18,6 +18,7 @@ const Layout = () => {
     { path: '/course-Home', label: 'Courses', icon: GraduationCap },
     { path: '/class-Home', label: 'Classes', icon: Users },
     { path: '/exam-home', label: 'Exams', icon: BookOpen },
+    { path: '/notices', label: 'Notices', icon: Bell },
   ];
 
   return (

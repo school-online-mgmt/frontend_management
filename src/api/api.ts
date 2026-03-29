@@ -234,7 +234,93 @@ updateSubject = async (id: string, data: { name: string, slug: string, bookName:
     return response.data;
 };
 
-// --- Student APIs ---
+    // Get sections for a class
+    getSectionsByClass = async (classId: string) => {
+        const response = await apiClient.get(`/management/class/${classId}/sections`);
+        return response.data.sections ?? response.data ?? [];
+    };
+
+    // ── Notice Board APIs ─────────────────────────────────────────────────────
+
+    getNoticeBoards = async (params?: { visibility?: string; classId?: string }) => {
+        const res = await apiClient.get("/management/notice/boards", { params });
+        return res.data;
+    };
+
+    createNoticeBoard = async (data: {
+        name: string; description?: string; visibility: string;
+        classId?: string; sectionId?: string; approverId?: string;
+    }) => {
+        const res = await apiClient.post("/management/notice/boards/create", data);
+        return res.data;
+    };
+
+    getNoticeBoardById = async (boardId: string) => {
+        const res = await apiClient.get(`/management/notice/boards/${boardId}`);
+        return res.data;
+    };
+
+    updateNoticeBoard = async (boardId: string, data: { name?: string; description?: string; approverId?: string; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/notice/boards/${boardId}/update`, data);
+        return res.data;
+    };
+
+    deleteNoticeBoard = async (boardId: string) => {
+        const res = await apiClient.delete(`/management/notice/boards/${boardId}`);
+        return res.data;
+    };
+
+    getNoticeBoardNotices = async (boardId: string, params?: { status?: string }) => {
+        const res = await apiClient.get(`/management/notice/boards/${boardId}/notices`, { params });
+        return res.data;
+    };
+
+    createNotice = async (boardId: string, data: {
+        title: string; body: string; startDateTime: string; endDateTime: string;
+        priority?: string; publishDirectly?: boolean;
+    }) => {
+        const res = await apiClient.post(`/management/notice/boards/${boardId}/notices/create`, data);
+        return res.data;
+    };
+
+    approveNotice = async (noticeId: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/approve`);
+        return res.data;
+    };
+
+    rejectNotice = async (noticeId: string, rejectionReason: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/reject`, { rejectionReason });
+        return res.data;
+    };
+
+    archiveNotice = async (noticeId: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/archive`);
+        return res.data;
+    };
+
+    updateNotice = async (noticeId: string, data: { title?: string; body?: string; startDateTime?: string; endDateTime?: string; priority?: string }) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/update`, data);
+        return res.data;
+    };
+
+    deleteNotice = async (noticeId: string) => {
+        const res = await apiClient.delete(`/management/notice/notices/${noticeId}`);
+        return res.data;
+    };
+
+    getPendingNotices = async () => {
+        const res = await apiClient.get("/management/notice/notices/pending");
+        return res.data;
+    };
+
+    getNoticeApproverOptions = async () => {
+        const res = await apiClient.get("/management/notice/approver-options");
+        return res.data;
+    };
+
+    // ── END Notice Board APIs ─────────────────────────────────────────────────
+
+    // --- Student APIs ---
 getAppliedStudents = async () => {
     const response = await apiClient.get('/management/student/applied');
     return response.data;
