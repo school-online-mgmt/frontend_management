@@ -126,7 +126,7 @@ export interface CourseSubject {
   subject?: Subject;
 }
 
-export type ExamStatus = 'AWAITING_SYLLABUS' | 'AWAITING_EXAM_DATE' | 'EXAM_CONDUCTED' | 'PUBLISHED' | 'AWAITING_SYLLABUS' | 'AWAITING_DATE_SCHEDULING';
+export type ExamStatus = 'AWAITING_SYLLABUS' | 'AWAITING_EXAM_DATE' | 'EXAM_CONDUCTED' | 'AWAITING_RESULT' | 'PUBLISHED' | 'AWAITING_DATE_SCHEDULING';
 
 export interface ExamPaper {
   id: string;

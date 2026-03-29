@@ -238,7 +238,7 @@ const CourseDetails = () => {
                                 className="flex justify-between items-center p-4"
                             >
                                 <span
-                                    // onClick={() => navigate(`/subject/${cs.subject.slug}`)}
+                                    onClick={() => navigate(`/subject/${subject.slug}`)}
                                     className="font-medium hover:underline cursor-pointer"
                                 >
                                     {subject.name}

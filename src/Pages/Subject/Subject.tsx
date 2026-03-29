@@ -58,11 +58,15 @@ const SubjectDetailsPage = () => {
     });
 
     // React Query - Assigned Teachers
-    const { data: assignedTeachers = [] } = useQuery({
+    const { data: assignedTeachersData } = useQuery({
         queryKey: ['assignedTeachers', subject?.id],
         queryFn: () => api.getSubjectTeachers(subject!.id),
         enabled: !!subject?.id,
     });
+
+    const assignedTeachers = Array.isArray(assignedTeachersData) 
+        ? assignedTeachersData 
+        : (assignedTeachersData?.subjectTeachers || assignedTeachersData?.teachers || []);
 
     // Mutations
     const updateSubjectMutation = useMutation({
@@ -303,20 +307,20 @@ const SubjectDetailsPage = () => {
 
             <div className="bg-white rounded-2xl border border-slate-100">
                 <div className="p-4 border-b font-semibold">Courses containing this subject</div>
-                <div className="divide-y">
-                    {subject.courseSubjects?.length === 0 ? (
-                        <p className="p-6 text-slate-500">Not assigned to any courses.</p>
-                    ) : (
-                        subject.courseSubjects?.map((cs: any) => (
+                {subject.courseSubjects?.length === 0 ? (
+                    <div className="p-6 text-slate-500">Not assigned to any courses.</div>
+                ) : (
+                    <div className="divide-y">
+                        {subject.courseSubjects?.map((cs: any) => (
                             <div key={cs.course.id} className="flex justify-between items-center p-4">
                                 <span
                                     onClick={() => navigate(`/course/${cs.course.id}`)}
                                     className="font-medium hover:underline cursor-pointer"
                                 >{cs.course.name}</span>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Teachers Section */}
@@ -375,11 +379,11 @@ const SubjectDetailsPage = () => {
                     </div>
                 )}
 
-                <div className="divide-y">
-                    {assignedTeachers.length === 0 ? (
-                        <p className="p-6 text-slate-500">No teachers assigned yet.</p>
-                    ) : (
-                        assignedTeachers.map((st: any) => (
+                {assignedTeachers.length === 0 ? (
+                    <div className="p-6 text-slate-500">No teachers assigned yet.</div>
+                ) : (
+                    <div className="divide-y">
+                        {assignedTeachers.map((st: any) => (
                             <div key={st.id} className="flex justify-between items-center p-4">
                                 <div>
                                     <p className="font-medium">{st.teachers?.name}</p>
@@ -393,9 +397,9 @@ const SubjectDetailsPage = () => {
                                     <X size={14} /> Remove
                                 </button>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

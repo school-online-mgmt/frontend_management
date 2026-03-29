@@ -382,9 +382,21 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Update result marks (teacher or principal)
     updateResultMarks = async (resultId: string, payload: { marks: number; remarks?: string }) => {
         const res = await apiClient.patch(
-            `/management/result/${resultId}/updateMarks`,
+            `/management/exam/result/${resultId}/marks`,
             payload
         );
+        return res.data;
+    };
+
+    // Publish exam results (principal only)
+    publishExamResults = async (examId: string) => {
+        const res = await apiClient.post(`/management/exam/${examId}/publish`);
+        return res.data;
+    };
+
+    // Get exam report/analytics (published exams)
+    getExamReport = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/report`);
         return res.data;
     };
 

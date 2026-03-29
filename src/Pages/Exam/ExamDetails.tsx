@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     BookOpen, Calendar, CheckCircle2, Clock, FileText,
-    Pencil, Trash2, User, BookMarked, GraduationCap
+    Pencil, Trash2, User, BookMarked, GraduationCap, Loader2
 } from "lucide-react";
 import api from "../../api/api";
 import BackButton from "../../components/common/BackButton";
@@ -13,40 +13,41 @@ import ScheduleExamModal from "../../components/Exam/ScheduleExamModal";
 import AddSyllabusModal from "../../components/Exam/AddSyllabusModal";
 import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import ExamReport from "../../components/Exam/ExamReport";
 
 // ─── Status badge ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, {
     label: string; className: string; icon: ReactElement | null; description: string;
 }> = {
     AWAITING_SYLLABUS: {
-        label: "Awaiting Syllabus",
+        label: "Syllabus Required",
         className: "bg-amber-100 text-amber-700 border border-amber-200",
         icon: <Clock size={14} />,
         description: "The assigned teacher needs to submit the syllabus for this exam paper.",
     },
     AWAITING_EXAM_DATE: {
-        label: "Awaiting Exam Date",
+        label: "Ready to Schedule",
         className: "bg-blue-100 text-blue-700 border border-blue-200",
         icon: <Calendar size={14} />,
-        description: "Syllabus has been submitted. Schedule the exam date.",
+        description: "Syllabus has been submitted. Schedule the exam date to proceed.",
     },
     EXAM_CONDUCTED: {
-        label: "Exam Conducted",
+        label: "Attendance In Progress",
         className: "bg-purple-100 text-purple-700 border border-purple-200",
         icon: <CheckCircle2 size={14} />,
-        description: "The exam has been conducted. Results are being collected.",
+        description: "The exam has been conducted. Teachers are recording student attendance.",
     },
     AWAITING_RESULT: {
-        label: "Awaiting Results",
+        label: "Grading In Progress",
         className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
         icon: <FileText size={14} />,
-        description: "Results are pending submission from teachers.",
+        description: "Attendance is complete. Teachers are entering marks for present students.",
     },
-    COMPLETE: {
-        label: "Complete",
+    PUBLISHED: {
+        label: "Results Published",
         className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
         icon: <CheckCircle2 size={14} />,
-        description: "All results have been submitted and exam is complete.",
+        description: "All results have been published and are visible to students.",
     },
 };
 
@@ -79,10 +80,10 @@ const InfoItem = ({ icon, label, value }: { icon: ReactElement; label: string; v
 // ─── Workflow step indicator ─────────────────────────────────────────────────
 const STEPS = [
     { key: "AWAITING_SYLLABUS", label: "Syllabus" },
-    { key: "AWAITING_EXAM_DATE", label: "Schedule" },
-    { key: "EXAM_CONDUCTED", label: "Conducted" },
-    { key: "AWAITING_RESULT", label: "Results" },
-    { key: "COMPLETE", label: "Complete" },
+    { key: "AWAITING_EXAM_DATE", label: "Scheduling" },
+    { key: "EXAM_CONDUCTED", label: "Attendance" },
+    { key: "AWAITING_RESULT", label: "Grading" },
+    { key: "PUBLISHED", label: "Published" },
 ];
 
 const stepIndex = (status: string) => STEPS.findIndex(s => s.key === status);
@@ -135,6 +136,11 @@ const ExamDetails = () => {
     const [message, setMessage] = useState<string | null>(null);
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
 
+    // Results state for AWAITING_RESULT status
+    const [examResults, setExamResults] = useState<any[]>([]);
+    const [resultsLoading, setResultsLoading] = useState(false);
+    const [publishing, setPublishing] = useState(false);
+
     const fetchExam = async () => {
         try {
             const data = await api.getExamById(examId);
@@ -147,6 +153,20 @@ const ExamDetails = () => {
     };
 
     useEffect(() => { fetchExam(); }, [examId]);
+
+    // Fetch results when exam is AWAITING_RESULT or PUBLISHED
+    useEffect(() => {
+        if (exam && (exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED")) {
+            setResultsLoading(true);
+            api.getExamResults(examId)
+                .then((data: any) => {
+                    const list = Array.isArray(data) ? data : (data.results || []);
+                    setExamResults(list);
+                })
+                .catch(() => setExamResults([]))
+                .finally(() => setResultsLoading(false));
+        }
+    }, [exam?.status, examId]);
 
     // Auto-dismiss messages
     useEffect(() => {
@@ -176,7 +196,7 @@ const ExamDetails = () => {
         try {
             setCompletingAttendance(true);
             await api.completeAttendance(examId);
-            setMessage("Exam attendance completed! Status transitioned to AWAITING_RESULT.");
+            setMessage("Attendance completed — exam status transitioned to Grading In Progress.");
             setMessageType("success");
             fetchExam();
         } catch (err: any) {
@@ -184,6 +204,21 @@ const ExamDetails = () => {
             setMessageType("error");
         } finally {
             setCompletingAttendance(false);
+        }
+    };
+
+    const handlePublishResults = async () => {
+        try {
+            setPublishing(true);
+            await api.publishExamResults(examId);
+            setMessage("Results published successfully!");
+            setMessageType("success");
+            fetchExam();
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to publish results");
+            setMessageType("error");
+        } finally {
+            setPublishing(false);
         }
     };
 
@@ -296,6 +331,16 @@ const ExamDetails = () => {
                         >
                             <CheckCircle2 size={14} />
                             {completingAttendance ? "Completing..." : "Complete Attendance"}
+                        </button>
+                    )}
+                    {exam.status === "AWAITING_RESULT" && isPrincipalOrAdmin && (
+                        <button
+                            onClick={handlePublishResults}
+                            disabled={publishing}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            <CheckCircle2 size={14} />
+                            {publishing ? "Publishing..." : "Publish Results"}
                         </button>
                     )}
                     {isPrincipalOrAdmin && (
@@ -431,6 +476,106 @@ const ExamDetails = () => {
                     </p>
                 )}
             </div>
+
+            {/* Results Overview — show for AWAITING_RESULT and PUBLISHED */}
+            {(exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED") && (
+                <div className="bg-white rounded-2xl border overflow-hidden">
+                    <div className="p-6 border-b bg-slate-50">
+                        <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+                            <FileText size={16} className="text-slate-400" />
+                            Exam Results
+                        </h2>
+                        {!resultsLoading && examResults.length > 0 && (() => {
+                            const present = examResults.filter((r: any) => r.attendanceStatus === "PRESENT");
+                            const absent = examResults.filter((r: any) => r.attendanceStatus === "ABSENT");
+                            const marksEntered = present.filter((r: any) => r.marks !== null && r.marks !== undefined);
+                            const marksMissing = present.length - marksEntered.length;
+                            return (
+                                <div className="flex flex-wrap gap-2 mt-3 text-sm font-medium">
+                                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
+                                        {examResults.length} Total
+                                    </span>
+                                    <span className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                        ✓ {present.length} Present
+                                    </span>
+                                    <span className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                                        ✗ {absent.length} Absent
+                                    </span>
+                                    <span className={`px-3 py-1.5 rounded-lg border ${
+                                        marksMissing === 0
+                                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                            : "bg-amber-50 border-amber-200 text-amber-700"
+                                    }`}>
+                                        📝 {marksEntered.length}/{present.length} marks entered
+                                    </span>
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {resultsLoading ? (
+                        <div className="p-12 flex items-center justify-center">
+                            <Loader2 size={24} className="animate-spin text-indigo-600" />
+                        </div>
+                    ) : examResults.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-sm">No result records found.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 border-b">
+                                    <tr>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Student</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Roll No</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Section</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Attendance</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Marks</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {examResults.map((r: any) => (
+                                        <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
+                                            <td className="px-5 py-3 font-medium text-slate-800">
+                                                {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "—"}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-600">
+                                                {r.rollNo || r.academic?.rollNo || "—"}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-600">
+                                                {r.sectionName || r.academic?.section?.name || "—"}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {r.attendanceStatus === "PRESENT" ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">✓ Present</span>
+                                                ) : r.attendanceStatus === "ABSENT" ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">✗ Absent</span>
+                                                ) : (
+                                                    <span className="text-slate-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {r.attendanceStatus === "ABSENT" ? (
+                                                    <span className="text-slate-400 text-xs">N/A</span>
+                                                ) : r.marks !== null && r.marks !== undefined ? (
+                                                    <span className="font-medium text-slate-800">{r.marks} / {exam.fullMarks}</span>
+                                                ) : (
+                                                    <span className="text-amber-600 text-xs font-medium">Pending</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-500 text-xs">{r.remarks || "—"}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Exam Performance Report — only for PUBLISHED exams */}
+            {exam.status === "PUBLISHED" && (
+                <ExamReport examId={examId} />
+            )}
 
         </div>
     );
