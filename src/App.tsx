@@ -23,6 +23,7 @@ import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
+import CalendarPage from "./Pages/Events/CalendarPage.tsx";
 
 function App() {
   return (
@@ -46,6 +47,8 @@ function App() {
             <Route path="/exam/:examId" element={<ExamDetails />} />
             <Route path="/notices" element={<NoticeBoardHome />} />
             <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
+            <Route path="/events" element={<Navigate to="/calendar" replace />} />
+            <Route path="/calendar" element={<CalendarPage />} />
 
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />

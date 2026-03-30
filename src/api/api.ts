@@ -20,8 +20,7 @@ export const setLogoutCallback = (callback: () => void) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn("Unauthorized - triggering logout");
+    if (error.response?.status === 401) {
       if (logoutCallback) {
           logoutCallback();
       }
@@ -370,7 +369,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Get all exams
     getExams = async (payload: {
             sessionId: string,
-            classId?: string,
+            classId: string,
             courseId?: string,
             examTerm?: string
         }) => {
@@ -568,6 +567,48 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
+        return res.data;
+    };
+
+    // ── School Events ─────────────────────────────────────────────────────────
+    getSchoolEvents = async (from?: string, to?: string) => {
+        const res = await apiClient.get("/management/events", {
+            params: { from, to },
+        });
+        return res.data;
+    };
+
+    createSchoolEvent = async (data: {
+        title: string;
+        description?: string;
+        type: string;
+        date: string;
+        endDate?: string;
+    }) => {
+        const res = await apiClient.post("/management/events/create", data);
+        return res.data;
+    };
+
+    updateSchoolEvent = async (eventId: string, data: any) => {
+        const res = await apiClient.patch(`/management/events/${eventId}`, data);
+        return res.data;
+    };
+
+    deleteSchoolEvent = async (eventId: string) => {
+        const res = await apiClient.delete(`/management/events/${eventId}`);
+        return res.data;
+    };
+
+    // ── Calendar (read-only view) ─────────────────────────────────────────────
+    getCalendarEvents = async (from?: string, to?: string) => {
+        const res = await apiClient.get("/management/calendar/events", {
+            params: { from, to },
+        });
+        return res.data;
+    };
+
+    getCalendarSessions = async () => {
+        const res = await apiClient.get("/management/calendar/sessions");
         return res.data;
     };
 }

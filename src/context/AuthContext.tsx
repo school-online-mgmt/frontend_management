@@ -59,10 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 userId: user?.id ?? null,
                 user: user ?? null,
             });
-
-            console.log("✓ Auth verified", { userId: user?.id, role: user?.role });
         } catch (error) {
-            console.error("✗ Auth verification failed:", error);
             setAuth({ 
                 isAuthenticated: false, 
                 role: null, 
@@ -77,8 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = useCallback(async () => {
         try {
             await api.logout();
-        } catch (error) {
-            console.error("Logout error:", error);
+        } catch {
+            // Logout API error is non-critical
         } finally {
             setAuth({ 
                 isAuthenticated: false, 
@@ -87,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 user: null 
             });
             navigate("/login", { replace: true });
-            console.log("User logged out");
         }
     }, [navigate]);
 

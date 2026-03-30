@@ -92,19 +92,22 @@ const ExamHome = () => {
                 sessionId: selectedSession,
                 classId: selectedClass,
                 courseId: selectedCourse || undefined,
-                examTerm: selectedTerm || undefined,});
+                examTerm: selectedTerm || undefined,
+            });
 
             setExams(data.exams || []);
             setCourses(data.filters?.courses || []);
             setTerms(data.filters?.terms || []);
-        } catch {
+        } catch (err: any) {
             setExams([]);
+            setMessage(err?.response?.data?.message || "Failed to fetch exams");
+            setMessageType("error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Load classes when session changes
+    // Reset dependent filters when session changes
     useEffect(() => {
         if (!selectedSession) return;
 
@@ -112,14 +115,16 @@ const ExamHome = () => {
         setSelectedCourse("");
         setSelectedTerm("");
         setExams([]);
+        setCourses([]);
+        setTerms([]);
 
     }, [selectedSession]);
 
-    // Fetch exams only when class is selected
+    // Fetch exams when any filter changes (session + class required)
     useEffect(() => {
         if (!selectedSession || !selectedClass) return;
         fetchExams();
-    }, [selectedClass, selectedCourse, selectedTerm]);
+    }, [selectedSession, selectedClass, selectedCourse, selectedTerm]);
 
     // Auto-dismiss messages
     useEffect(() => {
@@ -215,7 +220,10 @@ const ExamHome = () => {
 
                 <select
                     value={selectedCourse}
-                    onChange={(e) => setSelectedCourse(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedCourse(e.target.value);
+                        setSelectedTerm("");
+                    }}
                     disabled={!selectedClass}
                     className="border p-2 rounded-lg text-sm disabled:opacity-50"
                 >
