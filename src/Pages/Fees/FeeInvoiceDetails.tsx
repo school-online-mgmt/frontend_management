@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, User, Calendar, CheckCircle, AlertTriangle, X, Printer } from 'lucide-react';
+import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer } from 'lucide-react';
 import api from '../../api/api';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];

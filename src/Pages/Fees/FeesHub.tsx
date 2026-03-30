@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CreditCard, BookOpen, Bus, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
-    TrendingUp, Users, DollarSign, AlertTriangle, RefreshCw, X, Save, Eye,
+    TrendingUp, DollarSign, AlertTriangle, RefreshCw, Save, Eye,
 } from 'lucide-react';
 import api from '../../api/api';
 
@@ -195,8 +195,6 @@ function CourseFeesTab() {
         await api.deleteCourseFee(id); await reload();
     };
 
-    const setFees_ = fees; // already have fees in state
-    const alreadySet = new Set(setFees_.map(f => f.courseId));
 
     return (
         <div className="space-y-4">
