@@ -83,7 +83,7 @@ export const designSystem = {
 // Common Component Classes
 export const componentClasses = {
   // Page Layout
-  pageContainer: "min-h-screen bg-gradient-to-br from-slate-50 to-slate-100",
+  pageContainer: "min-h-full",
   pageContent: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8",
 
   // Header/Title
