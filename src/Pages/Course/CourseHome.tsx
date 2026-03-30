@@ -19,7 +19,7 @@ const CourseHome = () => {
         setIsLoading(true);
         try {
             const data = await api.getCourses();
-            setCourses(data.courses || []);
+            setCourses(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching courses", error);
             setCourses([]);

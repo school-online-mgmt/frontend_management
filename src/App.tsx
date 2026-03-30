@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext.tsx';
 import SubjectHomePage from './Pages/Subject/SubjectHome.tsx';
-import Subject from './Pages/Subject/Subject.tsx'; 
+import SubjectDetails from './Pages/Subject/Subject.tsx';
 import LoginPage from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -20,12 +21,18 @@ import StudentDetails from "./Pages/Students/StudentDetails.tsx";
 import StudentAdmission from "./Pages/StudentAdmission.tsx";
 import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
+import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
+import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
+import CalendarPage from "./Pages/Events/CalendarPage.tsx";
+import FeesHub from "./Pages/Fees/FeesHub.tsx";
+import FeeInvoiceDetails from "./Pages/Fees/FeeInvoiceDetails.tsx";
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
         
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
@@ -35,11 +42,15 @@ function App() {
             <Route path="/applicants-home" element={<ApplicantsHome />} />
             <Route path="/students-home" element={<StudentsHome />} />
             <Route path="/subject-Home" element={<SubjectHomePage />} />
-             <Route path="/subject/:slug" element={<Subject />} /> 
+             <Route path="/subject/:slug" element={<SubjectDetails />} /> 
             <Route path="/course-Home" element={<CourseHome />} />
             <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/exam-home" element={<ExamHome />} />
             <Route path="/exam/:examId" element={<ExamDetails />} />
+            <Route path="/notices" element={<NoticeBoardHome />} />
+            <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
+            <Route path="/events" element={<Navigate to="/calendar" replace />} />
+            <Route path="/calendar" element={<CalendarPage />} />
 
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />
@@ -50,11 +61,14 @@ function App() {
             <Route path="/student-home" element={<StudentHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
+            <Route path="/fees" element={<FeesHub />} />
+            <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
           </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

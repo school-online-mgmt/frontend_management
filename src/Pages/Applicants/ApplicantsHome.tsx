@@ -28,7 +28,7 @@ const ApplicantsHome: React.FC = () => {
 
   const searchApplicants = async () => {
     if (!searchQuery.trim()) {
-      fetchApplicants();
+      await fetchApplicants();
       return;
     }
     setLoading(true);
@@ -45,7 +45,7 @@ const ApplicantsHome: React.FC = () => {
   const acceptApplication = async (applicantId: string) => {
     try {
       await api.acceptApplication(applicantId);
-      fetchApplicants(); // Refresh list
+      await fetchApplicants(); // Refresh list
       navigate('/students-home');
     } catch (error) {
       console.error('Failed to accept application', error);

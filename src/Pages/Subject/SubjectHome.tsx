@@ -1,56 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, BookOpen, RefreshCcw, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../api/api";
 import CreateSubject from "../../components/CreateSubject.tsx";
 import { useNavigate } from "react-router-dom";
+import type { Subject, Session } from "../../api/types";
 
 const SubjectPage = () => {
-    const [subjects, setSubjects] = useState<any[]>([]);
-    const [sessions, setSessions] = useState<any[]>([]);
     const [selectedSession, setSelectedSession] = useState<string>("");
-    const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
     const navigate = useNavigate();
 
-    const fetchSubjects = async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getSubjects();
-            setSubjects(data);
-        } catch (error) {
-            console.error("Error fetching subjects", error);
-            setSubjects([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // React Query hooks for data fetching
+    const { data: subjects = [], isLoading: subjectsLoading, refetch: refetchSubjects } = useQuery({
+        queryKey: ['subjects'],
+        queryFn: () => api.getSubjects(),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
 
-    const fetchSessions = async () => {
-        try {
+    const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+        queryKey: ['sessions'],
+        queryFn: async () => {
             const data = await api.getSessions();
-            setSessions(Array.isArray(data) ? data : data?.sessions || []);
-        } catch (error) {
-            console.error("Error fetching sessions", error);
-            setSessions([]);
-        }
-    };
+            return Array.isArray(data) ? data : data?.sessions || [];
+        },
+        staleTime: 10 * 60 * 1000, // 10 minutes
+    });
 
-    const filteredSubjects = selectedSession
-        ? subjects.filter((subject) => subject.sessionId === selectedSession)
+    const filteredSubjects = selectedSession && subjects.length > 0
+        ? subjects.filter((subject: Subject) => (subject?.sessionId ?? '') === selectedSession)
         : subjects;
 
-    useEffect(() => {
-        fetchSubjects();
-        fetchSessions();
-    }, []);
+    const isLoading = subjectsLoading || sessionsLoading;
 
     return (
         <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
             {isCreateModalOpen && (
                 <CreateSubject
                     onClose={() => setIsCreateModalOpen(false)}
-                    onRefresh={fetchSubjects}
+                    onRefresh={() => refetchSubjects()}
                 />
             )}
 
@@ -65,7 +53,7 @@ const SubjectPage = () => {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={fetchSubjects}
+                        onClick={() => refetchSubjects()}
                         disabled={isLoading}
                         className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm hover:bg-slate-50 flex items-center gap-2"
                     >
@@ -96,7 +84,7 @@ const SubjectPage = () => {
                             className="px-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                             <option value="">All Sessions</option>
-                            {sessions.map((session: any) => (
+                            {sessions.map((session: Session) => (
                                 <option key={session.id} value={session.id}>
                                     {session.name}
                                 </option>
@@ -140,7 +128,7 @@ const SubjectPage = () => {
                                         </td>
                                     </tr>
                                 ) : filteredSubjects.length > 0 ? (
-                                    filteredSubjects.map((subject: any) => (
+                                    filteredSubjects.map((subject: Subject) => (
                                         <tr
                                             key={subject.id}
                                             onClick={() => navigate(`/subject/${subject.slug}`)}

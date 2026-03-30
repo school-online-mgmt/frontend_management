@@ -7,16 +7,24 @@ import useAuth from "../../hooks/useAuth";
 
 // ── Status badge helper ─────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-    AWAITING_SYLLABUS_UPDATE: {
-        label: "Awaiting Syllabus",
+    AWAITING_SYLLABUS: {
+        label: "Syllabus Required",
         className: "bg-amber-100 text-amber-700 border border-amber-200",
     },
-    AWAITING_DATE_SCHEDULING: {
-        label: "Awaiting Scheduling",
+    AWAITING_EXAM_DATE: {
+        label: "Ready to Schedule",
         className: "bg-blue-100 text-blue-700 border border-blue-200",
     },
+    EXAM_CONDUCTED: {
+        label: "Attendance In Progress",
+        className: "bg-purple-100 text-purple-700 border border-purple-200",
+    },
+    AWAITING_RESULT: {
+        label: "Grading In Progress",
+        className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+    },
     PUBLISHED: {
-        label: "Published",
+        label: "Results Published",
         className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
     },
 };
@@ -66,17 +74,12 @@ const ExamHome = () => {
             const data = await api.getSessions();
             setSessions(data || []);
         };
-
-        loadSessions();
-    }, []);
-
-    // Fetch classes
-    useEffect(() => {
         const loadClasses = async () => {
             const data = await api.getClasses();
             setClasses(data || []);
         };
         loadClasses();
+        loadSessions();
     }, []);
 
     // Fetch Exams
@@ -89,19 +92,22 @@ const ExamHome = () => {
                 sessionId: selectedSession,
                 classId: selectedClass,
                 courseId: selectedCourse || undefined,
-                examTerm: selectedTerm || undefined,});
+                examTerm: selectedTerm || undefined,
+            });
 
             setExams(data.exams || []);
             setCourses(data.filters?.courses || []);
             setTerms(data.filters?.terms || []);
-        } catch {
+        } catch (err: any) {
             setExams([]);
+            setMessage(err?.response?.data?.message || "Failed to fetch exams");
+            setMessageType("error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Load classes when session changes
+    // Reset dependent filters when session changes
     useEffect(() => {
         if (!selectedSession) return;
 
@@ -109,14 +115,16 @@ const ExamHome = () => {
         setSelectedCourse("");
         setSelectedTerm("");
         setExams([]);
+        setCourses([]);
+        setTerms([]);
 
     }, [selectedSession]);
 
-    // Fetch exams only when class is selected
+    // Fetch exams when any filter changes (session + class required)
     useEffect(() => {
         if (!selectedSession || !selectedClass) return;
         fetchExams();
-    }, [selectedClass, selectedCourse, selectedTerm]);
+    }, [selectedSession, selectedClass, selectedCourse, selectedTerm]);
 
     // Auto-dismiss messages
     useEffect(() => {
@@ -212,7 +220,10 @@ const ExamHome = () => {
 
                 <select
                     value={selectedCourse}
-                    onChange={(e) => setSelectedCourse(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedCourse(e.target.value);
+                        setSelectedTerm("");
+                    }}
                     disabled={!selectedClass}
                     className="border p-2 rounded-lg text-sm disabled:opacity-50"
                 >

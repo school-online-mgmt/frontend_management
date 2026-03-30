@@ -11,7 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.95.2",
     "axios": "^1.13.6",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

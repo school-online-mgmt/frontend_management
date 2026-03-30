@@ -9,13 +9,21 @@ const apiClient = axios.create({
   withCredentials: true, // Important for sessions/cookies
 });
 
+// Store the logout callback to be set by AuthProvider
+let logoutCallback: (() => void) | null = null;
+
+export const setLogoutCallback = (callback: () => void) => {
+    logoutCallback = callback;
+};
+
 // Add a response interceptor to handle global errors (like 401 Unauthorized)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Optional: Redirect to login or clear local storage if you were storing tokens
-      // window.location.href = '/login'; 
+    if (error.response?.status === 401) {
+      if (logoutCallback) {
+          logoutCallback();
+      }
     }
     return Promise.reject(error);
   }
@@ -28,6 +36,16 @@ class API {
   };
   checkAuth = async () => {
     const response = await apiClient.get('/management/auth/verifyAuth');
+    return response.data;
+  };
+
+  logout = async () => {
+    const response = await apiClient.post('/management/auth/logout');
+    return response.data;
+  };
+
+  refreshToken = async () => {
+    const response = await apiClient.post('/management/auth/refresh');
     return response.data;
   };
 
@@ -215,7 +233,93 @@ updateSubject = async (id: string, data: { name: string, slug: string, bookName:
     return response.data;
 };
 
-// --- Student APIs ---
+    // Get sections for a class
+    getSectionsByClass = async (classId: string) => {
+        const response = await apiClient.get(`/management/class/${classId}/sections`);
+        return response.data.sections ?? response.data ?? [];
+    };
+
+    // ── Notice Board APIs ─────────────────────────────────────────────────────
+
+    getNoticeBoards = async (params?: { visibility?: string; classId?: string }) => {
+        const res = await apiClient.get("/management/notice/boards", { params });
+        return res.data;
+    };
+
+    createNoticeBoard = async (data: {
+        name: string; description?: string; visibility: string;
+        classId?: string; sectionId?: string; approverId?: string;
+    }) => {
+        const res = await apiClient.post("/management/notice/boards/create", data);
+        return res.data;
+    };
+
+    getNoticeBoardById = async (boardId: string) => {
+        const res = await apiClient.get(`/management/notice/boards/${boardId}`);
+        return res.data;
+    };
+
+    updateNoticeBoard = async (boardId: string, data: { name?: string; description?: string; approverId?: string; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/notice/boards/${boardId}/update`, data);
+        return res.data;
+    };
+
+    deleteNoticeBoard = async (boardId: string) => {
+        const res = await apiClient.delete(`/management/notice/boards/${boardId}`);
+        return res.data;
+    };
+
+    getNoticeBoardNotices = async (boardId: string, params?: { status?: string }) => {
+        const res = await apiClient.get(`/management/notice/boards/${boardId}/notices`, { params });
+        return res.data;
+    };
+
+    createNotice = async (boardId: string, data: {
+        title: string; body: string; startDateTime: string; endDateTime: string;
+        priority?: string; publishDirectly?: boolean;
+    }) => {
+        const res = await apiClient.post(`/management/notice/boards/${boardId}/notices/create`, data);
+        return res.data;
+    };
+
+    approveNotice = async (noticeId: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/approve`);
+        return res.data;
+    };
+
+    rejectNotice = async (noticeId: string, rejectionReason: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/reject`, { rejectionReason });
+        return res.data;
+    };
+
+    archiveNotice = async (noticeId: string) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/archive`);
+        return res.data;
+    };
+
+    updateNotice = async (noticeId: string, data: { title?: string; body?: string; startDateTime?: string; endDateTime?: string; priority?: string }) => {
+        const res = await apiClient.patch(`/management/notice/notices/${noticeId}/update`, data);
+        return res.data;
+    };
+
+    deleteNotice = async (noticeId: string) => {
+        const res = await apiClient.delete(`/management/notice/notices/${noticeId}`);
+        return res.data;
+    };
+
+    getPendingNotices = async () => {
+        const res = await apiClient.get("/management/notice/notices/pending");
+        return res.data;
+    };
+
+    getNoticeApproverOptions = async () => {
+        const res = await apiClient.get("/management/notice/approver-options");
+        return res.data;
+    };
+
+    // ── END Notice Board APIs ─────────────────────────────────────────────────
+
+    // --- Student APIs ---
 getAppliedStudents = async () => {
     const response = await apiClient.get('/management/student/applied');
     return response.data;
@@ -247,8 +351,13 @@ acceptApplication = async (applicantId: string) => {
     return response.data;
 };
 
-getStudents = async () => {
-    const response = await apiClient.get('/management/student/');
+getStudents = async (subjectId?: string, sessionId?: string) => {
+    const response = await apiClient.get('/management/student/', {
+        params: {
+            ...(subjectId && { subjectId }),
+            ...(sessionId && { sessionId }),
+        },
+    });
     return response.data;
 };
 
@@ -260,7 +369,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Get all exams
     getExams = async (payload: {
             sessionId: string,
-            classId?: string,
+            classId: string,
             courseId?: string,
             examTerm?: string
         }) => {
@@ -334,7 +443,50 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
+    // Conduct exam - creates results for all students in subject section
+    conductExam = async (examId: string, payload: { conductedDate: Date }) => {
+        const res = await apiClient.patch(
+            `/management/exam/${examId}/conduct`,
+            payload
+        );
+        return res.data;
+    };
+
+    // Complete attendance marking - transition to AWAITING_RESULT
+    completeAttendance = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/complete-attendance`);
+        return res.data;
+    };
+
+    // Get exam results
+    getExamResults = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/results`);
+        return res.data;
+    };
+
+    // Update result marks (teacher or principal)
+    updateResultMarks = async (resultId: string, payload: { marks: number; remarks?: string }) => {
+        const res = await apiClient.patch(
+            `/management/exam/result/${resultId}/marks`,
+            payload
+        );
+        return res.data;
+    };
+
+    // Publish exam results (principal only)
+    publishExamResults = async (examId: string) => {
+        const res = await apiClient.post(`/management/exam/${examId}/publish`);
+        return res.data;
+    };
+
+    // Get exam report/analytics (published exams)
+    getExamReport = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/report`);
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
+
     // Get all applicants
     getApplicants = async () => {
         const res = await apiClient.get("/management/student/applied");
@@ -415,6 +567,134 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
+        return res.data;
+    };
+
+    // ── School Events ─────────────────────────────────────────────────────────
+    getSchoolEvents = async (from?: string, to?: string) => {
+        const res = await apiClient.get("/management/events", {
+            params: { from, to },
+        });
+        return res.data;
+    };
+
+    createSchoolEvent = async (data: {
+        title: string;
+        description?: string;
+        type: string;
+        date: string;
+        endDate?: string;
+    }) => {
+        const res = await apiClient.post("/management/events/create", data);
+        return res.data;
+    };
+
+    updateSchoolEvent = async (eventId: string, data: any) => {
+        const res = await apiClient.patch(`/management/events/${eventId}`, data);
+        return res.data;
+    };
+
+    deleteSchoolEvent = async (eventId: string) => {
+        const res = await apiClient.delete(`/management/events/${eventId}`);
+        return res.data;
+    };
+
+    // ── Calendar (read-only view) ─────────────────────────────────────────────
+    getCalendarEvents = async (from?: string, to?: string) => {
+        const res = await apiClient.get("/management/calendar/events", {
+            params: { from, to },
+        });
+        return res.data;
+    };
+
+    getCalendarSessions = async () => {
+        const res = await apiClient.get("/management/calendar/sessions");
+        return res.data;
+    };
+
+    // ── Fees Module ───────────────────────────────────────────────────────────
+
+    // Course Fees
+    getCourseFees = async () => {
+        const res = await apiClient.get("/management/fees/course-fees");
+        return res.data;
+    };
+    setCourseFee = async (courseId: string, tuitionFee: number) => {
+        const res = await apiClient.post("/management/fees/course-fees", { courseId, tuitionFee });
+        return res.data;
+    };
+    deleteCourseFee = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/course-fees/${id}`);
+        return res.data;
+    };
+
+    // Transport Zones
+    getTransportZones = async () => {
+        const res = await apiClient.get("/management/fees/transport-zones");
+        return res.data;
+    };
+    createTransportZone = async (data: { name: string; description?: string; price: number }) => {
+        const res = await apiClient.post("/management/fees/transport-zones", data);
+        return res.data;
+    };
+    updateTransportZone = async (id: string, data: { name?: string; description?: string; price?: number }) => {
+        const res = await apiClient.patch(`/management/fees/transport-zones/${id}`, data);
+        return res.data;
+    };
+    deleteTransportZone = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/transport-zones/${id}`);
+        return res.data;
+    };
+
+    // Extra Charges
+    getExtraCharges = async (params?: { studentId?: string; month?: number; year?: number }) => {
+        const res = await apiClient.get("/management/fees/extra-charges", { params });
+        return res.data;
+    };
+    addExtraCharge = async (data: { studentId: string; academicId: string; type: string; description?: string; amount: number; month: number; year: number }) => {
+        const res = await apiClient.post("/management/fees/extra-charges", data);
+        return res.data;
+    };
+    updateExtraCharge = async (id: string, data: Partial<{ type: string; description: string; amount: number; month: number; year: number }>) => {
+        const res = await apiClient.patch(`/management/fees/extra-charges/${id}`, data);
+        return res.data;
+    };
+    deleteExtraCharge = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/extra-charges/${id}`);
+        return res.data;
+    };
+
+    // Invoices
+    getFeeInvoices = async (params?: { month?: number; year?: number; status?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/fees/invoices", { params });
+        return res.data;
+    };
+    generateInvoices = async (data: { month: number; year: number; sessionId: string; dueDate: string }) => {
+        const res = await apiClient.post("/management/fees/invoices/generate", data);
+        return res.data;
+    };
+    getFeeInvoiceById = async (id: string) => {
+        const res = await apiClient.get(`/management/fees/invoices/${id}`);
+        return res.data;
+    };
+    recordPayment = async (invoiceId: string, data: { amount: number; paymentMode: string; referenceNo?: string; paymentDate?: string; remarks?: string }) => {
+        const res = await apiClient.post(`/management/fees/invoices/${invoiceId}/payment`, data);
+        return res.data;
+    };
+    waiveInvoice = async (invoiceId: string, remarks?: string) => {
+        const res = await apiClient.patch(`/management/fees/invoices/${invoiceId}/waive`, { remarks });
+        return res.data;
+    };
+    cancelInvoice = async (invoiceId: string, remarks?: string) => {
+        const res = await apiClient.patch(`/management/fees/invoices/${invoiceId}/cancel`, { remarks });
+        return res.data;
+    };
+    markOverdueInvoices = async () => {
+        const res = await apiClient.patch("/management/fees/invoices/mark-overdue");
+        return res.data;
+    };
+    getFeeSummary = async (params?: { month?: number; year?: number }) => {
+        const res = await apiClient.get("/management/fees/summary", { params });
         return res.data;
     };
 }
