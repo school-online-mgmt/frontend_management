@@ -611,5 +611,91 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         const res = await apiClient.get("/management/calendar/sessions");
         return res.data;
     };
+
+    // ── Fees Module ───────────────────────────────────────────────────────────
+
+    // Course Fees
+    getCourseFees = async () => {
+        const res = await apiClient.get("/management/fees/course-fees");
+        return res.data;
+    };
+    setCourseFee = async (courseId: string, tuitionFee: number) => {
+        const res = await apiClient.post("/management/fees/course-fees", { courseId, tuitionFee });
+        return res.data;
+    };
+    deleteCourseFee = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/course-fees/${id}`);
+        return res.data;
+    };
+
+    // Transport Zones
+    getTransportZones = async () => {
+        const res = await apiClient.get("/management/fees/transport-zones");
+        return res.data;
+    };
+    createTransportZone = async (data: { name: string; description?: string; price: number }) => {
+        const res = await apiClient.post("/management/fees/transport-zones", data);
+        return res.data;
+    };
+    updateTransportZone = async (id: string, data: { name?: string; description?: string; price?: number }) => {
+        const res = await apiClient.patch(`/management/fees/transport-zones/${id}`, data);
+        return res.data;
+    };
+    deleteTransportZone = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/transport-zones/${id}`);
+        return res.data;
+    };
+
+    // Extra Charges
+    getExtraCharges = async (params?: { studentId?: string; month?: number; year?: number }) => {
+        const res = await apiClient.get("/management/fees/extra-charges", { params });
+        return res.data;
+    };
+    addExtraCharge = async (data: { studentId: string; academicId: string; type: string; description?: string; amount: number; month: number; year: number }) => {
+        const res = await apiClient.post("/management/fees/extra-charges", data);
+        return res.data;
+    };
+    updateExtraCharge = async (id: string, data: Partial<{ type: string; description: string; amount: number; month: number; year: number }>) => {
+        const res = await apiClient.patch(`/management/fees/extra-charges/${id}`, data);
+        return res.data;
+    };
+    deleteExtraCharge = async (id: string) => {
+        const res = await apiClient.delete(`/management/fees/extra-charges/${id}`);
+        return res.data;
+    };
+
+    // Invoices
+    getFeeInvoices = async (params?: { month?: number; year?: number; status?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/fees/invoices", { params });
+        return res.data;
+    };
+    generateInvoices = async (data: { month: number; year: number; sessionId: string; dueDate: string }) => {
+        const res = await apiClient.post("/management/fees/invoices/generate", data);
+        return res.data;
+    };
+    getFeeInvoiceById = async (id: string) => {
+        const res = await apiClient.get(`/management/fees/invoices/${id}`);
+        return res.data;
+    };
+    recordPayment = async (invoiceId: string, data: { amount: number; paymentMode: string; referenceNo?: string; paymentDate?: string; remarks?: string }) => {
+        const res = await apiClient.post(`/management/fees/invoices/${invoiceId}/payment`, data);
+        return res.data;
+    };
+    waiveInvoice = async (invoiceId: string, remarks?: string) => {
+        const res = await apiClient.patch(`/management/fees/invoices/${invoiceId}/waive`, { remarks });
+        return res.data;
+    };
+    cancelInvoice = async (invoiceId: string, remarks?: string) => {
+        const res = await apiClient.patch(`/management/fees/invoices/${invoiceId}/cancel`, { remarks });
+        return res.data;
+    };
+    markOverdueInvoices = async () => {
+        const res = await apiClient.patch("/management/fees/invoices/mark-overdue");
+        return res.data;
+    };
+    getFeeSummary = async (params?: { month?: number; year?: number }) => {
+        const res = await apiClient.get("/management/fees/summary", { params });
+        return res.data;
+    };
 }
 export default new API();

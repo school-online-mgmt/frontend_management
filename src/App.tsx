@@ -24,6 +24,8 @@ import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
+import FeesHub from "./Pages/Fees/FeesHub.tsx";
+import FeeInvoiceDetails from "./Pages/Fees/FeeInvoiceDetails.tsx";
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
             <Route path="/student-home" element={<StudentHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
+            <Route path="/fees" element={<FeesHub />} />
+            <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
           </Route>
         </Route>
 
