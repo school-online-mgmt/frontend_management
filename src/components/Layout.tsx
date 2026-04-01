@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users,
   UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
   ChevronLeft, Menu, X, Search, ChevronDown, Settings, HelpCircle,
-  Megaphone,
+  Megaphone, ClipboardCheck, UserCheck,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 
@@ -31,6 +31,8 @@ const NAV_SECTIONS = [
       { path: "/course-Home", label: "Courses", icon: GraduationCap },
       { path: "/class-Home", label: "Classes", icon: Layers },
       { path: "/exam-home", label: "Exams", icon: ClipboardList },
+      { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck },
+      { path: "/teacher-attendance", label: "Teacher Attendance", icon: UserCheck },
     ],
   },
   {

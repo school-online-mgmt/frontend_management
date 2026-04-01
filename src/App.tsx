@@ -26,6 +26,8 @@ import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
 import FeesHub from "./Pages/Fees/FeesHub.tsx";
 import FeeInvoiceDetails from "./Pages/Fees/FeeInvoiceDetails.tsx";
+import AttendanceHome from "./Pages/Attendance/AttendanceHome.tsx";
+import TeacherAttendanceHome from "./Pages/Attendance/TeacherAttendanceHome.tsx";
 
 function App() {
   return (
@@ -63,6 +65,8 @@ function App() {
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/fees" element={<FeesHub />} />
             <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
+            <Route path="/attendance" element={<AttendanceHome />} />
+            <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
           </Route>
         </Route>
 
