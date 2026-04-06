@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CreditCard, BookOpen, Bus, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
-    TrendingUp, DollarSign, AlertTriangle, RefreshCw, Save, Eye,
+    TrendingUp, DollarSign, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
 } from 'lucide-react';
 import api from '../../api/api';
 
@@ -36,7 +36,7 @@ interface Session { id: string; name: string; slug: string; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeesHub() {
-    const [tab, setTab] = useState<'summary' | 'course-fees' | 'transport' | 'extra' | 'invoices'>('summary');
+    const [tab, setTab] = useState<'summary' | 'course-fees' | 'transport' | 'extra' | 'invoices' | 'payments'>('summary');
     return (
         <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
             <header>
@@ -45,13 +45,14 @@ export default function FeesHub() {
             </header>
 
             {/* Tab Bar */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
                 {[
                     { key: 'summary', label: 'Summary', icon: TrendingUp },
                     { key: 'course-fees', label: 'Course Fees', icon: BookOpen },
                     { key: 'transport', label: 'Transport Zones', icon: Bus },
                     { key: 'extra', label: 'Extra Charges', icon: AlertCircle },
                     { key: 'invoices', label: 'Invoices', icon: CreditCard },
+                    { key: 'payments', label: 'Payments', icon: Wallet },
                 ].map(({ key, label, icon: Icon }) => (
                     <button key={key} onClick={() => setTab(key as typeof tab)}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -65,6 +66,7 @@ export default function FeesHub() {
             {tab === 'transport' && <TransportTab />}
             {tab === 'extra' && <ExtraChargesTab />}
             {tab === 'invoices' && <InvoicesTab />}
+            {tab === 'payments' && <PaymentsTab />}
         </div>
     );
 }
@@ -264,7 +266,170 @@ function CourseFeesTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TRANSPORT ZONES TAB
+// PAYMENTS TAB
+// ─────────────────────────────────────────────────────────────────────────────
+interface PaymentRow {
+    id: string; amount: number; paymentMode: string; paymentStatus: string;
+    referenceNo?: string; paymentDate: string; remarks?: string;
+    razorpayPaymentId?: string; razorpayOrderId?: string;
+    invoiceId: string; invoiceNo: string; invoiceMonth: number; invoiceYear: number;
+    studentId: string; studentFirstName: string; studentLastName: string; studentPhone: string;
+    receivedByName?: string;
+}
+
+const paymentStatusColor: Record<string, string> = {
+    CREATED: 'bg-slate-100 text-slate-600',
+    AUTHORIZED: 'bg-blue-100 text-blue-700',
+    CAPTURED: 'bg-green-100 text-green-800',
+    FAILED: 'bg-red-100 text-red-700',
+    REFUNDED: 'bg-orange-100 text-orange-700',
+};
+
+function PaymentsTab() {
+    const navigate = useNavigate();
+    const [payments, setPayments] = useState<PaymentRow[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [from, setFrom] = useState('');
+    const [to, setTo] = useState('');
+    const [mode, setMode] = useState('');
+    const [status, setStatus] = useState('');
+    const [exporting, setExporting] = useState(false);
+    const [refunding, setRefunding] = useState<string | null>(null);
+
+    const reload = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params: Record<string, string> = {};
+            if (from) params.from = from;
+            if (to) params.to = to;
+            if (mode) params.paymentMode = mode;
+            if (status) params.paymentStatus = status;
+            const data = await api.getFeePayments(params);
+            setPayments(data.payments || []);
+        } catch { /* ignore */ }
+        finally { setLoading(false); }
+    }, [from, to, mode, status]);
+
+    useEffect(() => { reload(); }, [reload]);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const params: Record<string, string> = {};
+            if (from) params.from = from;
+            if (to) params.to = to;
+            if (mode) params.paymentMode = mode;
+            if (status) params.paymentStatus = status;
+            await api.exportFeePayments(params);
+        } catch { alert('Export failed'); }
+        finally { setExporting(false); }
+    };
+
+    const handleRefund = async (p: PaymentRow) => {
+        if (!confirm(`Refund ₹${p.amount.toLocaleString('en-IN')} to ${p.studentFirstName} ${p.studentLastName}?\n\nThis will issue a full refund via Razorpay.`)) return;
+        setRefunding(p.id);
+        try {
+            const data = await api.refundPayment(p.id);
+            alert(data.message || 'Refunded successfully');
+            await reload();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Refund failed');
+        } finally { setRefunding(null); }
+    };
+
+    const totalAmount = payments.reduce((s, p) => s + (p.paymentStatus === 'REFUNDED' ? 0 : p.amount), 0);
+    const totalRefunded = payments.filter(p => p.paymentStatus === 'REFUNDED').reduce((s, p) => s + p.amount, 0);
+
+    return (
+        <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-3 items-end justify-between">
+                <div className="flex gap-3 items-end flex-wrap">
+                    <div><label className="block text-xs font-medium text-slate-600 mb-1">From</label>
+                        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-slate-600 mb-1">To</label>
+                        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm" /></div>
+                    <div><label className="block text-xs font-medium text-slate-600 mb-1">Mode</label>
+                        <select value={mode} onChange={e => setMode(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <option value="">All Modes</option>
+                            {['CASH','CHEQUE','ONLINE','BANK_TRANSFER','DD'].map(m => <option key={m} value={m}>{m.replace(/_/g,' ')}</option>)}
+                        </select></div>
+                    <div><label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+                        <select value={status} onChange={e => setStatus(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <option value="">All Statuses</option>
+                            {['CREATED','AUTHORIZED','CAPTURED','FAILED','REFUNDED'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select></div>
+                    <button onClick={reload} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700">
+                        <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
+                    </button>
+                </div>
+                <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
+                    <Download size={15} />{exporting ? 'Exporting…' : 'Export CSV'}
+                </button>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-4">
+                <div className="bg-green-50 text-green-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
+                    <span className="text-xs font-medium opacity-70">Total Collected</span>
+                    <span className="text-lg font-bold">{fmt(totalAmount)}</span>
+                </div>
+                <div className="bg-orange-50 text-orange-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
+                    <span className="text-xs font-medium opacity-70">Total Refunded</span>
+                    <span className="text-lg font-bold">{fmt(totalRefunded)}</span>
+                </div>
+                <div className="bg-slate-50 text-slate-700 rounded-xl px-4 py-3 flex flex-col gap-0.5">
+                    <span className="text-xs font-medium opacity-70">Transactions</span>
+                    <span className="text-lg font-bold">{payments.length}</span>
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>{['Date','Invoice','Student','Mode','Reference','Status','Amount','Actions'].map(h =>
+                            <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        )}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {loading ? (
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
+                        ) : payments.length === 0 ? (
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">No payment transactions found</td></tr>
+                        ) : payments.map(p => (
+                            <tr key={p.id} className="hover:bg-slate-50">
+                                <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
+                                <td className="px-3 py-3">
+                                    <button onClick={() => navigate(`/fees/invoice/${p.invoiceId}`)} className="font-mono text-xs text-blue-600 hover:underline">
+                                        {p.invoiceNo}
+                                    </button>
+                                </td>
+                                <td className="px-3 py-3 font-medium">{p.studentFirstName} {p.studentLastName}</td>
+                                <td className="px-3 py-3"><span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.paymentMode.replace(/_/g,' ')}</span></td>
+                                <td className="px-3 py-3 text-slate-400 font-mono text-xs">{p.referenceNo || p.razorpayPaymentId || '—'}</td>
+                                <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusColor[p.paymentStatus] || 'bg-slate-100 text-slate-600'}`}>{p.paymentStatus}</span></td>
+                                <td className="px-3 py-3 font-semibold text-right whitespace-nowrap">
+                                    <span className={p.paymentStatus === 'REFUNDED' ? 'text-orange-600 line-through' : 'text-green-700'}>{fmt(p.amount)}</span>
+                                </td>
+                                <td className="px-3 py-3">
+                                    {p.paymentMode === 'ONLINE' && p.paymentStatus === 'CAPTURED' && (
+                                        <button onClick={() => handleRefund(p)} disabled={refunding === p.id}
+                                            className="flex items-center gap-1 px-2.5 py-1 text-xs border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-50">
+                                            <RotateCcw size={12} />{refunding === p.id ? 'Processing…' : 'Refund'}
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 function TransportTab() {
     const [zones, setZones] = useState<Zone[]>([]);

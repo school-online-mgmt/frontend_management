@@ -799,8 +799,29 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
-    getLeaveTeachers = async () => {
-        const res = await apiClient.get("/management/leave/teachers");
+    getFeeSummary = async (params?: { month?: number; year?: number }) => {
+        const res = await apiClient.get("/management/fees/summary", { params });
+        return res.data;
+    };
+
+    // Payments
+    getFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
+        const res = await apiClient.get("/management/fees/payments", { params });
+        return res.data;
+    };
+    exportFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
+        const res = await apiClient.get("/management/fees/payments/export", { params, responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+    refundPayment = async (paymentId: string) => {
+        const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);
         return res.data;
     };
 }
