@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { RefreshCcw, Layers } from "lucide-react";
+import { RefreshCcw, Layers, Plus } from "lucide-react";
 import { useParams } from "react-router-dom";
 import api from "../../api/api";
 import AddSectionModal from "../../components/Classes/AddSectionModal";
 import BackButton from "../../components/common/BackButton.tsx";
 import CoursesSection from "../../components/Classes/CoursesSection.tsx";
+import CreateCourseInClassModal from "../../components/Courses/CreateCourseInClassModal.tsx";
 
 const ClassDetails = () => {
 
@@ -12,6 +13,7 @@ const ClassDetails = () => {
 
     const [classData, setClassData] = useState<any>(null);
     const [showSectionModal, setShowSectionModal] = useState(false);
+    const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const [message, setMessage] = useState<{
@@ -73,6 +75,18 @@ const ClassDetails = () => {
                     onClose={() => setShowSectionModal(false)}
                     onSuccess={(msg: any) => {
                         setMessage(msg);
+                        fetchClass();
+                    }}
+                />
+            )}
+
+            {showCreateCourseModal && (
+                <CreateCourseInClassModal
+                    classId={classId}
+                    className={classData.name}
+                    onClose={() => setShowCreateCourseModal(false)}
+                    onSuccess={(msg: string) => {
+                        setMessage({ type: "success", text: msg });
                         fetchClass();
                     }}
                 />
@@ -177,7 +191,10 @@ const ClassDetails = () => {
             </div>
 
             {/* COURSES */}
-            <CoursesSection courses={classData.courses} />
+            <CoursesSection
+                courses={classData.courses}
+                onCreateCourse={() => setShowCreateCourseModal(true)}
+            />
 
         </div>
     );

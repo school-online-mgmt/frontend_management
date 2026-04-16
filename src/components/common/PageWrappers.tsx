@@ -6,7 +6,7 @@ interface PageWrapperProps {
 }
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children, className = '' }) => (
-  <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-emerald-50 ${className}`}>
+  <div className={`min-h-full ${className}`}>
     {children}
   </div>
 );

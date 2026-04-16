@@ -26,6 +26,11 @@ import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
 import FeesHub from "./Pages/Fees/FeesHub.tsx";
 import FeeInvoiceDetails from "./Pages/Fees/FeeInvoiceDetails.tsx";
+import AttendanceHome from "./Pages/Attendance/AttendanceHome.tsx";
+import TeacherAttendanceHome from "./Pages/Attendance/TeacherAttendanceHome.tsx";
+import LeaveHome from "./Pages/Leave/LeaveHome.tsx";
+import LibraryHome from "./Pages/Library/LibraryHome.tsx";
+import BookDetailsPage from "./Pages/Library/BookDetails.tsx";
 
 function App() {
   return (
@@ -63,6 +68,11 @@ function App() {
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/fees" element={<FeesHub />} />
             <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
+            <Route path="/attendance" element={<AttendanceHome />} />
+            <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
+            <Route path="/leaves" element={<LeaveHome />} />
+            <Route path="/library" element={<LibraryHome />} />
+            <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
           </Route>
         </Route>
 

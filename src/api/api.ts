@@ -697,5 +697,219 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         const res = await apiClient.get("/management/fees/summary", { params });
         return res.data;
     };
+
+    // ── Attendance Module ─────────────────────────────────────────────────────
+    getAttendanceSections = async () => {
+        const res = await apiClient.get("/management/attendance/sections");
+        return res.data;
+    };
+
+    getAttendanceStudents = async (sectionId: string, date: string) => {
+        const res = await apiClient.get(`/management/attendance/section/${sectionId}/students`, {
+            params: { date },
+        });
+        return res.data;
+    };
+
+    markAttendanceManagement = async (sectionId: string, data: { date: string; records: Array<{ studentId: string; academicId: string; status: string; remarks?: string }> }) => {
+        const res = await apiClient.post(`/management/attendance/section/${sectionId}/mark`, data);
+        return res.data;
+    };
+
+    getAttendanceView = async (params?: { classId?: string; sectionId?: string; date?: string; from?: string; to?: string }) => {
+        const res = await apiClient.get("/management/attendance/view", { params });
+        return res.data;
+    };
+
+    getStudentAttendance = async (studentId: string, params?: { month?: number; year?: number }) => {
+        const res = await apiClient.get(`/management/attendance/student/${studentId}`, { params });
+        return res.data;
+    };
+
+    getAttendanceHolidays = async (year: number, month: number) => {
+        const res = await apiClient.get("/management/attendance/holidays", {
+            params: { year, month },
+        });
+        return res.data;
+    };
+
+    getAttendanceTodaySummary = async () => {
+        const res = await apiClient.get("/management/attendance/today-summary");
+        return res.data;
+    };
+
+    // ── Teacher Attendance Module ─────────────────────────────────────────────
+    getTeacherAttendanceTeachers = async (date: string) => {
+        const res = await apiClient.get("/management/teacher-attendance/teachers/date", {
+            params: { date },
+        });
+        return res.data;
+    };
+
+    markTeacherAttendance = async (data: { date: string; records: Array<{ teacherId: string; status: string; remarks?: string }> }) => {
+        const res = await apiClient.post("/management/teacher-attendance/mark", data);
+        return res.data;
+    };
+
+    getTeacherAttendanceView = async (params?: { teacherId?: string; date?: string; from?: string; to?: string }) => {
+        const res = await apiClient.get("/management/teacher-attendance/view", { params });
+        return res.data;
+    };
+
+    getIndividualTeacherAttendance = async (teacherId: string, params?: { month?: number; year?: number }) => {
+        const res = await apiClient.get(`/management/teacher-attendance/teacher/${teacherId}`, { params });
+        return res.data;
+    };
+
+    getTeacherAttendanceTodaySummary = async () => {
+        const res = await apiClient.get("/management/teacher-attendance/today-summary");
+        return res.data;
+    };
+
+    getTeacherAttendanceHolidays = async (year: number, month: number) => {
+        const res = await apiClient.get("/management/teacher-attendance/holidays", {
+            params: { year, month },
+        });
+        return res.data;
+    };
+
+    // ── Leave Management ────────────────────────────────────────────────────
+    getStudentLeaves = async (params?: { status?: string; classId?: string; sectionId?: string; from?: string; to?: string }) => {
+        const res = await apiClient.get("/management/leave/student-leaves", { params });
+        return res.data;
+    };
+
+    respondStudentLeaveApproval = async (approvalId: string, data: { action: string; remarks?: string }) => {
+        const res = await apiClient.patch(`/management/leave/student-leaves/${approvalId}/respond`, data);
+        return res.data;
+    };
+
+    getTeacherLeaves = async (params?: { status?: string; teacherId?: string; from?: string; to?: string }) => {
+        const res = await apiClient.get("/management/leave/teacher-leaves", { params });
+        return res.data;
+    };
+
+    respondTeacherLeave = async (leaveId: string, data: { action: string; remarks?: string }) => {
+        const res = await apiClient.patch(`/management/leave/teacher-leaves/${leaveId}/respond`, data);
+        return res.data;
+    };
+
+    getLeaveClasses = async () => {
+        const res = await apiClient.get("/management/leave/classes");
+        return res.data;
+    };
+
+
+    // Payments
+    getFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
+        const res = await apiClient.get("/management/fees/payments", { params });
+        return res.data;
+    };
+    exportFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
+        const res = await apiClient.get("/management/fees/payments/export", { params, responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+    refundPayment = async (paymentId: string) => {
+        const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);
+        return res.data;
+    };
+
+    // ── Library Module ────────────────────────────────────────────────────────
+    getLibraryStats = async () => {
+        const res = await apiClient.get("/management/library/stats");
+        return res.data;
+    };
+
+    getLibraryBooks = async (params?: { genre?: string; enabled?: string; search?: string }) => {
+        const res = await apiClient.get("/management/library/books", { params });
+        return res.data;
+    };
+
+    getLibraryBookById = async (id: string) => {
+        const res = await apiClient.get(`/management/library/books/${id}`);
+        return res.data;
+    };
+
+    createLibraryBook = async (data: {
+        title: string; author: string; isbn?: string; publisher?: string;
+        publicationYear?: number; genre?: string; description?: string;
+        coverImageUrl?: string; rackNumber?: string; totalCopies?: number;
+        isEnabled?: boolean; requiresApproval?: boolean; restrictedToClassIds?: string[];
+    }) => {
+        const res = await apiClient.post("/management/library/books", data);
+        return res.data;
+    };
+
+    updateLibraryBook = async (id: string, data: any) => {
+        const res = await apiClient.patch(`/management/library/books/${id}`, data);
+        return res.data;
+    };
+
+    toggleLibraryBook = async (id: string) => {
+        const res = await apiClient.patch(`/management/library/books/${id}/toggle`);
+        return res.data;
+    };
+
+    deleteLibraryBook = async (id: string) => {
+        const res = await apiClient.delete(`/management/library/books/${id}`);
+        return res.data;
+    };
+
+    getLibraryRequests = async (params?: { status?: string }) => {
+        const res = await apiClient.get("/management/library/requests", { params });
+        return res.data;
+    };
+
+    approveLibraryRequest = async (id: string) => {
+        const res = await apiClient.patch(`/management/library/requests/${id}/approve`);
+        return res.data;
+    };
+
+    rejectLibraryRequest = async (id: string, reason: string) => {
+        const res = await apiClient.patch(`/management/library/requests/${id}/reject`, { reason });
+        return res.data;
+    };
+
+    getLibraryIssues = async (params?: { status?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/library/issues", { params });
+        return res.data;
+    };
+
+    issueLibraryBook = async (data: { bookId: string; studentId: string; requestId?: string; remarks?: string }) => {
+        const res = await apiClient.post("/management/library/issues", data);
+        return res.data;
+    };
+
+    returnLibraryBook = async (issueId: string, data: { remarks?: string; markLost?: boolean; overrideFine?: number }) => {
+        const res = await apiClient.patch(`/management/library/issues/${issueId}/return`, data);
+        return res.data;
+    };
+
+    markLibraryFinePaid = async (issueId: string) => {
+        const res = await apiClient.patch(`/management/library/issues/${issueId}/mark-fine-paid`);
+        return res.data;
+    };
+
+    markLibraryOverdue = async () => {
+        const res = await apiClient.post("/management/library/issues/mark-overdue");
+        return res.data;
+    };
+
+    getLibraryRenewals = async (params?: { status?: string }) => {
+        const res = await apiClient.get("/management/library/renewals", { params });
+        return res.data;
+    };
+
+    respondLibraryRenewal = async (id: string, action: "APPROVED" | "REJECTED", remarks?: string) => {
+        const res = await apiClient.patch(`/management/library/renewals/${id}/respond`, { action, remarks });
+        return res.data;
+    };
 }
 export default new API();

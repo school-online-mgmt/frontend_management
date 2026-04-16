@@ -131,9 +131,9 @@ const StudentAdmission = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-100 pb-12">
+    <div className="min-h-full pb-12">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white py-8">
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-3 mb-2">
             <FileCheck size={32} />
