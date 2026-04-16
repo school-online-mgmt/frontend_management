@@ -22,27 +22,48 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
     const [classes, setClasses] = useState<any[]>([]);
     const [sections, setSections] = useState<any[]>([]);
     const [courses, setCourses] = useState<any[]>([]);
+    const [allCourses, setAllCourses] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Fetch only sessions on mount
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [sess, cls, secs, cors] = await Promise.all([
-                    api.getSessions(),
-                    api.getClasses(),
-                    api.getSections(),
-                    api.getCourses(),
-                ]);
-                setSessions(sess);
-                setClasses(cls);
-                setSections(secs);
-                setCourses(cors);
-            } catch (error) {
-                console.error("Error fetching data", error);
-            }
-        };
-        fetchData();
+        api.getSessions().then((data: any) => {
+            setSessions(Array.isArray(data) ? data : []);
+        }).catch(() => setSessions([]));
     }, []);
+
+    // Fetch classes & courses when session changes
+    useEffect(() => {
+        if (form.sessionId) {
+            api.getClasses().then((data: any) => {
+                setClasses(Array.isArray(data) ? data : []);
+            }).catch(() => setClasses([]));
+            api.getCourses({ sessionId: form.sessionId }).then((data: any) => {
+                const arr = Array.isArray(data) ? data : [];
+                setAllCourses(arr);
+            }).catch(() => setAllCourses([]));
+        } else {
+            setClasses([]);
+            setAllCourses([]);
+        }
+        setSections([]);
+        setCourses([]);
+        setForm(prev => ({ ...prev, classId: "", sectionId: "", courseId: "" }));
+    }, [form.sessionId]);
+
+    // Fetch sections & filter courses when class changes
+    useEffect(() => {
+        if (form.classId) {
+            api.getSectionsByClass(form.classId).then((data: any) => {
+                setSections(Array.isArray(data) ? data : []);
+            }).catch(() => setSections([]));
+            setCourses(allCourses.filter((c: any) => c.classId === form.classId || c.class?.id === form.classId));
+        } else {
+            setSections([]);
+            setCourses([]);
+        }
+        setForm(prev => ({ ...prev, sectionId: "", courseId: "" }));
+    }, [form.classId, allCourses]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -79,22 +100,22 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Class</label>
-                        <select name="classId" value={form.classId} onChange={handleChange} required className="w-full p-2 border rounded">
-                            <option value="">Select Class</option>
+                        <select name="classId" value={form.classId} onChange={handleChange} required disabled={!form.sessionId} className="w-full p-2 border rounded disabled:bg-slate-100 disabled:cursor-not-allowed">
+                            <option value="">{!form.sessionId ? "Select a session first" : "Select Class"}</option>
                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Section</label>
-                        <select name="sectionId" value={form.sectionId} onChange={handleChange} required className="w-full p-2 border rounded">
-                            <option value="">Select Section</option>
+                        <select name="sectionId" value={form.sectionId} onChange={handleChange} required disabled={!form.classId} className="w-full p-2 border rounded disabled:bg-slate-100 disabled:cursor-not-allowed">
+                            <option value="">{!form.classId ? "Select a class first" : "Select Section"}</option>
                             {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Course</label>
-                        <select name="courseId" value={form.courseId} onChange={handleChange} required className="w-full p-2 border rounded">
-                            <option value="">Select Course</option>
+                        <select name="courseId" value={form.courseId} onChange={handleChange} required disabled={!form.classId} className="w-full p-2 border rounded disabled:bg-slate-100 disabled:cursor-not-allowed">
+                            <option value="">{!form.classId ? "Select a class first" : "Select Course"}</option>
                             {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, BookOpen, LogOut, School, GraduationCap, Users,
+  LayoutDashboard, BookOpen, LogOut, School, Users,
   UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
   ChevronLeft, Menu, X, Search, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library,

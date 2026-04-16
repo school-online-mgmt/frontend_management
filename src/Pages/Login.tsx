@@ -3,6 +3,7 @@ import { Lock, Phone, Eye, EyeOff, Loader2, CheckCircle, School } from 'lucide-r
 import { useNavigate } from 'react-router-dom';
 import api from '../api/api.ts';
 import { useToast } from '../context/ToastContext';
+import { useAuthContext } from '../context/AuthContext';
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { refresh } = useAuthContext();
 
   // Validation function
   const validateForm = (): boolean => {
@@ -47,9 +49,8 @@ const Login: React.FC = () => {
       if (res.user?.id) {
         setIsSuccess(true);
         addToast(`Welcome back, ${res.user.name || 'Admin'}!`, 'success');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
+        await refresh();
+        navigate('/dashboard');
       } else {
         addToast('Invalid credentials', 'error');
       }

@@ -48,13 +48,60 @@ const StudentAdmission = () => {
     transportOpted: false,
   });
 
+  // Dropdown data
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [allCourses, setAllCourses] = useState<any[]>([]);
+
   useEffect(() => {
     fetchApplicants();
+    // Only fetch sessions on mount (classes, sections, courses are dependent)
+    api.getSessions().then((data: any) => {
+      setSessions(Array.isArray(data) ? data : []);
+    }).catch(() => setSessions([]));
   }, []);
 
   useEffect(() => {
     filterApplicants();
   }, [searchQuery, statusFilter, applicants]);
+
+  // Fetch classes & courses when session changes
+  useEffect(() => {
+    if (admissionData.sessionId) {
+      api.getClasses().then((data: any) => {
+        setClasses(Array.isArray(data) ? data : []);
+      }).catch(() => setClasses([]));
+      api.getCourses({ sessionId: admissionData.sessionId }).then((data: any) => {
+        const arr = Array.isArray(data) ? data : [];
+        setAllCourses(arr);
+      }).catch(() => setAllCourses([]));
+    } else {
+      setClasses([]);
+      setAllCourses([]);
+    }
+    // Reset dependent fields when session changes
+    setAdmissionData(prev => ({ ...prev, classId: "", sectionId: "", courseId: "" }));
+    setSections([]);
+    setCourses([]);
+  }, [admissionData.sessionId]);
+
+  // Fetch sections & filter courses when class changes
+  useEffect(() => {
+    if (admissionData.classId) {
+      api.getSectionsByClass(admissionData.classId).then((data: any) => {
+        setSections(Array.isArray(data) ? data : []);
+      }).catch(() => setSections([]));
+      // Filter courses that belong to the selected class
+      setCourses(allCourses.filter((c: any) => c.classId === admissionData.classId || c.class?.id === admissionData.classId));
+    } else {
+      setSections([]);
+      setCourses([]);
+    }
+    // Reset dependent fields when class changes
+    setAdmissionData(prev => ({ ...prev, sectionId: "", courseId: "" }));
+  }, [admissionData.classId, allCourses]);
 
   const fetchApplicants = async () => {
     setLoading(true);
@@ -457,57 +504,80 @@ const StudentAdmission = () => {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Session *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Session ID"
+                  <select
                     value={admissionData.sessionId}
                     onChange={(e) =>
                       setAdmissionData({ ...admissionData, sessionId: e.target.value })
                     }
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                  >
+                    <option value="">Select Session</option>
+                    {sessions.map((session) => (
+                      <option key={session.id} value={session.id}>
+                        {session.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Class *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Class ID"
+                  <select
                     value={admissionData.classId}
+                    disabled={!admissionData.sessionId}
                     onChange={(e) =>
                       setAdmissionData({ ...admissionData, classId: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{!admissionData.sessionId ? "Select a session first" : "Select Class"}</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Section *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Section ID"
+                  <select
                     value={admissionData.sectionId}
+                    disabled={!admissionData.classId}
                     onChange={(e) =>
                       setAdmissionData({ ...admissionData, sectionId: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{!admissionData.classId ? "Select a class first" : "Select Section"}</option>
+                    {sections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Course *
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Course ID"
+                  <select
                     value={admissionData.courseId}
+                    disabled={!admissionData.classId}
                     onChange={(e) =>
                       setAdmissionData({ ...admissionData, courseId: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{!admissionData.classId ? "Select a class first" : "Select Course"}</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
