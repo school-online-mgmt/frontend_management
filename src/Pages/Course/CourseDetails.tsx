@@ -87,7 +87,12 @@ const CourseDetails = () => {
             );
 
             setTimeout(() => {
-                navigate("/course-home");
+                // Navigate back to the class page if we know classId, else go to class-Home
+                if (course.class?.id) {
+                    navigate(`/class/${course.class.id}`);
+                } else {
+                    navigate("/class-Home");
+                }
             }, 1200);
 
         } catch {

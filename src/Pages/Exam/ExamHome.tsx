@@ -66,7 +66,7 @@ const ExamHome = () => {
 
     const navigate = useNavigate();
 
-    const canCreate = role === "PRINCIPAL" || role === "SUPER_ADMIN";
+    const canCreate = role === "PRINCIPAL" || role === "SUPER_ADMIN" || role === "DIRECTOR" || role === "MANAGEMENT_STAFF";
 
     // Load Sessions
     useEffect(() => {

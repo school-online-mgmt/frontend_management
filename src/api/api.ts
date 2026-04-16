@@ -799,10 +799,6 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
-    getFeeSummary = async (params?: { month?: number; year?: number }) => {
-        const res = await apiClient.get("/management/fees/summary", { params });
-        return res.data;
-    };
 
     // Payments
     getFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
@@ -822,6 +818,97 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     };
     refundPayment = async (paymentId: string) => {
         const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);
+        return res.data;
+    };
+
+    // ── Library Module ────────────────────────────────────────────────────────
+    getLibraryStats = async () => {
+        const res = await apiClient.get("/management/library/stats");
+        return res.data;
+    };
+
+    getLibraryBooks = async (params?: { genre?: string; enabled?: string; search?: string }) => {
+        const res = await apiClient.get("/management/library/books", { params });
+        return res.data;
+    };
+
+    getLibraryBookById = async (id: string) => {
+        const res = await apiClient.get(`/management/library/books/${id}`);
+        return res.data;
+    };
+
+    createLibraryBook = async (data: {
+        title: string; author: string; isbn?: string; publisher?: string;
+        publicationYear?: number; genre?: string; description?: string;
+        coverImageUrl?: string; rackNumber?: string; totalCopies?: number;
+        isEnabled?: boolean; requiresApproval?: boolean; restrictedToClassIds?: string[];
+    }) => {
+        const res = await apiClient.post("/management/library/books", data);
+        return res.data;
+    };
+
+    updateLibraryBook = async (id: string, data: any) => {
+        const res = await apiClient.patch(`/management/library/books/${id}`, data);
+        return res.data;
+    };
+
+    toggleLibraryBook = async (id: string) => {
+        const res = await apiClient.patch(`/management/library/books/${id}/toggle`);
+        return res.data;
+    };
+
+    deleteLibraryBook = async (id: string) => {
+        const res = await apiClient.delete(`/management/library/books/${id}`);
+        return res.data;
+    };
+
+    getLibraryRequests = async (params?: { status?: string }) => {
+        const res = await apiClient.get("/management/library/requests", { params });
+        return res.data;
+    };
+
+    approveLibraryRequest = async (id: string) => {
+        const res = await apiClient.patch(`/management/library/requests/${id}/approve`);
+        return res.data;
+    };
+
+    rejectLibraryRequest = async (id: string, reason: string) => {
+        const res = await apiClient.patch(`/management/library/requests/${id}/reject`, { reason });
+        return res.data;
+    };
+
+    getLibraryIssues = async (params?: { status?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/library/issues", { params });
+        return res.data;
+    };
+
+    issueLibraryBook = async (data: { bookId: string; studentId: string; requestId?: string; remarks?: string }) => {
+        const res = await apiClient.post("/management/library/issues", data);
+        return res.data;
+    };
+
+    returnLibraryBook = async (issueId: string, data: { remarks?: string; markLost?: boolean; overrideFine?: number }) => {
+        const res = await apiClient.patch(`/management/library/issues/${issueId}/return`, data);
+        return res.data;
+    };
+
+    markLibraryFinePaid = async (issueId: string) => {
+        const res = await apiClient.patch(`/management/library/issues/${issueId}/mark-fine-paid`);
+        return res.data;
+    };
+
+    markLibraryOverdue = async () => {
+        const res = await apiClient.post("/management/library/issues/mark-overdue");
+        return res.data;
+    };
+
+    getLibraryRenewals = async (params?: { status?: string }) => {
+        const res = await apiClient.get("/management/library/renewals", { params });
+        return res.data;
+    };
+
+    respondLibraryRenewal = async (id: string, action: "APPROVED" | "REJECTED", remarks?: string) => {
+        const res = await apiClient.patch(`/management/library/renewals/${id}/respond`, { action, remarks });
         return res.data;
     };
 }
