@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { CreateClassData, UpdateTeacherData, UpdateExamPayload, UpdateSchoolEventData, UpdateLibraryBookData } from './types';
 
 // Create an Axios instance with a base URL from environment variables
 const apiClient = axios.create({
@@ -176,7 +177,7 @@ class API {
   };
 
   // Create class
-  createClass = async (data: any) => {
+  createClass = async (data: CreateClassData) => {
     const response = await apiClient.post("/management/class/create", data);
     return response.data;
   };
@@ -397,7 +398,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     };
 
     // Update Exam
-    updateExam = async (examId: string, payload: any) => {
+    updateExam = async (examId: string, payload: UpdateExamPayload) => {
         const res = await apiClient.patch(`/management/exam/${examId}/update`, payload);
         return res.data;
     };
@@ -553,7 +554,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     };
 
     // Update teacher
-    updateTeacher = async (teacherId: string, teacherData: any) => {
+    updateTeacher = async (teacherId: string, teacherData: UpdateTeacherData) => {
         const res = await apiClient.patch(`/management/teacher/${teacherId}`, teacherData);
         return res.data;
     };
@@ -589,7 +590,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
-    updateSchoolEvent = async (eventId: string, data: any) => {
+    updateSchoolEvent = async (eventId: string, data: UpdateSchoolEventData) => {
         const res = await apiClient.patch(`/management/events/${eventId}`, data);
         return res.data;
     };
@@ -847,7 +848,7 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
-    updateLibraryBook = async (id: string, data: any) => {
+    updateLibraryBook = async (id: string, data: UpdateLibraryBookData) => {
         const res = await apiClient.patch(`/management/library/books/${id}`, data);
         return res.data;
     };

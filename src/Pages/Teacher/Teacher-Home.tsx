@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, RefreshCcw, Users, Search, ChevronRight, Phone, Briefcase } from "lucide-react";
 import api from "../../api/api";
 import { useNavigate } from "react-router-dom";
 import CreateTeacher from "../../components/CreateTeacher";
 import Button from "../../components/common/Button";
-import { Card, CardContent, Badge, EmptyState } from "../../components/common/FormComponents";
+import { Card, CardContent, Badge, EmptyState, Input } from "../../components/common/FormComponents";
 import { PageWrapper, PageContent, PageHeader, Section } from "../../components/common/PageWrappers";
-import { Input } from "../../components/common/FormComponents";
+import type { Teacher } from "../../api/types";
 
 const TeacherHome = () => {
-    const [teachers, setTeachers] = useState<any[]>([]);
-    const [filteredTeachers, setFilteredTeachers] = useState<any[]>([]);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -18,47 +17,43 @@ const TeacherHome = () => {
 
     const navigate = useNavigate();
 
-    const fetchTeachers = async () => {
+    const fetchTeachers = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await api.getTeachers();
             const teacherList = Array.isArray(data) ? data : data.teachers || [];
             setTeachers(teacherList);
-            filterTeachers(teacherList, searchTerm, filterStatus);
         } catch (error) {
             console.error("Error fetching teachers", error);
             setTeachers([]);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const filterTeachers = (list: any[], search: string, status: string) => {
-        let filtered = list;
-        
-        if (search) {
-            filtered = filtered.filter(t => 
-                t.name.toLowerCase().includes(search.toLowerCase()) ||
-                t.email?.toLowerCase().includes(search.toLowerCase())
+    const filteredTeachers = useMemo(() => {
+        let filtered = teachers;
+
+        if (searchTerm) {
+            const lower = searchTerm.toLowerCase();
+            filtered = filtered.filter(t =>
+                t.name.toLowerCase().includes(lower) ||
+                t.phone?.toLowerCase().includes(lower)
             );
         }
 
-        if (status !== "all") {
-            filtered = filtered.filter(t => 
-                status === "active" ? t.isActive : !t.isActive
+        if (filterStatus !== "all") {
+            filtered = filtered.filter(t =>
+                filterStatus === "active" ? t.isActive : !t.isActive
             );
         }
 
-        setFilteredTeachers(filtered);
-    };
+        return filtered;
+    }, [teachers, searchTerm, filterStatus]);
 
     useEffect(() => {
         fetchTeachers();
-    }, []);
-
-    useEffect(() => {
-        filterTeachers(teachers, searchTerm, filterStatus);
-    }, [searchTerm, filterStatus, teachers]);
+    }, [fetchTeachers]);
 
     return (
         <PageWrapper>

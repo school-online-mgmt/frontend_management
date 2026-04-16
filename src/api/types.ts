@@ -67,10 +67,11 @@ export interface StudentDetailsResponse {
 export interface Teacher {
   id: string;
   name: string;
-  email: string;
-  phone: string;
+  phone?: string;
+  gender: string;
+  age: number;
   qualification: string;
-  specialization: string;
+  isActive: boolean;
   tenantId: string;
   createdAt: string;
   updatedAt: string;
@@ -82,7 +83,10 @@ export interface Subject {
   slug: string;
   bookName: string;
   description?: string;
-  sessionId?: string;
+  type: string;
+  teacherId?: string;
+  isActive: boolean;
+  sessionId: string;
   tenantId: string;
   createdAt: string;
   updatedAt: string;
@@ -92,12 +96,10 @@ export interface Session {
   id: string;
   name: string;
   slug: string;
-  startYear: number;
-  endYear: number;
-  isActive: boolean;
+  startDate: string;
+  endDate: string;
   tenantId: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface Section {
@@ -105,6 +107,8 @@ export interface Section {
   name: string;
   slug: string;
   classId: string;
+  teacherId?: string;
+  isActive: boolean;
   tenantId: string;
   createdAt: string;
   updatedAt: string;
@@ -118,11 +122,24 @@ export interface SubjectTeacher {
   teachers?: Teacher;
 }
 
+export interface Course {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  classId: string;
+  sessionId: string;
+  isActive: boolean;
+  tenantId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CourseSubject {
   id: string;
   courseId: string;
   subjectId: string;
-  course?: any;
+  course?: Course;
   subject?: Subject;
 }
 
@@ -152,13 +169,66 @@ export interface ExamResult {
   examPaperId: string;
   studentId: string;
   academicId: string;
+  attendanceStatus?: string;
   marks?: number;
   remarks?: string;
   submittedBy?: string;
   submittedAt?: string;
+  isPublished: boolean;
+  publishedAt?: string;
+  publishedBy?: string;
   createdAt: string;
   updatedAt: string;
   tenantId: string;
   studentName?: string;
   studentRollNo?: string;
+}
+
+export interface CreateClassData {
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface UpdateTeacherData {
+  name?: string;
+  gender?: string;
+  age?: number;
+  qualification?: string;
+  phone?: string;
+  isActive?: boolean;
+  password?: string;
+}
+
+export interface UpdateExamPayload {
+  examTerm?: string;
+  examName?: string;
+  fullMarks?: number;
+  examDate?: string;
+  syllabus?: string;
+  questionPaper?: string;
+}
+
+export interface UpdateSchoolEventData {
+  title?: string;
+  description?: string;
+  type?: string;
+  date?: string;
+  endDate?: string;
+}
+
+export interface UpdateLibraryBookData {
+  title?: string;
+  author?: string;
+  isbn?: string;
+  publisher?: string;
+  publicationYear?: number;
+  genre?: string;
+  description?: string;
+  coverImageUrl?: string;
+  rackNumber?: string;
+  totalCopies?: number;
+  isEnabled?: boolean;
+  requiresApproval?: boolean;
+  restrictedToClassIds?: string[];
 }
