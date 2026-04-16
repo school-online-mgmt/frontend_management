@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RefreshCcw, Layers, Plus } from "lucide-react";
+import { RefreshCcw, Layers } from "lucide-react";
 import { useParams } from "react-router-dom";
 import api from "../../api/api";
 import AddSectionModal from "../../components/Classes/AddSectionModal";
