@@ -374,6 +374,17 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     return response.data;
 };
 
+createStudent = async (data: {
+    firstName: string; middleName?: string; lastName: string;
+    fatherName: string; motherName: string; gender: string;
+    phone: string; address: string; password: string;
+    disability: boolean; disabilityDescription?: string;
+    email: string; comments?: string;
+}) => {
+    const response = await apiClient.post('/management/student/create', data);
+    return response.data;
+};
+
     // Get school-wide exam overview (no classId required)
     getExamOverview = async (sessionId: string) => {
         const res = await apiClient.get("/management/exam/overview", { params: { sessionId } });

@@ -22,8 +22,8 @@ const Login: React.FC = () => {
     
     if (!phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{7,}$/.test(phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Enter a valid phone number (minimum 7 digits)';
+    } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
 
     if (!password) {
@@ -94,11 +94,14 @@ const Login: React.FC = () => {
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                 <input 
-                  type="tel" 
-                  placeholder="Enter your phone number" 
-                  value={phone} 
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="Enter your 10-digit phone number"
+                  value={phone}
+                  maxLength={10}
                   onChange={(e) => {
-                    setPhone(e.target.value);
+                    const digits = e.target.value.replace(/\D/g, '');
+                    setPhone(digits);
                     if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
                   }}
                   disabled={isLoading || isSuccess}
@@ -134,7 +137,7 @@ const Login: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || isSuccess}
                 >
-                  {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}

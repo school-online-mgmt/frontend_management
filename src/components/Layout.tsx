@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, LogOut, School, Users,
   UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
-  ChevronLeft, Menu, X, Search, ChevronDown, Settings, HelpCircle,
+  ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight,
 } from "lucide-react";
@@ -91,18 +91,6 @@ const NAV_SECTIONS = [
   },
 ];
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
-const getPageTitle = (pathname: string): string => {
-  for (const section of NAV_SECTIONS) {
-    for (const item of section.items) {
-      if (pathname === item.path || pathname.startsWith(item.path.split("-")[0])) {
-        return item.label;
-      }
-    }
-  }
-  return "Dashboard";
-};
-
 const getInitials = (first?: string, last?: string) =>
   `${first?.charAt(0) ?? ""}${last?.charAt(0) ?? ""}`.toUpperCase() || "A";
 
@@ -164,7 +152,6 @@ const Layout = () => {
   const isSectionActive = (section: typeof NAV_SECTIONS[0]) =>
     section.items.some(i => isActive(i.path));
 
-  const pageTitle = getPageTitle(location.pathname);
 
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
@@ -339,8 +326,16 @@ const Layout = () => {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
+      <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
         <SidebarContent />
+        {/* Collapse extender tab */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden lg:flex absolute -right-3 top-[56px] z-20 w-6 h-10 items-center justify-center bg-slate-800 hover:bg-slate-700 border border-white/[0.08] rounded-r-lg text-slate-400 hover:text-slate-200 transition-colors shadow-md"
+        >
+          <ChevronLeft size={13} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
+        </button>
       </aside>
 
       {/* Mobile Overlay */}
@@ -361,21 +356,9 @@ const Layout = () => {
             className="lg:hidden p-1.5 -ml-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
             <Menu size={18} />
           </button>
-          <button onClick={() => setCollapsed((c) => !c)}
-            className="hidden lg:flex items-center justify-center w-7 h-7 -ml-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-            <ChevronLeft size={16} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xs font-semibold text-slate-800 truncate">{pageTitle}</h2>
-          </div>
+          <div className="flex-1 min-w-0" />
 
           <div className="flex items-center gap-1">
-            <button className="flex items-center gap-2 h-7 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-400 hover:border-slate-300 hover:text-slate-500 transition-colors">
-              <Search size={13} />
-              <span className="hidden sm:inline">Search…</span>
-              <kbd className="hidden md:inline-flex items-center px-1 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-mono text-slate-400 ml-1.5">⌘K</kbd>
-            </button>
             <button className="relative p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
               <Bell size={16} />
               <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-white" />
