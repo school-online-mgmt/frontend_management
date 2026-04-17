@@ -32,25 +32,25 @@ export default function LeaveHome() {
     const [tab, setTab] = useState<TabKey>("student");
     return (
         <div className="h-full flex flex-col bg-slate-50">
-            <header className="shrink-0 bg-white border-b border-slate-200 px-6 py-4">
+            <header className="shrink-0 bg-slate-900 border-b border-white/[0.06] px-6 py-4">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20">
                             <CalendarDays size={19} className="text-white" />
                         </div>
                         <div>
-                            <h1 className="text-base font-bold text-slate-800">Leave Management</h1>
+                            <h1 className="text-base font-bold text-white">Leave Management</h1>
                             <p className="text-[11px] text-slate-400">Manage student & teacher leave requests</p>
                         </div>
                     </div>
-                    <nav className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+                    <nav className="flex bg-white/10 rounded-xl p-1 gap-0.5">
                         {([
                             { key: "student" as TabKey, label: "Student Leaves", icon: Users },
                             { key: "teacher" as TabKey, label: "Teacher Leaves", icon: UserCog },
                         ]).map(t => (
                             <button key={t.key} onClick={() => setTab(t.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab === t.key ? "bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700"
+                                    tab === t.key ? "bg-white/15 text-emerald-400 shadow-sm" : "text-slate-400 hover:text-slate-200"
                                 }`}>
                                 <t.icon size={13} />{t.label}
                             </button>

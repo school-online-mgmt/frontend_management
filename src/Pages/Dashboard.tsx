@@ -5,6 +5,7 @@ import {
   CreditCard, AlertTriangle, CheckCircle2, UserPlus, Layers,
   ClipboardCheck, Library, Bell, Loader2, RefreshCw,
   ChevronRight, Sparkles, BookMarked, Wallet, CalendarDays,
+  School, UserCog,
 } from "lucide-react";
 import api from "../api/api";
 import useAuth from "../hooks/useAuth";
@@ -237,7 +238,32 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* â”€â”€ Stat Cards Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Staff Coverage Teaser ─────────────────────────────────────────── */}
+      <button
+        onClick={() => navigate("/assignments")}
+        className="w-full text-left bg-white border border-slate-100 rounded-2xl shadow-sm px-4 py-3.5 flex items-center justify-between gap-4 hover:shadow-md hover:border-slate-200 transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+            <UserCog size={15} className="text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-700">Staff Coverage Overview</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              View teacher assignments for classes, sections &amp; subjects
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-500">
+            <School size={11} className="text-indigo-400" />{classes.length} classes
+            <Layers size={11} className="text-violet-400 ml-1" />{classes.reduce((a: number, c: any) => a + (c.sections?.length ?? 0), 0)} sections
+          </div>
+          <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
+        </div>
+      </button>
+
+      {/* Stat Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <button onClick={() => navigate("/students-home")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-blue-700 bg-blue-50 border-blue-100">

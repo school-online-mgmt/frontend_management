@@ -196,6 +196,7 @@ class API {
     return response.data;
   };
 
+
   // -----------Section APIs------------
   // Get all Sections
   getSections = async () => {
@@ -203,6 +204,16 @@ class API {
     return response.data.sections;
 };
 
+  // Get staff assignment gaps (classes/sections/subjects without teacher)
+  getStaffGaps = async (): Promise<{
+    classGaps: { id: string; name: string; slug: string }[];
+    sectionGaps: { id: string; name: string; slug: string; classId: string; class: { id: string; name: string } }[];
+    subjectGaps: { sectionId: string; sectionName: string; classId: string; className: string; subjectId: string; subjectName: string }[];
+    totalSubjectSectionPairs: number;
+  }> => {
+    const response = await apiClient.get("/management/dashboard/staff-gaps");
+    return response.data;
+  };
 
 //get All Sessions
 getSessions= async () => {
@@ -571,6 +582,12 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Get teacher full assignments (classes, sections, subjects)
+    getTeacherAssignments = async (teacherId: string) => {
+        const res = await apiClient.get(`/management/teacher/${teacherId}/assignments`);
+        return res.data;
+    };
+
     // Create teacher (note: different signature than below)
     createTeacherEntry = async (teacherData: {
         name: string;
@@ -598,6 +615,24 @@ createStudent = async (data: {
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
+        return res.data;
+    };
+
+    // Update section (e.g. remove teacher: pass teacherId: null)
+    updateSection = async (sectionId: string, data: { name?: string; slug?: string; teacherId?: string | null }) => {
+        const res = await apiClient.patch(`/management/section/${sectionId}`, data);
+        return res.data;
+    };
+
+    // Get section by ID (rich details)
+    getSectionById = async (sectionId: string) => {
+        const res = await apiClient.get(`/management/section/${sectionId}`);
+        return res.data;
+    };
+
+    // Update class (e.g. remove teacher: pass teacherId: null)
+    updateClass = async (classId: string, data: { name?: string; slug?: string; teacherId?: string | null }) => {
+        const res = await apiClient.patch(`/management/class/${classId}`, data);
         return res.data;
     };
 
@@ -838,14 +873,14 @@ createStudent = async (data: {
     };
     exportFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
         const res = await apiClient.get("/management/fees/payments/export", { params, responseType: 'blob' });
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const url = globalThis.URL.createObjectURL(new Blob([res.data]));
         const a = document.createElement('a');
         a.href = url;
         a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
+        globalThis.URL.revokeObjectURL(url);
     };
     refundPayment = async (paymentId: string) => {
         const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   RefreshCcw, UserPlus, Search, Filter, X,
   Users, CheckCircle, Clock, BookOpen, ChevronRight,
-  Phone, Mail, UserCheck,
+  Phone, Mail, UserCheck, Loader2,
 } from 'lucide-react';
 import api from '../../api/api';
 import type { Student } from '../../api/types';
@@ -42,7 +42,7 @@ function avatarColor(name: string) {
 
 const StudentsHome: React.FC = () => {
   const [students, setStudents]           = useState<Student[]>([]);
-  const [loading, setLoading]             = useState(false);
+  const [loading, setLoading]             = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showAdmitModal, setShowAdmitModal]   = useState(false);
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
@@ -96,14 +96,25 @@ const StudentsHome: React.FC = () => {
   const activeFilterCount = [statusFilter, genderFilter].filter(Boolean).length;
   const clearFilters = () => { setStatusFilter(''); setGenderFilter(''); setSearch(''); };
 
+  if (loading && students.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <Loader2 size={28} className="animate-spin text-indigo-400 mx-auto" />
+          <p className="text-sm text-slate-500">Loading students…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-slate-50">
       {/* Page header */}
-      <div className="bg-white border-b border-slate-200 px-6 lg:px-8 py-6">
+      <div className="bg-slate-900 border-b border-white/[0.06] px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Student Management</h1>
-            <p className="text-sm text-slate-500 mt-1">View, search and manage enrolled students</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Student Management</h1>
+            <p className="text-sm text-slate-400 mt-1">View, search and manage enrolled students</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -115,7 +126,7 @@ const StudentsHome: React.FC = () => {
             </button>
             <button
               onClick={fetchStudents} disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/10 text-slate-300 text-sm font-medium rounded-xl shadow-sm hover:bg-white/15 disabled:opacity-50 transition-all"
             >
               <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh

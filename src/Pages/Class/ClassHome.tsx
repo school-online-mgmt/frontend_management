@@ -1,150 +1,193 @@
-import { useEffect, useState } from "react";
-import { Plus, RefreshCcw, School } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
+import { Plus, RefreshCcw, School, Users, Layers, User, ChevronRight, BookOpen, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateClassModal from "../../components/Classes/CreateClassModal";
 
+const StatBadge = ({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) => (
+    <div className="flex items-center gap-2">
+        <div className="text-slate-400">{icon}</div>
+        <div>
+            <p className="text-base font-bold text-slate-800 leading-none">{value}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+        </div>
+    </div>
+);
+
 const ClassHome = () => {
-
     const navigate = useNavigate();
-
     const [classes, setClasses] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [message, setMessage] = useState<{
-        type: "success" | "error";
-        text: string;
-    } | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-    useEffect(() => {
+    const showToast = (text: string, type: "success" | "error") => {
+        setToast({ text, type });
+        setTimeout(() => setToast(null), 4000);
+    };
 
-        if (!message) return;
-
-        const timer = setTimeout(() => {
-            setMessage(null);
-        }, 4000);
-
-        return () => clearTimeout(timer);
-    }, [message]);
-
-    const fetchClasses = async () => {
-
+    const fetchClasses = useCallback(async () => {
         setIsLoading(true);
-
         try {
-            const classes = await api.getClasses();
-            setClasses(classes || []);
-        } catch (err) {
-
+            const data = await api.getClasses();
+            setClasses(data || []);
+        } catch {
             setClasses([]);
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchClasses();
     }, []);
 
-    return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
+    useEffect(() => { fetchClasses(); }, [fetchClasses]);
 
+    const filtered = classes.filter(c =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.slug.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const totalStudents = classes.reduce((sum, c) => sum + (c.studentCount ?? 0), 0);
+    const totalSections = classes.reduce((sum, c) => sum + (c.sectionCount ?? 0), 0);
+
+    return (
+        <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+            {toast && (
+                <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>
+                    {toast.text}
+                </div>
+            )}
 
             {showCreateModal && (
                 <CreateClassModal
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={(msg: any) => {
-                        setMessage(msg);
+                        showToast(msg?.text ?? "Class created", "success");
                         fetchClasses();
                     }}
                 />
             )}
 
-            {message && (
-                <div
-                    className={`p-3 rounded-lg text-sm ${
-                        message.type === "success"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-red-50 text-red-700"
-                    }`}
-                >
-                    {message.text}
-                </div>
-            )}
-            <header className="flex justify-between items-end mb-10">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">
-                        Class Management
-                    </h1>
-
-                    <p className="text-slate-500 mt-2">
-                        Create and manage classes
-                    </p>
+                    <h1 className="text-2xl font-bold text-slate-900">Class Management</h1>
+                    <p className="text-slate-500 text-sm mt-1">Manage classes, sections, and class teachers</p>
                 </div>
-
-                <div className="flex gap-3">
-
-                    <button
-                        onClick={fetchClasses}
-                        className="px-3 py-1.5 border border-slate-200 rounded-xl flex items-center gap-2"
-                    >
-                        <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
-                        Refresh
+                <div className="flex gap-2">
+                    <button onClick={fetchClasses} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-slate-50 transition">
+                        <RefreshCcw size={15} className={isLoading ? "animate-spin" : ""} /> Refresh
                     </button>
-
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl flex items-center gap-2"
-                    >
-                        <Plus size={18} />
-                        Create Class
+                    <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-emerald-700 transition shadow-sm">
+                        <Plus size={16} /> Create Class
                     </button>
-
                 </div>
+            </div>
 
-            </header>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                {[
+                    { icon: <School size={22} className="text-indigo-500" />, value: classes.length, label: "Total Classes", bg: "bg-indigo-50" },
+                    { icon: <Layers size={22} className="text-violet-500" />, value: totalSections, label: "Total Sections", bg: "bg-violet-50" },
+                    { icon: <Users size={22} className="text-emerald-500" />, value: totalStudents, label: "Total Students", bg: "bg-emerald-50" },
+                ].map(s => (
+                    <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl ${s.bg} flex items-center justify-center flex-shrink-0`}>{s.icon}</div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">{s.value}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
 
-            <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
+            {/* Search */}
+            <div className="relative">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Search by class name or slug..."
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                />
+            </div>
 
-                <table className="w-full text-left">
-
-                    <thead>
-                    <tr className="border-b border-slate-100">
-                        <th className="p-4 text-sm font-semibold uppercase">Slug</th>
-                        <th className="p-4 text-sm font-semibold uppercase">Class</th>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-
-                    {classes.map(cls => (
-
-                        <tr
+            {/* Class Cards */}
+            {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                    <RefreshCcw size={28} className="animate-spin text-emerald-600" />
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="text-center py-20">
+                    <School size={40} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-slate-500 font-medium">{searchTerm ? "No classes match your search" : "No classes yet"}</p>
+                    {!searchTerm && <button onClick={() => setShowCreateModal(true)} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold">Create First Class</button>}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filtered.map(cls => (
+                        <div
                             key={cls.id}
                             onClick={() => navigate(`/class/${cls.id}`)}
-                            className="hover:bg-slate-50 cursor-pointer"
+                            className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all cursor-pointer group"
                         >
-
-                            <td className="p-4 font-mono text-slate-500">
-                                #{cls.slug}
-                            </td>
-
-                            <td className="p-4 flex items-center gap-3">
-
-                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                                    <School size={18} />
+                            {/* Card Header */}
+                            <div className="p-5 pb-4">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm flex-shrink-0">
+                                        {cls.name.charAt(0)}
+                                    </div>
+                                    <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">#{cls.slug}</span>
                                 </div>
+                                <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">{cls.name}</h3>
 
-                                {cls.name}
+                                {/* Class Teacher */}
+                                <div className={`mt-2 flex items-center gap-2 text-sm ${cls.teacher ? 'text-slate-600' : 'text-slate-400 italic'}`}>
+                                    <User size={13} className="flex-shrink-0" />
+                                    {cls.teacher ? (
+                                        <span>{cls.teacher.name} <span className="text-slate-400 text-xs">({cls.teacher.qualification})</span></span>
+                                    ) : 'No class teacher assigned'}
+                                </div>
+                            </div>
 
-                            </td>
-                        </tr>
+                            {/* Stats Row */}
+                            <div className="border-t border-slate-100 px-5 py-3.5 grid grid-cols-3 gap-3">
+                                <StatBadge icon={<Layers size={15} />} value={cls.sectionCount ?? cls.sections?.length ?? 0} label="Sections" />
+                                <StatBadge icon={<Users size={15} />} value={cls.studentCount ?? 0} label="Students" />
+                                <StatBadge icon={<BookOpen size={15} />} value={cls.courses?.length ?? 0} label="Courses" />
+                            </div>
+
+                            {/* Sections Preview */}
+                            {cls.sections && cls.sections.length > 0 && (
+                                <div className="px-5 pb-4">
+                                    <p className="text-xs text-slate-400 mb-2">Sections</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {cls.sections.slice(0, 5).map((s: any) => (
+                                            <span key={s.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 text-violet-700 text-xs font-medium rounded-lg border border-violet-100">
+                                                <Layers size={10} />{s.name}
+                                            </span>
+                                        ))}
+                                        {cls.sections.length > 5 && (
+                                            <span className="px-2.5 py-1 bg-slate-50 text-slate-500 text-xs rounded-lg border border-slate-100">+{cls.sections.length - 5} more</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between">
+                                <span className="text-xs text-slate-500">View Details</span>
+                                <ChevronRight size={15} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                            </div>
+                        </div>
                     ))}
-                    </tbody>
-                </table>
-            </div>
+                </div>
+            )}
+
+            {filtered.length > 0 && (
+                <p className="text-xs text-slate-400 text-center">Showing {filtered.length} of {classes.length} classes</p>
+            )}
         </div>
     );
 };
 
 export default ClassHome;
+

@@ -34,6 +34,7 @@ const NAV_SECTIONS = [
     collapsible: true,
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
+      { path: "/assignments", label: "Assignments", icon: ClipboardList },
     ],
   },
   {
@@ -180,7 +181,7 @@ const Layout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} scrollbar-thin`}>
+        <nav className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
           <div className="space-y-0.5">
             {NAV_SECTIONS.map((section) => {
               const sectionActive = isSectionActive(section);
@@ -328,11 +329,11 @@ const Layout = () => {
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
         <SidebarContent />
-        {/* Collapse extender tab */}
+        {/* Collapse extender tab — matches the h-14 (56px) brand header */}
         <button
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="hidden lg:flex absolute -right-3 top-[56px] z-20 w-6 h-10 items-center justify-center bg-slate-800 hover:bg-slate-700 border border-white/[0.08] rounded-r-lg text-slate-400 hover:text-slate-200 transition-colors shadow-md"
+          className="hidden lg:flex absolute -right-3 top-0 z-20 w-6 h-14 items-center justify-center bg-slate-800 hover:bg-slate-700 border border-white/[0.08] rounded-r-lg text-slate-400 hover:text-slate-200 transition-colors shadow-md"
         >
           <ChevronLeft size={13} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
         </button>
@@ -351,25 +352,29 @@ const Layout = () => {
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-12 bg-white border-b border-slate-200 flex items-center gap-3 px-4 lg:px-5 shrink-0 z-10">
+        <header className="h-12 bg-slate-900 border-b border-white/[0.06] flex items-center gap-3 px-4 lg:px-5 shrink-0 z-10">
           <button onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-1.5 -ml-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+            className="lg:hidden p-1.5 -ml-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
             <Menu size={18} />
           </button>
           <div className="flex-1 min-w-0" />
 
           <div className="flex items-center gap-1">
-            <button className="relative p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            <button className="relative p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
               <Bell size={16} />
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-white" />
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-slate-900" />
             </button>
             <div ref={profileRef} className="relative">
               <button onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <span className="text-emerald-700 text-[10px] font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
+                className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-white/[0.06] transition-colors">
+                <div className="w-7 h-7 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-emerald-400 text-[10px] font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
                 </div>
-                <ChevronDown size={12} className={`text-slate-400 transition-transform hidden sm:block ${profileOpen ? "rotate-180" : ""}`} />
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-semibold text-white leading-none">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-[10px] text-slate-500 capitalize mt-0.5">{user?.role ?? "Admin"}</p>
+                </div>
+                <ChevronDown size={12} className={`text-slate-500 transition-transform hidden sm:block ${profileOpen ? "rotate-180" : ""}`} />
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-lg shadow-slate-200/50 py-1 z-50">
