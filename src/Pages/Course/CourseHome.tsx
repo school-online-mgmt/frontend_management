@@ -118,7 +118,7 @@ const CourseHome = () => {
                                 </tr>
                             ) : courses.length > 0 ? (
 
-                                courses.map((course: unknown) => (
+                                courses.map((course: any) => (
                                     <tr
                                         key={course.id}
                                         onClick={() => navigate(`/course/${course.id}`)}

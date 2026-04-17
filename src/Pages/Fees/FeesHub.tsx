@@ -86,9 +86,9 @@ function SummaryTab() {
             const p: Record<string, unknown> = {};
             if (month) p.month = Number.parseInt(month);
             if (year) p.year = Number.parseInt(year);
-            const data = await api.getFeeSummary(p as Record<string, unknown>);
+            const data = await api.getFeeSummary(p as any);
             setSummary(data.summary);
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
         finally { setLoading(false); }
     }, [month, year]);
 
@@ -188,7 +188,7 @@ function CourseFeesTab() {
         try {
             await api.setCourseFee(courseId, Number.parseInt(tuitionFee));
             await reload(); setShowForm(false); setCourseId(''); setTuitionFee(''); setEditingId(null);
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
         finally { setSaving(false); }
     };
 
@@ -306,7 +306,7 @@ function PaymentsTab() {
             if (status) params.paymentStatus = status;
             const data = await api.getFeePayments(params);
             setPayments(data.payments || []);
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
         finally { setLoading(false); }
     }, [from, to, mode, status]);
 
@@ -321,7 +321,7 @@ function PaymentsTab() {
             if (mode) params.paymentMode = mode;
             if (status) params.paymentStatus = status;
             await api.exportFeePayments(params);
-        } catch (_) { alert('Export failed'); }
+        } catch { alert('Export failed'); }
         finally { setExporting(false); }
     };
 
@@ -332,7 +332,7 @@ function PaymentsTab() {
             const data = await api.refundPayment(p.id);
             alert(data.message || 'Refunded successfully');
             await reload();
-        } catch (err: unknown) {
+        } catch (err: any) {
             alert(err.response?.data?.message || 'Refund failed');
         } finally { setRefunding(null); }
     };
@@ -455,7 +455,7 @@ function TransportTab() {
             if (editing) await api.updateTransportZone(editing.id, { name, description: desc, price: Number.parseInt(price) });
             else await api.createTransportZone({ name, description: desc, price: Number.parseInt(price) });
             await reload(); setShowForm(false);
-        } catch (_) { } finally { setSaving(false); }
+        } catch { /* ignored */ } finally { setSaving(false); }
     };
     const del = async (id: string) => { if (!confirm('Delete zone?')) return; await api.deleteTransportZone(id); await reload(); };
 
@@ -524,7 +524,7 @@ function ExtraChargesTab() {
         const p: Record<string, unknown> = {};
         if (filterMonth) p.month = Number.parseInt(filterMonth);
         if (filterYear) p.year = Number.parseInt(filterYear);
-        api.getExtraCharges(p as Record<string, unknown>).then(d => setCharges(d.extraCharges || [])).catch(() => {});
+        api.getExtraCharges(p as any).then(d => setCharges(d.extraCharges || [])).catch(() => {});
     }, [filterMonth, filterYear]);
 
     useEffect(() => { reload(); }, [reload]);
@@ -533,7 +533,7 @@ function ExtraChargesTab() {
     // When student changes, load their academic records
     useEffect(() => {
         if (!form.studentId) { setStudentAcademics([]); return; }
-        api.getStudentById(form.studentId).then((d: unknown) => {
+        api.getStudentById(form.studentId).then((d: any) => {
             const acads = d.academics || [];
             setStudentAcademics(acads);
             if (acads.length > 0) setForm(f => ({ ...f, academicId: acads[0].id }));
@@ -546,7 +546,7 @@ function ExtraChargesTab() {
         try {
             await api.addExtraCharge({ ...form, amount: Number.parseInt(form.amount), month: Number.parseInt(form.month), year: Number.parseInt(form.year) });
             await reload(); setShowForm(false); setForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
-        } catch (_) { alert('Failed to add charge'); } finally { setSaving(false); }
+        } catch { alert('Failed to add charge'); } finally { setSaving(false); }
     };
 
     const del = async (id: string) => { if (!confirm('Remove this charge?')) return; await api.deleteExtraCharge(id); await reload(); };
@@ -578,14 +578,14 @@ function ExtraChargesTab() {
                             <label className="block text-xs font-medium text-slate-600 mb-1">Student <span className="text-red-500">*</span></label>
                             <select value={form.studentId} onChange={e => setForm(f=>({...f, studentId: e.target.value, academicId:''}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 <option value="">Select…</option>
-                                {students.map((s: unknown) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
+                                {students.map((s: any) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
                             </select>
                         </div>
                         {studentAcademics.length > 0 && (
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Academic Session <span className="text-red-500">*</span></label>
                                 <select value={form.academicId} onChange={e => setForm(f=>({...f, academicId: e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                    {studentAcademics.map((a: unknown) => <option key={a.id} value={a.id}>{a.sessionName || a.id.slice(0,8)}</option>)}
+                                    {studentAcademics.map((a: any) => <option key={a.id} value={a.id}>{a.sessionName || a.id.slice(0,8)}</option>)}
                                 </select>
                             </div>
                         )}
@@ -659,7 +659,7 @@ function InvoicesTab() {
         if (filterMonth) p.month = Number.parseInt(filterMonth);
         if (filterYear) p.year = Number.parseInt(filterYear);
         if (filterStatus) p.status = filterStatus;
-        api.getFeeInvoices(p as Record<string, unknown>).then(d => setInvoices(d.invoices || [])).catch(() => {});
+        api.getFeeInvoices(p as any).then(d => setInvoices(d.invoices || [])).catch(() => {});
     }, [filterMonth, filterYear, filterStatus]);
 
     useEffect(() => { reload(); }, [reload]);
@@ -672,7 +672,7 @@ function InvoicesTab() {
             const data = await api.generateInvoices({ month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate });
             alert(`Done! Generated: ${data.generated}, Skipped (already exist): ${data.skipped}`);
             await reload(); setShowGenerate(false);
-        } catch (_) { alert('Generation failed'); }
+        } catch { alert('Generation failed'); }
         finally { setGenerating(false); }
     };
 
@@ -739,7 +739,7 @@ function InvoicesTab() {
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Session</label>
                             <select value={gen.sessionId} onChange={e => setGen(g=>({...g,sessionId:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 <option value="">Select session…</option>
-                                {sessions.map((s: unknown) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
                             <input type="date" value={gen.dueDate} onChange={e => setGen(g=>({...g,dueDate:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>

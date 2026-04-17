@@ -16,7 +16,7 @@ const STATUS_CFG: Record<LeaveStatus, { bg: string; text: string; border: string
     REJECTED:  { bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",     icon: XCircle,      label: "Rejected" },
     CANCELLED: { bg: "bg-slate-50",   text: "text-slate-500",   border: "border-slate-200",   icon: Ban,          label: "Cancelled" },
 };
-const TYPE_LABELS: Record<LeaveType, string> = { SICK: "🤒 Sick", PERSONAL: "🏠 Personal", FAMILY: "👨‍👩‍👧 Family", OTHER: "📋 Other" };
+const TYPE_LABELS: Record<LeaveType, string> = { SICK: "ðŸ¤’ Sick", PERSONAL: "ðŸ  Personal", FAMILY: "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§ Family", OTHER: "ðŸ“‹ Other" };
 const STATUS_FILTERS = ["", "PENDING", "APPROVED", "REJECTED", "CANCELLED"];
 
 function fmtDate(d: string) { return new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
@@ -65,7 +65,7 @@ export default function LeaveHome() {
     );
 }
 
-// ── Student Leaves Tab ────────────────────────────────────────────────────────
+// â”€â”€ Student Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StudentLeavesTab() {
     const [leaves, setLeaves] = useState<any[]>([]);
@@ -79,7 +79,7 @@ function StudentLeavesTab() {
         try {
             const r = await api.getStudentLeaves(filter ? { status: filter } : undefined);
             setLeaves(r.leaves ?? []);
-        } catch (_) { setToast({ type: "error", msg: "Failed to load student leaves" }); }
+        } catch { setToast({ type: "error", msg: "Failed to load student leaves" }); }
         finally { setLoading(false); }
     }, [filter]);
     useEffect(() => { load(); }, [load]);
@@ -90,7 +90,7 @@ function StudentLeavesTab() {
             await api.respondStudentLeaveApproval(approvalId, { action });
             setToast({ type: "success", msg: `Leave ${action.toLowerCase()} successfully` });
             load();
-        } catch (_) { setToast({ type: "error", msg: "Failed to respond" }); }
+        } catch { setToast({ type: "error", msg: "Failed to respond" }); }
         finally { setRespondingId(null); }
     };
 
@@ -105,10 +105,10 @@ function StudentLeavesTab() {
             </div>
             {loading ? <Spinner /> : leaves.length > 0 ? (
                 <div className="space-y-3">
-                    {leaves.map((l: unknown) => {
+                    {leaves.map((l: any) => {
                         const sc = STATUS_CFG[l.status as LeaveStatus] || STATUS_CFG.PENDING;
                         const name = l.student ? `${l.student.firstName} ${l.student.lastName}` : "Unknown";
-                        const mgmtApproval = l.approvals?.find((a: unknown) => a.approverType === "MANAGEMENT" && a.status === "PENDING");
+                        const mgmtApproval = l.approvals?.find((a: any) => a.approverType === "MANAGEMENT" && a.status === "PENDING");
                         return (
                             <div key={l.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                                 <div className="flex items-start gap-4">
@@ -134,7 +134,7 @@ function StudentLeavesTab() {
                                         <p className="text-xs text-slate-500">{l.reason}</p>
                                         {l.approvals?.length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-1.5">
-                                                {l.approvals.map((a: unknown) => {
+                                                {l.approvals.map((a: any) => {
                                                     const ac = STATUS_CFG[a.status as LeaveStatus] || STATUS_CFG.PENDING;
                                                     return (
                                                         <span key={a.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${ac.bg} ${ac.text} ${ac.border}`}>
@@ -168,7 +168,7 @@ function StudentLeavesTab() {
     );
 }
 
-// ── Teacher Leaves Tab ────────────────────────────────────────────────────────
+// â”€â”€ Teacher Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TeacherLeavesTab() {
     const [leaves, setLeaves] = useState<any[]>([]);
@@ -182,7 +182,7 @@ function TeacherLeavesTab() {
         try {
             const r = await api.getTeacherLeaves(filter ? { status: filter } : undefined);
             setLeaves(r.leaves ?? []);
-        } catch (_) { setToast({ type: "error", msg: "Failed to load teacher leaves" }); }
+        } catch { setToast({ type: "error", msg: "Failed to load teacher leaves" }); }
         finally { setLoading(false); }
     }, [filter]);
     useEffect(() => { load(); }, [load]);
@@ -193,7 +193,7 @@ function TeacherLeavesTab() {
             await api.respondTeacherLeave(leaveId, { action });
             setToast({ type: "success", msg: `Leave ${action.toLowerCase()} successfully` });
             load();
-        } catch (_) { setToast({ type: "error", msg: "Failed to respond" }); }
+        } catch { setToast({ type: "error", msg: "Failed to respond" }); }
         finally { setRespondingId(null); }
     };
 
@@ -208,7 +208,7 @@ function TeacherLeavesTab() {
             </div>
             {loading ? <Spinner /> : leaves.length > 0 ? (
                 <div className="space-y-3">
-                    {leaves.map((l: unknown) => {
+                    {leaves.map((l: any) => {
                         const sc = STATUS_CFG[l.status as LeaveStatus] || STATUS_CFG.PENDING;
                         const teacherName = l.teacher?.name || "Unknown";
                         return (
@@ -260,7 +260,7 @@ function TeacherLeavesTab() {
     );
 }
 
-// ── Shared Components ─────────────────────────────────────────────────────────
+// â”€â”€ Shared Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Toast({ toast, onClose }: { toast: { type: string; msg: string }; onClose: () => void }) {
     useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [toast, onClose]);

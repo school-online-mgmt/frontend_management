@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
     totalExams: number; totalResults: number; appeared: number; absent: number;
     averagePercentage: number; passRate: number; highestPct: number;
@@ -19,7 +19,7 @@ interface SectionRow { sectionId: string; sectionName: string; className: string
 interface SubjectRow { subjectId: string; subjectName: string; avgPercentage: number; passRate: number; totalResults: number; highest: number; }
 interface TopPerformer { studentId: string; studentName: string; className: string; sectionName: string; rollNo: string; avgPercentage: number; examsCount: number; grade: string; pcts: number[]; }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TERMS = [
     { value: "", label: "All Terms" },
     { value: "TERM1", label: "Term 1" },
@@ -40,7 +40,7 @@ const GRADE_ORDER = ["A+", "A", "B+", "B", "C", "D", "F"];
 
 const gradeFromPct = (p: number) => p >= 90 ? "A+" : p >= 80 ? "A" : p >= 70 ? "B+" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 40 ? "D" : "F";
 
-// ── SVG Radar Chart (enhanced) ─────────────────────────────────────────────────
+// â”€â”€ SVG Radar Chart (enhanced) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RadarChart = ({ data, size = 280, color = "#6366f1", fillColor = "rgba(99,102,241,0.12)", label }: {
     data: { label: string; value: number }[]; size?: number; color?: string; fillColor?: string; label?: string;
 }) => {
@@ -86,7 +86,7 @@ const RadarChart = ({ data, size = 280, color = "#6366f1", fillColor = "rgba(99,
                     return (
                         <text key={i} x={p.x} y={p.y} textAnchor={anchor} dominantBaseline="middle"
                             fontSize={labelFontSize} fill="#475569" fontWeight="600">
-                            {d.label.length > 14 ? d.label.slice(0, 13) + "…" : d.label}
+                            {d.label.length > 14 ? d.label.slice(0, 13) + "â€¦" : d.label}
                             <tspan x={p.x} dy="13" fontSize="9" fill="#94a3b8" fontWeight="500">{d.value}%</tspan>
                         </text>
                     );
@@ -98,7 +98,7 @@ const RadarChart = ({ data, size = 280, color = "#6366f1", fillColor = "rgba(99,
     );
 };
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon: Icon, label, value, sub, color, trend }: {
     icon: typeof Users; label: string; value: string | number; sub?: string; color: string; trend?: "up" | "down" | null;
 }) => (
@@ -113,7 +113,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, trend }: {
     </div>
 );
 
-// ── Filter Badge ────────────────────────────────────────────────────────────────
+// â”€â”€ Filter Badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const FilterBadge = ({ label, onClear }: { label: string; onClear: () => void }) => (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
         {label}
@@ -121,7 +121,7 @@ const FilterBadge = ({ label, onClear }: { label: string; onClear: () => void })
     </span>
 );
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PerformancePage: React.FC = () => {
     const [sessions, setSessions] = useState<any[]>([]);
     const [classes, setClasses] = useState<any[]>([]);
@@ -134,7 +134,7 @@ const PerformancePage: React.FC = () => {
     const [studentId, setStudentId] = useState("");
     const [studentSearch, setStudentSearch] = useState("");
     const [showStudentDropdown, setShowStudentDropdown] = useState(false);
-    const [data, setData] = useState<unknown>(null);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState<"overview" | "class" | "section" | "subject" | "students" | "student-detail">("overview");
 
@@ -154,7 +154,7 @@ const PerformancePage: React.FC = () => {
     // Load students when class/section selected
     useEffect(() => {
         if (sessionId) {
-            api.getStudents(undefined, sessionId).then((d: unknown) => {
+            api.getStudents(undefined, sessionId).then((d: any) => {
                 setStudents(d?.students ?? d ?? []);
             });
         }
@@ -195,7 +195,7 @@ const PerformancePage: React.FC = () => {
     const filteredStudents = useMemo(() => {
         if (!studentSearch) return [];
         const q = studentSearch.toLowerCase();
-        return (students || []).filter((s: unknown) =>
+        return (students || []).filter((s: any) =>
             `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
             s.rollNo?.toLowerCase().includes(q)
         ).slice(0, 8);
@@ -203,7 +203,7 @@ const PerformancePage: React.FC = () => {
 
     const selectedStudentName = useMemo(() => {
         if (!studentId) return "";
-        const s = (students || []).find((s: unknown) => s.id === studentId);
+        const s = (students || []).find((s: any) => s.id === studentId);
         return s ? `${s.firstName} ${s.lastName}` : "";
     }, [studentId, students]);
 
@@ -283,7 +283,7 @@ const PerformancePage: React.FC = () => {
                             <Search size={12} className="text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search student…"
+                                placeholder="Search studentâ€¦"
                                 value={studentId ? selectedStudentName : studentSearch}
                                 onChange={e => { setStudentSearch(e.target.value); setStudentId(""); setShowStudentDropdown(true); }}
                                 onFocus={() => setShowStudentDropdown(true)}
@@ -297,7 +297,7 @@ const PerformancePage: React.FC = () => {
                         </div>
                         {showStudentDropdown && filteredStudents.length > 0 && !studentId && (
                             <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
-                                {filteredStudents.map((s: unknown) => (
+                                {filteredStudents.map((s: any) => (
                                     <button key={s.id} onClick={() => { setStudentId(s.id); setStudentSearch(""); setShowStudentDropdown(false); }}
                                         className="w-full text-left px-3 py-2 hover:bg-indigo-50 flex items-center gap-2 transition-colors">
                                         <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
@@ -305,7 +305,7 @@ const PerformancePage: React.FC = () => {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-xs font-semibold text-slate-700 truncate">{s.firstName} {s.lastName}</p>
-                                            <p className="text-[10px] text-slate-400">Roll: {s.rollNo ?? "—"}</p>
+                                            <p className="text-[10px] text-slate-400">Roll: {s.rollNo ?? "â€”"}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -327,7 +327,7 @@ const PerformancePage: React.FC = () => {
             {/* Tabs */}
             <div className="bg-white border border-slate-200 p-1 rounded-2xl flex gap-0.5 overflow-x-auto shadow-sm">
                 {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key as Record<string, unknown>)}
+                    <button key={t.key} onClick={() => setTab(t.key as any)}
                         className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                             tab === t.key ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                         }`}>
@@ -338,7 +338,7 @@ const PerformancePage: React.FC = () => {
 
             {loading ? (
                 <div className="bg-white rounded-2xl border p-20 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance data…</p></div>
+                    <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance dataâ€¦</p></div>
                 </div>
             ) : !summary ? (
                 <div className="bg-white rounded-2xl border p-20 flex flex-col items-center gap-4 text-center">
@@ -350,7 +350,7 @@ const PerformancePage: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    {/* ── OVERVIEW TAB ──────────────────────────────────────────── */}
+                    {/* â”€â”€ OVERVIEW TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "overview" && (
                         <div className="space-y-5">
                             {/* Stats */}
@@ -363,7 +363,7 @@ const PerformancePage: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {/* Radar – Subject Performance */}
+                                {/* Radar â€“ Subject Performance */}
                                 {radarSubjects.length >= 3 && (
                                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
@@ -432,7 +432,7 @@ const PerformancePage: React.FC = () => {
                                                 }`}>#{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName}</p>
                                                 </div>
                                                 <div className="hidden sm:flex items-center gap-2 w-28">
                                                     <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
@@ -452,7 +452,7 @@ const PerformancePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── CLASS TAB ─────────────────────────────────────────────── */}
+                    {/* â”€â”€ CLASS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "class" && (
                         <div className="space-y-5">
                             {radarClasses.length >= 3 && (
@@ -496,7 +496,7 @@ const PerformancePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── SECTION TAB ───────────────────────────────────────────── */}
+                    {/* â”€â”€ SECTION TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "section" && (
                         <div className="space-y-5">
                             {radarSections.length >= 3 && (
@@ -540,7 +540,7 @@ const PerformancePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── SUBJECT TAB ───────────────────────────────────────────── */}
+                    {/* â”€â”€ SUBJECT TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "subject" && (
                         <div className="space-y-5">
                             {radarSubjects.length >= 3 && (
@@ -581,14 +581,14 @@ const PerformancePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── TOP STUDENTS TAB ──────────────────────────────────────── */}
+                    {/* â”€â”€ TOP STUDENTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "students" && (
                         <div className="space-y-5">
                             {topPerformers.length > 0 && (
                                 <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
                                     <div className="flex items-center gap-3 mb-1">
                                         <Medal size={22} className="text-amber-400" />
-                                        <h3 className="text-lg font-bold">🏆 School Top Performers</h3>
+                                        <h3 className="text-lg font-bold">ðŸ† School Top Performers</h3>
                                     </div>
                                     <p className="text-xs text-slate-400 mb-5">Top 10 students by average percentage across all published exams{term ? ` (${TERMS.find(t => t.value === term)?.label})` : ""}</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -602,9 +602,9 @@ const PerformancePage: React.FC = () => {
                                                     i === 1 ? "bg-slate-400/20 text-slate-300" : "bg-orange-400/20 text-orange-300"
                                                 }`}>#{i + 1}</div>
                                                 <p className="text-sm font-bold text-white truncate w-full">{tp.studentName}</p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">{tp.className} · {tp.sectionName}</p>
+                                                <p className="text-[10px] text-slate-400 mt-0.5">{tp.className} Â· {tp.sectionName}</p>
                                                 <p className="text-2xl font-black text-white mt-2">{tp.avgPercentage}%</p>
-                                                <p className="text-[10px] text-slate-500">{tp.examsCount} exams · Grade {tp.grade}</p>
+                                                <p className="text-[10px] text-slate-500">{tp.examsCount} exams Â· Grade {tp.grade}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -627,7 +627,7 @@ const PerformancePage: React.FC = () => {
                                                 }`}>{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
                                                 </div>
                                                 <div className="hidden sm:block w-36">
                                                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -648,7 +648,7 @@ const PerformancePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── STUDENT DETAIL TAB ─────────────────────────────────────── */}
+                    {/* â”€â”€ STUDENT DETAIL TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "student-detail" && studentId && (
                         <div className="space-y-5">
                             {/* Student performance = same as school summary but for one student */}

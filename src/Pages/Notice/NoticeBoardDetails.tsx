@@ -97,7 +97,7 @@ const NoticeModal = ({
                 });
             }
             onSave(); onClose();
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err?.response?.data?.message ?? "Failed to save notice");
         } finally {
             setSaving(false);
@@ -287,14 +287,14 @@ const NoticeBoardDetails = () => {
     const { role } = useAuth();
     const isPrincipal = role === "PRINCIPAL" || role === "SUPER_ADMIN";
 
-    const [board, setBoard] = useState<unknown>(null);
+    const [board, setBoard] = useState<any>(null);
     const [notices, setNotices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("ALL");
     const [showCreate, setShowCreate] = useState(false);
-    const [editNotice, setEditNotice] = useState<unknown>(null);
-    const [rejectTarget, setRejectTarget] = useState<unknown>(null);
+    const [editNotice, setEditNotice] = useState<any>(null);
+    const [rejectTarget, setRejectTarget] = useState<any>(null);
     const [actionSaving, setActionSaving] = useState(false);
 
     const load = useCallback(async () => {
@@ -307,7 +307,7 @@ const NoticeBoardDetails = () => {
             ]);
             setBoard(boardData.board);
             setNotices(noticesData.notices ?? []);
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err?.response?.data?.message ?? "Failed to load");
         } finally {
             setLoading(false);
@@ -388,7 +388,7 @@ const NoticeBoardDetails = () => {
     );
     if (!board) return null;
 
-    const VIS = { PUBLIC: { icon: Globe, label: "School-Wide" }, CLASS: { icon: BookOpen, label: "Class" }, SECTION: { icon: Users, label: "Section" } } as Record<string, unknown>;
+    const VIS = { PUBLIC: { icon: Globe, label: "School-Wide" }, CLASS: { icon: BookOpen, label: "Class" }, SECTION: { icon: Users, label: "Section" } } as any;
     const visInfo = VIS[board.visibility] ?? VIS.PUBLIC;
     const VisIcon = visInfo.icon;
 
@@ -485,10 +485,10 @@ const NoticeBoardDetails = () => {
                             isPrincipal={isPrincipal}
                             canApprove={false}
                             onApprove={handleApprove}
-                            onReject={(n: unknown) => setRejectTarget(n)}
+                            onReject={(n: any) => setRejectTarget(n)}
                             onArchive={handleArchive}
                             onDelete={handleDelete}
-                            onEdit={(n: unknown) => { setEditNotice(n); setShowCreate(true); }}
+                            onEdit={(n: any) => { setEditNotice(n); setShowCreate(true); }}
                         />
                     ))}
                 </div>

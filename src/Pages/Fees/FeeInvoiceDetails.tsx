@@ -49,7 +49,7 @@ export default function FeeInvoiceDetails() {
         try {
             const data = await api.getFeeInvoiceById(id);
             setInvoice(data.invoice); setItems(data.items); setPayments(data.payments);
-        } catch (_) { navigate('/fees'); }
+        } catch { navigate('/fees'); }
         finally { setLoading(false); }
     };
 
@@ -61,7 +61,7 @@ export default function FeeInvoiceDetails() {
         try {
             await api.recordPayment(id, { ...payForm, amount: parseFloat(payForm.amount) });
             await reload(); setShowPayment(false); setPayForm(p => ({ ...p, amount: '', referenceNo: '', remarks: '' }));
-        } catch (_) { alert('Payment recording failed'); }
+        } catch { alert('Payment recording failed'); }
         finally { setSaving(false); }
     };
 

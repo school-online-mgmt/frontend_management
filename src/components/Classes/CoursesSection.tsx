@@ -2,7 +2,7 @@ import { Eye, Plus } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const CoursesSection = ({ courses, onCreateCourse }: { courses: unknown[]; onCreateCourse?: () => void }) => {
+const CoursesSection = ({ courses, onCreateCourse }: { courses: any[]; onCreateCourse?: () => void }) => {
 
     const navigate = useNavigate();
     const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
@@ -46,7 +46,7 @@ const CoursesSection = ({ courses, onCreateCourse }: { courses: unknown[]; onCre
 
                 <tbody>
 
-                {courses.map((course: unknown) => (
+                {courses.map((course: any) => (
 
                     <React.Fragment key={course.id}>
                         <tr
@@ -83,7 +83,7 @@ const CoursesSection = ({ courses, onCreateCourse }: { courses: unknown[]; onCre
                                     {course.courseSubjects?.length > 0 ? (
                                         <div className="grid grid-cols-3 gap-4">
 
-                                            {course.courseSubjects.map((cs: unknown) => {
+                                            {course.courseSubjects.map((cs: any) => {
                                                 const subject = cs.subject;
 
                                                 return (

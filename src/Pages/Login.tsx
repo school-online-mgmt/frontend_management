@@ -54,7 +54,7 @@ const Login: React.FC = () => {
       } else {
         addToast('Invalid credentials', 'error');
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       const message = err.response?.data?.message || "Invalid credentials or server error.";
       addToast(message, 'error');
       setErrors({ password: message });

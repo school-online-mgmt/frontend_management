@@ -11,9 +11,9 @@ const StudentHome = () => {
     const [students, setStudents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<unknown>(null);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-    const [selectedApplicant, setSelectedApplicant] = useState<unknown>(null);
+    const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
     const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
 
     const fetchStudents = async () => {
@@ -33,17 +33,17 @@ const StudentHome = () => {
         fetchStudents();
     }, []);
 
-    const handleUpdate = (student: unknown) => {
+    const handleUpdate = (student: any) => {
         setSelectedStudent(student);
         setIsUpdateModalOpen(true);
     };
 
-    const handleConfirm = (applicant: unknown) => {
+    const handleConfirm = (applicant: any) => {
         setSelectedApplicant(applicant);
         setIsConfirmModalOpen(true);
     };
 
-    const handleAdmissionConfirm = async (data: unknown) => {
+    const handleAdmissionConfirm = async (data: any) => {
         if (!selectedApplicant) return;
         try {
             await api.confirmStudentAdmission(selectedApplicant.id, data);
@@ -122,7 +122,7 @@ const StudentHome = () => {
                         />
                     ) : viewType === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {students.map((student: unknown) => (
+                            {students.map((student: any) => (
                                 <Card key={student.id} hoverable bordered>
                                     <CardContent>
                                         <div className="flex items-start justify-between mb-4">
@@ -193,7 +193,7 @@ const StudentHome = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {students.map((student: unknown) => (
+                                        {students.map((student: any) => (
                                             <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">

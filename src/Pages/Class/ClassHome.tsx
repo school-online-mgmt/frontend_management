@@ -53,7 +53,7 @@ const ClassHome = () => {
             {showCreateModal && (
                 <CreateClassModal
                     onClose={() => setShowCreateModal(false)}
-                    onSuccess={(msg: unknown) => {
+                    onSuccess={(msg: any) => {
                         setMessage(msg);
                         fetchClasses();
                     }}

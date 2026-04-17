@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api";
 
-/* ── Types ─────────────────────────────────────────────────────────────────── */
+/* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface CalendarEvent {
     id: string;
     title: string;
@@ -20,23 +20,23 @@ interface CalendarEvent {
 
 interface Session { id: string; name: string; startDate: string; endDate: string; }
 
-/* ── Event type look-up ────────────────────────────────────────────────────── */
+/* â”€â”€ Event type look-up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const eventTypes = [
     "HOLIDAY", "VACATION", "ACTIVITY", "PROGRAM",
     "EXHIBITION", "SPORTS", "CULTURAL", "MEETING", "OTHER",
 ];
 
 const eventTypeConfig: Record<string, { icon: string; bgColor: string; dotColor: string }> = {
-    HOLIDAY:    { icon: "🏖️", bgColor: "bg-blue-50",    dotColor: "bg-blue-500" },
-    VACATION:   { icon: "✈️", bgColor: "bg-green-50",   dotColor: "bg-green-500" },
-    ACTIVITY:   { icon: "🎨", bgColor: "bg-purple-50",  dotColor: "bg-purple-500" },
-    PROGRAM:    { icon: "🎭", bgColor: "bg-pink-50",    dotColor: "bg-pink-500" },
-    EXHIBITION: { icon: "🖼️", bgColor: "bg-orange-50",  dotColor: "bg-orange-500" },
-    SPORTS:     { icon: "⚽", bgColor: "bg-red-50",     dotColor: "bg-red-400" },
-    CULTURAL:   { icon: "🎵", bgColor: "bg-indigo-50",  dotColor: "bg-indigo-500" },
-    MEETING:    { icon: "👥", bgColor: "bg-yellow-50",  dotColor: "bg-yellow-500" },
-    EXAM:       { icon: "📝", bgColor: "bg-red-50",     dotColor: "bg-red-600" },
-    OTHER:      { icon: "📌", bgColor: "bg-slate-50",   dotColor: "bg-slate-500" },
+    HOLIDAY:    { icon: "ðŸ–ï¸", bgColor: "bg-blue-50",    dotColor: "bg-blue-500" },
+    VACATION:   { icon: "âœˆï¸", bgColor: "bg-green-50",   dotColor: "bg-green-500" },
+    ACTIVITY:   { icon: "ðŸŽ¨", bgColor: "bg-purple-50",  dotColor: "bg-purple-500" },
+    PROGRAM:    { icon: "ðŸŽ­", bgColor: "bg-pink-50",    dotColor: "bg-pink-500" },
+    EXHIBITION: { icon: "ðŸ–¼ï¸", bgColor: "bg-orange-50",  dotColor: "bg-orange-500" },
+    SPORTS:     { icon: "âš½", bgColor: "bg-red-50",     dotColor: "bg-red-400" },
+    CULTURAL:   { icon: "ðŸŽµ", bgColor: "bg-indigo-50",  dotColor: "bg-indigo-500" },
+    MEETING:    { icon: "ðŸ‘¥", bgColor: "bg-yellow-50",  dotColor: "bg-yellow-500" },
+    EXAM:       { icon: "ðŸ“", bgColor: "bg-red-50",     dotColor: "bg-red-600" },
+    OTHER:      { icon: "ðŸ“Œ", bgColor: "bg-slate-50",   dotColor: "bg-slate-500" },
 };
 
 function eventCoversDate(event: CalendarEvent, dateStr: string): boolean {
@@ -47,11 +47,11 @@ function eventCoversDate(event: CalendarEvent, dateStr: string): boolean {
 
 const emptyForm = { title: "", description: "", type: "OTHER", date: "", endDate: "" };
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   CalendarPage — Calendar view + full event CRUD
-   ══════════════════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CalendarPage â€” Calendar view + full event CRUD
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const CalendarPage: React.FC = () => {
-    /* ── calendar state ──────────────────────────────────────────────────── */
+    /* â”€â”€ calendar state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const [currentDate, setCurrentDate]       = useState(new Date());
     const [events, setEvents]                 = useState<CalendarEvent[]>([]);
     const [sessions, setSessions]             = useState<Session[]>([]);
@@ -59,14 +59,14 @@ const CalendarPage: React.FC = () => {
     const [loading, setLoading]               = useState(true);
     const [selectedDate, setSelectedDate]     = useState<string | null>(null);
 
-    /* ── event CRUD state ────────────────────────────────────────────────── */
+    /* â”€â”€ event CRUD state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const [showForm, setShowForm]             = useState(false);
     const [editingId, setEditingId]           = useState<string | null>(null);
     const [formData, setFormData]             = useState({ ...emptyForm });
     const [formError, setFormError]           = useState<string | null>(null);
     const [saving, setSaving]                 = useState(false);
 
-    /* ── all-events list panel ───────────────────────────────────────────── */
+    /* â”€â”€ all-events list panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const [showAllEvents, setShowAllEvents]   = useState(false);
     const [allEvents, setAllEvents]           = useState<CalendarEvent[]>([]);
     const [allEventsLoading, setAllEventsLoading] = useState(false);
@@ -74,7 +74,7 @@ const CalendarPage: React.FC = () => {
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const dayNames   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-    /* ── Load sessions on mount ──────────────────────────────────────────── */
+    /* â”€â”€ Load sessions on mount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     useEffect(() => {
         (async () => {
             try {
@@ -85,11 +85,11 @@ const CalendarPage: React.FC = () => {
                 const current = list.find(s => s.startDate <= today && s.endDate >= today) ?? list[list.length - 1] ?? null;
                 setActiveSession(current);
                 if (current) setCurrentDate(new Date());
-            } catch (_) { /* ignore */ }
+            } catch { /* ignore */ }
         })();
     }, []);
 
-    /* ── Fetch calendar events for visible month ─────────────────────────── */
+    /* â”€â”€ Fetch calendar events for visible month â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     useEffect(() => { fetchCalendarEvents(); }, [currentDate]);
 
     const fetchCalendarEvents = async () => {
@@ -99,11 +99,11 @@ const CalendarPage: React.FC = () => {
             const to   = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
             const data = await api.getCalendarEvents(from, to);
             setEvents(data?.events ?? []);
-        } catch (_) { setEvents([]); }
+        } catch { setEvents([]); }
         finally { setLoading(false); }
     };
 
-    /* ── Fetch ALL events (for the list panel) ───────────────────────────── */
+    /* â”€â”€ Fetch ALL events (for the list panel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const fetchAllEvents = async () => {
         setAllEventsLoading(true);
         try {
@@ -111,11 +111,11 @@ const CalendarPage: React.FC = () => {
             const to   = new Date(new Date().getFullYear() + 1, 11, 31).toISOString();
             const data = await api.getSchoolEvents?.(from, to);
             setAllEvents(data?.events ?? []);
-        } catch (_) { setAllEvents([]); }
+        } catch { setAllEvents([]); }
         finally { setAllEventsLoading(false); }
     };
 
-    /* ── Month navigation (clamped to session) ───────────────────────────── */
+    /* â”€â”€ Month navigation (clamped to session) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const canGoPrev = useCallback(() => {
         if (!activeSession) return true;
         const prev = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
@@ -131,7 +131,7 @@ const CalendarPage: React.FC = () => {
     const previousMonth = () => { if (canGoPrev()) setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)); };
     const nextMonth     = () => { if (canGoNext()) setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)); };
 
-    /* ── Calendar grid helpers ───────────────────────────────────────────── */
+    /* â”€â”€ Calendar grid helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const daysInMonth  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const firstDay     = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
     const calendarDays = Array.from({ length: firstDay }, () => 0).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
@@ -144,7 +144,7 @@ const CalendarPage: React.FC = () => {
     const getEventsForDate  = (day: number) => { const ds = toDateStr(day); return events.filter(e => eventCoversDate(e, ds)); };
     const selectedDateEvents = selectedDate ? events.filter(e => eventCoversDate(e, selectedDate)) : [];
 
-    /* ── CRUD helpers ────────────────────────────────────────────────────── */
+    /* â”€â”€ CRUD helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     const openCreateForm = (prefillDate?: string) => {
         setFormData({ ...emptyForm, date: prefillDate ?? "" });
         setEditingId(null);
@@ -182,7 +182,7 @@ const CalendarPage: React.FC = () => {
             setEditingId(null);
             setFormData({ ...emptyForm });
             await fetchCalendarEvents();
-        } catch (err: unknown) {
+        } catch (err: any) {
             setFormError(err.response?.data?.message || "Failed to save event");
         } finally { setSaving(false); }
     };
@@ -193,7 +193,7 @@ const CalendarPage: React.FC = () => {
             await api.deleteSchoolEvent?.(id);
             fetchCalendarEvents();
             if (showAllEvents) fetchAllEvents();
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
     };
 
     const toggleAllEvents = () => {
@@ -203,13 +203,13 @@ const CalendarPage: React.FC = () => {
         if (next) fetchAllEvents();
     };
 
-    /* ══════════════════════════════════════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        RENDER
-       ══════════════════════════════════════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8">
 
-            {/* ── Header ─────────────────────────────────────────────────────── */}
+            {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ const CalendarPage: React.FC = () => {
                 </div>
             </motion.div>
 
-            {/* ── Create / Edit Form (slide down) ────────────────────────────── */}
+            {/* â”€â”€ Create / Edit Form (slide down) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <AnimatePresence>
                 {showForm && (
                     <motion.div
@@ -317,7 +317,7 @@ const CalendarPage: React.FC = () => {
                                 <div className="flex gap-2">
                                     <button type="submit" disabled={saving}
                                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition font-medium text-sm">
-                                        {saving ? "Saving…" : editingId ? "Update Event" : "Create Event"}
+                                        {saving ? "Savingâ€¦" : editingId ? "Update Event" : "Create Event"}
                                     </button>
                                     <button type="button"
                                         onClick={() => { setShowForm(false); setEditingId(null); setFormData({ ...emptyForm }); }}
@@ -331,7 +331,7 @@ const CalendarPage: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* ── All-Events List Panel ───────────────────────────────────────── */}
+            {/* â”€â”€ All-Events List Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <AnimatePresence>
                 {showAllEvents && (
                     <motion.div
@@ -365,8 +365,8 @@ const CalendarPage: React.FC = () => {
                                                 </div>
                                                 {ev.description && <p className="text-xs text-slate-600 line-clamp-2 mb-2">{ev.description}</p>}
                                                 <p className="text-xs text-slate-500 mb-3">
-                                                    📅 {new Date(ev.date).toLocaleDateString("en-IN")}
-                                                    {ev.endDate && ` → ${new Date(ev.endDate).toLocaleDateString("en-IN")}`}
+                                                    ðŸ“… {new Date(ev.date).toLocaleDateString("en-IN")}
+                                                    {ev.endDate && ` â†’ ${new Date(ev.endDate).toLocaleDateString("en-IN")}`}
                                                 </p>
                                                 {!ev.isExam && (
                                                     <div className="flex gap-2">
@@ -390,7 +390,7 @@ const CalendarPage: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* ── Main grid: Calendar + Sidebar ──────────────────────────────── */}
+            {/* â”€â”€ Main grid: Calendar + Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Calendar grid */}
                 <div className="lg:col-span-2">
@@ -455,7 +455,7 @@ const CalendarPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ── Sidebar: selected-date events ──────────────────────────── */}
+                {/* â”€â”€ Sidebar: selected-date events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm sticky top-6">
                         <div className="flex items-center justify-between mb-4">
@@ -493,7 +493,7 @@ const CalendarPage: React.FC = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-slate-900 text-sm">{ev.title}</p>
                                                     {ev.description && <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">{ev.description}</p>}
-                                                    <p className="text-xs text-slate-500 mt-1">{startStr}{endStr && endStr !== startStr ? ` → ${endStr}` : ""}</p>
+                                                    <p className="text-xs text-slate-500 mt-1">{startStr}{endStr && endStr !== startStr ? ` â†’ ${endStr}` : ""}</p>
                                                 </div>
                                             </div>
                                             {/* Edit / Delete for non-exam events */}

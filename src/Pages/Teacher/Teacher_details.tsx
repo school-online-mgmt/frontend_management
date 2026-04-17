@@ -7,7 +7,7 @@ const TeacherDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-    const [teacher, setTeacher] = useState<unknown>(null);
+    const [teacher, setTeacher] = useState<any>(null);
     const [assignedSubjects, setAssignedSubjects] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -101,7 +101,7 @@ const TeacherDetails = () => {
                     {assignedSubjects.length === 0 ? (
                         <p className="p-8 text-center text-slate-500">No subjects assigned yet.</p>
                     ) : (
-                        assignedSubjects.map((st: unknown) => (
+                        assignedSubjects.map((st: any) => (
                             <div key={st.subjectTeachers?.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 {/* Subject */}
                                 <div className="flex items-center gap-3">

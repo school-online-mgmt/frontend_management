@@ -21,7 +21,7 @@ const UpdateExamModal = ({
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
-        const payload: unknown = {};
+        const payload: any = {};
 
         if (name !== exam.name) payload.name = name;
         if (Number(fullMarks) !== exam.fullMarks) payload.fullMarks = Number(fullMarks);
@@ -48,7 +48,7 @@ const UpdateExamModal = ({
             onRefresh();
             onClose();
 
-        } catch (err: unknown) {
+        } catch (err: any) {
             setMessage(err?.response?.data?.message || "Update failed");
             setMessageType("error");
             onClose();

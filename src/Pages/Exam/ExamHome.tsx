@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
     Plus, RefreshCcw, BookOpen, BarChart3, ClipboardList,
-    TrendingUp, CheckCircle, Clock, Calendar, Users, Award,
+    CheckCircle, Clock, Calendar, Users,
     ChevronDown, ChevronRight, AlertCircle, Search,
     ArrowUpRight, X, Target
 } from "lucide-react";
@@ -100,20 +100,20 @@ const ExamHome = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
     const [allExams, setAllExams] = useState<any[]>([]);
-    const [filterOptions, setFilterOptions] = useState<unknown>({ classes: [], courses: [], subjects: [], terms: [] });
+    const [filterOptions, setFilterOptions] = useState<any>({ classes: [], courses: [], subjects: [], terms: [] });
     const [isLoading, setIsLoading] = useState(false);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
 
     const [message, setMessage] = useState<string | null>(null);
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
 
-    const [selectedReportExamId, setSelectedReportExamId] = useState<string | null>(null);
+
     const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({ TERM1: true, TERM2: true, TERM3: true });
 
     const canCreate = ["PRINCIPAL", "SUPER_ADMIN", "DIRECTOR", "MANAGEMENT_STAFF"].includes(role ?? "");
 
     useEffect(() => {
-        api.getSessions().then((s: unknown) => {
+        api.getSessions().then((s: any) => {
             const arr = Array.isArray(s) ? s : [];
             setSessions(arr);
             if (arr.length > 0) setSelectedSession(arr[0].id);
@@ -127,7 +127,7 @@ const ExamHome = () => {
             const data = await api.getExamOverview(selectedSession);
             setAllExams(data.exams || []);
             setFilterOptions(data.filters || { classes: [], courses: [], subjects: [], terms: [] });
-        } catch (err: unknown) {
+        } catch (err: any) {
             setAllExams([]);
             setMessage(err?.response?.data?.message || "Failed to fetch exams");
             setMessageType("error");
@@ -190,7 +190,7 @@ const ExamHome = () => {
         return { total, byStatus, byTerm, bySubject, published, completionRate };
     }, [filteredExams]);
 
-    const publishedExams = useMemo(() => filteredExams.filter(e => e.status === "PUBLISHED"), [filteredExams]);
+    // publishedExams removed - was unused
 
     const activeFilters = [filterClass, filterCourse, filterSubject, filterTerm, filterStatus, searchQuery].filter(Boolean).length;
 
@@ -262,7 +262,7 @@ const ExamHome = () => {
                             <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setFilterCourse(""); }}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Classes</option>
-                                {filterOptions.classes?.map((c: unknown) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {filterOptions.classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
@@ -271,7 +271,7 @@ const ExamHome = () => {
                             <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Courses</option>
-                                {filterOptions.courses?.map((c: unknown) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {filterOptions.courses?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
@@ -280,7 +280,7 @@ const ExamHome = () => {
                             <select value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Subjects</option>
-                                {filterOptions.subjects?.map((s: unknown) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {filterOptions.subjects?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
 
@@ -374,7 +374,7 @@ const ExamHome = () => {
                                         <div className="space-y-4">
                                             {TERMS.map(term => {
                                                 const termExams = stats.byTerm[term] ?? [];
-                                                const published = termExams.filter((e: unknown) => e.status === "PUBLISHED").length;
+                                                const published = termExams.filter((e: any) => e.status === "PUBLISHED").length;
                                                 const total = termExams.length;
                                                 const pct = total > 0 ? Math.round((published / total) * 100) : 0;
                                                 return (
@@ -390,7 +390,7 @@ const ExamHome = () => {
                                                         {total > 0 && (
                                                             <div className="flex gap-2 mt-2 flex-wrap">
                                                                 {STATUS_ORDER.map(status => {
-                                                                    const n = termExams.filter((e: unknown) => e.status === status).length;
+                                                                    const n = termExams.filter((e: any) => e.status === status).length;
                                                                     if (!n) return null;
                                                                     const cfg = STATUS_CONFIG[status];
                                                                     return (

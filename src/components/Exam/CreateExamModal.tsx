@@ -52,7 +52,7 @@ const CreateExamModal = ({
         }
 
         const loadOptions = async () => {
-            let data: unknown[] = [];
+            let data: any[] = [];
             if (filterType === "class") data = (await api.getClasses()) || [];
             else if (filterType === "course") data = (await api.getCourses({ sessionId })) || [];
             setFilterOptions(data);
@@ -65,7 +65,7 @@ const CreateExamModal = ({
         if (!sessionId || !filterType || filterType === "subject" || !selectedFilterValue) return;
 
         setLoadingSubjects(true);
-        const params: unknown = { sessionId, onlyWithTeacher: true };
+        const params: any = { sessionId, onlyWithTeacher: true };
         if (filterType === "class") params.classId = selectedFilterValue;
         else if (filterType === "course") params.courseId = selectedFilterValue;
 
@@ -108,7 +108,7 @@ const CreateExamModal = ({
             setMessageType("success");
             onRefresh();
             onClose();
-        } catch (err: unknown) {
+        } catch (err: any) {
             setMessage(err?.response?.data?.message || "Failed to create exam");
             setMessageType("error");
             onClose();

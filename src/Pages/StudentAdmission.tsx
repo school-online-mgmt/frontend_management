@@ -58,7 +58,7 @@ const StudentAdmission = () => {
   useEffect(() => {
     fetchApplicants();
     // Only fetch sessions on mount (classes, sections, courses are dependent)
-    api.getSessions().then((data: unknown) => {
+    api.getSessions().then((data: any) => {
       setSessions(Array.isArray(data) ? data : []);
     }).catch(() => setSessions([]));
   }, []);
@@ -70,10 +70,10 @@ const StudentAdmission = () => {
   // Fetch classes & courses when session changes
   useEffect(() => {
     if (admissionData.sessionId) {
-      api.getClasses().then((data: unknown) => {
+      api.getClasses().then((data: any) => {
         setClasses(Array.isArray(data) ? data : []);
       }).catch(() => setClasses([]));
-      api.getCourses({ sessionId: admissionData.sessionId }).then((data: unknown) => {
+      api.getCourses({ sessionId: admissionData.sessionId }).then((data: any) => {
         const arr = Array.isArray(data) ? data : [];
         setAllCourses(arr);
       }).catch(() => setAllCourses([]));
@@ -90,11 +90,11 @@ const StudentAdmission = () => {
   // Fetch sections & filter courses when class changes
   useEffect(() => {
     if (admissionData.classId) {
-      api.getSectionsByClass(admissionData.classId).then((data: unknown) => {
+      api.getSectionsByClass(admissionData.classId).then((data: any) => {
         setSections(Array.isArray(data) ? data : []);
       }).catch(() => setSections([]));
       // Filter courses that belong to the selected class
-      setCourses(allCourses.filter((c: unknown) => c.classId === admissionData.classId || c.class?.id === admissionData.classId));
+      setCourses(allCourses.filter((c: any) => c.classId === admissionData.classId || c.class?.id === admissionData.classId));
     } else {
       setSections([]);
       setCourses([]);
@@ -169,12 +169,12 @@ const StudentAdmission = () => {
 
   const getStatusColor = (status: string) => {
     const statusMap: Record<string, { bg: string; text: string; icon: string }> = {
-      APPLIED: { bg: "bg-amber-100", text: "text-amber-700", icon: "📋" },
-      ACCEPTED: { bg: "bg-emerald-100", text: "text-emerald-700", icon: "✅" },
-      REJECTED: { bg: "bg-red-100", text: "text-red-700", icon: "❌" },
-      CANCELLED: { bg: "bg-slate-100", text: "text-slate-700", icon: "🚫" },
+      APPLIED: { bg: "bg-amber-100", text: "text-amber-700", icon: "ðŸ“‹" },
+      ACCEPTED: { bg: "bg-emerald-100", text: "text-emerald-700", icon: "âœ…" },
+      REJECTED: { bg: "bg-red-100", text: "text-red-700", icon: "âŒ" },
+      CANCELLED: { bg: "bg-slate-100", text: "text-slate-700", icon: "ðŸš«" },
     };
-    return statusMap[status] || { bg: "bg-slate-100", text: "text-slate-700", icon: "📌" };
+    return statusMap[status] || { bg: "bg-slate-100", text: "text-slate-700", icon: "ðŸ“Œ" };
   };
 
   return (
@@ -412,7 +412,7 @@ const StudentAdmission = () => {
                 onClick={() => setSelectedApplicant(null)}
                 className="text-indigo-100 hover:text-white text-2xl transition"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -494,7 +494,7 @@ const StudentAdmission = () => {
                 onClick={() => setShowAdmissionForm(false)}
                 className="text-emerald-100 hover:text-white text-2xl transition"
               >
-                ✕
+                âœ•
               </button>
             </div>
 

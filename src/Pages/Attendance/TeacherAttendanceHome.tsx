@@ -115,7 +115,7 @@ function MarkTab() {
             const st: Record<string,string> = {};
             (r.teachers||[]).forEach((t:Teacher) => { st[t.id] = t.attendance?.status || "PRESENT"; });
             setStatuses(st);
-        } catch (e: unknown) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to load teachers" });
         } finally { setLoading(false); }
     }, [selDate]);
@@ -129,7 +129,7 @@ function MarkTab() {
             await api.markTeacherAttendance({ date:selDate, records });
             setToast({ type:"success", msg:`Teacher attendance ${marked?"updated":"saved"} for ${records.length} teachers` });
             setMarked(true);
-        } catch (e: unknown) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to submit" });
         } finally { setSubmitting(false); }
     };
@@ -457,7 +457,7 @@ function CalendarTab() {
 function ViewTab() {
     const [date, setDate] = useState(TODAY);
     const [records, setRecords] = useState<Rec[]>([]);
-    const [summary, setSummary] = useState<unknown>({});
+    const [summary, setSummary] = useState<any>({});
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
 
@@ -550,7 +550,7 @@ function ViewTab() {
 
 // TODAY SUMMARY TAB
 function TodaySummaryTab() {
-    const [data, setData] = useState<unknown>(null);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 
-// ── Types ───────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
     totalExams: number; totalResults: number; appeared: number; absent: number;
     averagePercentage: number; passRate: number; highestPct: number;
@@ -27,7 +27,7 @@ interface ExamReportData {
     topPerformers: { studentName: string; marks: number; percentage: number; grade: string; sectionName: string; }[];
 }
 
-// ── Constants ───────────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const GRADE_COLORS: Record<string, { bg: string; text: string; bar: string; border: string }> = {
     "A+": { bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-500", border: "border-emerald-200" },
     "A":  { bg: "bg-emerald-50", text: "text-emerald-600", bar: "bg-emerald-400", border: "border-emerald-200" },
@@ -39,7 +39,7 @@ const GRADE_COLORS: Record<string, { bg: string; text: string; bar: string; bord
 };
 const GRADE_ORDER = ["A+", "A", "B+", "B", "C", "D", "F"];
 
-// ── SVG Radar Chart ─────────────────────────────────────────────────────────────
+// â”€â”€ SVG Radar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RadarChart = ({ data, size = 260, color = "#6366f1" }: { data: { label: string; value: number }[]; size?: number; color?: string }) => {
     const cx = size / 2, cy = size / 2, r = size * 0.36;
     const n = data.length;
@@ -65,7 +65,7 @@ const RadarChart = ({ data, size = 260, color = "#6366f1" }: { data: { label: st
                 const anchor = Math.abs(p.x - cx) < 5 ? "middle" : p.x > cx ? "start" : "end";
                 return (
                     <text key={i} x={p.x} y={p.y} textAnchor={anchor} dominantBaseline="middle" fontSize={n > 6 ? 9 : 10} fill="#475569" fontWeight="600">
-                        {d.label.length > 12 ? d.label.slice(0, 11) + "…" : d.label}
+                        {d.label.length > 12 ? d.label.slice(0, 11) + "â€¦" : d.label}
                         <tspan x={p.x} dy="12" fontSize="9" fill="#94a3b8" fontWeight="500">{d.value}%</tspan>
                     </text>
                 );
@@ -74,7 +74,7 @@ const RadarChart = ({ data, size = 260, color = "#6366f1" }: { data: { label: st
     );
 };
 
-// ── Stat Card ───────────────────────────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: typeof Users; label: string; value: string | number; sub?: string; color: string }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-lg transition-all group">
         <div className="flex items-start justify-between">
@@ -90,7 +90,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: typeof Users
     </div>
 );
 
-// ── Improvement Insights ────────────────────────────────────────────────────────
+// â”€â”€ Improvement Insights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary: SchoolSummary; subjectBreakdown: SubjectRow[]; classBreakdown: ClassRow[] }) => {
     const insights: { type: "warning" | "success" | "info"; message: string }[] = [];
 
@@ -102,7 +102,7 @@ const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary:
 
     // High failure rate
     if (summary.passRate < 70) {
-        insights.push({ type: "warning", message: `Overall pass rate is ${summary.passRate}% — below the 70% benchmark. Review teaching methodologies and student engagement.` });
+        insights.push({ type: "warning", message: `Overall pass rate is ${summary.passRate}% â€” below the 70% benchmark. Review teaching methodologies and student engagement.` });
     }
 
     // Strong subjects
@@ -159,7 +159,7 @@ const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary:
     );
 };
 
-// ── Main Component ──────────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ResultsPerformancePage: React.FC = () => {
     const [sessions, setSessions] = useState<any[]>([]);
     const [classes, setClasses] = useState<any[]>([]);
@@ -167,7 +167,7 @@ const ResultsPerformancePage: React.FC = () => {
     const [sessionId, setSessionId] = useState("");
     const [classId, setClassId] = useState("");
     const [sectionId, setSectionId] = useState("");
-    const [data, setData] = useState<unknown>(null);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState<"overview" | "class" | "section" | "subject" | "students" | "report-card">("overview");
 
@@ -189,7 +189,7 @@ const ResultsPerformancePage: React.FC = () => {
 
     // Load sections when class changes
     useEffect(() => {
-        if (classId) api.getSectionsByClass(classId).then((s: unknown) => setSections(Array.isArray(s) ? s : []));
+        if (classId) api.getSectionsByClass(classId).then((s: any) => setSections(Array.isArray(s) ? s : []));
         else setSections([]);
         setSectionId("");
     }, [classId]);
@@ -199,7 +199,7 @@ const ResultsPerformancePage: React.FC = () => {
         if (!sessionId) return;
         setLoading(true);
         api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined })
-            .then((d: unknown) => {
+            .then((d: any) => {
                 setData(d);
                 setPublishedExams(d?.exams ?? []);
             })
@@ -307,8 +307,8 @@ const ResultsPerformancePage: React.FC = () => {
                         <div className="ml-auto text-right self-end">
                             <p className="text-xs text-slate-400">
                                 {selectedSessionName && <span className="font-medium text-slate-600">{selectedSessionName}</span>}
-                                {classId && <span> · {classes.find(c => c.id === classId)?.name}</span>}
-                                {sectionId && <span> · {sections.find(s => s.id === sectionId)?.name}</span>}
+                                {classId && <span> Â· {classes.find(c => c.id === classId)?.name}</span>}
+                                {sectionId && <span> Â· {sections.find(s => s.id === sectionId)?.name}</span>}
                             </p>
                         </div>
                     </div>
@@ -330,7 +330,7 @@ const ResultsPerformancePage: React.FC = () => {
                     <div className="bg-white rounded-2xl border border-slate-100 p-16 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
                             <Loader2 size={28} className="animate-spin text-indigo-600" />
-                            <p className="text-sm text-slate-500">Loading performance data…</p>
+                            <p className="text-sm text-slate-500">Loading performance dataâ€¦</p>
                         </div>
                     </div>
                 ) : !summary ? (
@@ -341,7 +341,7 @@ const ResultsPerformancePage: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                        {/* ── OVERVIEW TAB ────────────────────────────────────────── */}
+                        {/* â”€â”€ OVERVIEW TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "overview" && (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -356,7 +356,7 @@ const ResultsPerformancePage: React.FC = () => {
                                 <InsightsPanel summary={summary} subjectBreakdown={subjectBreakdown} classBreakdown={classBreakdown} />
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Radar – Subject Performance */}
+                                    {/* Radar â€“ Subject Performance */}
                                     {radarSubjects.length >= 3 && (
                                         <div className="bg-white rounded-2xl border border-slate-100 p-6">
                                             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
@@ -410,7 +410,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                         }`}>{i + 1}</div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-semibold text-slate-800 truncate">{tp.studentName}</p>
-                                                            <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
+                                                            <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
                                                         </div>
                                                         <div className="hidden sm:block w-28">
                                                             <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -431,7 +431,7 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── CLASS TAB ────────────────────────────────────────────── */}
+                        {/* â”€â”€ CLASS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "class" && (
                             <div className="space-y-6">
                                 {radarClasses.length >= 3 && (
@@ -468,7 +468,7 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── SECTION TAB ──────────────────────────────────────────── */}
+                        {/* â”€â”€ SECTION TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "section" && (
                             <div className="space-y-6">
                                 {radarSections.length >= 3 && (
@@ -505,7 +505,7 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── SUBJECT TAB ──────────────────────────────────────────── */}
+                        {/* â”€â”€ SUBJECT TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "subject" && (
                             <div className="space-y-6">
                                 {radarSubjects.length >= 3 && (
@@ -548,14 +548,14 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── TOP STUDENTS TAB ────────────────────────────────────── */}
+                        {/* â”€â”€ TOP STUDENTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "students" && (
                             <div className="space-y-6">
                                 {topPerformers.length > 0 && (
                                     <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white">
                                         <div className="flex items-center gap-3 mb-1">
                                             <Medal size={20} className="text-amber-400" />
-                                            <h3 className="text-base font-bold">🏆 School Top Performers</h3>
+                                            <h3 className="text-base font-bold">ðŸ† School Top Performers</h3>
                                         </div>
                                         <p className="text-xs text-slate-400 mb-5">Top students by average percentage across all published exams</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -568,7 +568,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     }`}>#{i + 1}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-bold text-white truncate">{tp.studentName}</p>
-                                                        <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName}</p>
+                                                        <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName}</p>
                                                         <p className="text-xs text-slate-500">Roll #{tp.rollNo}</p>
                                                     </div>
                                                     <div className="text-right shrink-0">
@@ -596,7 +596,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     }`}>{i + 1}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-semibold text-slate-800">{tp.studentName}</p>
-                                                        <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
+                                                        <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
                                                     </div>
                                                     <div className="hidden sm:block w-32">
                                                         <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -617,7 +617,7 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── EXAM REPORTS TAB ────────────────────────────────────── */}
+                        {/* â”€â”€ EXAM REPORTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "report-card" && (
                             <div className="space-y-6">
                                 {/* Exam selector */}
@@ -629,7 +629,7 @@ const ResultsPerformancePage: React.FC = () => {
                                         <p className="text-sm text-slate-400 text-center py-8">No published exams found for this session</p>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {publishedExams.map((exam: unknown) => (
+                                            {publishedExams.map((exam: any) => (
                                                 <button key={exam.id}
                                                     onClick={() => setSelectedExamId(selectedExamId === exam.id ? null : exam.id)}
                                                     className={`text-left p-4 rounded-xl border-2 transition-all ${
@@ -643,7 +643,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                         </div>
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-slate-800 text-sm truncate">{exam.examName}</p>
-                                                            <p className="text-xs text-slate-400 mt-0.5">{exam.subjectName} · {exam.examTerm?.replace("TERM", "T")}</p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">{exam.subjectName} Â· {exam.examTerm?.replace("TERM", "T")}</p>
                                                         </div>
                                                     </div>
                                                 </button>
@@ -666,7 +666,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     <FileText size={22} />
                                                     <h2 className="text-xl font-bold">Exam Report Card</h2>
                                                 </div>
-                                                <p className="text-indigo-200 text-sm">{examReport.exam.examName} — {examReport.exam.subjectName} · {examReport.exam.examTerm?.replace("TERM", "Term ")} · Full Marks: {examReport.exam.fullMarks}</p>
+                                                <p className="text-indigo-200 text-sm">{examReport.exam.examName} â€” {examReport.exam.subjectName} Â· {examReport.exam.examTerm?.replace("TERM", "Term ")} Â· Full Marks: {examReport.exam.fullMarks}</p>
                                             </div>
 
                                             {/* Report stats */}
@@ -736,7 +736,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                 <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                                                     <div className="px-6 py-4 border-b bg-slate-50 flex items-center gap-2">
                                                         <Trophy size={15} className="text-amber-500" />
-                                                        <h3 className="text-sm font-bold text-slate-800">Top Performers — {examReport.exam.examName}</h3>
+                                                        <h3 className="text-sm font-bold text-slate-800">Top Performers â€” {examReport.exam.examName}</h3>
                                                     </div>
                                                     <div className="divide-y divide-slate-50">
                                                         {examReport.topPerformers.map((tp, i) => {

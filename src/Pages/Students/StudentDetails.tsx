@@ -30,7 +30,7 @@ const StudentDetails: React.FC = () => {
     }
   };
 
-  const handleAdmit = async (formData: unknown) => {
+  const handleAdmit = async (formData: any) => {
     if (!student) return;
     try {
       await api.admitStudent(student.student.id, formData);

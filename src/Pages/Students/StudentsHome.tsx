@@ -28,7 +28,7 @@ const StudentsHome: React.FC = () => {
     }
   };
 
-  const handleAdmit = async (formData: unknown) => {
+  const handleAdmit = async (formData: any) => {
     if (!selectedStudent) return;
     try {
       await api.admitStudent(selectedStudent.id, formData);

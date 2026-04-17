@@ -20,8 +20,8 @@ const eventTypes = [
 ];
 
 const eventTypeIcons: Record<string, string> = {
-    HOLIDAY: "🏖️", VACATION: "✈️", ACTIVITY: "🎨", PROGRAM: "🎭",
-    EXHIBITION: "🖼️", SPORTS: "⚽", CULTURAL: "🎵", MEETING: "👥", OTHER: "📌"
+    HOLIDAY: "ðŸ–ï¸", VACATION: "âœˆï¸", ACTIVITY: "ðŸŽ¨", PROGRAM: "ðŸŽ­",
+    EXHIBITION: "ðŸ–¼ï¸", SPORTS: "âš½", CULTURAL: "ðŸŽµ", MEETING: "ðŸ‘¥", OTHER: "ðŸ“Œ"
 };
 
 const EventManagement: React.FC = () => {
@@ -50,7 +50,7 @@ const EventManagement: React.FC = () => {
             const to = new Date(new Date().getFullYear() + 1, 11, 31).toISOString();
             const data = await api.getSchoolEvents?.(from, to);
             setEvents(data?.events ?? []);
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err.response?.data?.message || "Failed to fetch events");
         } finally {
             setLoading(false);
@@ -75,7 +75,7 @@ const EventManagement: React.FC = () => {
             setShowForm(false);
             setError(null);
             fetchEvents();
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err.response?.data?.message || "Failed to save event");
         }
     };
@@ -85,7 +85,7 @@ const EventManagement: React.FC = () => {
             try {
                 await api.deleteSchoolEvent?.(id);
                 fetchEvents();
-            } catch (err: unknown) {
+            } catch (err: any) {
                 setError(err.response?.data?.message || "Failed to delete event");
             }
         }
@@ -216,7 +216,7 @@ const EventManagement: React.FC = () => {
                             >
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-start gap-3 flex-1">
-                                        <span className="text-2xl">{eventTypeIcons[event.type] || "📌"}</span>
+                                        <span className="text-2xl">{eventTypeIcons[event.type] || "ðŸ“Œ"}</span>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-slate-900 truncate">{event.title}</h3>
                                             <span className="inline-block text-xs font-medium bg-blue-50 text-blue-700 px-2 py-1 rounded mt-1">
@@ -227,8 +227,8 @@ const EventManagement: React.FC = () => {
                                 </div>
                                 {event.description && <p className="text-sm text-slate-600 line-clamp-2 mb-3">{event.description}</p>}
                                 <div className="text-xs text-slate-500 space-y-1 mb-4">
-                                    <p>📅 {new Date(event.date).toLocaleDateString("en-IN")}</p>
-                                    {event.endDate && <p>→ {new Date(event.endDate).toLocaleDateString("en-IN")}</p>}
+                                    <p>ðŸ“… {new Date(event.date).toLocaleDateString("en-IN")}</p>
+                                    {event.endDate && <p>â†’ {new Date(event.endDate).toLocaleDateString("en-IN")}</p>}
                                 </div>
                                 <div className="flex gap-2">
                                     <button

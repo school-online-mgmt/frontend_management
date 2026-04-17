@@ -30,7 +30,7 @@ const CreateBoardModal = ({
     open, onClose, onCreate, classes, teachers
 }: {
     open: boolean; onClose: () => void; onCreate: () => void;
-    classes: unknown[]; teachers: unknown[];
+    classes: any[]; teachers: any[];
 }) => {
     const [form, setForm] = useState({
         name: "", description: "", visibility: "PUBLIC",
@@ -73,7 +73,7 @@ const CreateBoardModal = ({
             });
             onCreate();
             onClose();
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err?.response?.data?.message ?? "Failed to create board");
         } finally {
             setSaving(false);
@@ -127,7 +127,7 @@ const CreateBoardModal = ({
                             <select value={form.classId} onChange={e => setForm(f => ({...f, classId: e.target.value, sectionId: ""}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 <option value="">Select class...</option>
-                                {classes.map((c: unknown) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
                     )}
@@ -137,7 +137,7 @@ const CreateBoardModal = ({
                             <select value={form.sectionId} onChange={e => setForm(f => ({...f, sectionId: e.target.value}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 <option value="">Select section...</option>
-                                {sections.map((s: unknown) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {sections.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                     )}
@@ -146,7 +146,7 @@ const CreateBoardModal = ({
                         <select value={form.approverId} onChange={e => setForm(f => ({...f, approverId: e.target.value}))}
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                             <option value="">Principal approves only</option>
-                            {teachers.map((t: unknown) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                         <p className="text-xs text-slate-400 mt-1">If assigned, the teacher can approve/reject notices on this board.</p>
                     </div>
@@ -192,7 +192,7 @@ const NoticeBoardHome = () => {
             ]);
             setBoards(boardsData.boards ?? []);
             setPendingNotices(pendingData.notices ?? []);
-        } catch (err: unknown) {
+        } catch (err: any) {
             setError(err?.response?.data?.message ?? "Failed to load notice boards");
         } finally {
             setLoading(false);

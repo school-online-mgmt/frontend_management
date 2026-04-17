@@ -4,7 +4,7 @@ import api from "../../api/api";
 type ConfirmAdmissionModalProps = {
     applicant: any;
     onClose: () => void;
-    onConfirm: (data: unknown) => void;
+    onConfirm: (data: any) => void;
 };
 
 const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissionModalProps) => {

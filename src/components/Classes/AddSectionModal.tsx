@@ -13,7 +13,7 @@ const AddSectionModal = ({ classId, onClose, onSuccess }: any) => {
     setLoading(true);
 
     try {
-      const payload: unknown = {name, slug};
+      const payload: any = {name, slug};
 
       const res = await api.createSection(classId, payload);
 
@@ -24,7 +24,7 @@ const AddSectionModal = ({ classId, onClose, onSuccess }: any) => {
 
       onClose();
 
-    } catch (err: unknown) {
+    } catch (err: any) {
 
       onSuccess({
         type: "error",

@@ -11,7 +11,7 @@ type Tab = "catalog" | "issues" | "requests" | "renewals";
 const LibraryHome = () => {
     const navigate = useNavigate();
     const [tab, setTab] = useState<Tab>("catalog");
-    const [stats, setStats] = useState<unknown>(null);
+    const [stats, setStats] = useState<any>(null);
     const [books, setBooks] = useState<any[]>([]);
     const [issues, setIssues] = useState<any[]>([]);
     const [requests, setRequests] = useState<any[]>([]);
@@ -19,8 +19,8 @@ const LibraryHome = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showReturnModal, setShowReturnModal] = useState<unknown>(null);
-    const [showIssueModal, setShowIssueModal] = useState<unknown>(null);
+    const [showReturnModal, setShowReturnModal] = useState<any>(null);
+    const [showIssueModal, setShowIssueModal] = useState<any>(null);
     const [issueFilter, setIssueFilter] = useState("ISSUED");
     const [requestFilter, setRequestFilter] = useState("PENDING");
     const [renewalFilter, setRenewalFilter] = useState("PENDING");
@@ -35,7 +35,7 @@ const LibraryHome = () => {
         try {
             const data = await api.getLibraryStats();
             setStats(data.stats);
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
     }, []);
 
     const fetchBooks = useCallback(async () => {
@@ -43,7 +43,7 @@ const LibraryHome = () => {
         try {
             const data = await api.getLibraryBooks({ search: search || undefined });
             setBooks(data.books || []);
-        } catch (_) { setBooks([]); } finally { setIsLoading(false); }
+        } catch { setBooks([]); } finally { setIsLoading(false); }
     }, [search]);
 
     const fetchIssues = useCallback(async () => {
@@ -51,7 +51,7 @@ const LibraryHome = () => {
         try {
             const data = await api.getLibraryIssues({ status: issueFilter });
             setIssues(data.issues || []);
-        } catch (_) { setIssues([]); } finally { setIsLoading(false); }
+        } catch { setIssues([]); } finally { setIsLoading(false); }
     }, [issueFilter]);
 
     const fetchRequests = useCallback(async () => {
@@ -59,7 +59,7 @@ const LibraryHome = () => {
         try {
             const data = await api.getLibraryRequests({ status: requestFilter });
             setRequests(data.requests || []);
-        } catch (_) { setRequests([]); } finally { setIsLoading(false); }
+        } catch { setRequests([]); } finally { setIsLoading(false); }
     }, [requestFilter]);
 
     const fetchRenewals = useCallback(async () => {
@@ -67,7 +67,7 @@ const LibraryHome = () => {
         try {
             const data = await api.getLibraryRenewals({ status: renewalFilter });
             setRenewals(data.renewals || []);
-        } catch (_) { setRenewals([]); } finally { setIsLoading(false); }
+        } catch { setRenewals([]); } finally { setIsLoading(false); }
     }, [renewalFilter]);
 
     useEffect(() => { fetchStats(); }, [fetchStats]);
@@ -85,7 +85,7 @@ const LibraryHome = () => {
             showMsg("success", data.message);
             fetchBooks();
             fetchStats();
-        } catch (_) { showMsg("error", "Failed to toggle book status"); }
+        } catch { showMsg("error", "Failed to toggle book status"); }
     };
 
     const handleApproveRequest = async (requestId: string) => {
@@ -94,7 +94,7 @@ const LibraryHome = () => {
             await api.approveLibraryRequest(requestId);
             showMsg("success", "Request approved and book issued");
             fetchRequests(); fetchStats();
-        } catch (e: unknown) { showMsg("error", e?.response?.data?.message || "Failed to approve"); }
+        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to approve"); }
     };
 
     const handleRejectRequest = async (requestId: string) => {
@@ -103,7 +103,7 @@ const LibraryHome = () => {
             await api.rejectLibraryRequest(requestId, reason || "");
             showMsg("success", "Request rejected");
             fetchRequests(); fetchStats();
-        } catch (_) { showMsg("error", "Failed to reject"); }
+        } catch { showMsg("error", "Failed to reject"); }
     };
 
     const handleRespondRenewal = async (renewalId: string, action: "APPROVED" | "REJECTED") => {
@@ -112,7 +112,7 @@ const LibraryHome = () => {
             await api.respondLibraryRenewal(renewalId, action, remarks);
             showMsg("success", `Renewal ${action.toLowerCase()}`);
             fetchRenewals(); fetchStats();
-        } catch (e: unknown) { showMsg("error", e?.response?.data?.message || "Failed to respond"); }
+        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to respond"); }
     };
 
     const handleMarkOverdue = async () => {
@@ -120,7 +120,7 @@ const LibraryHome = () => {
             const data = await api.markLibraryOverdue();
             showMsg("success", data.message);
             fetchIssues(); fetchStats();
-        } catch (_) { showMsg("error", "Failed to mark overdue"); }
+        } catch { showMsg("error", "Failed to mark overdue"); }
     };
 
     const TABS: { key: Tab; label: string; icon: any; badge?: number }[] = [
@@ -599,7 +599,7 @@ const InlineReturnModal = ({ issue, onClose, onSuccess }: { issue: any; onClose:
         try {
             const data = await api.returnLibraryBook(issue.id, { remarks, markLost, overrideFine: Number.parseInt(overrideFine) || 0 });
             onSuccess(`Book ${markLost ? "marked as lost" : "returned"}. Fine: ₹${data.fineAmount}`);
-        } catch (e: unknown) { setError(e?.response?.data?.message || "Failed"); }
+        } catch (e: any) { setError(e?.response?.data?.message || "Failed"); }
         finally { setIsSubmitting(false); }
     };
     return (
@@ -646,7 +646,7 @@ const InlineIssueModal = ({ request, onClose, onSuccess }: { request: any; onClo
         try {
             await api.issueLibraryBook({ bookId: request.bookId, studentId: request.studentId, requestId: request.id, remarks });
             onSuccess(`Book issued to ${request.studentName}`);
-        } catch (e: unknown) { setError(e?.response?.data?.message || "Failed to issue"); }
+        } catch (e: any) { setError(e?.response?.data?.message || "Failed to issue"); }
         finally { setIsSubmitting(false); }
     };
     return (
@@ -708,7 +708,7 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
             });
             onSuccess(`"${form.title}" added to library`);
             onClose();
-        } catch (e: unknown) {
+        } catch (e: any) {
             setError(e?.response?.data?.message || "Failed to add book");
         } finally { setIsSubmitting(false); }
     };

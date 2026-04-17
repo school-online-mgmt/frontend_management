@@ -12,7 +12,7 @@ const CourseDetails = () => {
     const { courseId } = useParams() as { courseId: string };
     const navigate = useNavigate();
 
-    const [course, setCourse] = useState<unknown>(null);
+    const [course, setCourse] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -29,7 +29,7 @@ const CourseDetails = () => {
         try {
             const data = await api.getCourseById(courseId);
             setCourse(data);
-        } catch (_) {
+        } catch {
             alert("Failed to load course");
         } finally {
             setIsLoading(false);
@@ -70,7 +70,7 @@ const CourseDetails = () => {
                 `${selectedSubject.name} removed from ${course.name}`
             );
             fetchCourse();
-        } catch (_) {
+        } catch {
             showMessage("error", "Failed to remove subject");
         }
     };
@@ -95,7 +95,7 @@ const CourseDetails = () => {
                 }
             }, 1200);
 
-        } catch (_) {
+        } catch {
 
             showMessage("error", "Failed to delete course");
 
@@ -237,7 +237,7 @@ const CourseDetails = () => {
                             No subjects added yet
                         </p>
                     ) : (
-                        course.subjects.map((subject: unknown) => (
+                        course.subjects.map((subject: any) => (
                             <div
                                 key={subject.id}
                                 className="flex justify-between items-center p-4"

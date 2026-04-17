@@ -100,7 +100,7 @@ const ExamReport = ({ examId }: { examId: string }) => {
                 setLoading(true);
                 const data = await api.getExamReport(examId);
                 setReport(data);
-            } catch (err: unknown) {
+            } catch (err: any) {
                 setError(err?.response?.data?.message || "Failed to load report");
             } finally {
                 setLoading(false);

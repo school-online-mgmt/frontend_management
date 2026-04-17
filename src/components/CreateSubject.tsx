@@ -60,7 +60,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             required
           >
             <option value="" disabled>Select a Session</option>
-            {sessions.map((session: unknown) => (
+            {sessions.map((session: any) => (
               <option key={session.id} value={session.id}>
                 {session.name}
               </option>

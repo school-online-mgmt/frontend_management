@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
     totalExams: number; totalResults: number; appeared: number; absent: number;
     averagePercentage: number; passRate: number; highestPct: number;
@@ -17,7 +17,7 @@ interface SectionRow { sectionId: string; sectionName: string; className: string
 interface SubjectRow { subjectId: string; subjectName: string; avgPercentage: number; passRate: number; totalResults: number; highest: number; }
 interface TopPerformer { studentId: string; studentName: string; className: string; sectionName: string; rollNo: string; avgPercentage: number; examsCount: number; grade: string; pcts: number[]; }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const GRADE_COLORS: Record<string, { bg: string; text: string; bar: string; border: string }> = {
     "A+": { bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-500", border: "border-emerald-200" },
     "A":  { bg: "bg-emerald-50", text: "text-emerald-600", bar: "bg-emerald-400", border: "border-emerald-200" },
@@ -29,7 +29,7 @@ const GRADE_COLORS: Record<string, { bg: string; text: string; bar: string; bord
 };
 const GRADE_ORDER = ["A+", "A", "B+", "B", "C", "D", "F"];
 
-// ── SVG Radar Chart ────────────────────────────────────────────────────────────
+// â”€â”€ SVG Radar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RadarChart = ({ data, size = 260 }: { data: { label: string; value: number }[]; size?: number }) => {
     const cx = size / 2, cy = size / 2, r = size * 0.38;
     const n = data.length;
@@ -70,7 +70,7 @@ const RadarChart = ({ data, size = 260 }: { data: { label: string; value: number
                 return (
                     <text key={i} x={p.x} y={p.y} textAnchor={anchor} dominantBaseline="middle"
                         fontSize={labelFontSize} fill="#475569" fontWeight="600">
-                        {d.label.length > 12 ? d.label.slice(0, 11) + "…" : d.label}
+                        {d.label.length > 12 ? d.label.slice(0, 11) + "â€¦" : d.label}
                         <tspan x={p.x} dy="12" fontSize="9" fill="#94a3b8" fontWeight="500">{d.value}%</tspan>
                     </text>
                 );
@@ -79,7 +79,7 @@ const RadarChart = ({ data, size = 260 }: { data: { label: string; value: number
     );
 };
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: typeof Users; label: string; value: string | number; sub?: string; color: string }) => (
     <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center gap-2.5 mb-2">
@@ -91,7 +91,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: typeof Users
     </div>
 );
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PerformanceDashboard: React.FC = () => {
     const [sessions, setSessions] = useState<any[]>([]);
     const [classes, setClasses] = useState<any[]>([]);
@@ -99,7 +99,7 @@ const PerformanceDashboard: React.FC = () => {
     const [sessionId, setSessionId] = useState("");
     const [classId, setClassId] = useState("");
     const [sectionId, setSectionId] = useState("");
-    const [data, setData] = useState<unknown>(null);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState<"overview" | "class" | "section" | "subject" | "students">("overview");
 
@@ -205,7 +205,7 @@ const PerformanceDashboard: React.FC = () => {
 
             {loading ? (
                 <div className="bg-white rounded-2xl border p-16 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3"><Loader2 size={24} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500">Loading performance data…</p></div>
+                    <div className="flex flex-col items-center gap-3"><Loader2 size={24} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500">Loading performance dataâ€¦</p></div>
                 </div>
             ) : !summary ? (
                 <div className="bg-white rounded-2xl border p-16 flex flex-col items-center gap-3 text-center">
@@ -215,7 +215,7 @@ const PerformanceDashboard: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    {/* ── OVERVIEW TAB ──────────────────────────────────────────── */}
+                    {/* â”€â”€ OVERVIEW TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "overview" && (
                         <div className="space-y-5">
                             {/* Stats */}
@@ -227,7 +227,7 @@ const PerformanceDashboard: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {/* Radar – Subject Performance */}
+                                {/* Radar â€“ Subject Performance */}
                                 {radarSubjects.length >= 3 && (
                                     <div className="bg-white rounded-2xl border p-5">
                                         <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
@@ -276,7 +276,7 @@ const PerformanceDashboard: React.FC = () => {
                                                 }`}>{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm font-bold text-slate-800">{tp.avgPercentage}%</p>
@@ -291,7 +291,7 @@ const PerformanceDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── CLASS TAB ─────────────────────────────────────────────── */}
+                    {/* â”€â”€ CLASS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "class" && (
                         <div className="space-y-5">
                             {radarClasses.length >= 3 && (
@@ -327,7 +327,7 @@ const PerformanceDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── SECTION TAB ───────────────────────────────────────────── */}
+                    {/* â”€â”€ SECTION TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "section" && (
                         <div className="space-y-5">
                             {radarSections.length >= 3 && (
@@ -364,7 +364,7 @@ const PerformanceDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── SUBJECT TAB ───────────────────────────────────────────── */}
+                    {/* â”€â”€ SUBJECT TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "subject" && (
                         <div className="space-y-5">
                             {radarSubjects.length >= 3 && (
@@ -400,7 +400,7 @@ const PerformanceDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── TOP STUDENTS TAB ──────────────────────────────────────── */}
+                    {/* â”€â”€ TOP STUDENTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     {tab === "students" && (
                         <div className="space-y-5">
                             {/* Top performer radar (top 8 subjects of #1 student) */}
@@ -408,7 +408,7 @@ const PerformanceDashboard: React.FC = () => {
                                 <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white">
                                     <div className="flex items-center gap-3 mb-1">
                                         <Medal size={20} className="text-amber-400" />
-                                        <h3 className="text-base font-bold">🏆 School Top Performers</h3>
+                                        <h3 className="text-base font-bold">ðŸ† School Top Performers</h3>
                                     </div>
                                     <p className="text-xs text-slate-400 mb-4">Top 10 students by average percentage across all published exams</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -419,7 +419,7 @@ const PerformanceDashboard: React.FC = () => {
                                                 }`}>#{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-bold text-white truncate">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
                                                 </div>
                                                 <div className="text-right shrink-0">
                                                     <p className="text-lg font-black text-white">{tp.avgPercentage}%</p>
@@ -446,7 +446,7 @@ const PerformanceDashboard: React.FC = () => {
                                                 }`}>{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
                                                 </div>
                                                 <div className="hidden sm:block w-36">
                                                     <div className="flex items-center gap-2">

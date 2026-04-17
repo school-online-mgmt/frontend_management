@@ -11,7 +11,7 @@ const ClassDetails = () => {
 
     const { classId } = useParams() as { classId: string };
 
-    const [classData, setClassData] = useState<unknown>(null);
+    const [classData, setClassData] = useState<any>(null);
     const [showSectionModal, setShowSectionModal] = useState(false);
     const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -73,7 +73,7 @@ const ClassDetails = () => {
                 <AddSectionModal
                     classId={classId}
                     onClose={() => setShowSectionModal(false)}
-                    onSuccess={(msg: unknown) => {
+                    onSuccess={(msg: any) => {
                         setMessage(msg);
                         fetchClass();
                     }}
@@ -161,7 +161,7 @@ const ClassDetails = () => {
 
                     <tbody>
 
-                    {classData.sections.map((section: unknown) => (
+                    {classData.sections.map((section: any) => (
 
                         <tr
                             key={section.id}

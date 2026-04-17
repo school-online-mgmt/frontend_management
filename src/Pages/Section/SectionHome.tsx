@@ -130,7 +130,7 @@ const SectionHome = () => {
 
                             ) : sections.length > 0 ? (
 
-                                sections.map((section: unknown) => (
+                                sections.map((section: any) => (
 
                                     <tr
                                         key={section.id}

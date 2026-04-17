@@ -54,7 +54,7 @@ const CreateCourse = ({
 
             onRefresh();
             onClose();
-        } catch (error: unknown) {
+        } catch (error: any) {
             setMessage(error?.response?.data?.message || "Failed to create course");
             setMessageType("error");
         } finally {

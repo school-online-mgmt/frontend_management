@@ -37,7 +37,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
             await api.createCourse({ slug, name, description, classId, sessionId });
             onSuccess(`Course "${name}" created successfully`);
             onClose();
-        } catch (e: unknown) {
+        } catch (e: any) {
             setError(e?.response?.data?.message || "Failed to create course");
         } finally {
             setIsSubmitting(false);
