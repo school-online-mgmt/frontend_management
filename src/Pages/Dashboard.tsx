@@ -9,11 +9,11 @@ import {
 import api from "../api/api";
 import useAuth from "../hooks/useAuth";
 
-/* â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-const fmt = (n: number) => `â‚¹${n.toLocaleString("en-IN")}`;
+/* ── helpers ─────────────────────────────────────────────────────────── */
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-/* â”€â”€ Attendance Ring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Attendance Ring ───────────────────────────────────────────────────── */
 const Ring = ({ value, size = 56, stroke = 5, color }: { value: number; size?: number; stroke?: number; color: string }) => {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
@@ -31,7 +31,7 @@ const Ring = ({ value, size = 56, stroke = 5, color }: { value: number; size?: n
   );
 };
 
-/* â”€â”€ Main Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Main Dashboard ────────────────────────────────────────────────────── */
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -110,7 +110,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <Loader2 size={28} className="animate-spin text-emerald-500 mx-auto" />
-          <p className="text-sm text-slate-500">Loading dashboardâ€¦</p>
+          <p className="text-sm text-slate-500">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -143,7 +143,7 @@ const Dashboard = () => {
   return (
     <div className="p-3 md:p-5 space-y-5 max-w-6xl mx-auto">
 
-      {/* â”€â”€ Hero Welcome â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Hero Welcome ───────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 rounded-2xl p-5 md:p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10" />
         <div className="absolute top-0 right-0 w-56 h-56 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -155,7 +155,7 @@ const Dashboard = () => {
                 <Sparkles size={14} className="text-emerald-400" />
                 <span className="text-emerald-300 text-xs font-medium">Management Portal</span>
               </div>
-              <h1 className="text-white text-xl font-bold">{greeting}, {firstName} ðŸ‘‹</h1>
+              <h1 className="text-white text-xl font-bold">{greeting}, {firstName} 👋</h1>
               <p className="text-slate-400 text-xs mt-1">Here's your school overview for today</p>
             </div>
             <button onClick={load} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
@@ -206,7 +206,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* â”€â”€ Pending Actions Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Pending Actions Alert ────────────────────────────────────────────── */}
       {totalPendingActions > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-2">
           <h3 className="text-xs font-semibold text-amber-800 flex items-center gap-2">
@@ -359,11 +359,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* â”€â”€ Fee Overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Fee Overview ─────────────────────────────────────────────────── */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-              <CreditCard size={13} className="text-amber-500" /> Fee Collection â€” This Month
+              <CreditCard size={13} className="text-amber-500" /> Fee Collection — This Month
             </h3>
             <button onClick={() => navigate("/fees")}
               className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-0.5">
@@ -415,7 +415,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* â”€â”€ Library Overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Library Overview ─────────────────────────────────────────────── */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
@@ -455,7 +455,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* â”€â”€ School Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── School Summary ─────────────────────────────────────────────────── */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">

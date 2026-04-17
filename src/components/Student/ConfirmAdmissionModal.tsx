@@ -24,6 +24,22 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
     const [courses, setCourses] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Auto-generate admission ID on mount
+    useEffect(() => {
+        api.generateAdmissionInfo().then((data: any) => {
+            setForm(prev => ({ ...prev, admissionId: data.admissionId }));
+        }).catch(() => {});
+    }, []);
+
+    // Auto-generate roll number when section changes
+    useEffect(() => {
+        if (form.sectionId) {
+            api.generateAdmissionInfo(form.sectionId).then((data: any) => {
+                setForm(prev => ({ ...prev, rollNo: data.rollNo }));
+            }).catch(() => {});
+        }
+    }, [form.sectionId]);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -100,11 +116,11 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Admission ID</label>
-                        <input type="text" name="admissionId" value={form.admissionId} onChange={handleChange} required className="w-full p-2 border rounded" />
+                        <input type="text" name="admissionId" value={form.admissionId} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Roll No</label>
-                        <input type="text" name="rollNo" value={form.rollNo} onChange={handleChange} required className="w-full p-2 border rounded" />
+                        <input type="text" name="rollNo" value={form.rollNo} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
                     </div>
                     <div>
                         <label className="block text-sm">

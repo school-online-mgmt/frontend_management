@@ -25,6 +25,7 @@ interface AdmissionRequest {
   classId: string;
   sectionId: string;
   courseId: string;
+  admissionId: string;
   rollNo: string;
   transportOpted: boolean;
   transportZoneId?: string;
@@ -44,6 +45,7 @@ const StudentAdmission = () => {
     classId: "",
     sectionId: "",
     courseId: "",
+    admissionId: "",
     rollNo: "",
     transportOpted: false,
   });
@@ -61,7 +63,20 @@ const StudentAdmission = () => {
     api.getSessions().then((data: any) => {
       setSessions(Array.isArray(data) ? data : []);
     }).catch(() => setSessions([]));
+    // Auto-generate admission ID
+    api.generateAdmissionInfo().then((data: any) => {
+      setAdmissionData(prev => ({ ...prev, admissionId: data.admissionId }));
+    }).catch(() => {});
   }, []);
+
+  // Auto-generate roll number when section changes
+  useEffect(() => {
+    if (admissionData.sectionId) {
+      api.generateAdmissionInfo(admissionData.sectionId).then((data: any) => {
+        setAdmissionData(prev => ({ ...prev, rollNo: data.rollNo }));
+      }).catch(() => {});
+    }
+  }, [admissionData.sectionId]);
 
   useEffect(() => {
     filterApplicants();
@@ -581,16 +596,26 @@ const StudentAdmission = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Admission ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Auto-generated"
+                    value={admissionData.admissionId}
+                    readOnly
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Roll Number
                   </label>
                   <input
                     type="text"
-                    placeholder="Roll Number"
+                    placeholder="Auto-generated"
                     value={admissionData.rollNo}
-                    onChange={(e) =>
-                      setAdmissionData({ ...admissionData, rollNo: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    readOnly
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 cursor-not-allowed"
                   />
                 </div>
                 <div className="flex items-center pt-6">
