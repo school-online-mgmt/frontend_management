@@ -56,6 +56,7 @@ const StudentAdmission = () => {
   const [sections, setSections] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [allCourses, setAllCourses] = useState<any[]>([]);
+  const [transportZones, setTransportZones] = useState<any[]>([]);
 
   useEffect(() => {
     fetchApplicants();
@@ -63,6 +64,10 @@ const StudentAdmission = () => {
     api.getSessions().then((data: any) => {
       setSessions(Array.isArray(data) ? data : []);
     }).catch(() => setSessions([]));
+    // Fetch transport zones
+    api.getTransportZones().then((data: any) => {
+      setTransportZones(Array.isArray(data) ? data : data?.zones ?? []);
+    }).catch(() => setTransportZones([]));
     // Auto-generate admission ID
     api.generateAdmissionInfo().then((data: any) => {
       setAdmissionData(prev => ({ ...prev, admissionId: data.admissionId }));
@@ -159,6 +164,10 @@ const StudentAdmission = () => {
   };
 
   const handleCreateAdmission = async (applicant: Applicant) => {
+    if (admissionData.transportOpted && !admissionData.transportZoneId) {
+      setError("Please select a transport zone when transport is opted.");
+      return;
+    }
     try {
       // Call backend to create admission
       await api.createAdmission?.(applicant.id, admissionData);
@@ -618,19 +627,75 @@ const StudentAdmission = () => {
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 cursor-not-allowed"
                   />
                 </div>
-                <div className="flex items-center pt-6">
-                  <input
-                    type="checkbox"
-                    checked={admissionData.transportOpted}
-                    onChange={(e) =>
-                      setAdmissionData({ ...admissionData, transportOpted: e.target.checked })
-                    }
-                    id="transport"
-                    className="w-5 h-5 text-emerald-600 rounded"
-                  />
-                  <label htmlFor="transport" className="ml-2 text-sm font-medium text-slate-700">
-                    Transport Opted
-                  </label>
+                <div className="col-span-2">
+                  {/* Transport toggle */}
+                  <div className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg bg-slate-50">
+                    <input
+                      type="checkbox"
+                      checked={admissionData.transportOpted}
+                      onChange={(e) =>
+                        setAdmissionData({
+                          ...admissionData,
+                          transportOpted: e.target.checked,
+                          transportZoneId: e.target.checked ? admissionData.transportZoneId : undefined,
+                        })
+                      }
+                      id="transport"
+                      className="w-5 h-5 text-emerald-600 rounded accent-emerald-600"
+                    />
+                    <label htmlFor="transport" className="text-sm font-semibold text-slate-700 cursor-pointer select-none">
+                      Transport Opted
+                    </label>
+                  </div>
+
+                  {/* Zone dropdown — shown only when transport is opted */}
+                  {admissionData.transportOpted && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Transport Zone <span className="text-red-500">*</span>
+                      </label>
+                      {transportZones.length === 0 ? (
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+                          <span>⚠️</span>
+                          <span>No transport zones configured. Please set up zones in the Fees module first.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={admissionData.transportZoneId ?? ""}
+                            onChange={(e) =>
+                              setAdmissionData({ ...admissionData, transportZoneId: e.target.value || undefined })
+                            }
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                          >
+                            <option value="">Select Transport Zone</option>
+                            {transportZones.map((zone: any) => (
+                              <option key={zone.id} value={zone.id}>
+                                {zone.name} — ₹{Number(zone.price).toLocaleString("en-IN")}/mo
+                                {zone.description ? ` (${zone.description})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                          {/* Selected zone detail card */}
+                          {admissionData.transportZoneId && (() => {
+                            const z = transportZones.find((z: any) => z.id === admissionData.transportZoneId);
+                            return z ? (
+                              <div className="mt-2 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                                <span className="text-emerald-600 text-lg">🚌</span>
+                                <div>
+                                  <p className="text-sm font-bold text-emerald-800">{z.name}</p>
+                                  {z.description && <p className="text-xs text-emerald-700 mt-0.5">{z.description}</p>}
+                                  <p className="text-xs font-semibold text-emerald-700 mt-1">
+                                    Monthly Fee: ₹{Number(z.price).toLocaleString("en-IN")}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

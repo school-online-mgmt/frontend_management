@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CreditCard, BookOpen, Bus, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
-    TrendingUp, DollarSign, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
+    TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
 } from 'lucide-react';
 import api from '../../api/api';
 
@@ -95,7 +95,7 @@ function SummaryTab() {
     useEffect(() => { fetch(); }, [fetch]);
 
     const statCards = summary ? [
-        { label: 'Total Demand', value: fmt(summary.totalDemand), icon: DollarSign, color: 'bg-blue-50 text-blue-700' },
+        { label: 'Total Demand', value: fmt(summary.totalDemand), icon: Wallet, color: 'bg-blue-50 text-blue-700' },
         { label: 'Collected', value: fmt(summary.totalCollected), icon: CheckCircle, color: 'bg-green-50 text-green-700' },
         { label: 'Outstanding', value: fmt(summary.outstanding), icon: TrendingUp, color: 'bg-orange-50 text-orange-700' },
         { label: 'Overdue', value: summary.overdue, icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
