@@ -16,10 +16,10 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
     }, []);
 
     const existingIds =
-        course.subjects?.map((subject: any) => subject.id) || [];
+        course.subjects?.map((subject: unknown) => subject.id) || [];
 
     const availableSubjects = subjects.filter(
-        (s: any) => s.sessionId === course.sessionId && !existingIds.includes(s.id)
+        (s: unknown) => s.sessionId === course.sessionId && !existingIds.includes(s.id)
     );
 
     const handleAdd = async () => {
@@ -38,7 +38,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
                     "Failed to add subject"
                 );
             }
-        } catch {
+        } catch (_) {
             alert("Failed to add subject");
         }
     };
@@ -62,7 +62,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
                 >
                     <option value="">Select Subject</option>
 
-                    {availableSubjects.map((s: any) => (
+                    {availableSubjects.map((s: unknown) => (
                         <option key={s.id} value={s.id}>
                             {s.name}
                         </option>

@@ -23,7 +23,6 @@ const SectionHome = () => {
 
         } catch (error) {
 
-            console.error("Error fetching sections", error);
             setSections([]);
 
         } finally {
@@ -131,7 +130,7 @@ const SectionHome = () => {
 
                             ) : sections.length > 0 ? (
 
-                                sections.map((section: any) => (
+                                sections.map((section: unknown) => (
 
                                     <tr
                                         key={section.id}

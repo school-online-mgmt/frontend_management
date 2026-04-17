@@ -35,7 +35,7 @@ const ClassHome = () => {
             const classes = await api.getClasses();
             setClasses(classes || []);
         } catch (err) {
-            console.error(err);
+
             setClasses([]);
         } finally {
             setIsLoading(false);
@@ -53,7 +53,7 @@ const ClassHome = () => {
             {showCreateModal && (
                 <CreateClassModal
                     onClose={() => setShowCreateModal(false)}
-                    onSuccess={(msg: any) => {
+                    onSuccess={(msg: unknown) => {
                         setMessage(msg);
                         fetchClasses();
                     }}

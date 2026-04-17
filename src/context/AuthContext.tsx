@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = useCallback(async () => {
         try {
             await api.logout();
-        } catch {
+        } catch (_) {
             // Logout API error is non-critical
         } finally {
             setAuth({ 

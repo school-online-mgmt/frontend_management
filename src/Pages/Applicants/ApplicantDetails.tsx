@@ -22,7 +22,7 @@ const ApplicantDetails: React.FC = () => {
       const response = await api.getApplicantById(applicantId!);
       setApplicant(response);
     } catch (error) {
-      console.error('Failed to fetch applicant', error);
+
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ const ApplicantDetails: React.FC = () => {
       await api.acceptApplication(applicant.id);
       navigate('/students-home');
     } catch (error) {
-      console.error('Failed to accept application', error);
+
     } finally {
       setAccepting(false);
     }

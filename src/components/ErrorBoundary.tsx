@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
             error,
             errorInfo,
         });
-        console.error('Error caught by boundary:', error, errorInfo);
+
     }
 
     handleReset = () => {
@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
                         <div className="flex gap-3">
                             <button
-                                onClick={() => window.location.href = '/'}
+                                onClick={() => globalThis.location.href = '/'}
                                 className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition"
                             >
                                 Go Home

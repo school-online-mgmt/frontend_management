@@ -20,7 +20,7 @@ const ApplicantsHome: React.FC = () => {
       const response = await api.getApplicants();
       setApplicants(response);
     } catch (error) {
-      console.error('Failed to fetch applicants', error);
+
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ const ApplicantsHome: React.FC = () => {
       const response = await api.searchApplicants(searchQuery);
       setApplicants(response);
     } catch (error) {
-      console.error('Failed to search applicants', error);
+
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ const ApplicantsHome: React.FC = () => {
       await fetchApplicants(); // Refresh list
       navigate('/students-home');
     } catch (error) {
-      console.error('Failed to accept application', error);
+
     }
   };
 

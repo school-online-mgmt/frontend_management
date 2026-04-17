@@ -110,7 +110,7 @@ function MarkTab() {
     const [statuses,    setStatuses]    = useState<Record<string,string>>({});
     const [loading,     setLoading]     = useState(false);
     const [submitting,  setSubmitting]  = useState(false);
-    const [secInfo,     setSecInfo]     = useState<any>(null);
+    const [secInfo,     setSecInfo]     = useState<unknown>(null);
     const [isHoliday,   setIsHoliday]   = useState(false);
     const [holReason,   setHolReason]   = useState("");
     const [marked,      setMarked]      = useState(false);
@@ -142,7 +142,7 @@ function MarkTab() {
             const st: Record<string,string> = {};
             (r.students||[]).forEach((s:Student) => { st[s.studentId] = s.attendance?.status || "PRESENT"; });
             setStatuses(st);
-        } catch (e:any) {
+        } catch (e: unknown) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to load students" });
         } finally { setLoading(false); }
     }, [selSection, selDate]);
@@ -156,7 +156,7 @@ function MarkTab() {
             await api.markAttendanceManagement(selSection, { date:selDate, records });
             setToast({ type:"success", msg:`Attendance ${marked?"updated":"saved"} for ${records.length} students` });
             setMarked(true);
-        } catch (e:any) {
+        } catch (e: unknown) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to submit attendance" });
         } finally { setSubmitting(false); }
     };
@@ -333,7 +333,7 @@ function CalendarTab() {
         const ld  = new Date(year,month,0).getDate();
         const from = `${year}-${mm}-01`, to = `${year}-${mm}-${ld}`;
         try {
-            const params: any = { from, to };
+            const params: unknown = { from, to };
             if (selSection) params.sectionId = selSection;
             const [a, h] = await Promise.all([
                 api.getAttendanceView(params),
@@ -537,7 +537,7 @@ function ViewTab() {
     const [selSection, setSelSection] = useState("");
     const [date,       setDate]       = useState(TODAY);
     const [records,    setRecords]    = useState<Rec[]>([]);
-    const [summary,    setSummary]    = useState<any>({});
+    const [summary,    setSummary]    = useState<unknown>({});
     const [loading,    setLoading]    = useState(false);
     const [search,     setSearch]     = useState("");
 
@@ -547,7 +547,7 @@ function ViewTab() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const p:any={date};
+            const p: unknown ={date};
             if(selClass)   p.classId=selClass;
             if(selSection) p.sectionId=selSection;
             const r = await api.getAttendanceView(p);
@@ -633,7 +633,7 @@ function ViewTab() {
 //  TODAY SUMMARY TAB — dashboard-style overview
 // =============================================================================
 function TodaySummaryTab() {
-    const [data, setData]       = useState<any>(null);
+    const [data, setData]       = useState<unknown>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

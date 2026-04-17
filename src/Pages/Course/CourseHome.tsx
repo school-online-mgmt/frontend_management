@@ -21,7 +21,7 @@ const CourseHome = () => {
             const data = await api.getCourses();
             setCourses(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error("Error fetching courses", error);
+
             setCourses([]);
         } finally {
             setIsLoading(false);
@@ -118,7 +118,7 @@ const CourseHome = () => {
                                 </tr>
                             ) : courses.length > 0 ? (
 
-                                courses.map((course: any) => (
+                                courses.map((course: unknown) => (
                                     <tr
                                         key={course.id}
                                         onClick={() => navigate(`/course/${course.id}`)}

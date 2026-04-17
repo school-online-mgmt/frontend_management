@@ -21,20 +21,20 @@ const BookDetailsPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [book, setBook] = useState<any>(null);
+    const [book, setBook] = useState<unknown>(null);
     const [activeIssues, setActiveIssues] = useState<any[]>([]);
     const [issueHistory, setIssueHistory] = useState<any[]>([]);
     const [pendingRequests, setPendingRequests] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [showIssueModal, setShowIssueModal] = useState(false);
-    const [showReturnModal, setShowReturnModal] = useState<any>(null);
+    const [showReturnModal, setShowReturnModal] = useState<unknown>(null);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
     const [students, setStudents] = useState<any[]>([]);
     const [classes, setClasses] = useState<any[]>([]);
 
     // Pre-fill from "Issue Book" click on requests tab
-    const prefilledRequest = (location.state as any)?.issueStudent || null;
+    const prefilledRequest = (location.state as Record<string, unknown>)?.issueStudent || null;
 
     const showMsg = (type: "success" | "error", text: string) => {
         setMessage({ type, text });
@@ -49,7 +49,7 @@ const BookDetailsPage = () => {
             setActiveIssues(data.activeIssues || []);
             setIssueHistory(data.issueHistory || []);
             setPendingRequests(data.pendingRequests || []);
-        } catch { showMsg("error", "Failed to load book"); }
+        } catch (_) { showMsg("error", "Failed to load book"); }
         finally { setIsLoading(false); }
     };
 
@@ -82,13 +82,13 @@ const BookDetailsPage = () => {
                         book={book}
                         classes={classes}
                         onCancel={() => setIsEditing(false)}
-                        onSave={async (data: any) => {
+                        onSave={async (data: unknown) => {
                             try {
                                 await api.updateLibraryBook(book.id, data);
                                 showMsg("success", "Book updated");
                                 setIsEditing(false);
                                 fetchBook();
-                            } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to update"); }
+                            } catch (e: unknown) { showMsg("error", e?.response?.data?.message || "Failed to update"); }
                         }}
                     />
                 ) : (
@@ -124,7 +124,7 @@ const BookDetailsPage = () => {
                                         try {
                                             await api.deleteLibraryBook(book.id);
                                             navigate("/library");
-                                        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to delete"); }
+                                        } catch (e: unknown) { showMsg("error", e?.response?.data?.message || "Failed to delete"); }
                                     }}
                                     className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50"
                                 >
@@ -144,7 +144,7 @@ const BookDetailsPage = () => {
                             ].map((item) => (
                                 <div key={item.label} className="bg-slate-50 rounded-xl p-3">
                                     <p className="text-xs text-slate-500">{item.label}</p>
-                                    <p className={`font-semibold mt-0.5 ${(item as any).highlight ? "text-red-600" : "text-slate-800"}`}>{item.value}</p>
+                                    <p className={`font-semibold mt-0.5 ${(item as Record<string, unknown>).highlight ? "text-red-600" : "text-slate-800"}`}>{item.value}</p>
                                 </div>
                             ))}
                         </div>
@@ -193,7 +193,7 @@ const BookDetailsPage = () => {
                                                     await api.approveLibraryRequest(req.id);
                                                     showMsg("success", "Request approved and book issued");
                                                     fetchBook();
-                                                } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed"); }
+                                                } catch (e: unknown) { showMsg("error", e?.response?.data?.message || "Failed"); }
                                             }}
                                             className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700"
                                         >
@@ -333,12 +333,12 @@ const BookDetailsPage = () => {
 /* ── Issue Book Modal ────────────────────────────────────────────────────────── */
 const IssueBookModal = ({ book, students, prefilledStudent, onClose, onSuccess }: any) => {
     const [studentSearch, setStudentSearch] = useState("");
-    const [selectedStudent, setSelectedStudent] = useState<any>(prefilledStudent || null);
+    const [selectedStudent, setSelectedStudent] = useState<unknown>(prefilledStudent || null);
     const [remarks, setRemarks] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    const filtered = students.filter((s: any) => {
+    const filtered = students.filter((s: unknown) => {
         const q = studentSearch.toLowerCase();
         return (`${s.firstName} ${s.lastName}`).toLowerCase().includes(q) ||
             (s.phone || "").includes(q);
@@ -351,7 +351,7 @@ const IssueBookModal = ({ book, students, prefilledStudent, onClose, onSuccess }
             await api.issueLibraryBook({ bookId: book.id, studentId: selectedStudent.id, remarks });
             onSuccess(`Book issued to ${selectedStudent.firstName} ${selectedStudent.lastName}`);
             onClose();
-        } catch (e: any) { setError(e?.response?.data?.message || "Failed to issue"); }
+        } catch (e: unknown) { setError(e?.response?.data?.message || "Failed to issue"); }
         finally { setIsSubmitting(false); }
     };
 
@@ -387,7 +387,7 @@ const IssueBookModal = ({ book, students, prefilledStudent, onClose, onSuccess }
                             <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
                                 {filtered.length === 0 ? (
                                     <p className="p-3 text-sm text-slate-400">No students found</p>
-                                ) : filtered.map((s: any) => (
+                                ) : filtered.map((s: unknown) => (
                                     <button key={s.id} onClick={() => { setSelectedStudent(s); setStudentSearch(""); }}
                                         className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm">
                                         {s.firstName} {s.lastName} <span className="text-slate-400">· {s.phone}</span>
@@ -435,10 +435,10 @@ const ReturnBookModal = ({ issue, onClose, onSuccess }: any) => {
             const data = await api.returnLibraryBook(issue.id, {
                 remarks,
                 markLost,
-                overrideFine: parseInt(overrideFine) || 0,
+                overrideFine: Number.parseInt(overrideFine) || 0,
             });
             onSuccess(`Book ${markLost ? "marked as lost" : "returned"}. Fine: ₹${data.fineAmount}`);
-        } catch (e: any) { setError(e?.response?.data?.message || "Failed to process return"); }
+        } catch (e: unknown) { setError(e?.response?.data?.message || "Failed to process return"); }
         finally { setIsSubmitting(false); }
     };
 
@@ -541,13 +541,13 @@ const EditBookForm = ({ book, classes, onCancel, onSave }: any) => {
                 <div><label className="text-xs font-semibold text-slate-600 block mb-1">Rack</label>
                     <input value={form.rackNumber} onChange={(e) => set("rackNumber", e.target.value)} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div><label className="text-xs font-semibold text-slate-600 block mb-1">Total Copies</label>
-                    <input type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                    <input type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", Number.parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div className="col-span-2"><label className="text-xs font-semibold text-slate-600 block mb-1">Description</label>
                     <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div className="col-span-2">
                     <label className="text-xs font-semibold text-slate-600 block mb-2">Class Restrictions</label>
                     <div className="flex flex-wrap gap-2">
-                        {classes.map((cls: any) => (
+                        {classes.map((cls: unknown) => (
                             <button key={cls.id} type="button"
                                 onClick={() => setSelectedClasses((p) => p.includes(cls.id) ? p.filter((c) => c !== cls.id) : [...p, cls.id])}
                                 className={`text-xs px-3 py-1 rounded-full border transition ${selectedClasses.includes(cls.id) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200"}`}>

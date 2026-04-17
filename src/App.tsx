@@ -21,6 +21,7 @@ import StudentDetails from "./Pages/Students/StudentDetails.tsx";
 import StudentAdmission from "./Pages/StudentAdmission.tsx";
 import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
+import ResultsPerformancePage from "./Pages/Performance/ResultsPerformancePage.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
@@ -52,6 +53,7 @@ function App() {
             <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/exam-home" element={<ExamHome />} />
             <Route path="/exam/:examId" element={<ExamDetails />} />
+            <Route path="/performance" element={<ResultsPerformancePage />} />
             <Route path="/notices" element={<NoticeBoardHome />} />
             <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
             <Route path="/events" element={<Navigate to="/calendar" replace />} />

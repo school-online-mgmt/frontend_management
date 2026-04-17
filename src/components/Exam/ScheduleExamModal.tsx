@@ -37,7 +37,7 @@ const ScheduleExamModal = ({
             onRefresh();
             onClose();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             setMessage(err?.response?.data?.message || "Failed to schedule exam");
             setMessageType("error");
             onClose();

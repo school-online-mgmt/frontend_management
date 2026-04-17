@@ -4,7 +4,7 @@ import api from "../../api/api";
 type ConfirmAdmissionModalProps = {
     applicant: any;
     onClose: () => void;
-    onConfirm: (data: any) => void;
+    onConfirm: (data: unknown) => void;
 };
 
 const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissionModalProps) => {
@@ -38,7 +38,7 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
                 setSections(secs);
                 setCourses(cors);
             } catch (error) {
-                console.error("Error fetching data", error);
+
             }
         };
         fetchData();
@@ -59,7 +59,7 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
             await onConfirm(form);
             onClose();
         } catch (error) {
-            console.error("Error confirming admission", error);
+
         } finally {
             setLoading(false);
         }

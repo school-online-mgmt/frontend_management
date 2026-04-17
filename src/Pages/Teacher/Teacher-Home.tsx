@@ -24,7 +24,7 @@ const TeacherHome = () => {
             const teacherList = Array.isArray(data) ? data : data.teachers || [];
             setTeachers(teacherList);
         } catch (error) {
-            console.error("Error fetching teachers", error);
+
             setTeachers([]);
         } finally {
             setIsLoading(false);

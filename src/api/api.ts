@@ -367,6 +367,12 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     return response.data;
 };
 
+    // Get school-wide exam overview (no classId required)
+    getExamOverview = async (sessionId: string) => {
+        const res = await apiClient.get("/management/exam/overview", { params: { sessionId } });
+        return res.data;
+    };
+
     // Get all exams
     getExams = async (payload: {
             sessionId: string,
@@ -483,6 +489,12 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Get exam report/analytics (published exams)
     getExamReport = async (examId: string) => {
         const res = await apiClient.get(`/management/exam/${examId}/report`);
+        return res.data;
+    };
+
+    // Get school-wide performance dashboard data
+    getPerformanceDashboard = async (params: { sessionId: string; classId?: string; sectionId?: string; term?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/exam/performance", { params });
         return res.data;
     };
 

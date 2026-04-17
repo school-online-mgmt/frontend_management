@@ -50,7 +50,7 @@ const EventManagement: React.FC = () => {
             const to = new Date(new Date().getFullYear() + 1, 11, 31).toISOString();
             const data = await api.getSchoolEvents?.(from, to);
             setEvents(data?.events ?? []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.response?.data?.message || "Failed to fetch events");
         } finally {
             setLoading(false);
@@ -75,7 +75,7 @@ const EventManagement: React.FC = () => {
             setShowForm(false);
             setError(null);
             fetchEvents();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.response?.data?.message || "Failed to save event");
         }
     };
@@ -85,7 +85,7 @@ const EventManagement: React.FC = () => {
             try {
                 await api.deleteSchoolEvent?.(id);
                 fetchEvents();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 setError(err.response?.data?.message || "Failed to delete event");
             }
         }

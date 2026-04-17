@@ -24,19 +24,19 @@ const StudentDetails: React.FC = () => {
       const response = await api.getStudentById(id!);
       setStudent(response);
     } catch (error) {
-      console.error('Failed to fetch student', error);
+
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdmit = async (formData: any) => {
+  const handleAdmit = async (formData: unknown) => {
     if (!student) return;
     try {
       await api.admitStudent(student.student.id, formData);
       fetchStudent(); // Refresh
     } catch (error) {
-      console.error('Failed to admit student', error);
+
     }
   };
 

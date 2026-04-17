@@ -85,7 +85,7 @@ const CalendarPage: React.FC = () => {
                 const current = list.find(s => s.startDate <= today && s.endDate >= today) ?? list[list.length - 1] ?? null;
                 setActiveSession(current);
                 if (current) setCurrentDate(new Date());
-            } catch { /* ignore */ }
+            } catch (_) { /* ignore */ }
         })();
     }, []);
 
@@ -99,7 +99,7 @@ const CalendarPage: React.FC = () => {
             const to   = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
             const data = await api.getCalendarEvents(from, to);
             setEvents(data?.events ?? []);
-        } catch { setEvents([]); }
+        } catch (_) { setEvents([]); }
         finally { setLoading(false); }
     };
 
@@ -111,7 +111,7 @@ const CalendarPage: React.FC = () => {
             const to   = new Date(new Date().getFullYear() + 1, 11, 31).toISOString();
             const data = await api.getSchoolEvents?.(from, to);
             setAllEvents(data?.events ?? []);
-        } catch { setAllEvents([]); }
+        } catch (_) { setAllEvents([]); }
         finally { setAllEventsLoading(false); }
     };
 
@@ -182,7 +182,7 @@ const CalendarPage: React.FC = () => {
             setEditingId(null);
             setFormData({ ...emptyForm });
             await fetchCalendarEvents();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setFormError(err.response?.data?.message || "Failed to save event");
         } finally { setSaving(false); }
     };
@@ -193,7 +193,7 @@ const CalendarPage: React.FC = () => {
             await api.deleteSchoolEvent?.(id);
             fetchCalendarEvents();
             if (showAllEvents) fetchAllEvents();
-        } catch { /* ignore */ }
+        } catch (_) { /* ignore */ }
     };
 
     const toggleAllEvents = () => {

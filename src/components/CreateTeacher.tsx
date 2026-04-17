@@ -22,12 +22,12 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
       // Sending data: age converted to number, gender as lowercase string
       await api.createTeacherEntry({
         ...teacherData,
-        age: parseInt(teacherData.age)
+        age: Number.parseInt(teacherData.age)
       });
       onRefresh();
       onClose();
     } catch (err) { 
-      console.error(err);
+
       alert("Failed to create teacher. Please ensure all fields are valid."); 
     } finally { 
       setIsSubmitting(false); 

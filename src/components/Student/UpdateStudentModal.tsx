@@ -39,7 +39,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                 setSections(sectionsData);
                 setCourses(coursesData);
             } catch (error) {
-                console.error("Error fetching data", error);
+
             }
         };
         fetchData();
@@ -53,7 +53,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
             onRefresh();
             onClose();
         } catch (error) {
-            console.error("Error updating student", error);
+
         } finally {
             setIsLoading(false);
         }

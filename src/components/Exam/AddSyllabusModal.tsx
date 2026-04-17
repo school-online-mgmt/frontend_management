@@ -31,7 +31,7 @@ const AddSyllabusModal = ({
             onRefresh();
             onClose();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             setMessage(err?.response?.data?.message || "Failed");
             setMessageType("error");
             onClose();

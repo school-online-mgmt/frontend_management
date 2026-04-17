@@ -49,7 +49,7 @@ export default function FeeInvoiceDetails() {
         try {
             const data = await api.getFeeInvoiceById(id);
             setInvoice(data.invoice); setItems(data.items); setPayments(data.payments);
-        } catch { navigate('/fees'); }
+        } catch (_) { navigate('/fees'); }
         finally { setLoading(false); }
     };
 
@@ -61,19 +61,17 @@ export default function FeeInvoiceDetails() {
         try {
             await api.recordPayment(id, { ...payForm, amount: parseFloat(payForm.amount) });
             await reload(); setShowPayment(false); setPayForm(p => ({ ...p, amount: '', referenceNo: '', remarks: '' }));
-        } catch { alert('Payment recording failed'); }
+        } catch (_) { alert('Payment recording failed'); }
         finally { setSaving(false); }
     };
 
     const waive = async () => {
-        if (!id) return;
-        await api.waiveInvoice(id, actionRemarks);
+        if (!id) { return; } await api.waiveInvoice(id, actionRemarks);
         await reload(); setShowWaive(false); setActionRemarks('');
     };
 
     const cancel = async () => {
-        if (!id) return;
-        await api.cancelInvoice(id, actionRemarks);
+        if (!id) { return; } await api.cancelInvoice(id, actionRemarks);
         await reload(); setShowCancel(false); setActionRemarks('');
     };
 
@@ -118,7 +116,7 @@ export default function FeeInvoiceDetails() {
   <div><div class="school-name">School Management System</div><div style="color:#64748b;font-size:13px">Fee Invoice</div></div>
   <div><div class="invoice-title">${invoice.invoiceNo}</div>
   <div class="invoice-no">${MONTHS[invoice.month-1]} ${invoice.year}</div>
-  <div class="invoice-no" style="margin-top:4px"><span class="status status-${invoice.status}">${invoice.status.replace(/_/g,' ')}</span></div></div>
+  <div class="invoice-no" style="margin-top:4px"><span class="status status-${invoice.status}">${invoice.status.replaceAll('_', ' ')}</span></div></div>
 </div>
 
 <div class="section">
@@ -136,7 +134,7 @@ export default function FeeInvoiceDetails() {
   <table>
     <thead><tr><th>Description</th><th>Type</th><th style="text-align:right">Amount</th></tr></thead>
     <tbody>
-      ${items.map(it => `<tr><td>${it.description}</td><td>${it.itemType.replace(/_/g,' ')}</td><td class="amount">₹${it.amount.toLocaleString('en-IN')}</td></tr>`).join('')}
+      ${items.map(it => `<tr><td>${it.description}</td><td>${it.itemType.replaceAll('_', ' ')}</td><td class="amount">₹${it.amount.toLocaleString('en-IN')}</td></tr>`).join('')}
       <tr class="total-row"><td colspan="2"><strong>Total Amount</strong></td><td class="amount">₹${invoice.totalAmount.toLocaleString('en-IN')}</td></tr>
       <tr><td colspan="2">Amount Paid</td><td class="amount" style="color:#16a34a">₹${invoice.paidAmount.toLocaleString('en-IN')}</td></tr>
       <tr class="total-row"><td colspan="2"><strong>Balance Due</strong></td><td class="amount" style="color:#dc2626">₹${balance.toLocaleString('en-IN')}</td></tr>
@@ -180,7 +178,7 @@ ${payments.length > 0 ? `
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColor[invoice.status]}`}>{invoice.status.replace(/_/g,' ')}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColor[invoice.status]}`}>{invoice.status.replaceAll('_', ' ')}</span>
                     <button onClick={printInvoice} className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50">
                         <Printer size={15}/> Print / PDF
                     </button>
@@ -208,7 +206,7 @@ ${payments.length > 0 ? `
                             <thead><tr className="bg-slate-50"><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase">Description</th><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase">Type</th><th className="px-3 py-2 text-right text-xs text-slate-500 uppercase">Amount</th></tr></thead>
                             <tbody className="divide-y divide-slate-50">
                                 {items.map(it => (
-                                    <tr key={it.id}><td className="px-3 py-2.5">{it.description}</td><td className="px-3 py-2.5 text-slate-500 text-xs">{it.itemType.replace(/_/g,' ')}</td><td className="px-3 py-2.5 text-right font-semibold">{fmt(it.amount)}</td></tr>
+                                    <tr key={it.id}><td className="px-3 py-2.5">{it.description}</td><td className="px-3 py-2.5 text-slate-500 text-xs">{it.itemType.replaceAll('_', ' ')}</td><td className="px-3 py-2.5 text-right font-semibold">{fmt(it.amount)}</td></tr>
                                 ))}
                                 <tr className="bg-slate-50 font-bold"><td colSpan={2} className="px-3 py-2.5">Total</td><td className="px-3 py-2.5 text-right">{fmt(invoice.totalAmount)}</td></tr>
                                 <tr><td colSpan={2} className="px-3 py-2.5 text-green-700">Paid</td><td className="px-3 py-2.5 text-right text-green-700 font-semibold">{fmt(invoice.paidAmount)}</td></tr>

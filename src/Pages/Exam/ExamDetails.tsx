@@ -122,7 +122,7 @@ const ExamDetails = () => {
     const { role } = useAuth();
     const navigate = useNavigate();
 
-    const [exam, setExam] = useState<any>(null);
+    const [exam, setExam] = useState<unknown>(null);
     const [loading, setLoading] = useState(true);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [completingAttendance, setCompletingAttendance] = useState(false);
@@ -145,7 +145,7 @@ const ExamDetails = () => {
         try {
             const data = await api.getExamById(examId);
             setExam(data);
-        } catch {
+        } catch (_) {
             setExam(null);
         } finally {
             setLoading(false);
@@ -159,7 +159,7 @@ const ExamDetails = () => {
         if (exam && (exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED")) {
             setResultsLoading(true);
             api.getExamResults(examId)
-                .then((data: any) => {
+                .then((data: unknown) => {
                     const list = Array.isArray(data) ? data : (data.results || []);
                     setExamResults(list);
                 })
@@ -183,7 +183,7 @@ const ExamDetails = () => {
             setDeleteLoading(true);
             await api.deleteExam(examId);
             navigate("/exam-home");
-        } catch (err: any) {
+        } catch (err: unknown) {
             setMessage(err?.response?.data?.message || "Failed to delete exam paper");
             setMessageType("error");
             setDeleteOpen(false);
@@ -199,7 +199,7 @@ const ExamDetails = () => {
             setMessage("Attendance completed — exam status transitioned to Grading In Progress.");
             setMessageType("success");
             fetchExam();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setMessage(err?.response?.data?.message || "Failed to complete attendance marking");
             setMessageType("error");
         } finally {
@@ -214,7 +214,7 @@ const ExamDetails = () => {
             setMessage("Results published successfully!");
             setMessageType("success");
             fetchExam();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setMessage(err?.response?.data?.message || "Failed to publish results");
             setMessageType("error");
         } finally {
@@ -486,9 +486,9 @@ const ExamDetails = () => {
                             Exam Results
                         </h2>
                         {!resultsLoading && examResults.length > 0 && (() => {
-                            const present = examResults.filter((r: any) => r.attendanceStatus === "PRESENT");
-                            const absent = examResults.filter((r: any) => r.attendanceStatus === "ABSENT");
-                            const marksEntered = present.filter((r: any) => r.marks !== null && r.marks !== undefined);
+                            const present = examResults.filter((r: unknown) => r.attendanceStatus === "PRESENT");
+                            const absent = examResults.filter((r: unknown) => r.attendanceStatus === "ABSENT");
+                            const marksEntered = present.filter((r: unknown) => r.marks !== null && r.marks !== undefined);
                             const marksMissing = present.length - marksEntered.length;
                             return (
                                 <div className="flex flex-wrap gap-2 mt-3 text-sm font-medium">
@@ -533,7 +533,7 @@ const ExamDetails = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {examResults.map((r: any) => (
+                                    {examResults.map((r: unknown) => (
                                         <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
                                             <td className="px-5 py-3 font-medium text-slate-800">
                                                 {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "—"}

@@ -4,7 +4,7 @@ import api from "../../api/api";
 type AdmitStudentModalProps = {
     student: any;
     onClose: () => void;
-    onAdmit: (data: any) => void;
+    onAdmit: (data: unknown) => void;
 };
 
 const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps) => {
@@ -27,7 +27,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
 
     // Fetch only sessions on mount
     useEffect(() => {
-        api.getSessions().then((data: any) => {
+        api.getSessions().then((data: unknown) => {
             setSessions(Array.isArray(data) ? data : []);
         }).catch(() => setSessions([]));
     }, []);
@@ -35,10 +35,10 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
     // Fetch classes & courses when session changes
     useEffect(() => {
         if (form.sessionId) {
-            api.getClasses().then((data: any) => {
+            api.getClasses().then((data: unknown) => {
                 setClasses(Array.isArray(data) ? data : []);
             }).catch(() => setClasses([]));
-            api.getCourses({ sessionId: form.sessionId }).then((data: any) => {
+            api.getCourses({ sessionId: form.sessionId }).then((data: unknown) => {
                 const arr = Array.isArray(data) ? data : [];
                 setAllCourses(arr);
             }).catch(() => setAllCourses([]));
@@ -54,10 +54,10 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
     // Fetch sections & filter courses when class changes
     useEffect(() => {
         if (form.classId) {
-            api.getSectionsByClass(form.classId).then((data: any) => {
+            api.getSectionsByClass(form.classId).then((data: unknown) => {
                 setSections(Array.isArray(data) ? data : []);
             }).catch(() => setSections([]));
-            setCourses(allCourses.filter((c: any) => c.classId === form.classId || c.class?.id === form.classId));
+            setCourses(allCourses.filter((c: unknown) => c.classId === form.classId || c.class?.id === form.classId));
         } else {
             setSections([]);
             setCourses([]);
@@ -80,7 +80,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
             await onAdmit(form);
             onClose();
         } catch (error) {
-            console.error("Error admitting student", error);
+
         } finally {
             setLoading(false);
         }

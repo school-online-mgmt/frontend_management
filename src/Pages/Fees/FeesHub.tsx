@@ -84,11 +84,11 @@ function SummaryTab() {
         setLoading(true);
         try {
             const p: Record<string, unknown> = {};
-            if (month) p.month = parseInt(month);
-            if (year) p.year = parseInt(year);
-            const data = await api.getFeeSummary(p as any);
+            if (month) p.month = Number.parseInt(month);
+            if (year) p.year = Number.parseInt(year);
+            const data = await api.getFeeSummary(p as Record<string, unknown>);
             setSummary(data.summary);
-        } catch { /* ignore */ }
+        } catch (_) { /* ignore */ }
         finally { setLoading(false); }
     }, [month, year]);
 
@@ -145,8 +145,8 @@ function SummaryTab() {
                                 const key = s === 'PARTIALLY_PAID' ? 'partiallyPaid' : s.toLowerCase() as keyof Summary;
                                 return (
                                     <div key={s} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[s]}`}>{s.replace(/_/g,' ')}</span>
-                                        <span className="font-bold text-slate-800">{summary[key] as number}</span>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[s]}`}>{s.replaceAll('_', ' ')}</span>
+                                        <span className="font-bold text-slate-800">{summary[key]}</span>
                                     </div>
                                 );
                             })}
@@ -186,9 +186,9 @@ function CourseFeesTab() {
         if (!courseId || !tuitionFee) return;
         setSaving(true);
         try {
-            await api.setCourseFee(courseId, parseInt(tuitionFee));
+            await api.setCourseFee(courseId, Number.parseInt(tuitionFee));
             await reload(); setShowForm(false); setCourseId(''); setTuitionFee(''); setEditingId(null);
-        } catch { /* ignore */ }
+        } catch (_) { /* ignore */ }
         finally { setSaving(false); }
     };
 
@@ -306,7 +306,7 @@ function PaymentsTab() {
             if (status) params.paymentStatus = status;
             const data = await api.getFeePayments(params);
             setPayments(data.payments || []);
-        } catch { /* ignore */ }
+        } catch (_) { /* ignore */ }
         finally { setLoading(false); }
     }, [from, to, mode, status]);
 
@@ -321,7 +321,7 @@ function PaymentsTab() {
             if (mode) params.paymentMode = mode;
             if (status) params.paymentStatus = status;
             await api.exportFeePayments(params);
-        } catch { alert('Export failed'); }
+        } catch (_) { alert('Export failed'); }
         finally { setExporting(false); }
     };
 
@@ -332,13 +332,14 @@ function PaymentsTab() {
             const data = await api.refundPayment(p.id);
             alert(data.message || 'Refunded successfully');
             await reload();
-        } catch (err: any) {
+        } catch (err: unknown) {
             alert(err.response?.data?.message || 'Refund failed');
         } finally { setRefunding(null); }
     };
 
-    const totalAmount = payments.reduce((s, p) => s + (p.paymentStatus === 'REFUNDED' ? 0 : p.amount), 0);
+    const totalAmount = payments.reduce((s, p) => s + (['CAPTURED', 'AUTHORIZED'].includes(p.paymentStatus) ? p.amount : 0), 0);
     const totalRefunded = payments.filter(p => p.paymentStatus === 'REFUNDED').reduce((s, p) => s + p.amount, 0);
+    const totalFailed = payments.filter(p => p.paymentStatus === 'FAILED').reduce((s, p) => s + p.amount, 0);
 
     return (
         <div className="space-y-4">
@@ -352,7 +353,7 @@ function PaymentsTab() {
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Mode</label>
                         <select value={mode} onChange={e => setMode(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
                             <option value="">All Modes</option>
-                            {['CASH','CHEQUE','ONLINE','BANK_TRANSFER','DD'].map(m => <option key={m} value={m}>{m.replace(/_/g,' ')}</option>)}
+                            {['CASH','CHEQUE','ONLINE','BANK_TRANSFER','DD'].map(m => <option key={m} value={m}>{m.replaceAll('_', ' ')}</option>)}
                         </select></div>
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
                         <select value={status} onChange={e => setStatus(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
@@ -369,7 +370,7 @@ function PaymentsTab() {
             </div>
 
             {/* Stats */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
                 <div className="bg-green-50 text-green-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
                     <span className="text-xs font-medium opacity-70">Total Collected</span>
                     <span className="text-lg font-bold">{fmt(totalAmount)}</span>
@@ -377,6 +378,10 @@ function PaymentsTab() {
                 <div className="bg-orange-50 text-orange-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
                     <span className="text-xs font-medium opacity-70">Total Refunded</span>
                     <span className="text-lg font-bold">{fmt(totalRefunded)}</span>
+                </div>
+                <div className="bg-red-50 text-red-800 rounded-xl px-4 py-3 flex flex-col gap-0.5">
+                    <span className="text-xs font-medium opacity-70">Failed</span>
+                    <span className="text-lg font-bold">{fmt(totalFailed)}</span>
                 </div>
                 <div className="bg-slate-50 text-slate-700 rounded-xl px-4 py-3 flex flex-col gap-0.5">
                     <span className="text-xs font-medium opacity-70">Transactions</span>
@@ -406,7 +411,7 @@ function PaymentsTab() {
                                     </button>
                                 </td>
                                 <td className="px-3 py-3 font-medium">{p.studentFirstName} {p.studentLastName}</td>
-                                <td className="px-3 py-3"><span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.paymentMode.replace(/_/g,' ')}</span></td>
+                                <td className="px-3 py-3"><span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.paymentMode.replaceAll('_', ' ')}</span></td>
                                 <td className="px-3 py-3 text-slate-400 font-mono text-xs">{p.referenceNo || p.razorpayPaymentId || '—'}</td>
                                 <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusColor[p.paymentStatus] || 'bg-slate-100 text-slate-600'}`}>{p.paymentStatus}</span></td>
                                 <td className="px-3 py-3 font-semibold text-right whitespace-nowrap">
@@ -447,10 +452,10 @@ function TransportTab() {
         if (!name || !price) return;
         setSaving(true);
         try {
-            if (editing) await api.updateTransportZone(editing.id, { name, description: desc, price: parseInt(price) });
-            else await api.createTransportZone({ name, description: desc, price: parseInt(price) });
+            if (editing) await api.updateTransportZone(editing.id, { name, description: desc, price: Number.parseInt(price) });
+            else await api.createTransportZone({ name, description: desc, price: Number.parseInt(price) });
             await reload(); setShowForm(false);
-        } catch { } finally { setSaving(false); }
+        } catch (_) { } finally { setSaving(false); }
     };
     const del = async (id: string) => { if (!confirm('Delete zone?')) return; await api.deleteTransportZone(id); await reload(); };
 
@@ -517,9 +522,9 @@ function ExtraChargesTab() {
 
     const reload = useCallback(async () => {
         const p: Record<string, unknown> = {};
-        if (filterMonth) p.month = parseInt(filterMonth);
-        if (filterYear) p.year = parseInt(filterYear);
-        api.getExtraCharges(p as any).then(d => setCharges(d.extraCharges || [])).catch(() => {});
+        if (filterMonth) p.month = Number.parseInt(filterMonth);
+        if (filterYear) p.year = Number.parseInt(filterYear);
+        api.getExtraCharges(p as Record<string, unknown>).then(d => setCharges(d.extraCharges || [])).catch(() => {});
     }, [filterMonth, filterYear]);
 
     useEffect(() => { reload(); }, [reload]);
@@ -528,7 +533,7 @@ function ExtraChargesTab() {
     // When student changes, load their academic records
     useEffect(() => {
         if (!form.studentId) { setStudentAcademics([]); return; }
-        api.getStudentById(form.studentId).then((d: any) => {
+        api.getStudentById(form.studentId).then((d: unknown) => {
             const acads = d.academics || [];
             setStudentAcademics(acads);
             if (acads.length > 0) setForm(f => ({ ...f, academicId: acads[0].id }));
@@ -539,9 +544,9 @@ function ExtraChargesTab() {
         if (!form.studentId || !form.amount || !form.academicId) { alert('Please fill all required fields'); return; }
         setSaving(true);
         try {
-            await api.addExtraCharge({ ...form, amount: parseInt(form.amount), month: parseInt(form.month), year: parseInt(form.year) });
+            await api.addExtraCharge({ ...form, amount: Number.parseInt(form.amount), month: Number.parseInt(form.month), year: Number.parseInt(form.year) });
             await reload(); setShowForm(false); setForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
-        } catch { alert('Failed to add charge'); } finally { setSaving(false); }
+        } catch (_) { alert('Failed to add charge'); } finally { setSaving(false); }
     };
 
     const del = async (id: string) => { if (!confirm('Remove this charge?')) return; await api.deleteExtraCharge(id); await reload(); };
@@ -573,20 +578,20 @@ function ExtraChargesTab() {
                             <label className="block text-xs font-medium text-slate-600 mb-1">Student <span className="text-red-500">*</span></label>
                             <select value={form.studentId} onChange={e => setForm(f=>({...f, studentId: e.target.value, academicId:''}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 <option value="">Select…</option>
-                                {students.map((s: any) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
+                                {students.map((s: unknown) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
                             </select>
                         </div>
                         {studentAcademics.length > 0 && (
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Academic Session <span className="text-red-500">*</span></label>
                                 <select value={form.academicId} onChange={e => setForm(f=>({...f, academicId: e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                    {studentAcademics.map((a: any) => <option key={a.id} value={a.id}>{a.sessionName || a.id.slice(0,8)}</option>)}
+                                    {studentAcademics.map((a: unknown) => <option key={a.id} value={a.id}>{a.sessionName || a.id.slice(0,8)}</option>)}
                                 </select>
                             </div>
                         )}
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Charge Type</label>
                             <select value={form.type} onChange={e => setForm(f=>({...f, type:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                {EXTRA_CHARGE_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g,' ')}</option>)}
+                                {EXTRA_CHARGE_TYPES.map(t => <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
                             <input type="number" value={form.amount} onChange={e => setForm(f=>({...f, amount:e.target.value}))} placeholder="e.g. 500" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
@@ -620,7 +625,7 @@ function ExtraChargesTab() {
                         {charges.map(c => (
                             <tr key={c.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 font-medium">{c.studentFirstName} {c.studentLastName}</td>
-                                <td className="px-4 py-3"><span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">{c.type.replace(/_/g,' ')}</span></td>
+                                <td className="px-4 py-3"><span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">{c.type.replaceAll('_', ' ')}</span></td>
                                 <td className="px-4 py-3 text-slate-500">{c.description || '—'}</td>
                                 <td className="px-4 py-3 font-semibold text-red-600">{fmt(c.amount)}</td>
                                 <td className="px-4 py-3 text-slate-500">{MONTHS[c.month-1]} {c.year}</td>
@@ -651,10 +656,10 @@ function InvoicesTab() {
 
     const reload = useCallback(async () => {
         const p: Record<string, unknown> = {};
-        if (filterMonth) p.month = parseInt(filterMonth);
-        if (filterYear) p.year = parseInt(filterYear);
+        if (filterMonth) p.month = Number.parseInt(filterMonth);
+        if (filterYear) p.year = Number.parseInt(filterYear);
         if (filterStatus) p.status = filterStatus;
-        api.getFeeInvoices(p as any).then(d => setInvoices(d.invoices || [])).catch(() => {});
+        api.getFeeInvoices(p as Record<string, unknown>).then(d => setInvoices(d.invoices || [])).catch(() => {});
     }, [filterMonth, filterYear, filterStatus]);
 
     useEffect(() => { reload(); }, [reload]);
@@ -664,10 +669,10 @@ function InvoicesTab() {
         if (!gen.sessionId || !gen.dueDate) { alert('Please fill all fields'); return; }
         setGenerating(true);
         try {
-            const data = await api.generateInvoices({ month: parseInt(gen.month), year: parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate });
+            const data = await api.generateInvoices({ month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate });
             alert(`Done! Generated: ${data.generated}, Skipped (already exist): ${data.skipped}`);
             await reload(); setShowGenerate(false);
-        } catch { alert('Generation failed'); }
+        } catch (_) { alert('Generation failed'); }
         finally { setGenerating(false); }
     };
 
@@ -696,7 +701,7 @@ function InvoicesTab() {
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
                         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
                             <option value="">All Statuses</option>
-                            {STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+                            {STATUSES.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}
                         </select></div>
                 </div>
                 <div className="flex gap-2">
@@ -734,7 +739,7 @@ function InvoicesTab() {
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Session</label>
                             <select value={gen.sessionId} onChange={e => setGen(g=>({...g,sessionId:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 <option value="">Select session…</option>
-                                {sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {sessions.map((s: unknown) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
                             <input type="date" value={gen.dueDate} onChange={e => setGen(g=>({...g,dueDate:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
@@ -765,7 +770,7 @@ function InvoicesTab() {
                                 <td className="px-3 py-3 font-semibold">{fmt(inv.totalAmount)}</td>
                                 <td className="px-3 py-3 text-green-700">{fmt(inv.paidAmount)}</td>
                                 <td className="px-3 py-3 text-red-600 font-semibold">{fmt(inv.totalAmount - inv.paidAmount)}</td>
-                                <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[inv.status]}`}>{inv.status.replace(/_/g,' ')}</span></td>
+                                <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[inv.status]}`}>{inv.status.replaceAll('_', ' ')}</span></td>
                                 <td className="px-3 py-3">
                                     <button onClick={() => navigate(`/fees/invoice/${inv.id}`)} className="p-1.5 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600 transition-colors">
                                         <Eye size={14}/>

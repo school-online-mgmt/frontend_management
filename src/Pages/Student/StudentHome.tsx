@@ -11,9 +11,9 @@ const StudentHome = () => {
     const [students, setStudents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedStudent, setSelectedStudent] = useState<unknown>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-    const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+    const [selectedApplicant, setSelectedApplicant] = useState<unknown>(null);
     const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
 
     const fetchStudents = async () => {
@@ -22,7 +22,7 @@ const StudentHome = () => {
             const data = await api.getAppliedStudents();
             setStudents(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error("Error fetching applied students", error);
+
             setStudents([]);
         } finally {
             setIsLoading(false);
@@ -33,23 +33,23 @@ const StudentHome = () => {
         fetchStudents();
     }, []);
 
-    const handleUpdate = (student: any) => {
+    const handleUpdate = (student: unknown) => {
         setSelectedStudent(student);
         setIsUpdateModalOpen(true);
     };
 
-    const handleConfirm = (applicant: any) => {
+    const handleConfirm = (applicant: unknown) => {
         setSelectedApplicant(applicant);
         setIsConfirmModalOpen(true);
     };
 
-    const handleAdmissionConfirm = async (data: any) => {
+    const handleAdmissionConfirm = async (data: unknown) => {
         if (!selectedApplicant) return;
         try {
             await api.confirmStudentAdmission(selectedApplicant.id, data);
             fetchStudents();
         } catch (error) {
-            console.error("Error confirming admission", error);
+
         } finally {
             setIsConfirmModalOpen(false);
         }
@@ -122,7 +122,7 @@ const StudentHome = () => {
                         />
                     ) : viewType === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {students.map((student: any) => (
+                            {students.map((student: unknown) => (
                                 <Card key={student.id} hoverable bordered>
                                     <CardContent>
                                         <div className="flex items-start justify-between mb-4">
@@ -193,7 +193,7 @@ const StudentHome = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {students.map((student: any) => (
+                                        {students.map((student: unknown) => (
                                             <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">

@@ -97,7 +97,7 @@ const NoticeModal = ({
                 });
             }
             onSave(); onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err?.response?.data?.message ?? "Failed to save notice");
         } finally {
             setSaving(false);
@@ -243,16 +243,18 @@ const NoticeCard = ({
 
             {/* Actions */}
             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 flex-wrap">
-                {notice.status === "PENDING_APPROVAL" && (canApprove || isPrincipal) && (
+                {(notice.status === "PENDING_APPROVAL" || notice.status === "DRAFT") && (canApprove || isPrincipal) && (
                     <>
                         <button onClick={() => onApprove(notice.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
-                            <CheckCircle2 size={13} /> Approve
+                            <CheckCircle2 size={13} /> {notice.status === "DRAFT" ? "Publish" : "Approve"}
                         </button>
-                        <button onClick={() => onReject(notice)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
-                            <XCircle size={13} /> Reject
-                        </button>
+                        {notice.status === "PENDING_APPROVAL" && (
+                            <button onClick={() => onReject(notice)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
+                                <XCircle size={13} /> Reject
+                            </button>
+                        )}
                     </>
                 )}
                 {notice.status === "APPROVED" && isPrincipal && (
@@ -285,14 +287,14 @@ const NoticeBoardDetails = () => {
     const { role } = useAuth();
     const isPrincipal = role === "PRINCIPAL" || role === "SUPER_ADMIN";
 
-    const [board, setBoard] = useState<any>(null);
+    const [board, setBoard] = useState<unknown>(null);
     const [notices, setNotices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("ALL");
     const [showCreate, setShowCreate] = useState(false);
-    const [editNotice, setEditNotice] = useState<any>(null);
-    const [rejectTarget, setRejectTarget] = useState<any>(null);
+    const [editNotice, setEditNotice] = useState<unknown>(null);
+    const [rejectTarget, setRejectTarget] = useState<unknown>(null);
     const [actionSaving, setActionSaving] = useState(false);
 
     const load = useCallback(async () => {
@@ -305,7 +307,7 @@ const NoticeBoardDetails = () => {
             ]);
             setBoard(boardData.board);
             setNotices(noticesData.notices ?? []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err?.response?.data?.message ?? "Failed to load");
         } finally {
             setLoading(false);
@@ -386,7 +388,7 @@ const NoticeBoardDetails = () => {
     );
     if (!board) return null;
 
-    const VIS = { PUBLIC: { icon: Globe, label: "School-Wide" }, CLASS: { icon: BookOpen, label: "Class" }, SECTION: { icon: Users, label: "Section" } } as any;
+    const VIS = { PUBLIC: { icon: Globe, label: "School-Wide" }, CLASS: { icon: BookOpen, label: "Class" }, SECTION: { icon: Users, label: "Section" } } as Record<string, unknown>;
     const visInfo = VIS[board.visibility] ?? VIS.PUBLIC;
     const VisIcon = visInfo.icon;
 
@@ -483,10 +485,10 @@ const NoticeBoardDetails = () => {
                             isPrincipal={isPrincipal}
                             canApprove={false}
                             onApprove={handleApprove}
-                            onReject={(n: any) => setRejectTarget(n)}
+                            onReject={(n: unknown) => setRejectTarget(n)}
                             onArchive={handleArchive}
                             onDelete={handleDelete}
-                            onEdit={(n: any) => { setEditNotice(n); setShowCreate(true); }}
+                            onEdit={(n: unknown) => { setEditNotice(n); setShowCreate(true); }}
                         />
                     ))}
                 </div>

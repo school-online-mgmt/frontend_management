@@ -70,19 +70,19 @@ const SubjectDetailsPage = () => {
 
     // Mutations
     const updateSubjectMutation = useMutation({
-        mutationFn: (data: any) => api.updateSubject(subject!.id, data),
+        mutationFn: (data: unknown) => api.updateSubject(subject!.id, data),
         onSuccess: () => {
             showMessage("success", "Subject updated successfully");
             setIsEditOpen(false);
             queryClient.invalidateQueries({ queryKey: ['subject', slug] });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             showMessage("error", error?.response?.data?.message || "Failed to update subject");
         },
     });
 
     const addTeacherMutation = useMutation({
-        mutationFn: (data: any) => api.addTeacherToSubject(subject!.id, data),
+        mutationFn: (data: unknown) => api.addTeacherToSubject(subject!.id, data),
         onSuccess: () => {
             showMessage("success", "Teacher assigned successfully");
             setSelectedTeacherId('');
@@ -90,13 +90,13 @@ const SubjectDetailsPage = () => {
             setIsAddingTeacher(false);
             queryClient.invalidateQueries({ queryKey: ['assignedTeachers', subject?.id] });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             showMessage("error", error?.response?.data?.message || "Failed to assign teacher");
         },
     });
 
     const removeTeacherMutation = useMutation({
-        mutationFn: (data: any) => api.removeTeacherFromSubject(subject!.id, data),
+        mutationFn: (data: unknown) => api.removeTeacherFromSubject(subject!.id, data),
         onSuccess: () => {
             showMessage("success", "Teacher removed successfully");
             setTeacherToRemove(null);
@@ -221,7 +221,7 @@ const SubjectDetailsPage = () => {
                                 onChange={(e) => setEditData({ ...editData, sessionId: e.target.value })}
                             >
                                 <option value="" disabled>Select a Session</option>
-                                {sessionsList.map((session: any) => (
+                                {sessionsList.map((session: unknown) => (
                                     <option key={session.id} value={session.id}>
                                         {session.name}
                                     </option>
@@ -311,7 +311,7 @@ const SubjectDetailsPage = () => {
                     <div className="p-6 text-slate-500">Not assigned to any courses.</div>
                 ) : (
                     <div className="divide-y">
-                        {subject.courseSubjects?.map((cs: any) => (
+                        {subject.courseSubjects?.map((cs: unknown) => (
                             <div key={cs.course.id} className="flex justify-between items-center p-4">
                                 <span
                                     onClick={() => navigate(`/course/${cs.course.id}`)}
@@ -348,7 +348,7 @@ const SubjectDetailsPage = () => {
                             onChange={(e) => setSelectedTeacherId(e.target.value)}
                         >
                             <option value="" disabled>Select a Teacher</option>
-                            {teachers.map((teacher: any) => (
+                            {teachers.map((teacher: unknown) => (
                                 <option key={teacher.id} value={teacher.id}>
                                     {teacher.name}
                                 </option>
@@ -361,7 +361,7 @@ const SubjectDetailsPage = () => {
                             onChange={(e) => setSelectedSectionId(e.target.value)}
                         >
                             <option value="" disabled>Select a Section</option>
-                            {sections.map((section: any) => (
+                            {sections.map((section: unknown) => (
                                 <option key={section.id} value={section.id}>
                                     {section.name}
                                 </option>
@@ -383,7 +383,7 @@ const SubjectDetailsPage = () => {
                     <div className="p-6 text-slate-500">No teachers assigned yet.</div>
                 ) : (
                     <div className="divide-y">
-                        {assignedTeachers.map((st: any) => (
+                        {assignedTeachers.map((st: unknown) => (
                             <div key={st.id} className="flex justify-between items-center p-4">
                                 <div>
                                     <p className="font-medium">{st.teachers?.name}</p>

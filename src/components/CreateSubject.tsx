@@ -17,7 +17,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
         const data = await api.getSessions();
         setSessions(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Error fetching sessions", error);
+
       }
     };
     fetchDropdowns();
@@ -60,7 +60,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             required
           >
             <option value="" disabled>Select a Session</option>
-            {sessions.map((session: any) => (
+            {sessions.map((session: unknown) => (
               <option key={session.id} value={session.id}>
                 {session.name}
               </option>

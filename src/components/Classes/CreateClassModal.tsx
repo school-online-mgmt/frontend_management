@@ -13,7 +13,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
         setLoading(true);
 
         try {
-            const payload: any = { slug, name };
+            const payload: unknown = { slug, name };
 
             const res = await api.createClass(payload);
             onSuccess({
@@ -22,7 +22,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
             });
             onClose();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             onSuccess({
                 type: "error",
                 text: err?.response?.data?.message || "Failed to create class"
