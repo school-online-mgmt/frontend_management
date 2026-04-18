@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Plus, BookOpen, RefreshCcw } from "lucide-react";
 import api from "../../api/api";
 import CreateCourse from "../../components/Courses/CreateCourse.tsx";
 import { useNavigate } from "react-router-dom";
+import PageHeader from "../../components/PageHeader";
 
 const CourseHome = () => {
 
@@ -21,7 +21,7 @@ const CourseHome = () => {
             const data = await api.getCourses();
             setCourses(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error("Error fetching courses", error);
+
             setCourses([]);
         } finally {
             setIsLoading(false);
@@ -33,7 +33,7 @@ const CourseHome = () => {
     }, []);
 
     return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
+        <div className="min-h-full bg-slate-50">
             {isCreateModalOpen && (
                 <CreateCourse
                     onClose={() => setIsCreateModalOpen(false)}
@@ -44,47 +44,33 @@ const CourseHome = () => {
             )}
 
             {message && (
-                <div
-                    className={`p-4 rounded-xl border ${
-                        messageType === "success"
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                            : "bg-red-50 border-red-200 text-red-700"
-                    }`}
-                >
+                <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-xl shadow-lg text-sm font-medium border ${
+                    messageType === "success"
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : "bg-red-50 border-red-200 text-red-700"
+                }`}>
                     {message}
                 </div>
             )}
 
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Course Management
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        Create, view and manage courses
-                    </p>
-                </div>
-
-                <div className="flex gap-3">
-                    <button
-                        onClick={fetchCourses}
-                        disabled={isLoading}
-                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl shadow-sm hover:bg-slate-50 flex items-center gap-2"
-                    >
-                        <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
-                        Refresh
-                    </button>
-
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 flex items-center gap-2"
-                    >
-                        <Plus size={18} />
-                        Create Course
-                    </button>
-                </div>
-            </header>
-
+            <PageHeader
+                icon={BookOpen}
+                title="Course Management"
+                subtitle="Create, view and manage courses"
+                actions={
+                    <div className="flex gap-2">
+                        <button onClick={fetchCourses} disabled={isLoading}
+                            className="px-3 py-2 bg-white/10 border border-white/20 text-white rounded-xl flex items-center gap-2 text-sm hover:bg-white/20 transition backdrop-blur-sm">
+                            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        </button>
+                        <button onClick={() => setIsCreateModalOpen(true)}
+                            className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm">
+                            <Plus size={18} /> Create Course
+                        </button>
+                    </div>
+                }
+            />
+            <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
 
             <main>
                 <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
@@ -148,6 +134,7 @@ const CourseHome = () => {
                     </div>
                 </div>
             </main>
+            </div>
         </div>
     );
 };

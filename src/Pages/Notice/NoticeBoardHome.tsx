@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import useAuth from "../../hooks/useAuth";
+import PageHeader from "../../components/PageHeader";
 
 // ─── Visibility badge ─────────────────────────────────────────────────────────
 const VIS_CONFIG: Record<string, { label: string; icon: any; className: string }> = {
@@ -218,28 +219,27 @@ const NoticeBoardHome = () => {
     const totalPending = pendingNotices.length;
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Bell size={24} className="text-emerald-600" /> Notice Boards
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-0.5">Manage and publish announcements across the school</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={load}
-                        className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-                        <RefreshCcw size={18} />
-                    </button>
-                    {isPrincipal && (
-                        <button onClick={() => setShowCreate(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-sm font-medium shadow-sm">
-                            <Plus size={16} /> New Board
+        <div className="min-h-full bg-slate-50">
+            <PageHeader
+                icon={Bell}
+                title="Notice Boards"
+                subtitle="Manage and publish announcements across the school"
+                actions={
+                    <div className="flex items-center gap-2">
+                        <button onClick={load}
+                            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                            <RefreshCcw size={18} />
                         </button>
-                    )}
-                </div>
-            </div>
+                        {isPrincipal && (
+                            <button onClick={() => setShowCreate(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl hover:bg-white/25 transition-all text-sm font-medium backdrop-blur-sm">
+                                <Plus size={16} /> New Board
+                            </button>
+                        )}
+                    </div>
+                }
+            />
+            <div className="p-6 max-w-7xl mx-auto">
 
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -383,6 +383,7 @@ const NoticeBoardHome = () => {
                 open={showCreate} onClose={() => setShowCreate(false)}
                 onCreate={load} classes={classes} teachers={teachers}
             />
+            </div>
         </div>
     );
 };

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,8 +7,9 @@ import {
     AlertTriangle, Building2, Edit3, Loader2, CalendarDays, X, Calendar
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 interface ClassItem { id: string; name: string; sections: { id: string; name: string; teacher?: { name: string } | null }[] }
 interface Student {
     studentId: string; academicId: string; firstName: string; lastName: string;
@@ -21,7 +22,7 @@ interface Rec {
     sectionName: string; className: string; classId: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 const NOW   = new Date();
 const TODAY = `${NOW.getFullYear()}-${String(NOW.getMonth()+1).padStart(2,"0")}-${String(NOW.getDate()).padStart(2,"0")}`;
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -36,7 +37,7 @@ const SC: Record<SK, { bg:string; text:string; border:string; icon:React.Element
 const pctColor = (p:number|null) => !p ? "text-slate-300" : p>=90 ? "text-emerald-600" : p>=75 ? "text-amber-600" : "text-red-600";
 const attPct   = (p:number,a:number,l:number) => { const t=p+a+l; return t>0?Math.round(((p+l)/t)*100):null; };
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
+// --- Toast --------------------------------------------------------------------
 function Toast({ t, clear }: { t:{type:string;msg:string}|null; clear:()=>void }) {
     if (!t) return null;
     return (
@@ -64,29 +65,23 @@ export default function AttendanceHome() {
     ];
     return (
         <div className="h-full flex flex-col overflow-hidden bg-slate-50">
-            <div className="shrink-0 bg-white border-b border-slate-200 px-6 py-4">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-                            <ClipboardCheck size={19} className="text-white"/>
-                        </div>
-                        <div>
-                            <h1 className="text-base font-bold text-slate-800">Attendance Management</h1>
-                            <p className="text-[11px] text-slate-400">Mark, review and manage school attendance</p>
-                        </div>
-                    </div>
-                    <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+            <PageHeader
+                icon={ClipboardCheck}
+                title="Attendance Management"
+                subtitle="Mark, review and manage school attendance"
+                actions={
+                    <div className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
                         {TABS.map(tb => (
                             <button key={tb.key} onClick={() => setTab(tb.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700"
+                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
                                 }`}>
                                 <tb.icon size={13}/>{tb.label}
                             </button>
                         ))}
                     </div>
-                </div>
-            </div>
+                }
+            />
             <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
                     {tab==="mark"     && <motion.div key="mark"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><MarkTab/></motion.div>}
@@ -142,7 +137,7 @@ function MarkTab() {
             const st: Record<string,string> = {};
             (r.students||[]).forEach((s:Student) => { st[s.studentId] = s.attendance?.status || "PRESENT"; });
             setStatuses(st);
-        } catch (e:any) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to load students" });
         } finally { setLoading(false); }
     }, [selSection, selDate]);
@@ -156,7 +151,7 @@ function MarkTab() {
             await api.markAttendanceManagement(selSection, { date:selDate, records });
             setToast({ type:"success", msg:`Attendance ${marked?"updated":"saved"} for ${records.length} students` });
             setMarked(true);
-        } catch (e:any) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to submit attendance" });
         } finally { setSubmitting(false); }
     };
@@ -465,14 +460,14 @@ function CalendarTab() {
                     </div>
 
                     <div className="flex items-center justify-center gap-6 py-3 bg-slate-50/80 border-t border-slate-100 flex-wrap">
-                        {[{l:"≥ 90%",c:"text-emerald-600",bg:"bg-emerald-500"},{l:"75–89%",c:"text-amber-600",bg:"bg-amber-500"},{l:"< 75%",c:"text-red-600",bg:"bg-red-500"},{l:"Holiday",c:"text-slate-400",bg:"bg-slate-300"}].map(x=>(
+                        {[{l:"= 90%",c:"text-emerald-600",bg:"bg-emerald-500"},{l:"75–89%",c:"text-amber-600",bg:"bg-amber-500"},{l:"< 75%",c:"text-red-600",bg:"bg-red-500"},{l:"Holiday",c:"text-slate-400",bg:"bg-slate-300"}].map(x=>(
                             <span key={x.l} className={`flex items-center gap-1.5 text-[10px] font-semibold ${x.c}`}><span className={`w-2 h-2 rounded-full ${x.bg}`}/>{x.l}</span>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* ── Day detail panel ── */}
+            {/* -- Day detail panel -- */}
             <AnimatePresence>
                 {selDay&&(
                     <motion.div initial={{width:0,opacity:0}} animate={{width:300,opacity:1}} exit={{width:0,opacity:0}}
@@ -547,7 +542,7 @@ function ViewTab() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const p:any={date};
+            const p: any ={date};
             if(selClass)   p.classId=selClass;
             if(selSection) p.sectionId=selSection;
             const r = await api.getAttendanceView(p);

@@ -68,6 +68,8 @@ export interface Teacher {
   id: string;
   name: string;
   phone?: string;
+  email?: string;
+  address?: string;
   gender: string;
   age: number;
   qualification: string;
@@ -85,6 +87,7 @@ export interface Subject {
   description?: string;
   type: string;
   teacherId?: string;
+  teacherName?: string;
   isActive: boolean;
   sessionId: string;
   tenantId: string;
@@ -196,6 +199,8 @@ export interface UpdateTeacherData {
   age?: number;
   qualification?: string;
   phone?: string;
+  email?: string;
+  address?: string;
   isActive?: boolean;
   password?: string;
 }

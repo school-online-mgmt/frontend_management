@@ -65,8 +65,8 @@ const BookDetailsPage = () => {
 
     return (
         <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-6">
-            <button onClick={() => navigate("/library")} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
-                <ArrowLeft size={16} /> Back to Library
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
+                <ArrowLeft size={16} /> Back
             </button>
 
             {message && (
@@ -435,7 +435,7 @@ const ReturnBookModal = ({ issue, onClose, onSuccess }: any) => {
             const data = await api.returnLibraryBook(issue.id, {
                 remarks,
                 markLost,
-                overrideFine: parseInt(overrideFine) || 0,
+                overrideFine: Number.parseInt(overrideFine) || 0,
             });
             onSuccess(`Book ${markLost ? "marked as lost" : "returned"}. Fine: ₹${data.fineAmount}`);
         } catch (e: any) { setError(e?.response?.data?.message || "Failed to process return"); }
@@ -541,7 +541,7 @@ const EditBookForm = ({ book, classes, onCancel, onSave }: any) => {
                 <div><label className="text-xs font-semibold text-slate-600 block mb-1">Rack</label>
                     <input value={form.rackNumber} onChange={(e) => set("rackNumber", e.target.value)} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div><label className="text-xs font-semibold text-slate-600 block mb-1">Total Copies</label>
-                    <input type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
+                    <input type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", Number.parseInt(e.target.value))} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div className="col-span-2"><label className="text-xs font-semibold text-slate-600 block mb-1">Description</label>
                     <textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} className="w-full border rounded-lg p-2 text-sm" /></div>
                 <div className="col-span-2">

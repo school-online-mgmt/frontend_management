@@ -19,7 +19,7 @@ const CreateCourse = ({
             const data = await api.getSessions();
             setSessions(data || []);
         } catch (error) {
-            console.error("Failed to load sessions", error);
+
         }
     };
 
@@ -28,7 +28,7 @@ const CreateCourse = ({
             const classes = await api.getClasses();
             setClasses(classes || []);
         } catch (error) {
-            console.error("Failed to load classes", error);
+
         }
     };
 

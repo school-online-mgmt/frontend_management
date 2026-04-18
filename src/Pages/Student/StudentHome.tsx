@@ -22,7 +22,7 @@ const StudentHome = () => {
             const data = await api.getAppliedStudents();
             setStudents(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error("Error fetching applied students", error);
+
             setStudents([]);
         } finally {
             setIsLoading(false);
@@ -49,7 +49,7 @@ const StudentHome = () => {
             await api.confirmStudentAdmission(selectedApplicant.id, data);
             fetchStudents();
         } catch (error) {
-            console.error("Error confirming admission", error);
+
         } finally {
             setIsConfirmModalOpen(false);
         }

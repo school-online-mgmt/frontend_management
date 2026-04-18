@@ -243,16 +243,18 @@ const NoticeCard = ({
 
             {/* Actions */}
             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 flex-wrap">
-                {notice.status === "PENDING_APPROVAL" && (canApprove || isPrincipal) && (
+                {(notice.status === "PENDING_APPROVAL" || notice.status === "DRAFT") && (canApprove || isPrincipal) && (
                     <>
                         <button onClick={() => onApprove(notice.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
-                            <CheckCircle2 size={13} /> Approve
+                            <CheckCircle2 size={13} /> {notice.status === "DRAFT" ? "Publish" : "Approve"}
                         </button>
-                        <button onClick={() => onReject(notice)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
-                            <XCircle size={13} /> Reject
-                        </button>
+                        {notice.status === "PENDING_APPROVAL" && (
+                            <button onClick={() => onReject(notice)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
+                                <XCircle size={13} /> Reject
+                            </button>
+                        )}
                     </>
                 )}
                 {notice.status === "APPROVED" && isPrincipal && (
@@ -381,7 +383,7 @@ const NoticeBoardDetails = () => {
     if (error) return (
         <div className="p-6 text-center">
             <p className="text-red-600">{error}</p>
-            <button onClick={() => navigate("/notices")} className="mt-3 text-emerald-600 hover:underline text-sm">Back to boards</button>
+            <button onClick={() => navigate(-1)} className="mt-3 text-emerald-600 hover:underline text-sm">Back</button>
         </div>
     );
     if (!board) return null;
@@ -394,9 +396,9 @@ const NoticeBoardDetails = () => {
         <div className="p-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <button onClick={() => navigate("/notices")}
+                <button onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mb-4 transition-colors">
-                    <ArrowLeft size={16} /> Back to Boards
+                    <ArrowLeft size={16} /> Back
                 </button>
                 <div className="flex items-start justify-between">
                     <div>

@@ -5,6 +5,7 @@ import {
     UserCog,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 type LeaveType = "SICK" | "PERSONAL" | "FAMILY" | "OTHER";
@@ -16,7 +17,7 @@ const STATUS_CFG: Record<LeaveStatus, { bg: string; text: string; border: string
     REJECTED:  { bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",     icon: XCircle,      label: "Rejected" },
     CANCELLED: { bg: "bg-slate-50",   text: "text-slate-500",   border: "border-slate-200",   icon: Ban,          label: "Cancelled" },
 };
-const TYPE_LABELS: Record<LeaveType, string> = { SICK: "🤒 Sick", PERSONAL: "🏠 Personal", FAMILY: "👨‍👩‍👧 Family", OTHER: "📋 Other" };
+const TYPE_LABELS: Record<LeaveType, string> = { SICK: "ðŸ¤’ Sick", PERSONAL: "ðŸ  Personal", FAMILY: "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§ Family", OTHER: "ðŸ“‹ Other" };
 const STATUS_FILTERS = ["", "PENDING", "APPROVED", "REJECTED", "CANCELLED"];
 
 function fmtDate(d: string) { return new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
@@ -32,32 +33,26 @@ export default function LeaveHome() {
     const [tab, setTab] = useState<TabKey>("student");
     return (
         <div className="h-full flex flex-col bg-slate-50">
-            <header className="shrink-0 bg-white border-b border-slate-200 px-6 py-4">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-                            <CalendarDays size={19} className="text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-base font-bold text-slate-800">Leave Management</h1>
-                            <p className="text-[11px] text-slate-400">Manage student & teacher leave requests</p>
-                        </div>
-                    </div>
-                    <nav className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+            <PageHeader
+                icon={CalendarDays}
+                title="Leave Management"
+                subtitle="Manage student & teacher leave requests"
+                actions={
+                    <nav className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
                         {([
                             { key: "student" as TabKey, label: "Student Leaves", icon: Users },
                             { key: "teacher" as TabKey, label: "Teacher Leaves", icon: UserCog },
                         ]).map(t => (
                             <button key={t.key} onClick={() => setTab(t.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab === t.key ? "bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700"
+                                    tab === t.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
                                 }`}>
                                 <t.icon size={13} />{t.label}
                             </button>
                         ))}
                     </nav>
-                </div>
-            </header>
+                }
+            />
             <div className="flex-1 overflow-y-auto">
                 {tab === "student" ? <StudentLeavesTab /> : <TeacherLeavesTab />}
             </div>
@@ -65,7 +60,7 @@ export default function LeaveHome() {
     );
 }
 
-// ── Student Leaves Tab ────────────────────────────────────────────────────────
+// â”€â”€ Student Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StudentLeavesTab() {
     const [leaves, setLeaves] = useState<any[]>([]);
@@ -138,7 +133,7 @@ function StudentLeavesTab() {
                                                     const ac = STATUS_CFG[a.status as LeaveStatus] || STATUS_CFG.PENDING;
                                                     return (
                                                         <span key={a.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${ac.bg} ${ac.text} ${ac.border}`}>
-                                                            <ac.icon size={9} />{a.approverType.replace(/_/g, " ")} ({ac.label})
+                                                            <ac.icon size={9} />{a.approverType.replaceAll("_", " ")} ({ac.label})
                                                         </span>
                                                     );
                                                 })}
@@ -168,7 +163,7 @@ function StudentLeavesTab() {
     );
 }
 
-// ── Teacher Leaves Tab ────────────────────────────────────────────────────────
+// â”€â”€ Teacher Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TeacherLeavesTab() {
     const [leaves, setLeaves] = useState<any[]>([]);
@@ -260,7 +255,7 @@ function TeacherLeavesTab() {
     );
 }
 
-// ── Shared Components ─────────────────────────────────────────────────────────
+// â”€â”€ Shared Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Toast({ toast, onClose }: { toast: { type: string; msg: string }; onClose: () => void }) {
     useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [toast, onClose]);

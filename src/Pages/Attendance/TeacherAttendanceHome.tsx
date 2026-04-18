@@ -7,6 +7,7 @@ import {
     AlertTriangle, Edit3, Loader2, CalendarDays, X, Calendar, UserCheck
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 interface Teacher {
     id: string; name: string; phone: string | null;
@@ -56,29 +57,23 @@ export default function TeacherAttendanceHome() {
     ];
     return (
         <div className="h-full flex flex-col overflow-hidden bg-slate-50">
-            <div className="shrink-0 bg-white border-b border-slate-200 px-6 py-4">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-200">
-                            <UserCheck size={19} className="text-white"/>
-                        </div>
-                        <div>
-                            <h1 className="text-base font-bold text-slate-800">Teacher Attendance</h1>
-                            <p className="text-[11px] text-slate-400">Mark, review and manage teacher daily attendance</p>
-                        </div>
-                    </div>
-                    <div className="flex bg-slate-100 rounded-xl p-1 gap-0.5">
+            <PageHeader
+                icon={UserCheck}
+                title="Teacher Attendance"
+                subtitle="Mark, review and manage teacher daily attendance"
+                actions={
+                    <div className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
                         {TABS.map(tb => (
                             <button key={tb.key} onClick={() => setTab(tb.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab===tb.key ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700"
+                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
                                 }`}>
                                 <tb.icon size={13}/>{tb.label}
                             </button>
                         ))}
                     </div>
-                </div>
-            </div>
+                }
+            />
             <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
                     {tab==="mark"     && <motion.div key="mark"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><MarkTab/></motion.div>}
@@ -115,7 +110,7 @@ function MarkTab() {
             const st: Record<string,string> = {};
             (r.teachers||[]).forEach((t:Teacher) => { st[t.id] = t.attendance?.status || "PRESENT"; });
             setStatuses(st);
-        } catch (e:any) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to load teachers" });
         } finally { setLoading(false); }
     }, [selDate]);
@@ -129,7 +124,7 @@ function MarkTab() {
             await api.markTeacherAttendance({ date:selDate, records });
             setToast({ type:"success", msg:`Teacher attendance ${marked?"updated":"saved"} for ${records.length} teachers` });
             setMarked(true);
-        } catch (e:any) {
+        } catch (e: any) {
             setToast({ type:"error", msg: e.response?.data?.message || "Failed to submit" });
         } finally { setSubmitting(false); }
     };

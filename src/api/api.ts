@@ -67,7 +67,7 @@ class API {
     const response = await apiClient.get(`/management/subject/${id}`);
     return response.data;
   };
-  createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string }) => {
+  createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string, type?: string, teacherId?: string }) => {
     const response = await apiClient.post('/management/subject/create', subjectData);
     return response.data;
 };
@@ -196,6 +196,7 @@ class API {
     return response.data;
   };
 
+
   // -----------Section APIs------------
   // Get all Sections
   getSections = async () => {
@@ -203,6 +204,16 @@ class API {
     return response.data.sections;
 };
 
+  // Get staff assignment gaps (classes/sections/subjects without teacher)
+  getStaffGaps = async (): Promise<{
+    classGaps: { id: string; name: string; slug: string }[];
+    sectionGaps: { id: string; name: string; slug: string; classId: string; class: { id: string; name: string } }[];
+    subjectGaps: { sectionId: string; sectionName: string; classId: string; className: string; subjectId: string; subjectName: string }[];
+    totalSubjectSectionPairs: number;
+  }> => {
+    const response = await apiClient.get("/management/dashboard/staff-gaps");
+    return response.data;
+  };
 
 //get All Sessions
 getSessions= async () => {
@@ -229,7 +240,7 @@ getTeacherSubjects = async (teacherId: string) => {
     return response.data;
 };
 
-updateSubject = async (id: string, data: { name: string, slug: string, bookName: string, sessionId: string }) => {
+updateSubject = async (id: string, data: { name?: string, slug?: string, bookName?: string, sessionId?: string, teacherId?: string | null, type?: string }) => {
     const response = await apiClient.patch(`/management/subject/${id}`, data);
     return response.data;
 };
@@ -362,10 +373,34 @@ getStudents = async (subjectId?: string, sessionId?: string) => {
     return response.data;
 };
 
+generateAdmissionInfo = async (sectionId?: string) => {
+    const response = await apiClient.get('/management/student/generate-admission-info', {
+        params: sectionId ? { sectionId } : {},
+    });
+    return response.data;
+};
+
 admitStudent = async (studentId: string, data: { sessionId: string, classId: string, sectionId: string, courseId: string, admissionId: string, rollNo: string, transportOpted: boolean, transportZoneId?: string }) => {
     const response = await apiClient.post(`/management/student/admit/${studentId}`, data);
     return response.data;
 };
+
+createStudent = async (data: {
+    firstName: string; middleName?: string; lastName: string;
+    fatherName: string; motherName: string; gender: string;
+    phone: string; address: string; password: string;
+    disability: boolean; disabilityDescription?: string;
+    email: string; comments?: string;
+}) => {
+    const response = await apiClient.post('/management/student/create', data);
+    return response.data;
+};
+
+    // Get school-wide exam overview (no classId required)
+    getExamOverview = async (sessionId: string) => {
+        const res = await apiClient.get("/management/exam/overview", { params: { sessionId } });
+        return res.data;
+    };
 
     // Get all exams
     getExams = async (payload: {
@@ -486,6 +521,12 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
+    // Get school-wide performance dashboard data
+    getPerformanceDashboard = async (params: { sessionId: string; classId?: string; sectionId?: string; term?: string; studentId?: string }) => {
+        const res = await apiClient.get("/management/exam/performance", { params });
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
 
     // Get all applicants
@@ -541,16 +582,49 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         return res.data;
     };
 
-    // Create teacher (note: different signature than below)
+    // Get teacher full assignments (classes, sections, subjects)
+    getTeacherAssignments = async (teacherId: string) => {
+        const res = await apiClient.get(`/management/teacher/${teacherId}/assignments`);
+        return res.data;
+    };
+
+    // Create teacher
     createTeacherEntry = async (teacherData: {
         name: string;
         gender: string;
         age: number;
         qualification: string;
-        phone?: string;
+        phone: string;
+        email?: string;
+        address?: string;
+        password?: string;
     }) => {
         const res = await apiClient.post("/management/teacher/create", teacherData);
         return res.data;
+    };
+
+    // Reset teacher password (principal action)
+    resetTeacherPassword = async (teacherId: string, password: string) => {
+        const res = await apiClient.patch(`/management/teacher/${teacherId}/setPassword`, { password });
+        return res.data;
+    };
+
+    // Reset student password (management action)
+    resetStudentPassword = async (studentId: string, password: string) => {
+        const res = await apiClient.patch(`/management/student/${studentId}/reset-password`, { password });
+        return res.data;
+    };
+
+    // Reset management user password (principal action)
+    resetManagementUserPassword = async (userId: string, password: string) => {
+        const res = await apiClient.patch(`/management/auth/users/${userId}/reset-password`, { password });
+        return res.data;
+    };
+
+    // Get all management users (principal action)
+    getManagementUsers = async () => {
+        const res = await apiClient.get("/management/auth/users");
+        return res.data.users;
     };
 
     // Update teacher
@@ -568,6 +642,24 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
+        return res.data;
+    };
+
+    // Update section (e.g. remove teacher: pass teacherId: null)
+    updateSection = async (sectionId: string, data: { name?: string; slug?: string; teacherId?: string | null }) => {
+        const res = await apiClient.patch(`/management/section/${sectionId}`, data);
+        return res.data;
+    };
+
+    // Get section by ID (rich details)
+    getSectionById = async (sectionId: string) => {
+        const res = await apiClient.get(`/management/section/${sectionId}`);
+        return res.data;
+    };
+
+    // Update class (e.g. remove teacher: pass teacherId: null)
+    updateClass = async (classId: string, data: { name?: string; slug?: string; teacherId?: string | null }) => {
+        const res = await apiClient.patch(`/management/class/${classId}`, data);
         return res.data;
     };
 
@@ -674,6 +766,47 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
         const res = await apiClient.post("/management/fees/invoices/generate", data);
         return res.data;
     };
+
+    /**
+     * Stream invoice generation with real-time progress via SSE.
+     */
+    generateInvoicesStream = async (
+        data: { month: number; year: number; sessionId: string; dueDate: string },
+        onProgress: (event: { type: string; generated: number; skipped: number; processed: number; total: number }) => void,
+    ): Promise<{ generated: number; skipped: number; total: number }> => {
+        const baseURL = apiClient.defaults.baseURL || "";
+        const response = await fetch(`${baseURL}/management/fees/invoices/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+            credentials: "include",
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ message: "Generation failed" }));
+            throw new Error(err.message || "Generation failed");
+        }
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let result: any = { generated: 0, skipped: 0, total: 0 };
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    const payload = JSON.parse(line.slice(6));
+                    onProgress(payload);
+                    if (payload.type === "complete") result = payload;
+                }
+            }
+        }
+        return result;
+    };
+
     getFeeInvoiceById = async (id: string) => {
         const res = await apiClient.get(`/management/fees/invoices/${id}`);
         return res.data;
@@ -808,14 +941,14 @@ admitStudent = async (studentId: string, data: { sessionId: string, classId: str
     };
     exportFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
         const res = await apiClient.get("/management/fees/payments/export", { params, responseType: 'blob' });
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const url = globalThis.URL.createObjectURL(new Blob([res.data]));
         const a = document.createElement('a');
         a.href = url;
         a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
+        globalThis.URL.revokeObjectURL(url);
     };
     refundPayment = async (paymentId: string) => {
         const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);

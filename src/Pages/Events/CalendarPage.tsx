@@ -5,8 +5,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
-/* ── Types ─────────────────────────────────────────────────────────────────── */
+/* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface CalendarEvent {
     id: string;
     title: string;
@@ -20,23 +21,23 @@ interface CalendarEvent {
 
 interface Session { id: string; name: string; startDate: string; endDate: string; }
 
-/* ── Event type look-up ────────────────────────────────────────────────────── */
+/* â”€â”€ Event type look-up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const eventTypes = [
     "HOLIDAY", "VACATION", "ACTIVITY", "PROGRAM",
     "EXHIBITION", "SPORTS", "CULTURAL", "MEETING", "OTHER",
 ];
 
 const eventTypeConfig: Record<string, { icon: string; bgColor: string; dotColor: string }> = {
-    HOLIDAY:    { icon: "🏖️", bgColor: "bg-blue-50",    dotColor: "bg-blue-500" },
-    VACATION:   { icon: "✈️", bgColor: "bg-green-50",   dotColor: "bg-green-500" },
-    ACTIVITY:   { icon: "🎨", bgColor: "bg-purple-50",  dotColor: "bg-purple-500" },
-    PROGRAM:    { icon: "🎭", bgColor: "bg-pink-50",    dotColor: "bg-pink-500" },
-    EXHIBITION: { icon: "🖼️", bgColor: "bg-orange-50",  dotColor: "bg-orange-500" },
-    SPORTS:     { icon: "⚽", bgColor: "bg-red-50",     dotColor: "bg-red-400" },
-    CULTURAL:   { icon: "🎵", bgColor: "bg-indigo-50",  dotColor: "bg-indigo-500" },
-    MEETING:    { icon: "👥", bgColor: "bg-yellow-50",  dotColor: "bg-yellow-500" },
-    EXAM:       { icon: "📝", bgColor: "bg-red-50",     dotColor: "bg-red-600" },
-    OTHER:      { icon: "📌", bgColor: "bg-slate-50",   dotColor: "bg-slate-500" },
+    HOLIDAY:    { icon: "ðŸ–ï¸", bgColor: "bg-blue-50",    dotColor: "bg-blue-500" },
+    VACATION:   { icon: "âœˆï¸", bgColor: "bg-green-50",   dotColor: "bg-green-500" },
+    ACTIVITY:   { icon: "ðŸŽ¨", bgColor: "bg-purple-50",  dotColor: "bg-purple-500" },
+    PROGRAM:    { icon: "ðŸŽ­", bgColor: "bg-pink-50",    dotColor: "bg-pink-500" },
+    EXHIBITION: { icon: "ðŸ–¼ï¸", bgColor: "bg-orange-50",  dotColor: "bg-orange-500" },
+    SPORTS:     { icon: "âš½", bgColor: "bg-red-50",     dotColor: "bg-red-400" },
+    CULTURAL:   { icon: "ðŸŽµ", bgColor: "bg-indigo-50",  dotColor: "bg-indigo-500" },
+    MEETING:    { icon: "ðŸ‘¥", bgColor: "bg-yellow-50",  dotColor: "bg-yellow-500" },
+    EXAM:       { icon: "ðŸ“", bgColor: "bg-red-50",     dotColor: "bg-red-600" },
+    OTHER:      { icon: "ðŸ“Œ", bgColor: "bg-slate-50",   dotColor: "bg-slate-500" },
 };
 
 function eventCoversDate(event: CalendarEvent, dateStr: string): boolean {
@@ -47,181 +48,157 @@ function eventCoversDate(event: CalendarEvent, dateStr: string): boolean {
 
 const emptyForm = { title: "", description: "", type: "OTHER", date: "", endDate: "" };
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   CalendarPage — Calendar view + full event CRUD
-   ══════════════════════════════════════════════════════════════════════════════ */
-const CalendarPage: React.FC = () => {
-    /* ── calendar state ──────────────────────────────────────────────────── */
-    const [currentDate, setCurrentDate]       = useState(new Date());
-    const [events, setEvents]                 = useState<CalendarEvent[]>([]);
-    const [sessions, setSessions]             = useState<Session[]>([]);
-    const [activeSession, setActiveSession]   = useState<Session | null>(null);
-    const [loading, setLoading]               = useState(true);
-    const [selectedDate, setSelectedDate]     = useState<string | null>(null);
+/* ═══════════════════════ Component ═══════════════════════ */
+const CalendarPage = () => {
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [activeSession, setActiveSession] = useState<Session | null>(null);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [currentDate, setCurrentDate] = useState(new Date());
 
-    /* ── event CRUD state ────────────────────────────────────────────────── */
-    const [showForm, setShowForm]             = useState(false);
-    const [editingId, setEditingId]           = useState<string | null>(null);
-    const [formData, setFormData]             = useState({ ...emptyForm });
-    const [formError, setFormError]           = useState<string | null>(null);
-    const [saving, setSaving]                 = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [formData, setFormData] = useState({ ...emptyForm });
+    const [formError, setFormError] = useState("");
+    const [saving, setSaving] = useState(false);
 
-    /* ── all-events list panel ───────────────────────────────────────────── */
-    const [showAllEvents, setShowAllEvents]   = useState(false);
-    const [allEvents, setAllEvents]           = useState<CalendarEvent[]>([]);
+    const [showAllEvents, setShowAllEvents] = useState(false);
+    const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
     const [allEventsLoading, setAllEventsLoading] = useState(false);
 
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const dayNames   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-    /* ── Load sessions on mount ──────────────────────────────────────────── */
+    // ── Load sessions on mount ──
     useEffect(() => {
-        (async () => {
-            try {
-                const data = await api.getCalendarSessions();
-                const list: Session[] = data?.sessions ?? [];
-                setSessions(list);
-                const today = new Date().toISOString();
-                const current = list.find(s => s.startDate <= today && s.endDate >= today) ?? list[list.length - 1] ?? null;
-                setActiveSession(current);
-                if (current) setCurrentDate(new Date());
-            } catch { /* ignore */ }
-        })();
+        api.getCalendarSessions().then((res: any) => {
+            const list = res.sessions ?? res ?? [];
+            setSessions(list);
+            if (list.length > 0) {
+                setActiveSession(list[0]);
+                setCurrentDate(new Date(list[0].startDate));
+            }
+        });
     }, []);
 
-    /* ── Fetch calendar events for visible month ─────────────────────────── */
-    useEffect(() => { fetchCalendarEvents(); }, [currentDate]);
-
-    const fetchCalendarEvents = async () => {
+    // ── Load events when month / session changes ──
+    const fetchEvents = useCallback(async () => {
         setLoading(true);
         try {
-            const from = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-            const to   = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
-            const data = await api.getCalendarEvents(from, to);
-            setEvents(data?.events ?? []);
-        } catch { setEvents([]); }
-        finally { setLoading(false); }
-    };
+            const y = currentDate.getFullYear();
+            const m = currentDate.getMonth();
+            const from = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+            const lastDay = new Date(y, m + 1, 0).getDate();
+            const to = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
+            const res = await api.getCalendarEvents(from, to);
+            setEvents(res.events ?? res ?? []);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentDate]);
 
-    /* ── Fetch ALL events (for the list panel) ───────────────────────────── */
-    const fetchAllEvents = async () => {
-        setAllEventsLoading(true);
-        try {
-            const from = new Date(new Date().getFullYear(), 0, 1).toISOString();
-            const to   = new Date(new Date().getFullYear() + 1, 11, 31).toISOString();
-            const data = await api.getSchoolEvents?.(from, to);
-            setAllEvents(data?.events ?? []);
-        } catch { setAllEvents([]); }
-        finally { setAllEventsLoading(false); }
-    };
+    useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-    /* ── Month navigation (clamped to session) ───────────────────────────── */
-    const canGoPrev = useCallback(() => {
-        if (!activeSession) return true;
-        const prev = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-        return prev >= new Date(new Date(activeSession.startDate).getFullYear(), new Date(activeSession.startDate).getMonth(), 1);
-    }, [currentDate, activeSession]);
-
-    const canGoNext = useCallback(() => {
-        if (!activeSession) return true;
-        const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-        return next <= new Date(new Date(activeSession.endDate).getFullYear(), new Date(activeSession.endDate).getMonth(), 1);
-    }, [currentDate, activeSession]);
-
-    const previousMonth = () => { if (canGoPrev()) setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)); };
-    const nextMonth     = () => { if (canGoNext()) setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)); };
-
-    /* ── Calendar grid helpers ───────────────────────────────────────────── */
-    const daysInMonth  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-    const firstDay     = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-    const calendarDays = Array.from({ length: firstDay }, () => 0).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
+    // ── Calendar grid helpers ──
+    const calendarDays: number[] = (() => {
+        const y = currentDate.getFullYear();
+        const m = currentDate.getMonth();
+        const firstDow = new Date(y, m, 1).getDay();
+        const dim = new Date(y, m + 1, 0).getDate();
+        const arr: number[] = [];
+        for (let i = 0; i < firstDow; i++) arr.push(0);
+        for (let d = 1; d <= dim; d++) arr.push(d);
+        return arr;
+    })();
 
     const toDateStr = (day: number) => {
-        const m = currentDate.getMonth() + 1;
-        return `${currentDate.getFullYear()}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const y = currentDate.getFullYear();
+        const m = currentDate.getMonth();
+        return `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     };
 
-    const getEventsForDate  = (day: number) => { const ds = toDateStr(day); return events.filter(e => eventCoversDate(e, ds)); };
+    const getEventsForDate = (day: number) => {
+        const ds = toDateStr(day);
+        return events.filter(e => eventCoversDate(e, ds));
+    };
+
     const selectedDateEvents = selectedDate ? events.filter(e => eventCoversDate(e, selectedDate)) : [];
 
-    /* ── CRUD helpers ────────────────────────────────────────────────────── */
-    const openCreateForm = (prefillDate?: string) => {
-        setFormData({ ...emptyForm, date: prefillDate ?? "" });
-        setEditingId(null);
-        setFormError(null);
-        setShowForm(true);
-        setShowAllEvents(false);
+    // ── Navigation ──
+    const previousMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+    const canGoPrev = () => {
+        if (!activeSession) return true;
+        const start = new Date(activeSession.startDate);
+        return currentDate.getFullYear() > start.getFullYear() || currentDate.getMonth() > start.getMonth();
+    };
+    const canGoNext = () => {
+        if (!activeSession) return true;
+        const end = new Date(activeSession.endDate);
+        return currentDate.getFullYear() < end.getFullYear() || currentDate.getMonth() < end.getMonth();
     };
 
-    const openEditForm = (ev: CalendarEvent) => {
-        setFormData({
-            title: ev.title,
-            description: ev.description || "",
-            type: ev.type,
-            date: ev.date.split("T")[0],
-            endDate: ev.endDate?.split("T")[0] || "",
-        });
-        setEditingId(ev.id);
-        setFormError(null);
+    // ── CRUD helpers ──
+    const openCreateForm = (date: string) => {
+        setEditingId(null);
+        setFormData({ ...emptyForm, date });
+        setFormError("");
         setShowForm(true);
-        setShowAllEvents(false);
+    };
+    const openEditForm = (ev: CalendarEvent) => {
+        setEditingId(ev.id);
+        setFormData({ title: ev.title, description: ev.description ?? "", type: ev.type, date: ev.date.split("T")[0], endDate: ev.endDate?.split("T")[0] ?? "" });
+        setFormError("");
+        setShowForm(true);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.title || !formData.date) { setFormError("Title and start date are required"); return; }
+        if (!formData.title || !formData.date) { setFormError("Title and date are required"); return; }
         setSaving(true);
-        setFormError(null);
         try {
             if (editingId) {
-                await api.updateSchoolEvent?.(editingId, formData);
+                await api.updateSchoolEvent(editingId, { title: formData.title, description: formData.description || undefined, type: formData.type, date: formData.date, endDate: formData.endDate || undefined });
             } else {
-                await api.createSchoolEvent?.(formData);
+                await api.createSchoolEvent({ title: formData.title, description: formData.description || undefined, type: formData.type, date: formData.date, endDate: formData.endDate || undefined });
             }
             setShowForm(false);
             setEditingId(null);
             setFormData({ ...emptyForm });
-            await fetchCalendarEvents();
+            fetchEvents();
         } catch (err: any) {
             setFormError(err.response?.data?.message || "Failed to save event");
         } finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm("Delete this event?")) return;
+        if (!confirm("Delete this event?")) return;
         try {
-            await api.deleteSchoolEvent?.(id);
-            fetchCalendarEvents();
-            if (showAllEvents) fetchAllEvents();
-        } catch { /* ignore */ }
+            await api.deleteSchoolEvent(id);
+            fetchEvents();
+        } catch {}
     };
 
-    const toggleAllEvents = () => {
-        const next = !showAllEvents;
-        setShowAllEvents(next);
-        setShowForm(false);
-        if (next) fetchAllEvents();
+    const toggleAllEvents = async () => {
+        if (showAllEvents) { setShowAllEvents(false); return; }
+        setShowAllEvents(true);
+        setAllEventsLoading(true);
+        try {
+            const res = await api.getSchoolEvents();
+            setAllEvents(res.events ?? res ?? []);
+        } finally { setAllEventsLoading(false); }
     };
 
-    /* ══════════════════════════════════════════════════════════════════════════
-       RENDER
-       ══════════════════════════════════════════════════════════════════════════ */
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-8">
-
-            {/* ── Header ─────────────────────────────────────────────────────── */}
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <CalendarIcon size={28} className="text-blue-600" />
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Academic Calendar</h1>
-                            <p className="text-slate-500 text-sm">Manage &amp; view events, holidays &amp; exam dates</p>
-                        </div>
-                    </div>
-
+        <div className="min-h-full bg-slate-50">
+            <PageHeader
+                icon={CalendarIcon}
+                title="Academic Calendar"
+                subtitle="Manage & view events, holidays & exam dates"
+                actions={
                     <div className="flex items-center gap-2 flex-wrap">
-                        {/* Session picker */}
                         {sessions.length > 0 && (
                             <select
                                 value={activeSession?.id ?? ""}
@@ -229,34 +206,27 @@ const CalendarPage: React.FC = () => {
                                     const s = sessions.find(x => x.id === e.target.value);
                                     if (s) { setActiveSession(s); setCurrentDate(new Date(s.startDate)); }
                                 }}
-                                className="px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium bg-white"
+                                className="px-3 py-2 rounded-lg border border-white/20 text-sm font-medium bg-white/10 text-white backdrop-blur-sm"
                             >
-                                {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {sessions.map(s => <option key={s.id} value={s.id} className="text-slate-800">{s.name}</option>)}
                             </select>
                         )}
-                        {/* All Events toggle */}
-                        <button
-                            onClick={toggleAllEvents}
+                        <button onClick={toggleAllEvents}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                                showAllEvents ? "bg-slate-200 text-slate-800" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                            }`}
-                        >
-                            <List size={18} />
-                            All Events
+                                showAllEvents ? "bg-white/20 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+                            }`}>
+                            <List size={18} /> All Events
                         </button>
-                        {/* New Event */}
-                        <button
-                            onClick={() => openCreateForm(selectedDate ?? "")}
-                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-                        >
-                            <Plus size={18} />
-                            New Event
+                        <button onClick={() => openCreateForm(selectedDate ?? "")}
+                            className="flex items-center gap-2 bg-white/15 border border-white/25 text-white px-4 py-2 rounded-lg hover:bg-white/25 transition text-sm font-medium backdrop-blur-sm">
+                            <Plus size={18} /> New Event
                         </button>
                     </div>
-                </div>
-            </motion.div>
+                }
+            />
+            <div className="max-w-7xl mx-auto p-4 md:p-8">
 
-            {/* ── Create / Edit Form (slide down) ────────────────────────────── */}
+            {/* Create / Edit Form (slide down) */}
             <AnimatePresence>
                 {showForm && (
                     <motion.div
@@ -331,7 +301,7 @@ const CalendarPage: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* ── All-Events List Panel ───────────────────────────────────────── */}
+            {/* â”€â”€ All-Events List Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <AnimatePresence>
                 {showAllEvents && (
                     <motion.div
@@ -365,8 +335,8 @@ const CalendarPage: React.FC = () => {
                                                 </div>
                                                 {ev.description && <p className="text-xs text-slate-600 line-clamp-2 mb-2">{ev.description}</p>}
                                                 <p className="text-xs text-slate-500 mb-3">
-                                                    📅 {new Date(ev.date).toLocaleDateString("en-IN")}
-                                                    {ev.endDate && ` → ${new Date(ev.endDate).toLocaleDateString("en-IN")}`}
+                                                    ðŸ“… {new Date(ev.date).toLocaleDateString("en-IN")}
+                                                    {ev.endDate && ` â†’ ${new Date(ev.endDate).toLocaleDateString("en-IN")}`}
                                                 </p>
                                                 {!ev.isExam && (
                                                     <div className="flex gap-2">
@@ -390,7 +360,7 @@ const CalendarPage: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* ── Main grid: Calendar + Sidebar ──────────────────────────────── */}
+            {/* â”€â”€ Main grid: Calendar + Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Calendar grid */}
                 <div className="lg:col-span-2">
@@ -455,7 +425,7 @@ const CalendarPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ── Sidebar: selected-date events ──────────────────────────── */}
+                {/* â”€â”€ Sidebar: selected-date events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm sticky top-6">
                         <div className="flex items-center justify-between mb-4">
@@ -493,7 +463,7 @@ const CalendarPage: React.FC = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-slate-900 text-sm">{ev.title}</p>
                                                     {ev.description && <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">{ev.description}</p>}
-                                                    <p className="text-xs text-slate-500 mt-1">{startStr}{endStr && endStr !== startStr ? ` → ${endStr}` : ""}</p>
+                                                    <p className="text-xs text-slate-500 mt-1">{startStr}{endStr && endStr !== startStr ? ` â†’ ${endStr}` : ""}</p>
                                                 </div>
                                             </div>
                                             {/* Edit / Delete for non-exam events */}
@@ -516,6 +486,7 @@ const CalendarPage: React.FC = () => {
                         )}
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

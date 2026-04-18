@@ -10,6 +10,7 @@ import CourseHome from "./Pages/Course/CourseHome.tsx";
 import CourseDetails from "./Pages/Course/CourseDetails.tsx";
 import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
 import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
+import AssignmentsPage from './Pages/Teacher/AssignmentsPage.tsx';
 import SectionHome from "./Pages/Section/SectionHome.tsx";
 import ClassHome from "./Pages/Class/ClassHome.tsx";
 import ClassDetails from "./Pages/Class/ClassDetails.tsx";
@@ -21,6 +22,7 @@ import StudentDetails from "./Pages/Students/StudentDetails.tsx";
 import StudentAdmission from "./Pages/StudentAdmission.tsx";
 import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
+import ResultsPerformancePage from "./Pages/Performance/ResultsPerformancePage.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
@@ -31,6 +33,8 @@ import TeacherAttendanceHome from "./Pages/Attendance/TeacherAttendanceHome.tsx"
 import LeaveHome from "./Pages/Leave/LeaveHome.tsx";
 import LibraryHome from "./Pages/Library/LibraryHome.tsx";
 import BookDetailsPage from "./Pages/Library/BookDetails.tsx";
+import SectionDetails from "./Pages/Section/SectionDetails.tsx";
+import StaffHome from "./Pages/Staff/StaffHome.tsx";
 
 function App() {
   return (
@@ -52,6 +56,7 @@ function App() {
             <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/exam-home" element={<ExamHome />} />
             <Route path="/exam/:examId" element={<ExamDetails />} />
+            <Route path="/performance" element={<ResultsPerformancePage />} />
             <Route path="/notices" element={<NoticeBoardHome />} />
             <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
             <Route path="/events" element={<Navigate to="/calendar" replace />} />
@@ -60,9 +65,11 @@ function App() {
             {/* Teacher Routes */}
             <Route path="/teacher-home" element={<TeacherHome />} />
             <Route path="/teacher/:id" element={<TeacherDetails />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/class-Home" element={<ClassHome />} />
             <Route path="/class/:classId" element={<ClassDetails />} />
             <Route path="/section-home" element={<SectionHome />} />
+            <Route path="/section/:sectionId" element={<SectionDetails />} />
             <Route path="/student-home" element={<StudentHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
@@ -73,6 +80,7 @@ function App() {
             <Route path="/leaves" element={<LeaveHome />} />
             <Route path="/library" element={<LibraryHome />} />
             <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
+            <Route path="/staff" element={<StaffHome />} />
           </Route>
         </Route>
 
