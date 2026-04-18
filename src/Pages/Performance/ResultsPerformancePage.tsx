@@ -66,7 +66,7 @@ const RadarChart = ({ data, size = 260, color = "#6366f1" }: { data: { label: st
                 const anchor = Math.abs(p.x - cx) < 5 ? "middle" : p.x > cx ? "start" : "end";
                 return (
                     <text key={i} x={p.x} y={p.y} textAnchor={anchor} dominantBaseline="middle" fontSize={n > 6 ? 9 : 10} fill="#475569" fontWeight="600">
-                        {d.label.length > 12 ? d.label.slice(0, 11) + "â€¦" : d.label}
+                        {d.label.length > 12 ? d.label.slice(0, 11) + "…" : d.label}
                         <tspan x={p.x} dy="12" fontSize="9" fill="#94a3b8" fontWeight="500">{d.value}%</tspan>
                     </text>
                 );
@@ -103,7 +103,7 @@ const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary:
 
     // High failure rate
     if (summary.passRate < 70) {
-        insights.push({ type: "warning", message: `Overall pass rate is ${summary.passRate}% â€” below the 70% benchmark. Review teaching methodologies and student engagement.` });
+        insights.push({ type: "warning", message: `Overall pass rate is ${summary.passRate}% – below the 70% benchmark. Review teaching methodologies and student engagement.` });
     }
 
     // Strong subjects
@@ -300,8 +300,8 @@ const ResultsPerformancePage: React.FC = () => {
                         <div className="ml-auto text-right self-end">
                             <p className="text-xs text-slate-400">
                                 {selectedSessionName && <span className="font-medium text-slate-600">{selectedSessionName}</span>}
-                                {classId && <span> Â· {classes.find(c => c.id === classId)?.name}</span>}
-                                {sectionId && <span> Â· {sections.find(s => s.id === sectionId)?.name}</span>}
+                                {classId && <span> · {classes.find(c => c.id === classId)?.name}</span>}
+                                {sectionId && <span> · {sections.find(s => s.id === sectionId)?.name}</span>}
                             </p>
                         </div>
                     </div>
@@ -323,7 +323,7 @@ const ResultsPerformancePage: React.FC = () => {
                     <div className="bg-white rounded-2xl border border-slate-100 p-16 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-3">
                             <Loader2 size={28} className="animate-spin text-indigo-600" />
-                            <p className="text-sm text-slate-500">Loading performance dataâ€¦</p>
+                            <p className="text-sm text-slate-500">Loading performance data…</p>
                         </div>
                     </div>
                 ) : !summary ? (
@@ -349,7 +349,7 @@ const ResultsPerformancePage: React.FC = () => {
                                 <InsightsPanel summary={summary} subjectBreakdown={subjectBreakdown} classBreakdown={classBreakdown} />
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Radar â€“ Subject Performance */}
+                                    {/* Radar — Subject Performance */}
                                     {radarSubjects.length >= 3 && (
                                         <div className="bg-white rounded-2xl border border-slate-100 p-6">
                                             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
@@ -403,7 +403,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                         }`}>{i + 1}</div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-semibold text-slate-800 truncate">{tp.studentName}</p>
-                                                            <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
+                                                            <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
                                                         </div>
                                                         <div className="hidden sm:block w-28">
                                                             <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -561,7 +561,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     }`}>#{i + 1}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-bold text-white truncate">{tp.studentName}</p>
-                                                        <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName}</p>
+                                                        <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName}</p>
                                                         <p className="text-xs text-slate-500">Roll #{tp.rollNo}</p>
                                                     </div>
                                                     <div className="text-right shrink-0">
@@ -589,7 +589,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     }`}>{i + 1}</div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-semibold text-slate-800">{tp.studentName}</p>
-                                                        <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
+                                                        <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
                                                     </div>
                                                     <div className="hidden sm:block w-32">
                                                         <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -636,7 +636,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                         </div>
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-slate-800 text-sm truncate">{exam.examName}</p>
-                                                            <p className="text-xs text-slate-400 mt-0.5">{exam.subjectName} Â· {exam.examTerm?.replace("TERM", "T")}</p>
+                                                            <p className="text-xs text-slate-400 mt-0.5">{exam.subjectName} · {exam.examTerm?.replace("TERM", "T")}</p>
                                                         </div>
                                                     </div>
                                                 </button>
@@ -659,7 +659,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                     <FileText size={22} />
                                                     <h2 className="text-xl font-bold">Exam Report Card</h2>
                                                 </div>
-                                                <p className="text-indigo-200 text-sm">{examReport.exam.examName} â€” {examReport.exam.subjectName} Â· {examReport.exam.examTerm?.replace("TERM", "Term ")} Â· Full Marks: {examReport.exam.fullMarks}</p>
+                                                <p className="text-indigo-200 text-sm">{examReport.exam.examName} – {examReport.exam.subjectName} · {examReport.exam.examTerm?.replace("TERM", "Term ")} · Full Marks: {examReport.exam.fullMarks}</p>
                                             </div>
 
                                             {/* Report stats */}
@@ -729,7 +729,7 @@ const ResultsPerformancePage: React.FC = () => {
                                                 <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                                                     <div className="px-6 py-4 border-b bg-slate-50 flex items-center gap-2">
                                                         <Trophy size={15} className="text-amber-500" />
-                                                        <h3 className="text-sm font-bold text-slate-800">Top Performers â€” {examReport.exam.examName}</h3>
+                                                        <h3 className="text-sm font-bold text-slate-800">Top Performers – {examReport.exam.examName}</h3>
                                                     </div>
                                                     <div className="divide-y divide-slate-50">
                                                         {examReport.topPerformers.map((tp, i) => {

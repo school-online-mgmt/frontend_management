@@ -87,7 +87,7 @@ const RadarChart = ({ data, size = 280, color = "#6366f1", fillColor = "rgba(99,
                     return (
                         <text key={i} x={p.x} y={p.y} textAnchor={anchor} dominantBaseline="middle"
                             fontSize={labelFontSize} fill="#475569" fontWeight="600">
-                            {d.label.length > 14 ? d.label.slice(0, 13) + "â€¦" : d.label}
+                            {d.label.length > 14 ? d.label.slice(0, 13) + "…" : d.label}
                             <tspan x={p.x} dy="13" fontSize="9" fill="#94a3b8" fontWeight="500">{d.value}%</tspan>
                         </text>
                     );
@@ -283,7 +283,7 @@ const PerformancePage: React.FC = () => {
                             <Search size={12} className="text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search studentâ€¦"
+                                placeholder="Search student…"
                                 value={studentId ? selectedStudentName : studentSearch}
                                 onChange={e => { setStudentSearch(e.target.value); setStudentId(""); setShowStudentDropdown(true); }}
                                 onFocus={() => setShowStudentDropdown(true)}
@@ -305,7 +305,7 @@ const PerformancePage: React.FC = () => {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-xs font-semibold text-slate-700 truncate">{s.firstName} {s.lastName}</p>
-                                            <p className="text-[10px] text-slate-400">Roll: {s.rollNo ?? "â€”"}</p>
+                                            <p className="text-[10px] text-slate-400">Roll: {s.rollNo ?? "–"}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -338,7 +338,7 @@ const PerformancePage: React.FC = () => {
 
             {loading ? (
                 <div className="bg-white rounded-2xl border p-20 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance dataâ€¦</p></div>
+                    <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance data…</p></div>
                 </div>
             ) : !summary ? (
                 <div className="bg-white rounded-2xl border p-20 flex flex-col items-center gap-4 text-center">
@@ -363,7 +363,7 @@ const PerformancePage: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                {/* Radar â€“ Subject Performance */}
+                                {/* Radar — Subject Performance */}
                                 {radarSubjects.length >= 3 && (
                                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
@@ -432,7 +432,7 @@ const PerformancePage: React.FC = () => {
                                                 }`}>#{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName}</p>
                                                 </div>
                                                 <div className="hidden sm:flex items-center gap-2 w-28">
                                                     <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
@@ -602,9 +602,9 @@ const PerformancePage: React.FC = () => {
                                                     i === 1 ? "bg-slate-400/20 text-slate-300" : "bg-orange-400/20 text-orange-300"
                                                 }`}>#{i + 1}</div>
                                                 <p className="text-sm font-bold text-white truncate w-full">{tp.studentName}</p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">{tp.className} Â· {tp.sectionName}</p>
+                                                <p className="text-[10px] text-slate-400 mt-0.5">{tp.className} · {tp.sectionName}</p>
                                                 <p className="text-2xl font-black text-white mt-2">{tp.avgPercentage}%</p>
-                                                <p className="text-[10px] text-slate-500">{tp.examsCount} exams Â· Grade {tp.grade}</p>
+                                                <p className="text-[10px] text-slate-500">{tp.examsCount} exams · Grade {tp.grade}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -627,7 +627,7 @@ const PerformancePage: React.FC = () => {
                                                 }`}>{i + 1}</div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800">{tp.studentName}</p>
-                                                    <p className="text-xs text-slate-400">{tp.className} Â· {tp.sectionName} Â· Roll #{tp.rollNo}</p>
+                                                    <p className="text-xs text-slate-400">{tp.className} · {tp.sectionName} · Roll #{tp.rollNo}</p>
                                                 </div>
                                                 <div className="hidden sm:block w-36">
                                                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
