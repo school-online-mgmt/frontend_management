@@ -766,6 +766,47 @@ createStudent = async (data: {
         const res = await apiClient.post("/management/fees/invoices/generate", data);
         return res.data;
     };
+
+    /**
+     * Stream invoice generation with real-time progress via SSE.
+     */
+    generateInvoicesStream = async (
+        data: { month: number; year: number; sessionId: string; dueDate: string },
+        onProgress: (event: { type: string; generated: number; skipped: number; processed: number; total: number }) => void,
+    ): Promise<{ generated: number; skipped: number; total: number }> => {
+        const baseURL = apiClient.defaults.baseURL || "";
+        const response = await fetch(`${baseURL}/management/fees/invoices/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+            credentials: "include",
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ message: "Generation failed" }));
+            throw new Error(err.message || "Generation failed");
+        }
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let result: any = { generated: 0, skipped: 0, total: 0 };
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    const payload = JSON.parse(line.slice(6));
+                    onProgress(payload);
+                    if (payload.type === "complete") result = payload;
+                }
+            }
+        }
+        return result;
+    };
+
     getFeeInvoiceById = async (id: string) => {
         const res = await apiClient.get(`/management/fees/invoices/${id}`);
         return res.data;

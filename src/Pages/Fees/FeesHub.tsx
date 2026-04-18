@@ -655,6 +655,7 @@ function InvoicesTab() {
     const [showGenerate, setShowGenerate] = useState(false);
     const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
     const [generating, setGenerating] = useState(false);
+    const [genProgress, setGenProgress] = useState<{ generated: number; skipped: number; processed: number; total: number } | null>(null);
     const [filterMonth, setFilterMonth] = useState(''); const [filterYear, setFilterYear] = useState(String(currentYear));
     const [filterStatus, setFilterStatus] = useState('');
 
@@ -672,12 +673,16 @@ function InvoicesTab() {
     const generate = async () => {
         if (!gen.sessionId || !gen.dueDate) { alert('Please fill all fields'); return; }
         setGenerating(true);
+        setGenProgress(null);
         try {
-            const data = await api.generateInvoices({ month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate });
+            const data = await api.generateInvoicesStream(
+                { month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate },
+                (evt) => setGenProgress({ generated: evt.generated, skipped: evt.skipped, processed: evt.processed, total: evt.total }),
+            );
             alert(`Done! Generated: ${data.generated}, Skipped (already exist): ${data.skipped}`);
             await reload(); setShowGenerate(false);
         } catch { alert('Generation failed'); }
-        finally { setGenerating(false); }
+        finally { setGenerating(false); setGenProgress(null); }
     };
 
     const markOverdue = async () => {
@@ -752,8 +757,26 @@ function InvoicesTab() {
                         <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
                             <RefreshCw size={15} className={generating?'animate-spin':''}/>{generating?'Generating…':'Generate'}
                         </button>
-                        <button onClick={() => setShowGenerate(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
+                        <button onClick={() => setShowGenerate(false)} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
                     </div>
+                    {generating && genProgress && genProgress.total > 0 && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-slate-600">
+                                <span>Processing {genProgress.processed} / {genProgress.total} students</span>
+                                <span>{Math.round((genProgress.processed / genProgress.total) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                                <div
+                                    className="bg-emerald-500 h-3 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.round((genProgress.processed / genProgress.total) * 100)}%` }}
+                                />
+                            </div>
+                            <div className="flex gap-4 text-xs">
+                                <span className="text-green-600">✓ Generated: {genProgress.generated}</span>
+                                <span className="text-slate-400">⊘ Skipped: {genProgress.skipped}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
