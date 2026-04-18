@@ -67,7 +67,7 @@ class API {
     const response = await apiClient.get(`/management/subject/${id}`);
     return response.data;
   };
-  createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string }) => {
+  createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string, type?: string, teacherId?: string }) => {
     const response = await apiClient.post('/management/subject/create', subjectData);
     return response.data;
 };
@@ -240,7 +240,7 @@ getTeacherSubjects = async (teacherId: string) => {
     return response.data;
 };
 
-updateSubject = async (id: string, data: { name: string, slug: string, bookName: string, sessionId: string }) => {
+updateSubject = async (id: string, data: { name?: string, slug?: string, bookName?: string, sessionId?: string, teacherId?: string | null, type?: string }) => {
     const response = await apiClient.patch(`/management/subject/${id}`, data);
     return response.data;
 };
@@ -588,16 +588,43 @@ createStudent = async (data: {
         return res.data;
     };
 
-    // Create teacher (note: different signature than below)
+    // Create teacher
     createTeacherEntry = async (teacherData: {
         name: string;
         gender: string;
         age: number;
         qualification: string;
-        phone?: string;
+        phone: string;
+        email?: string;
+        address?: string;
+        password?: string;
     }) => {
         const res = await apiClient.post("/management/teacher/create", teacherData);
         return res.data;
+    };
+
+    // Reset teacher password (principal action)
+    resetTeacherPassword = async (teacherId: string, password: string) => {
+        const res = await apiClient.patch(`/management/teacher/${teacherId}/setPassword`, { password });
+        return res.data;
+    };
+
+    // Reset student password (management action)
+    resetStudentPassword = async (studentId: string, password: string) => {
+        const res = await apiClient.patch(`/management/student/${studentId}/reset-password`, { password });
+        return res.data;
+    };
+
+    // Reset management user password (principal action)
+    resetManagementUserPassword = async (userId: string, password: string) => {
+        const res = await apiClient.patch(`/management/auth/users/${userId}/reset-password`, { password });
+        return res.data;
+    };
+
+    // Get all management users (principal action)
+    getManagementUsers = async () => {
+        const res = await apiClient.get("/management/auth/users");
+        return res.data.users;
     };
 
     // Update teacher

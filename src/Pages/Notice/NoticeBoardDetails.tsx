@@ -383,7 +383,7 @@ const NoticeBoardDetails = () => {
     if (error) return (
         <div className="p-6 text-center">
             <p className="text-red-600">{error}</p>
-            <button onClick={() => navigate("/notices")} className="mt-3 text-emerald-600 hover:underline text-sm">Back to boards</button>
+            <button onClick={() => navigate(-1)} className="mt-3 text-emerald-600 hover:underline text-sm">Back</button>
         </div>
     );
     if (!board) return null;
@@ -396,9 +396,9 @@ const NoticeBoardDetails = () => {
         <div className="p-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <button onClick={() => navigate("/notices")}
+                <button onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mb-4 transition-colors">
-                    <ArrowLeft size={16} /> Back to Boards
+                    <ArrowLeft size={16} /> Back
                 </button>
                 <div className="flex items-start justify-between">
                     <div>

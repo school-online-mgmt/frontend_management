@@ -20,12 +20,13 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Students",
+    label: "People",
     icon: Users,
     collapsible: true,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
       { path: "/students-home", label: "Students", icon: Users },
+      { path: "/staff", label: "Staff Accounts", icon: Settings },
     ],
   },
   {
@@ -105,6 +106,8 @@ const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const NAV_SCROLL_KEY = "nav_scroll_top";
 
   // Track which sections are expanded — default all to expanded
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -142,6 +145,17 @@ const Layout = () => {
       }
     });
   }, [location.pathname]);
+
+  // Persist nav scroll position across refreshes
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const saved = sessionStorage.getItem(NAV_SCROLL_KEY);
+    if (saved) nav.scrollTop = parseInt(saved, 10);
+    const onScroll = () => sessionStorage.setItem(NAV_SCROLL_KEY, String(nav.scrollTop));
+    nav.addEventListener("scroll", onScroll, { passive: true });
+    return () => nav.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
@@ -181,7 +195,7 @@ const Layout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+        <nav ref={isMobile ? undefined : navRef} className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
           <div className="space-y-0.5">
             {NAV_SECTIONS.map((section) => {
               const sectionActive = isSectionActive(section);

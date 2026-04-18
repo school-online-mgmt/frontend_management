@@ -65,8 +65,8 @@ const BookDetailsPage = () => {
 
     return (
         <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-6">
-            <button onClick={() => navigate("/library")} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
-                <ArrowLeft size={16} /> Back to Library
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
+                <ArrowLeft size={16} /> Back
             </button>
 
             {message && (

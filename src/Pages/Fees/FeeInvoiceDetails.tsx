@@ -171,7 +171,7 @@ ${payments.length > 0 ? `
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/fees')} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"><ArrowLeft size={18}/></button>
+                    <button onClick={() => navigate(-1)} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"><ArrowLeft size={18}/></button>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900">{invoice.invoiceNo}</h1>
                         <p className="text-slate-500 text-sm mt-0.5">{MONTHS[invoice.month-1]} {invoice.year} Fee Invoice</p>

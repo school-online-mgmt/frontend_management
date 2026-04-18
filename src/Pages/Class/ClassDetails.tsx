@@ -62,8 +62,8 @@ const ClassDetails = () => {
             )}
 
             {/* Back */}
-            <button onClick={() => navigate("/class-Home")} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium">
-                <ArrowLeft size={18} /> Back to Classes
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium">
+                <ArrowLeft size={18} /> Back
             </button>
 
             {/* Hero */}

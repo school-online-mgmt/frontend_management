@@ -44,7 +44,6 @@ const Dashboard = () => {
     try {
       const now = new Date();
       const year = now.getFullYear();
-      const month = now.getMonth() + 1;
 
       const [
         studentsRes, teachersRes, subjectsRes, classesRes,
@@ -57,7 +56,7 @@ const Dashboard = () => {
         api.getClasses(),
         api.getAttendanceTodaySummary(),
         api.getTeacherAttendanceTodaySummary(),
-        api.getFeeSummary({ month, year }),
+        api.getFeeSummary({ year }),
         api.getLibraryStats(),
         api.getStudentLeaves({ status: "PENDING" }),
         api.getPendingNotices(),
@@ -389,7 +388,7 @@ const Dashboard = () => {
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-              <CreditCard size={13} className="text-amber-500" /> Fee Collection — This Month
+              <CreditCard size={13} className="text-amber-500" /> Fee Collection — {new Date().getFullYear()}
             </h3>
             <button onClick={() => navigate("/fees")}
               className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-0.5">
@@ -454,7 +453,7 @@ const Dashboard = () => {
           </div>
           <div className="p-4">
             {library ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
                   <p className="text-sm font-bold text-slate-800">{library.totalBooks ?? 0}</p>
                   <p className="text-[9px] text-slate-500">Total Books</p>
@@ -470,6 +469,10 @@ const Dashboard = () => {
                 <div className="bg-amber-50 rounded-lg px-3 py-2 text-center">
                   <p className="text-sm font-bold text-amber-700">{library.pendingRequests ?? 0}</p>
                   <p className="text-[9px] text-amber-600">Requests</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg px-3 py-2 text-center">
+                  <p className="text-sm font-bold text-purple-700">{library.pendingRenewals ?? 0}</p>
+                  <p className="text-[9px] text-purple-600">Renewals</p>
                 </div>
               </div>
             ) : (

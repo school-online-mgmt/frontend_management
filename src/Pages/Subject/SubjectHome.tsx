@@ -52,8 +52,8 @@ const StatCard = ({
 
 /* ── Subject Card (Grid) ─────────────────────────────────────────────────── */
 const SubjectCard = ({
-  subject, sessionName, onClick,
-}: { subject: Subject; sessionName?: string; onClick: () => void }) => {
+  subject, sessionName, teacherName, onClick,
+}: { subject: Subject; sessionName?: string; teacherName?: string; onClick: () => void }) => {
   const cfg = getTypeConfig(subject.type);
   const TypeIcon = cfg.icon;
   return (
@@ -96,6 +96,19 @@ const SubjectCard = ({
           </span>
           {sessionName && (
             <span className="text-slate-400 truncate">{sessionName}</span>
+          )}
+        </div>
+        {/* Teacher Incharge */}
+        <div className="flex items-center gap-2 text-xs">
+          <UserCheck size={12} className={teacherName ? "text-indigo-400 shrink-0" : "text-amber-400 shrink-0"} />
+          {teacherName ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 truncate max-w-[160px]">
+              {teacherName} <span className="text-[8px] opacity-60 font-bold">IC</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-100">
+              <AlertTriangle size={9} /> No Incharge
+            </span>
           )}
         </div>
         {subject.description && (
@@ -141,6 +154,18 @@ const SubjectPage = () => {
     staleTime: 10 * 60 * 1000,
   });
 
+  const {
+    data: teachers = [],
+  } = useQuery<{ id: string; name: string; qualification?: string }[]>({
+    queryKey: ["teachers"],
+    queryFn: async () => {
+      const data = await api.getTeachers();
+      const list = Array.isArray(data) ? data : data?.teachers ?? [];
+      return list.filter((t: any) => t.isActive !== false);
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   const isLoading = subjectsLoading || sessionsLoading;
 
   /* ── Session lookup map ──────────────────────────────────────────────── */
@@ -149,6 +174,13 @@ const SubjectPage = () => {
     sessions.forEach((s) => { m[s.id] = s.name; });
     return m;
   }, [sessions]);
+
+  /* ── Teacher lookup map ──────────────────────────────────────────────── */
+  const teacherMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    teachers.forEach((t) => { m[t.id] = t.name; });
+    return m;
+  }, [teachers]);
 
   /* ── Stats ───────────────────────────────────────────────────────────── */
   const stats = useMemo(() => {
@@ -435,6 +467,7 @@ const SubjectPage = () => {
                 key={subject.id}
                 subject={subject}
                 sessionName={sessionMap[subject.sessionId]}
+                teacherName={subject.teacherId ? teacherMap[subject.teacherId] : undefined}
                 onClick={() => navigate(`/subject/${subject.slug}`)}
               />
             ))}
@@ -451,7 +484,7 @@ const SubjectPage = () => {
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Type</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Textbook</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Session</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Teachers</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Incharge</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right"></th>
                   </tr>
@@ -492,12 +525,12 @@ const SubjectPage = () => {
                         </td>
                         <td className="px-5 py-4 hidden lg:table-cell">
                           {subject.teacherId ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-medium">
-                              <UserCheck size={11} /> Assigned
+                            <span className="inline-flex items-center gap-1 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-medium max-w-[150px] truncate" title={teacherMap[subject.teacherId]}>
+                              <UserCheck size={11} /> {teacherMap[subject.teacherId] ?? "Assigned"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full font-medium">
-                              <AlertTriangle size={11} /> Unassigned
+                              <AlertTriangle size={11} /> No Incharge
                             </span>
                           )}
                         </td>

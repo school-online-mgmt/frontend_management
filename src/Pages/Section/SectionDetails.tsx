@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     ArrowLeft, Loader2, Layers, Users, User, BookOpen,
-    School, Calendar, AlertTriangle, RefreshCcw, GraduationCap, Phone,
+    School, Calendar, AlertTriangle, RefreshCcw, GraduationCap, Phone, UserX,
 } from "lucide-react";
 import api from "../../api/api";
 
@@ -12,6 +12,7 @@ const SectionDetails = () => {
     const navigate = useNavigate();
 
     const [section, setSection] = useState<any>(null);
+    const [unassignedSubjects, setUnassignedSubjects] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,8 +29,21 @@ const SectionDetails = () => {
         }
 
         try {
-            const data = await api.getSectionById(sectionId);
-            setSection(data.section);
+            const [sectionData, gapsData] = await Promise.allSettled([
+                api.getSectionById(sectionId),
+                api.getStaffGaps(),
+            ]);
+
+            if (sectionData.status === "rejected") {
+                setError("Failed to load section details.");
+                return;
+            }
+            setSection(sectionData.value.section);
+
+            if (gapsData.status === "fulfilled") {
+                const gaps: any[] = gapsData.value.subjectGaps ?? [];
+                setUnassignedSubjects(gaps.filter((g: any) => g.sectionId === sectionId));
+            }
         } catch {
             setError("Failed to load section details.");
         } finally {
@@ -76,10 +90,10 @@ const SectionDetails = () => {
         <div className="p-6 lg:p-10 max-w-5xl mx-auto space-y-6">
             {/* Back */}
             <button
-                onClick={() => navigate(section.class?.id ? `/class/${section.class.id}` : "/section-home")}
+                onClick={() => navigate(-1)}
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium"
             >
-                <ArrowLeft size={18} /> Back to {section.class?.name ?? "Sections"}
+                <ArrowLeft size={18} /> Back
             </button>
 
             {/* Hero Card */}
@@ -120,7 +134,7 @@ const SectionDetails = () => {
                     {[
                         { icon: <Users size={18} className="text-emerald-500" />, value: section.studentCount ?? 0, label: "Students Enrolled", bg: "bg-emerald-50" },
                         { icon: <BookOpen size={18} className="text-amber-500" />, value: section.subjectAssignments?.length ?? 0, label: "Subject Teachers", bg: "bg-amber-50" },
-                        { icon: <User size={18} className="text-indigo-500" />, value: section.teacher ? 1 : 0, label: section.teacher ? "Teacher Assigned" : "No Teacher", bg: section.teacher ? "bg-indigo-50" : "bg-slate-50" },
+                        { icon: <AlertTriangle size={18} className="text-rose-500" />, value: unassignedSubjects.length, label: unassignedSubjects.length === 0 ? "All Covered" : "Subjects Unassigned", bg: unassignedSubjects.length === 0 ? "bg-emerald-50" : "bg-rose-50" },
                     ].map(stat => (
                         <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3">
                             <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center flex-shrink-0`}>{stat.icon}</div>
@@ -184,18 +198,25 @@ const SectionDetails = () => {
                         <h2 className="text-base font-bold text-slate-800">Subject Teachers</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Teachers assigned to subjects in this section</p>
                     </div>
-                    <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
-                        {section.subjectAssignments?.length ?? 0} assigned
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-100">
+                            {section.subjectAssignments?.length ?? 0} assigned
+                        </span>
+                        {unassignedSubjects.length > 0 && (
+                            <span className="px-3 py-1 bg-rose-50 text-rose-700 text-xs font-semibold rounded-full border border-rose-100">
+                                {unassignedSubjects.length} unassigned
+                            </span>
+                        )}
+                    </div>
                 </div>
 
-                {section.subjectAssignments?.length ? (
+                {(section.subjectAssignments?.length > 0 || unassignedSubjects.length > 0) ? (
                     <div className="divide-y divide-slate-50">
-                        {section.subjectAssignments.map((sa: any) => (
+                        {/* Assigned subjects */}
+                        {section.subjectAssignments?.map((sa: any) => (
                             <div key={sa.subjectTeachers?.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
-                                {/* Subject info */}
                                 <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                                         <BookOpen size={16} />
                                     </div>
                                     <div>
@@ -203,8 +224,6 @@ const SectionDetails = () => {
                                         <p className="text-xs text-slate-400 font-mono">#{sa.subjects?.slug}</p>
                                     </div>
                                 </div>
-
-                                {/* Teacher info - navigate to teacher details */}
                                 {sa.teachers ? (
                                     <button
                                         onClick={() => navigate(`/teacher/${sa.teachers.id}`)}
@@ -220,12 +239,49 @@ const SectionDetails = () => {
                                 )}
                             </div>
                         ))}
+
+                        {/* Unassigned subjects */}
+                        {unassignedSubjects.length > 0 && (
+                            <>
+                                {section.subjectAssignments?.length > 0 && (
+                                    <div className="px-6 py-2 bg-rose-50/60 border-y border-rose-100">
+                                        <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
+                                            <AlertTriangle size={11} /> Subjects without a teacher
+                                        </p>
+                                    </div>
+                                )}
+                                {unassignedSubjects.map((gap: any) => (
+                                    <div key={`${gap.subjectId}`} className="px-6 py-4 flex items-center justify-between hover:bg-rose-50/30 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center flex-shrink-0">
+                                                <BookOpen size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-slate-800 text-sm">{gap.subjectName}</p>
+                                                <p className="text-xs text-rose-400 font-medium mt-0.5">No teacher assigned</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-semibold">
+                                                <UserX size={12} /> Unassigned
+                                            </span>
+                                            <button
+                                                onClick={() => navigate(`/assignments`)}
+                                                className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition"
+                                            >
+                                                Assign →
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="p-10 text-center">
                         <BookOpen size={32} className="mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No subject teachers assigned</p>
-                        <p className="text-xs text-slate-400 mt-1">Assign teachers to subjects from the Subject management page.</p>
+                        <p className="text-xs text-slate-400 mt-1">Assign teachers to subjects from the Assignments page.</p>
                     </div>
                 )}
             </div>

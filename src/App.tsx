@@ -34,6 +34,7 @@ import LeaveHome from "./Pages/Leave/LeaveHome.tsx";
 import LibraryHome from "./Pages/Library/LibraryHome.tsx";
 import BookDetailsPage from "./Pages/Library/BookDetails.tsx";
 import SectionDetails from "./Pages/Section/SectionDetails.tsx";
+import StaffHome from "./Pages/Staff/StaffHome.tsx";
 
 function App() {
   return (
@@ -79,6 +80,7 @@ function App() {
             <Route path="/leaves" element={<LeaveHome />} />
             <Route path="/library" element={<LibraryHome />} />
             <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
+            <Route path="/staff" element={<StaffHome />} />
           </Route>
         </Route>
 

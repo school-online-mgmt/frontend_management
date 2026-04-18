@@ -4,7 +4,7 @@ import {
   Plus, RefreshCcw, Users, Search, ChevronRight, Phone,
   GraduationCap, Filter, X, CheckCircle2, XCircle,
   Loader2, UserPlus, BarChart3, UserCheck, UserX,
-  Briefcase, AlignJustify,
+  Briefcase, AlignJustify, Mail, MapPin
 } from "lucide-react";
 import api from "../../api/api";
 import CreateTeacher from "../../components/CreateTeacher";
@@ -92,6 +92,14 @@ const TeacherCard = ({ teacher, onClick }: { teacher: Teacher; onClick: () => vo
           <span className="truncate">{teacher.phone || "No phone on record"}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
+          <Mail size={12} className="text-slate-400 shrink-0" />
+          <span className="truncate">{teacher.email || "No email provided"}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <MapPin size={12} className="text-slate-400 shrink-0" />
+          <span className="truncate">{teacher.address || "No address provided"}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
           <Briefcase size={12} className="text-slate-400 shrink-0" />
           <span className="capitalize">{teacher.gender}</span>
           <span className="text-slate-300">·</span>
@@ -147,7 +155,7 @@ const TeacherHome = () => {
       if (statusFilter === "inactive" &&  t.isActive) return false;
       if (genderFilter && t.gender.toLowerCase() !== genderFilter.toLowerCase()) return false;
       if (q) {
-        const hay = `${t.name} ${t.qualification ?? ""} ${t.phone ?? ""}`.toLowerCase();
+        const hay = `${t.name} ${t.qualification ?? ""} ${t.phone ?? ""} ${t.email ?? ""} ${t.address ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -214,7 +222,7 @@ const TeacherHome = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, qualification or phone…"
+                placeholder="Search by name, qualification, phone, email or address…"
                 className="w-full pl-10 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-slate-50 placeholder-slate-400"
               />
               {search && (
@@ -378,7 +386,8 @@ const TeacherHome = () => {
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Teacher</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Qualification</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Phone</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Gender / Age</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Email</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Address</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                     <th className="px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right"></th>
                   </tr>
@@ -413,9 +422,16 @@ const TeacherHome = () => {
                           </div>
                         </td>
                         <td className="px-5 py-4 hidden lg:table-cell">
-                          <span className="text-xs text-slate-600 capitalize">{teacher.gender}</span>
-                          <span className="text-slate-300 mx-1">·</span>
-                          <span className="text-xs text-slate-500">{teacher.age} yrs</span>
+                           <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <Mail size={11} className="text-slate-400 shrink-0" />
+                            {teacher.email || "—"}
+                          </div>
+                        </td>
+                         <td className="px-5 py-4 hidden lg:table-cell">
+                           <div className="flex items-center gap-1.5 text-xs text-slate-500 max-w-[150px] truncate">
+                            <MapPin size={11} className="text-slate-400 shrink-0" />
+                            {teacher.address || "—"}
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
@@ -444,4 +460,3 @@ const TeacherHome = () => {
 };
 
 export default TeacherHome;
-

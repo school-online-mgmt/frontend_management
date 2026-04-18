@@ -165,7 +165,7 @@ const ApplicantDetails: React.FC = () => {
           <p className="text-slate-700 font-semibold mb-1">Could not load applicant</p>
           <p className="text-slate-500 text-sm mb-4">{error ?? 'Applicant not found.'}</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => navigate('/applicants-home')} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+            <button onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
               ← Back
             </button>
             <button onClick={fetchApplicant} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition">
@@ -207,9 +207,9 @@ const ApplicantDetails: React.FC = () => {
       {/* Header bar */}
       <div className="bg-white border-b border-slate-200 px-6 lg:px-8 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-          <button onClick={() => navigate('/applicants-home')}
+          <button onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
-            <ArrowLeft size={16} /> Back to Applicants
+            <ArrowLeft size={16} /> Back
           </button>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
