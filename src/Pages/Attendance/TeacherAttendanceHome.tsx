@@ -7,6 +7,7 @@ import {
     AlertTriangle, Edit3, Loader2, CalendarDays, X, Calendar, UserCheck
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 interface Teacher {
     id: string; name: string; phone: string | null;
@@ -56,29 +57,23 @@ export default function TeacherAttendanceHome() {
     ];
     return (
         <div className="h-full flex flex-col overflow-hidden bg-slate-50">
-            <div className="shrink-0 bg-slate-900 border-b border-white/[0.06] px-6 py-4">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-900/20">
-                            <UserCheck size={19} className="text-white"/>
-                        </div>
-                        <div>
-                            <h1 className="text-base font-bold text-white">Teacher Attendance</h1>
-                            <p className="text-[11px] text-slate-400">Mark, review and manage teacher daily attendance</p>
-                        </div>
-                    </div>
-                    <div className="flex bg-white/10 rounded-xl p-1 gap-0.5">
+            <PageHeader
+                icon={UserCheck}
+                title="Teacher Attendance"
+                subtitle="Mark, review and manage teacher daily attendance"
+                actions={
+                    <div className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
                         {TABS.map(tb => (
                             <button key={tb.key} onClick={() => setTab(tb.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab===tb.key ? "bg-white/15 text-violet-400 shadow-sm" : "text-slate-400 hover:text-slate-200"
+                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
                                 }`}>
                                 <tb.icon size={13}/>{tb.label}
                             </button>
                         ))}
                     </div>
-                </div>
-            </div>
+                }
+            />
             <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
                     {tab==="mark"     && <motion.div key="mark"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><MarkTab/></motion.div>}

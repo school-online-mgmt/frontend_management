@@ -5,6 +5,7 @@ import {
     UserCog,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 type LeaveType = "SICK" | "PERSONAL" | "FAMILY" | "OTHER";
@@ -32,32 +33,26 @@ export default function LeaveHome() {
     const [tab, setTab] = useState<TabKey>("student");
     return (
         <div className="h-full flex flex-col bg-slate-50">
-            <header className="shrink-0 bg-slate-900 border-b border-white/[0.06] px-6 py-4">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20">
-                            <CalendarDays size={19} className="text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-base font-bold text-white">Leave Management</h1>
-                            <p className="text-[11px] text-slate-400">Manage student & teacher leave requests</p>
-                        </div>
-                    </div>
-                    <nav className="flex bg-white/10 rounded-xl p-1 gap-0.5">
+            <PageHeader
+                icon={CalendarDays}
+                title="Leave Management"
+                subtitle="Manage student & teacher leave requests"
+                actions={
+                    <nav className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
                         {([
                             { key: "student" as TabKey, label: "Student Leaves", icon: Users },
                             { key: "teacher" as TabKey, label: "Teacher Leaves", icon: UserCog },
                         ]).map(t => (
                             <button key={t.key} onClick={() => setTab(t.key)}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab === t.key ? "bg-white/15 text-emerald-400 shadow-sm" : "text-slate-400 hover:text-slate-200"
+                                    tab === t.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
                                 }`}>
                                 <t.icon size={13} />{t.label}
                             </button>
                         ))}
                     </nav>
-                </div>
-            </header>
+                }
+            />
             <div className="flex-1 overflow-y-auto">
                 {tab === "student" ? <StudentLeavesTab /> : <TeacherLeavesTab />}
             </div>

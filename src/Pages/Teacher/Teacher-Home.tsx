@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import CreateTeacher from "../../components/CreateTeacher";
+import PageHeader from "../../components/PageHeader";
 import type { Teacher } from "../../api/types";
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -174,33 +175,24 @@ const TeacherHome = () => {
         <CreateTeacher onClose={() => setIsModalOpen(false)} onRefresh={fetchTeachers} />
       )}
 
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="bg-slate-900 border-b border-white/[0.06] px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Teachers</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Manage faculty, track assignments and control portal access
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              onClick={fetchTeachers}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/10 text-slate-300 text-sm font-medium rounded-xl hover:bg-white/15 disabled:opacity-50 transition shadow-sm"
-            >
-              <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} />
-              Refresh
+      <PageHeader
+        icon={Users}
+        title="Teachers"
+        gradient="from-violet-600 via-purple-600 to-indigo-600"
+        subtitle="Manage faculty, track assignments and control portal access"
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={fetchTeachers} disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
+              <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
             </button>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shadow-sm"
-            >
+            <button onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
               <UserPlus size={14} /> Add Teacher
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 

@@ -3,6 +3,7 @@ import { Plus, RefreshCcw, School, Users, Layers, User, ChevronRight, BookOpen, 
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateClassModal from "../../components/Classes/CreateClassModal";
+import PageHeader from "../../components/PageHeader";
 
 const StatBadge = ({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) => (
     <div className="flex items-center gap-2">
@@ -50,7 +51,7 @@ const ClassHome = () => {
     const totalSections = classes.reduce((sum, c) => sum + (c.sectionCount ?? 0), 0);
 
     return (
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+        <div className="min-h-full bg-slate-50">
             {toast && (
                 <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>
                     {toast.text}
@@ -67,21 +68,22 @@ const ClassHome = () => {
                 />
             )}
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Class Management</h1>
-                    <p className="text-slate-500 text-sm mt-1">Manage classes, sections, and class teachers</p>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={fetchClasses} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-slate-50 transition">
-                        <RefreshCcw size={15} className={isLoading ? "animate-spin" : ""} /> Refresh
-                    </button>
-                    <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-emerald-700 transition shadow-sm">
-                        <Plus size={16} /> Create Class
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                icon={School}
+                title="Class Management"
+                subtitle="Manage classes, sections, and class teachers"
+                actions={
+                    <div className="flex gap-2">
+                        <button onClick={fetchClasses} className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex items-center gap-2 text-sm text-white hover:bg-white/20 transition backdrop-blur-sm">
+                            <RefreshCcw size={15} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        </button>
+                        <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm">
+                            <Plus size={16} /> Create Class
+                        </button>
+                    </div>
+                }
+            />
+            <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
 
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4">
@@ -185,6 +187,7 @@ const ClassHome = () => {
             {filtered.length > 0 && (
                 <p className="text-xs text-slate-400 text-center">Showing {filtered.length} of {classes.length} classes</p>
             )}
+            </div>
         </div>
     );
 };

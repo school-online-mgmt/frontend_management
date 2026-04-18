@@ -205,10 +205,10 @@ const ApplicantDetails: React.FC = () => {
       )}
 
       {/* Header bar */}
-      <div className="bg-slate-900 border-b border-white/[0.06] px-6 lg:px-8 py-4">
+      <div className="bg-white border-b border-slate-200 px-6 lg:px-8 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <button onClick={() => navigate('/applicants-home')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-medium transition-colors">
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
             <ArrowLeft size={16} /> Back to Applicants
           </button>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>

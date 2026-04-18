@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle, CheckCircle2, Loader2, X,
   ChevronRight, School, Layers, BookOpen, UserCheck,
-  RefreshCw, GraduationCap, Users, ClipboardList,
+  RefreshCw, GraduationCap, Users, ClipboardList, UserCog,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 interface TeacherRef  { id: string; name: string; qualification?: string }
@@ -219,7 +220,6 @@ const AssignmentsPage = () => {
   const classAssigned   = classes.filter(c => !!c.teacher).length;
   const sectionAssigned = allSections.filter(s => !!s.teacher).length;
   const subjectAssigned = totalSubjectPairs - subjectGaps.length;
-  const totalGaps = (classes.length - classAssigned) + (allSections.length - sectionAssigned) + subjectGaps.length;
 
   const q = search.trim().toLowerCase();
 
@@ -276,36 +276,24 @@ const AssignmentsPage = () => {
       )}
 
       {/* Page header */}
-      <div className="bg-slate-900 border-b border-white/[0.06] px-6 lg:px-8 py-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Staff Assignments</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              View teacher assignments across all classes, sections and subjects
-              {totalGaps > 0 && (
-                <span className="ml-2 inline-flex items-center gap-1 text-amber-600 font-semibold">
-                  <AlertTriangle size={12} /> {totalGaps} gap{totalGaps > 1 ? "s" : ""} need attention
-                </span>
-              )}
-              {totalGaps === 0 && (
-                <span className="ml-2 inline-flex items-center gap-1 text-emerald-600 font-semibold">
-                  <CheckCircle2 size={12} /> Fully covered
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+      <PageHeader
+        icon={UserCog}
+        title="Staff Assignments"
+        gradient="from-rose-600 via-pink-600 to-fuchsia-600"
+        subtitle="View teacher assignments across all classes, sections and subjects"
+        actions={
+          <div className="flex items-center gap-2">
             <button onClick={() => navigate("/teacher-home")}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition shadow-sm">
+              className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
               <Users size={14} /> Manage Teachers
             </button>
             <button onClick={load}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/10 text-slate-300 text-sm font-medium rounded-xl hover:bg-white/15 transition shadow-sm">
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 transition backdrop-blur-sm">
               <RefreshCw size={14} /> Refresh
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-6xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 

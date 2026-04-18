@@ -9,8 +9,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateExamModal from "../../components/Exam/CreateExamModal";
 import useAuth from "../../hooks/useAuth";
+import PageHeader from "../../components/PageHeader";
 
-// ── Status config ─────────────────────────────────────────────────────────────
+// --- Status config ------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; bg: string; dot: string; text: string; icon: typeof Clock }> = {
     AWAITING_SYLLABUS:  { label: "Syllabus Pending",      bg: "bg-amber-50",    dot: "bg-amber-500",   text: "text-amber-700",   icon: AlertCircle   },
     AWAITING_EXAM_DATE: { label: "Ready to Schedule",     bg: "bg-blue-50",     dot: "bg-blue-500",    text: "text-blue-700",    icon: Calendar      },
@@ -35,7 +36,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const fmt = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
-// ── Stat card ─────────────────────────────────────────────────────────────
+// --- Stat card ------------------------------------------------------------
 const StatCard = ({ label, value, sub, color, Icon }: { label: string; value: number | string; sub?: string; color: string; Icon: typeof Clock }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-lg transition-all duration-300 group">
         <div className="flex items-start justify-between">
@@ -51,7 +52,7 @@ const StatCard = ({ label, value, sub, color, Icon }: { label: string; value: nu
     </div>
 );
 
-// ── Lifecycle Pipeline ───────────────────────────────────────────────────────
+// --- Lifecycle Pipeline -------------------------------------------------------
 const LifecyclePipeline = ({ byStatus, total }: { byStatus: Record<string, number>; total: number }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <h2 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -82,7 +83,7 @@ const LifecyclePipeline = ({ byStatus, total }: { byStatus: Record<string, numbe
     </div>
 );
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// --- Main Component -----------------------------------------------------------
 const ExamHome = () => {
     const { role } = useAuth();
     const navigate = useNavigate();
@@ -190,8 +191,6 @@ const ExamHome = () => {
         return { total, byStatus, byTerm, bySubject, published, completionRate };
     }, [filteredExams]);
 
-    // publishedExams removed - was unused
-
     const activeFilters = [filterClass, filterCourse, filterSubject, filterTerm, filterStatus, searchQuery].filter(Boolean).length;
 
     const clearFilters = () => {
@@ -200,37 +199,29 @@ const ExamHome = () => {
     };
 
     return (
-        <div className="min-h-full pb-12">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                    <BookOpen size={22} />
-                                </div>
-                                <h1 className="text-3xl font-bold">Exam Management</h1>
-                            </div>
-                            <p className="text-emerald-100 text-sm">Monitor, manage and analyse all exam activity across the school</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={fetchOverview} disabled={!selectedSession || isLoading}
-                                className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex gap-2 items-center text-sm hover:bg-white/20 disabled:opacity-40 transition-all backdrop-blur-sm">
-                                <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+        <div className="min-h-full bg-slate-50 pb-12">
+            <PageHeader
+                icon={BookOpen}
+                title="Exam Management"
+                gradient="from-sky-600 via-blue-600 to-indigo-600"
+                subtitle="Monitor, manage and analyse all exam activity across the school"
+                actions={
+                    <div className="flex gap-2">
+                        <button onClick={fetchOverview} disabled={!selectedSession || isLoading}
+                            className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex gap-2 items-center text-sm hover:bg-white/20 disabled:opacity-40 transition-all backdrop-blur-sm">
+                            <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        </button>
+                        {canCreate && (
+                            <button onClick={() => setIsCreateOpen(true)}
+                                className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition-all backdrop-blur-sm">
+                                <Plus size={16} /> Create Exam
                             </button>
-                            {canCreate && (
-                                <button onClick={() => setIsCreateOpen(true)}
-                                    className="px-4 py-2 bg-white text-emerald-700 rounded-xl shadow hover:bg-emerald-50 flex items-center gap-2 text-sm font-semibold transition-all">
-                                    <Plus size={16} /> Create Exam
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
-                </div>
-            </div>
+                }
+            />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
                 {isCreateOpen && (
                     <CreateExamModal onClose={() => setIsCreateOpen(false)} onRefresh={fetchOverview}
                         setMessage={setMessage} setMessageType={setMessageType} />
@@ -338,7 +329,7 @@ const ExamHome = () => {
                     ))}
                 </div>
 
-                {/* ─────────────── DASHBOARD TAB ─────────────── */}
+                {/* Dashboard TAB */}
                 {tab === "dashboard" && (
                     <div className="space-y-6">
                         {!selectedSession ? (
@@ -531,7 +522,7 @@ const ExamHome = () => {
                     </div>
                 )}
 
-                {/* ─────────────── EXAMS TAB ─────────────── */}
+                {/* Exams TAB */}
                 {tab === "exams" && (
                     <div className="space-y-6">
                         {!selectedSession ? (
@@ -645,7 +636,7 @@ const ExamHome = () => {
     );
 };
 
-// ── Helper components ──────────────────────────────────────────────────────────
+// --- Helper components ----------------------------------------------------------
 const EmptyState = ({ icon: Icon, title, sub }: { icon: typeof Clock; title: string; sub: string }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-16 flex flex-col items-center gap-3 text-center">
         <Icon size={36} className="text-slate-200" />
@@ -680,4 +671,3 @@ const LoadingSkeleton = () => (
 );
 
 export default ExamHome;
-

@@ -5,6 +5,7 @@ import {
   Bus, MapPin, Tag,
 } from "lucide-react";
 import api from "../api/api";
+import PageHeader from "../components/PageHeader";
 
 interface Applicant {
   id: string;
@@ -181,17 +182,13 @@ const StudentAdmission = () => {
   const selectedZone = transportZones.find((z: any) => z.id === admissionData.transportZoneId);
 
   return (
-    <div className="min-h-full pb-12">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-3 mb-2">
-            <FileCheck size={32} />
-            <h1 className="text-4xl font-bold">Student Admission Management</h1>
-          </div>
-          <p className="text-emerald-100">Review applications and create admissions</p>
-        </div>
-      </div>
+    <div className="min-h-full bg-slate-50 pb-12">
+      <PageHeader
+        icon={FileCheck}
+        title="Student Admission Management"
+        gradient="from-teal-600 via-cyan-600 to-blue-600"
+        subtitle="Review applications and create admissions"
+      />
 
       <div className="max-w-7xl mx-auto px-4 mt-8">
         {/* Stats */}

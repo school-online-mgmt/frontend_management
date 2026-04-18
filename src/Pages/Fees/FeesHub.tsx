@@ -5,6 +5,7 @@ import {
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
 } from 'lucide-react';
 import api from '../../api/api';
+import PageHeader from '../../components/PageHeader';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -38,11 +39,13 @@ interface Session { id: string; name: string; slug: string; }
 export default function FeesHub() {
     const [tab, setTab] = useState<'summary' | 'course-fees' | 'transport' | 'extra' | 'invoices' | 'payments'>('summary');
     return (
-        <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-            <header>
-                <h1 className="text-3xl font-bold text-slate-900">Fee Management</h1>
-                <p className="text-slate-500 mt-1">Manage tuition fees, transport zones, extra charges and invoices</p>
-            </header>
+        <div className="min-h-full bg-slate-50">
+            <PageHeader
+                icon={CreditCard}
+                title="Fee Management"
+                subtitle="Manage tuition fees, transport zones, extra charges and invoices"
+            />
+            <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
 
             {/* Tab Bar */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
@@ -67,6 +70,7 @@ export default function FeesHub() {
             {tab === 'extra' && <ExtraChargesTab />}
             {tab === 'invoices' && <InvoicesTab />}
             {tab === 'payments' && <PaymentsTab />}
+            </div>
         </div>
     );
 }

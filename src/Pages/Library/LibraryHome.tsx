@@ -5,6 +5,7 @@ import {
     BookMarked, AlertTriangle, ClipboardList, RotateCcw, X,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 type Tab = "catalog" | "issues" | "requests" | "renewals";
 
@@ -148,20 +149,19 @@ const LibraryHome = () => {
     };
 
     return (
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex items-end justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Library Management</h1>
-                    <p className="text-slate-500 mt-1">Manage books, issues, requests & renewals</p>
-                </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl flex items-center gap-2 hover:bg-emerald-700"
-                >
-                    <Plus size={18} /> Add Book
-                </button>
-            </div>
+        <div className="min-h-full bg-slate-50">
+            <PageHeader
+                icon={BookOpen}
+                title="Library Management"
+                subtitle="Manage books, issues, requests & renewals"
+                actions={
+                    <button onClick={() => setShowAddModal(true)}
+                        className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 hover:bg-white/25 transition-all backdrop-blur-sm">
+                        <Plus size={18} /> Add Book
+                    </button>
+                }
+            />
+            <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
 
             {message && (
                 <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
@@ -578,6 +578,7 @@ const LibraryHome = () => {
                     onSuccess={(msg: string) => { showMsg("success", msg); setShowIssueModal(null); fetchRequests(); fetchStats(); fetchIssues(); }}
                 />
             )}
+            </div>
         </div>
     );
 };

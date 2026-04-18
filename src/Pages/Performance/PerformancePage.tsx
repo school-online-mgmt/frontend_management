@@ -7,6 +7,7 @@ import {
     Layers, Star,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader from "../../components/PageHeader";
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
@@ -227,21 +228,20 @@ const PerformancePage: React.FC = () => {
     ] as const;
 
     return (
-        <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
-                        <div className="p-2 bg-indigo-100 rounded-xl"><BarChart3 size={20} className="text-indigo-600" /></div>
-                        Performance Analytics
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-1 ml-11">School-wide academic performance tracking & insights</p>
-                </div>
-                <button onClick={() => { if (sessionId) { setLoading(true); api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined, term: term || undefined, studentId: studentId || undefined }).then(setData).finally(() => setLoading(false)); } }}
-                    disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 shadow-sm transition-all">
-                    <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
-                </button>
-            </div>
+        <div className="min-h-full bg-slate-50">
+            <PageHeader
+                icon={BarChart3}
+                title="Performance Analytics"
+                gradient="from-purple-600 via-violet-600 to-indigo-600"
+                subtitle="School-wide academic performance tracking & insights"
+                actions={
+                    <button onClick={() => { if (sessionId) { setLoading(true); api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined, term: term || undefined, studentId: studentId || undefined }).then(setData).finally(() => setLoading(false)); } }}
+                        disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-xs font-semibold text-white hover:bg-white/20 transition-all backdrop-blur-sm">
+                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
+                    </button>
+                }
+            />
+            <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
 
             {/* Filters */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
@@ -730,6 +730,7 @@ const PerformancePage: React.FC = () => {
                     )}
                 </>
             )}
+            </div>
         </div>
     );
 };

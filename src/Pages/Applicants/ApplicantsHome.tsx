@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../../api/api';
 import type { Applicant } from '../../api/types';
+import PageHeader from '../../components/PageHeader';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
@@ -192,19 +193,17 @@ const ApplicantsHome: React.FC = () => {
       )}
 
       {/* Page Header */}
-      <div className="bg-slate-900 border-b border-white/[0.06] px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Applicant Management</h1>
-            <p className="text-sm text-slate-400 mt-1">Review, accept or reject student applications</p>
-          </div>
+      <PageHeader
+        icon={ClipboardList}
+        title="Applicant Management"
+        subtitle="Review, accept or reject student applications"
+        actions={
           <button onClick={fetchApplicants} disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/10 text-slate-300 text-sm font-medium rounded-xl shadow-sm hover:bg-white/15 disabled:opacity-50 transition-all self-start sm:self-auto">
-            <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-bold rounded-xl hover:bg-white/20 active:scale-95 disabled:opacity-50 transition-all backdrop-blur-sm">
+            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 
