@@ -64,10 +64,11 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" data-testid="create-teacher-form">
             <div className="relative group">
               <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
+                data-testid="teacher-name-input"
                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400"
                 placeholder="Full Name *"
                 value={teacherData.name}
@@ -80,6 +81,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
               <div className="relative group">
                 <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
                 <select 
+                  data-testid="teacher-gender-select"
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all appearance-none cursor-pointer"
                   value={teacherData.gender}
                   onChange={(e) => setTeacherData({...teacherData, gender: e.target.value})}
@@ -95,6 +97,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
               <div className="relative group">
                 <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
+                  data-testid="teacher-age-input"
                   type="number"
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400" 
                   placeholder="Age *" 
@@ -111,6 +114,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
               <div className="relative group">
                 <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
+                  data-testid="teacher-phone-input"
                   type="text"
                   maxLength={10}
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400"
@@ -124,6 +128,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
               <div className="relative group">
                 <GraduationCap size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
+                  data-testid="teacher-qualification-input"
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400"
                   placeholder="Qualification *"
                   value={teacherData.qualification}
@@ -136,6 +141,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
             <div className="relative group">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
+                data-testid="teacher-email-input"
                 type="email"
                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400"
                 placeholder="Email Address"
@@ -147,6 +153,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
             <div className="relative group">
               <MapPin size={16} className="absolute left-4 top-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <textarea 
+                data-testid="teacher-address-input"
                 rows={2}
                 className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all placeholder:text-slate-400 resize-none"
                 placeholder="Residential Address"
@@ -164,7 +171,8 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
                 Discard
               </button>
               <button 
-                type="submit" 
+                data-testid="teacher-submit-btn"
+                type="submit"
                 className="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2" 
                 disabled={isSubmitting}
               >

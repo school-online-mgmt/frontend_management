@@ -194,7 +194,7 @@ const TeacherHome = () => {
               className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
               <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
             </button>
-            <button onClick={() => setIsModalOpen(true)}
+            <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
               <UserPlus size={14} /> Add Teacher
             </button>

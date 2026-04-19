@@ -56,6 +56,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
                     Add Subject to {course.name}
                 </h2>
                 <select
+                    data-testid="add-subject-select"
                     value={subjectId}
                     onChange={(e) => setSubjectId(e.target.value)}
                     className="w-full border p-2 rounded-lg mb-4"
@@ -78,6 +79,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
                     </button>
 
                     <button
+                        data-testid="add-subject-confirm-btn"
                         onClick={handleAdd}
                         className="px-3 py-2 bg-emerald-600 text-white rounded-lg"
                     >

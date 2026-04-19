@@ -63,6 +63,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                     <div>
                         <label className="text-xs font-semibold text-slate-600 block mb-1">Course Name *</label>
                         <input
+                            data-testid="course-name-input"
                             placeholder="e.g. Science Stream"
                             value={name}
                             onChange={(e) => handleNameChange(e.target.value)}
@@ -73,6 +74,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                     <div>
                         <label className="text-xs font-semibold text-slate-600 block mb-1">Slug *</label>
                         <input
+                            data-testid="course-slug-input"
                             placeholder="auto-generated from name"
                             value={slug}
                             onChange={(e) => setSlug(e.target.value)}
@@ -83,6 +85,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                     <div>
                         <label className="text-xs font-semibold text-slate-600 block mb-1">Academic Session *</label>
                         <select
+                            data-testid="course-session-select"
                             value={sessionId}
                             onChange={(e) => setSessionId(e.target.value)}
                             className="w-full border border-slate-200 p-2 rounded-lg text-sm"
@@ -97,6 +100,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                     <div>
                         <label className="text-xs font-semibold text-slate-600 block mb-1">Description</label>
                         <textarea
+                            data-testid="course-description-input"
                             placeholder="Optional description…"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
@@ -109,6 +113,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                 <div className="flex justify-end gap-3 pt-2">
                     <button onClick={onClose} className="px-4 py-2 bg-slate-100 rounded-lg text-sm">Cancel</button>
                     <button
+                        data-testid="course-submit-btn"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
                         className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50"

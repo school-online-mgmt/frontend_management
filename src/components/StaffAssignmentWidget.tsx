@@ -58,7 +58,7 @@ const AssignModal = ({
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><X size={16} /></button>
         </div>
-        <select value={selected} onChange={e => setSelected(e.target.value)}
+        <select data-testid="assign-teacher-select" value={selected} onChange={e => setSelected(e.target.value)}
           className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300">
           <option value="">Select a teacher…</option>
           {teachers.map(t => (
@@ -71,7 +71,7 @@ const AssignModal = ({
             className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
             Cancel
           </button>
-          <button onClick={handleAssign} disabled={submitting}
+          <button data-testid="assign-confirm-btn" onClick={handleAssign} disabled={submitting}
             className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
             {submitting ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
             {submitting ? "Assigning…" : "Assign"}
@@ -106,6 +106,7 @@ const AssignedBadge = ({ teacher }: { teacher: TeacherRef }) => (
 /* ── Unassigned Badge ────────────────────────────────────────────────────────*/
 const UnassignedBadge = ({ onAssign }: { onAssign: () => void }) => (
   <button onClick={onAssign}
+    data-testid="unassigned-badge"
     className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-2 py-1 hover:bg-amber-100 transition-colors group">
     <AlertTriangle size={11} />
     <span className="text-[11px] font-semibold">Unassigned</span>
@@ -208,6 +209,7 @@ const StaffAssignmentWidget = () => {
             const isActive = activeTab === tab.key;
             return (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                data-testid={`staff-tab-${tab.key}`}
                 className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-2.5 text-[11px] font-semibold transition-all border-b-2 ${
                   isActive ? "border-indigo-500 text-indigo-700 bg-indigo-50/50" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                 }`}>
