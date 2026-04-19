@@ -226,7 +226,7 @@ addTeacherToSubject = async (subjectId: string, body: { teacherId: string, secti
     return response.data;
 };
 
-removeTeacherFromSubject = async (subjectId: string, body: { teacherId: string }) => {
+removeTeacherFromSubject = async (subjectId: string, body: { teacherId: string; sectionId?: string }) => {
     const response = await apiClient.delete(`/management/subject/${subjectId}/teachers`, { data: body });
     return response.data;
 };
@@ -618,6 +618,12 @@ createStudent = async (data: {
     // Reset management user password (principal action)
     resetManagementUserPassword = async (userId: string, password: string) => {
         const res = await apiClient.patch(`/management/auth/users/${userId}/reset-password`, { password });
+        return res.data;
+    };
+
+    // Change own password (management user — verifies current password)
+    changeOwnPassword = async (currentPassword: string, newPassword: string) => {
+        const res = await apiClient.patch("/management/auth/change-password", { currentPassword, newPassword });
         return res.data;
     };
 
@@ -1043,6 +1049,52 @@ createStudent = async (data: {
 
     respondLibraryRenewal = async (id: string, action: "APPROVED" | "REJECTED", remarks?: string) => {
         const res = await apiClient.patch(`/management/library/renewals/${id}/respond`, { action, remarks });
+        return res.data;
+    };
+
+    // ── Transport Module ──────────────────────────────────────────────────────
+
+    getTransportDashboard = async (params?: { sessionId?: string }) => {
+        const res = await apiClient.get("/management/transport/dashboard", { params });
+        return res.data;
+    };
+
+    getTransportStudents = async (params?: { sessionId?: string; zoneId?: string; opted?: string; page?: number; limit?: number; search?: string }) => {
+        const res = await apiClient.get("/management/transport/students", { params });
+        return res.data;
+    };
+
+    updateStudentTransport = async (academicId: string, data: { transportOpted: boolean; transportZoneId?: string | null }) => {
+        const res = await apiClient.patch(`/management/transport/students/${academicId}`, data);
+        return res.data;
+    };
+
+    getTransportBusDetails = async (params?: { zoneId?: string }) => {
+        const res = await apiClient.get("/management/transport/bus-details", { params });
+        return res.data;
+    };
+
+    createBusDetail = async (data: {
+        zoneId: string; busNumber: string; driverName: string; driverPhone?: string;
+        conductorName?: string; conductorPhone?: string; capacity?: number;
+        routeDescription?: string; pickupTime?: string; dropTime?: string; vehicleType?: string;
+    }) => {
+        const res = await apiClient.post("/management/transport/bus-details", data);
+        return res.data;
+    };
+
+    updateBusDetail = async (id: string, data: Partial<{
+        busNumber: string; driverName: string; driverPhone: string;
+        conductorName: string; conductorPhone: string; capacity: number;
+        routeDescription: string; pickupTime: string; dropTime: string;
+        vehicleType: string; isActive: boolean;
+    }>) => {
+        const res = await apiClient.patch(`/management/transport/bus-details/${id}`, data);
+        return res.data;
+    };
+
+    deleteBusDetail = async (id: string) => {
+        const res = await apiClient.delete(`/management/transport/bus-details/${id}`);
         return res.data;
     };
 }

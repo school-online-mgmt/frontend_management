@@ -35,6 +35,7 @@ import LibraryHome from "./Pages/Library/LibraryHome.tsx";
 import BookDetailsPage from "./Pages/Library/BookDetails.tsx";
 import SectionDetails from "./Pages/Section/SectionDetails.tsx";
 import StaffHome from "./Pages/Staff/StaffHome.tsx";
+import TransportHub from "./Pages/Transport/TransportHub.tsx";
 
 function App() {
   return (
@@ -81,6 +82,7 @@ function App() {
             <Route path="/library" element={<LibraryHome />} />
             <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
             <Route path="/staff" element={<StaffHome />} />
+            <Route path="/transport" element={<TransportHub />} />
           </Route>
         </Route>
 
