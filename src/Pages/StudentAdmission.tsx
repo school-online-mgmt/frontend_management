@@ -206,9 +206,9 @@ const StudentAdmission = () => {
         subtitle="Review applications and create admissions"
       />
 
-      <div className="max-w-7xl mx-auto px-4 mt-8">
+      <div className="max-w-7xl mx-auto px-4 mt-8" data-testid="admission-page">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" data-testid="stats-grid">
           {[
             { label: "Pending",  value: applicants.filter(a => a.status === "APPLIED").length,   icon: AlertCircle, color: "text-amber-500" },
             { label: "Accepted", value: applicants.filter(a => a.status === "ACCEPTED").length,  icon: CheckCircle, color: "text-emerald-600" },
@@ -233,6 +233,8 @@ const StudentAdmission = () => {
             <div className="md:col-span-2 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
+                id="search-input"
+                data-testid="search-input"
                 type="text"
                 placeholder="Search by name, email, or phone..."
                 value={searchQuery}
@@ -243,6 +245,8 @@ const StudentAdmission = () => {
             <div className="relative">
               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <select
+                id="status-filter"
+                data-testid="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white"
@@ -285,11 +289,11 @@ const StudentAdmission = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3" data-testid="applicants-list">
             {filteredApplicants.map((applicant) => {
               const badge = getStatusBadge(applicant.status);
               return (
-                <div key={applicant.id} className="bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-100 transition-all overflow-hidden">
+                <div key={applicant.id} data-testid={`applicant-row-${applicant.id}`} className="bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-100 transition-all overflow-hidden">
                   <div className="p-5">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                       <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -329,16 +333,19 @@ const StudentAdmission = () => {
 
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setSelectedApplicant(applicant)}
+                        data-testid={`view-btn-${applicant.id}`}
                         className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
                         <Eye size={15} /> View Details
                       </button>
                       {applicant.status === "APPLIED" && (
                         <>
                           <button onClick={() => { setSelectedApplicant(applicant); setShowAdmissionForm(true); }}
+                            data-testid={`create-admission-btn-${applicant.id}`}
                             className="flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
                             <UserPlus size={15} /> Create Admission
                           </button>
                           <button onClick={() => handleRejectApplication(applicant.id)}
+                            data-testid={`reject-btn-${applicant.id}`}
                             className="flex items-center gap-1.5 bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition text-sm font-medium">
                             <XCircle size={15} /> Reject
                           </button>
@@ -432,7 +439,7 @@ const StudentAdmission = () => {
                   {/* Session */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Session <span className="text-red-500">*</span></label>
-                    <select value={admissionData.sessionId}
+                    <select id="session-select" data-testid="session-select" value={admissionData.sessionId}
                       onChange={(e) => setAdmissionData({ ...admissionData, sessionId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <option value="">Select Session</option>
@@ -442,7 +449,7 @@ const StudentAdmission = () => {
                   {/* Class */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Class <span className="text-red-500">*</span></label>
-                    <select value={admissionData.classId} disabled={!admissionData.sessionId}
+                    <select id="class-select" data-testid="class-select" value={admissionData.classId} disabled={!admissionData.sessionId}
                       onChange={(e) => setAdmissionData({ ...admissionData, classId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed bg-white">
                       <option value="">{!admissionData.sessionId ? "Select a session first" : "Select Class"}</option>
@@ -452,7 +459,7 @@ const StudentAdmission = () => {
                   {/* Section */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Section <span className="text-red-500">*</span></label>
-                    <select value={admissionData.sectionId} disabled={!admissionData.classId}
+                    <select id="section-select" data-testid="section-select" value={admissionData.sectionId} disabled={!admissionData.classId}
                       onChange={(e) => setAdmissionData({ ...admissionData, sectionId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed bg-white">
                       <option value="">{!admissionData.classId ? "Select a class first" : "Select Section"}</option>
@@ -462,7 +469,7 @@ const StudentAdmission = () => {
                   {/* Course */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Course <span className="text-red-500">*</span></label>
-                    <select value={admissionData.courseId} disabled={!admissionData.classId}
+                    <select id="course-select" data-testid="course-select" value={admissionData.courseId} disabled={!admissionData.classId}
                       onChange={(e) => setAdmissionData({ ...admissionData, courseId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed bg-white">
                       <option value="">{!admissionData.classId ? "Select a class first" : "Select Course"}</option>
@@ -472,13 +479,13 @@ const StudentAdmission = () => {
                   {/* Admission ID */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Admission ID</label>
-                    <input type="text" value={admissionData.admissionId} readOnly
+                    <input id="admission-id" data-testid="admission-id" type="text" value={admissionData.admissionId} readOnly
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                   </div>
                   {/* Roll No */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Roll Number</label>
-                    <input type="text" value={admissionData.rollNo} readOnly
+                    <input id="roll-no" data-testid="roll-no" type="text" value={admissionData.rollNo} readOnly
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                   </div>
                 </div>
@@ -589,11 +596,11 @@ const StudentAdmission = () => {
 
               {/* Actions */}
               <div className="flex gap-3 pt-2 border-t border-slate-100">
-                <button onClick={() => handleCreateAdmission(selectedApplicant)}
+                <button data-testid="confirm-admission-btn" onClick={() => handleCreateAdmission(selectedApplicant)}
                   className="flex-1 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition text-sm font-semibold">
                   Confirm Admission
                 </button>
-                <button onClick={() => setShowAdmissionForm(false)}
+                <button data-testid="cancel-admission-btn" onClick={() => setShowAdmissionForm(false)}
                   className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-200 transition text-sm font-medium">
                   Cancel
                 </button>
