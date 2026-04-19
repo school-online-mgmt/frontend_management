@@ -146,6 +146,22 @@ const StudentAdmission = () => {
   };
 
   const handleCreateAdmission = async (applicant: Applicant) => {
+    if (!admissionData.sessionId) {
+      setError("Session is required. Please select a session.");
+      return;
+    }
+    if (!admissionData.classId) {
+      setError("Class is required. Please select a class.");
+      return;
+    }
+    if (!admissionData.sectionId) {
+      setError("Section is required. Please select a section.");
+      return;
+    }
+    if (!admissionData.courseId) {
+      setError("Course is required. Please select a course.");
+      return;
+    }
     if (admissionData.transportOpted && !admissionData.transportZoneId) {
       setError("Please select a transport zone when transport is opted.");
       return;

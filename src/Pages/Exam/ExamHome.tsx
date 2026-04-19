@@ -340,9 +340,9 @@ const ExamHome = () => {
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers have been created for this session yet" />
                         ) : (
                             <>
-                                {/* ⚡ Action Required — pinned to top */}
+                                {/* Action Required -- pinned to top */}
                                 {(stats.byStatus["AWAITING_SYLLABUS"] ?? 0) > 0 && (
-                                    <div className="bg-gradient-to-r from-amber-400 to-orange-300 rounded-2xl shadow-md shadow-amber-100 p-2">
+                                    <div className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl shadow-md shadow-amber-100 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <h2 className="text-sm font-bold text-white flex items-center gap-2">
                                                 <AlertCircle size={17} className="animate-pulse" />
