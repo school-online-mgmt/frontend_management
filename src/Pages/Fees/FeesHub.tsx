@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CreditCard, BookOpen, Bus, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
+    CreditCard, BookOpen, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
 } from 'lucide-react';
 import api from '../../api/api';
@@ -26,7 +26,6 @@ const currentYear = new Date().getFullYear();
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface CourseFee { id: string; courseId: string; courseName: string; courseSlug: string; tuitionFee: number; }
-interface Zone { id: string; name: string; description?: string; price: number; }
 interface ExtraCharge { id: string; studentId: string; academicId: string; type: string; description?: string; amount: number; month: number; year: number; studentFirstName: string; studentLastName: string; }
 interface Invoice { id: string; invoiceNo: string; month: number; year: number; dueDate: string; tuitionFee: number; transportFee: number; extraChargesTotal: number; totalAmount: number; paidAmount: number; status: string; studentId: string; studentFirstName: string; studentLastName: string; studentPhone: string; }
 interface Summary { totalInvoices: number; totalDemand: number; totalCollected: number; outstanding: number; pending: number; partiallyPaid: number; paid: number; overdue: number; waived: number; cancelled: number; }
@@ -37,13 +36,13 @@ interface Session { id: string; name: string; slug: string; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeesHub() {
-    const [tab, setTab] = useState<'summary' | 'course-fees' | 'transport' | 'extra' | 'invoices' | 'payments'>('summary');
+    const [tab, setTab] = useState<'summary' | 'course-fees' | 'extra' | 'invoices' | 'payments'>('summary');
     return (
         <div className="min-h-full bg-slate-50">
             <PageHeader
                 icon={CreditCard}
                 title="Fee Management"
-                subtitle="Manage tuition fees, transport zones, extra charges and invoices"
+                subtitle="Manage tuition fees, extra charges and invoices"
             />
             <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
 
@@ -52,7 +51,6 @@ export default function FeesHub() {
                 {[
                     { key: 'summary', label: 'Summary', icon: TrendingUp },
                     { key: 'course-fees', label: 'Course Fees', icon: BookOpen },
-                    { key: 'transport', label: 'Transport Zones', icon: Bus },
                     { key: 'extra', label: 'Extra Charges', icon: AlertCircle },
                     { key: 'invoices', label: 'Invoices', icon: CreditCard },
                     { key: 'payments', label: 'Payments', icon: Wallet },
@@ -66,7 +64,6 @@ export default function FeesHub() {
 
             {tab === 'summary' && <SummaryTab />}
             {tab === 'course-fees' && <CourseFeesTab />}
-            {tab === 'transport' && <TransportTab />}
             {tab === 'extra' && <ExtraChargesTab />}
             {tab === 'invoices' && <InvoicesTab />}
             {tab === 'payments' && <PaymentsTab />}
@@ -439,78 +436,6 @@ function PaymentsTab() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-function TransportTab() {
-    const [zones, setZones] = useState<Zone[]>([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editing, setEditing] = useState<Zone | null>(null);
-    const [name, setName] = useState(''); const [desc, setDesc] = useState(''); const [price, setPrice] = useState('');
-    const [saving, setSaving] = useState(false);
-
-    const reload = () => api.getTransportZones().then(d => setZones(d.zones || [])).catch(() => {});
-    useEffect(() => { reload(); }, []);
-
-    const openCreate = () => { setEditing(null); setName(''); setDesc(''); setPrice(''); setShowForm(true); };
-    const openEdit = (z: Zone) => { setEditing(z); setName(z.name); setDesc(z.description || ''); setPrice(String(z.price)); setShowForm(true); };
-    const save = async () => {
-        if (!name || !price) return;
-        setSaving(true);
-        try {
-            if (editing) await api.updateTransportZone(editing.id, { name, description: desc, price: Number.parseInt(price) });
-            else await api.createTransportZone({ name, description: desc, price: Number.parseInt(price) });
-            await reload(); setShowForm(false);
-        } catch { /* ignored */ } finally { setSaving(false); }
-    };
-    const del = async (id: string) => { if (!confirm('Delete zone?')) return; await api.deleteTransportZone(id); await reload(); };
-
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">Each zone has a monthly transport fee charged to opted-in students.</p>
-                <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
-                    <Plus size={16} /> Add Zone
-                </button>
-            </div>
-
-            {showForm && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h3 className="font-semibold text-slate-800">{editing ? 'Edit Zone' : 'New Transport Zone'}</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div><label className="block text-xs font-medium text-slate-600 mb-1">Zone Name</label>
-                            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Zone A" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
-                        <div><label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
-                            <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Optional description" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
-                        <div><label className="block text-xs font-medium text-slate-600 mb-1">Monthly Price (₹)</label>
-                            <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g. 800" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={save} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
-                            <Save size={15}/>{saving?'Saving…':'Save'}
-                        </button>
-                        <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {zones.length === 0 && <p className="text-slate-400 text-sm col-span-3">No transport zones configured.</p>}
-                {zones.map(z => (
-                    <div key={z.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                            <div><h3 className="font-bold text-slate-800">{z.name}</h3>
-                                {z.description && <p className="text-xs text-slate-500 mt-0.5">{z.description}</p>}</div>
-                            <div className="flex gap-1">
-                                <button onClick={() => openEdit(z)} className="p-1.5 hover:bg-slate-100 rounded text-slate-400"><Edit3 size={14}/></button>
-                                <button onClick={() => del(z.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
-                            </div>
-                        </div>
-                        <div className="mt-3 text-xl font-bold text-emerald-700">{fmt(z.price)}<span className="text-sm font-normal text-slate-500">/month</span></div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXTRA CHARGES TAB
@@ -652,19 +577,32 @@ function InvoicesTab() {
     const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [showGenerate, setShowGenerate] = useState(false);
     const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
     const [generating, setGenerating] = useState(false);
     const [genProgress, setGenProgress] = useState<{ generated: number; skipped: number; processed: number; total: number } | null>(null);
-    const [filterMonth, setFilterMonth] = useState(''); const [filterYear, setFilterYear] = useState(String(currentYear));
+    // Default year to '' so ALL invoices load on first visit
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterYear, setFilterYear] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
 
     const reload = useCallback(async () => {
-        const p: Record<string, unknown> = {};
-        if (filterMonth) p.month = Number.parseInt(filterMonth);
-        if (filterYear) p.year = Number.parseInt(filterYear);
-        if (filterStatus) p.status = filterStatus;
-        api.getFeeInvoices(p as any).then(d => setInvoices(d.invoices || [])).catch(() => {});
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const p: Record<string, unknown> = {};
+            if (filterMonth) p.month = Number.parseInt(filterMonth);
+            if (filterYear) p.year = Number.parseInt(filterYear);
+            if (filterStatus) p.status = filterStatus;
+            const data = await api.getFeeInvoices(p as any);
+            setInvoices(data.invoices || []);
+        } catch (err: any) {
+            setLoadError(err?.response?.data?.message || 'Failed to load invoices. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     }, [filterMonth, filterYear, filterStatus]);
 
     useEffect(() => { reload(); }, [reload]);
@@ -700,20 +638,32 @@ function InvoicesTab() {
                 <div className="flex gap-3 items-end flex-wrap">
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
                         <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                            <option value="">All</option>
+                            <option value="">All Months</option>
                             {MONTHS.map((m,i) => <option key={i+1} value={String(i+1)}>{m}</option>)}
                         </select></div>
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Year</label>
                         <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                            {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
+                            <option value="">All Years</option>
+                            {[currentYear-2, currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
                         </select></div>
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
                         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
                             <option value="">All Statuses</option>
                             {STATUSES.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}
                         </select></div>
+                    {(filterMonth || filterYear || filterStatus) && (
+                        <button
+                            onClick={() => { setFilterMonth(''); setFilterYear(''); setFilterStatus(''); }}
+                            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-500 rounded-lg text-sm hover:bg-slate-50"
+                        >
+                            <RotateCcw size={13}/> Clear
+                        </button>
+                    )}
                 </div>
                 <div className="flex gap-2">
+                    <button onClick={() => reload()} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm hover:bg-slate-50">
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> Refresh
+                    </button>
                     <button onClick={markOverdue} className="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50">
                         <AlertTriangle size={15}/> Mark Overdue
                     </button>
@@ -723,8 +673,17 @@ function InvoicesTab() {
                 </div>
             </div>
 
+            {/* Error banner */}
+            {loadError && (
+                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+                    <AlertTriangle size={16} className="shrink-0"/>
+                    <span className="flex-1">{loadError}</span>
+                    <button onClick={() => reload()} className="text-xs font-semibold underline hover:no-underline">Retry</button>
+                </div>
+            )}
+
             {/* Outstanding banner */}
-            {totalOutstanding > 0 && (
+            {!loading && totalOutstanding > 0 && (
                 <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
                     <AlertTriangle size={16}/>
                     <span>Outstanding balance: <strong>{fmt(totalOutstanding)}</strong> across {invoices.filter(i => !['PAID','WAIVED','CANCELLED'].includes(i.status)).length} invoice(s)</span>
@@ -782,32 +741,54 @@ function InvoicesTab() {
 
             {/* Invoices Table */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>{['Invoice No','Student','Month/Year','Due','Total','Paid','Balance','Status','Actions'].map(h => <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>)}</tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {invoices.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400">No invoices found</td></tr>}
-                        {invoices.map(inv => (
-                            <tr key={inv.id} className="hover:bg-slate-50">
-                                <td className="px-3 py-3 font-mono text-xs font-bold text-slate-700">{inv.invoiceNo}</td>
-                                <td className="px-3 py-3 font-medium">{inv.studentFirstName} {inv.studentLastName}</td>
-                                <td className="px-3 py-3 text-slate-500">{MONTHS[inv.month-1]} {inv.year}</td>
-                                <td className="px-3 py-3 text-slate-500 text-xs">{new Date(inv.dueDate).toLocaleDateString('en-IN')}</td>
-                                <td className="px-3 py-3 font-semibold">{fmt(inv.totalAmount)}</td>
-                                <td className="px-3 py-3 text-green-700">{fmt(inv.paidAmount)}</td>
-                                <td className="px-3 py-3 text-red-600 font-semibold">{fmt(inv.totalAmount - inv.paidAmount)}</td>
-                                <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[inv.status]}`}>{inv.status.replaceAll('_', ' ')}</span></td>
-                                <td className="px-3 py-3">
-                                    <button onClick={() => navigate(`/fees/invoice/${inv.id}`)} className="p-1.5 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600 transition-colors">
-                                        <Eye size={14}/>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                {loading ? (
+                    <div className="flex items-center justify-center gap-3 py-16 text-slate-400">
+                        <RefreshCw size={18} className="animate-spin" />
+                        <span className="text-sm">Loading invoices…</span>
+                    </div>
+                ) : (
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                            <tr>{['Invoice No','Student','Month/Year','Due','Total','Paid','Balance','Status','Actions'].map(h => <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>)}</tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {invoices.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className="px-4 py-12 text-center">
+                                        <CreditCard size={28} className="mx-auto text-slate-300 mb-2" />
+                                        <p className="text-sm text-slate-400 font-medium">No invoices found</p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            {filterMonth || filterYear || filterStatus
+                                                ? 'Try clearing the filters above.'
+                                                : 'Generate invoices using the button above.'}
+                                        </p>
+                                    </td>
+                                </tr>
+                            )}
+                            {invoices.map(inv => (
+                                <tr key={inv.id} className="hover:bg-slate-50">
+                                    <td className="px-3 py-3 font-mono text-xs font-bold text-slate-700">{inv.invoiceNo}</td>
+                                    <td className="px-3 py-3 font-medium">{inv.studentFirstName} {inv.studentLastName}</td>
+                                    <td className="px-3 py-3 text-slate-500">{MONTHS[inv.month-1]} {inv.year}</td>
+                                    <td className="px-3 py-3 text-slate-500 text-xs">{new Date(inv.dueDate).toLocaleDateString('en-IN')}</td>
+                                    <td className="px-3 py-3 font-semibold">{fmt(inv.totalAmount)}</td>
+                                    <td className="px-3 py-3 text-green-700">{fmt(inv.paidAmount)}</td>
+                                    <td className="px-3 py-3 text-red-600 font-semibold">{fmt(inv.totalAmount - inv.paidAmount)}</td>
+                                    <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[inv.status]}`}>{inv.status.replaceAll('_', ' ')}</span></td>
+                                    <td className="px-3 py-3">
+                                        <button onClick={() => navigate(`/fees/invoice/${inv.id}`)} className="p-1.5 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600 transition-colors">
+                                            <Eye size={14}/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
+            {!loading && invoices.length > 0 && (
+                <p className="text-xs text-slate-400 text-right">{invoices.length} invoice{invoices.length !== 1 ? 's' : ''} shown</p>
+            )}
         </div>
     );
 }
