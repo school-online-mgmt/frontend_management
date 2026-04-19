@@ -15,7 +15,7 @@ import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import ExamReport from "../../components/Exam/ExamReport";
 
-// â”€â”€â”€ Status badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Status badge ---
 const STATUS_CONFIG: Record<string, {
     label: string; className: string; icon: ReactElement | null; description: string;
 }> = {
@@ -66,18 +66,18 @@ const StatusBadge = ({ status }: { status: string }) => {
     );
 };
 
-// â”€â”€â”€ Info card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Info card ---
 const InfoItem = ({ icon, label, value }: { icon: ReactElement; label: string; value: string | number | null | undefined }) => (
     <div className="flex items-start gap-3">
         <div className="mt-0.5 text-slate-400">{icon}</div>
         <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
-            <p className="text-slate-800 font-medium mt-0.5">{value ?? "â€”"}</p>
+            <p className="text-slate-800 font-medium mt-0.5">{value ?? "-"}</p>
         </div>
     </div>
 );
 
-// â”€â”€â”€ Workflow step indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Workflow step indicator ---
 const STEPS = [
     { key: "AWAITING_SYLLABUS", label: "Syllabus" },
     { key: "AWAITING_EXAM_DATE", label: "Scheduling" },
@@ -116,7 +116,7 @@ const WorkflowStepper = ({ status }: { status: string }) => {
     );
 };
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Main Component ---
 const ExamDetails = () => {
     const { examId } = useParams() as { examId: string };
     const { role } = useAuth();
@@ -196,7 +196,7 @@ const ExamDetails = () => {
         try {
             setCompletingAttendance(true);
             await api.completeAttendance(examId);
-            setMessage("Attendance completed â€” exam status transitioned to Grading In Progress.");
+            setMessage("Attendance completed - exam status transitioned to Grading In Progress.");
             setMessageType("success");
             fetchExam();
         } catch (err: any) {
@@ -241,7 +241,7 @@ const ExamDetails = () => {
 
     const statusCfg = STATUS_CONFIG[exam.status] ?? { description: "" };
 
-    // â”€â”€ Action visibility rules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- Action visibility rules ---
     // Add Syllabus: teacher or principal when status is AWAITING_SYLLABUS
     const canAddSyllabus = exam.status === "AWAITING_SYLLABUS"
         && (isTeacher || isPrincipalOrAdmin);
@@ -305,12 +305,12 @@ const ExamDetails = () => {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
-                        <span>{exam.session?.name ?? "â€”"}</span>
-                        <span>Â·</span>
+                        <span>{exam.session?.name ?? "-"}</span>
+                        <span>/</span>
                         <span>{exam.examTerm}</span>
                     </div>
                     <h1 className="text-2xl font-bold text-slate-900">{exam.examName}</h1>
-                    <p className="text-slate-500 mt-0.5">{exam.subject?.name ?? "â€”"}</p>
+                    <p className="text-slate-500 mt-0.5">{exam.subject?.name ?? "-"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <StatusBadge status={exam.status} />
@@ -394,8 +394,8 @@ const ExamDetails = () => {
                 }`}>
                     <p className="font-semibold text-slate-800 mb-1">
                         {exam.status === "AWAITING_SYLLABUS"
-                            ? "âš ï¸ Action Required: Submit Syllabus"
-                            : "ðŸ“… Action Required: Schedule Exam"}
+                        ? "Action Required: Submit Syllabus"
+                            : "Action Required: Schedule Exam"}
                     </p>
                     <p className="text-sm text-slate-600 mb-4">
                         {exam.status === "AWAITING_SYLLABUS"
@@ -477,7 +477,7 @@ const ExamDetails = () => {
                 )}
             </div>
 
-            {/* Results Overview â€” show for AWAITING_RESULT and PUBLISHED */}
+            {/* Results Overview - show for AWAITING_RESULT and PUBLISHED */}
             {(exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED") && (
                 <div className="bg-white rounded-2xl border overflow-hidden">
                     <div className="p-6 border-b bg-slate-50">
@@ -496,17 +496,17 @@ const ExamDetails = () => {
                                         {examResults.length} Total
                                     </span>
                                     <span className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
-                                        âœ“ {present.length} Present
+                                        {present.length} Present
                                     </span>
                                     <span className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700">
-                                        âœ— {absent.length} Absent
+                                        {absent.length} Absent
                                     </span>
                                     <span className={`px-3 py-1.5 rounded-lg border ${
                                         marksMissing === 0
                                             ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                                             : "bg-amber-50 border-amber-200 text-amber-700"
                                     }`}>
-                                        ðŸ“ {marksEntered.length}/{present.length} marks entered
+                                        {marksEntered.length}/{present.length} marks entered
                                     </span>
                                 </div>
                             );
@@ -536,21 +536,21 @@ const ExamDetails = () => {
                                     {examResults.map((r: any) => (
                                         <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
                                             <td className="px-5 py-3 font-medium text-slate-800">
-                                                {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "â€”"}
+                                                {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "-"}
                                             </td>
                                             <td className="px-5 py-3 text-slate-600">
-                                                {r.rollNo || r.academic?.rollNo || "â€”"}
+                                                {r.rollNo || r.academic?.rollNo || "-"}
                                             </td>
                                             <td className="px-5 py-3 text-slate-600">
-                                                {r.sectionName || r.academic?.section?.name || "â€”"}
+                                                {r.sectionName || r.academic?.section?.name || "-"}
                                             </td>
                                             <td className="px-5 py-3">
                                                 {r.attendanceStatus === "PRESENT" ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">âœ“ Present</span>
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Present</span>
                                                 ) : r.attendanceStatus === "ABSENT" ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">âœ— Absent</span>
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Absent</span>
                                                 ) : (
-                                                    <span className="text-slate-400">â€”</span>
+                                                    <span className="text-slate-400">-</span>
                                                 )}
                                             </td>
                                             <td className="px-5 py-3">
@@ -562,7 +562,7 @@ const ExamDetails = () => {
                                                     <span className="text-amber-600 text-xs font-medium">Pending</span>
                                                 )}
                                             </td>
-                                            <td className="px-5 py-3 text-slate-500 text-xs">{r.remarks || "â€”"}</td>
+                                                <td className="px-5 py-3 text-slate-500 text-xs">{r.remarks || "-"}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -572,7 +572,7 @@ const ExamDetails = () => {
                 </div>
             )}
 
-            {/* Exam Performance Report â€” only for PUBLISHED exams */}
+            {/* Exam Performance Report - only for PUBLISHED exams */}
             {exam.status === "PUBLISHED" && (
                 <ExamReport examId={examId} />
             )}

@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+import React from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, LogOut, School, Users,
   UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
-  GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight,
+  GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
+  KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
+import api from "../api/api";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
 const NAV_SECTIONS = [
@@ -89,12 +92,111 @@ const NAV_SECTIONS = [
     collapsible: true,
     items: [
       { path: "/fees", label: "Fee Management", icon: CreditCard },
+      { path: "/transport", label: "Transport", icon: Bus },
     ],
   },
 ];
 
 const getInitials = (first?: string, last?: string) =>
   `${first?.charAt(0) ?? ""}${last?.charAt(0) ?? ""}`.toUpperCase() || "A";
+
+/* ── Change Password Modal ──────────────────────────────────────────────── */
+const ChangePasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
+    setIsSubmitting(true);
+    try {
+      await api.changeOwnPassword(currentPassword, newPassword);
+      setSuccess(true);
+      setTimeout(onClose, 1500);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to change password.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <KeyRound size={20} className="text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Change Password</h2>
+              <p className="text-xs text-slate-500">Update your account password</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        {success ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+              <KeyRound size={22} className="text-emerald-600" />
+            </div>
+            <p className="text-sm font-semibold text-emerald-700">Password changed successfully!</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">{error}</div>
+            )}
+            {[
+              { label: "Current Password", value: currentPassword, setter: setCurrentPassword, show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+              { label: "New Password", value: newPassword, setter: setNewPassword, show: showNew, toggle: () => setShowNew(v => !v) },
+              { label: "Confirm New Password", value: confirmPassword, setter: setConfirmPassword, show: showConfirm, toggle: () => setShowConfirm(v => !v) },
+            ].map(({ label, value, setter, show, toggle }) => (
+              <div key={label}>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>
+                <div className="relative">
+                  <input
+                    type={show ? "text" : "password"}
+                    value={value}
+                    onChange={e => setter(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 pr-10 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"
+                    placeholder={`Enter ${label.toLowerCase()}`}
+                  />
+                  <button type="button" onClick={toggle}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {show ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={onClose}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                {isSubmitting ? "Changing..." : "Change Password"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /* ── Layout Component ──────────────────────────────────────────────────── */
 const Layout = () => {
@@ -105,6 +207,7 @@ const Layout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const NAV_SCROLL_KEY = "nav_scroll_top";
@@ -340,6 +443,7 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
+      {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
         <SidebarContent />
@@ -397,8 +501,9 @@ const Layout = () => {
                     <p className="text-[10px] text-slate-400">{user?.email ?? "admin@school.edu"}</p>
                   </div>
                   <div className="py-0.5">
-                    <button className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50 transition-colors">
-                      <Settings size={13} className="text-slate-400" /> Settings
+                    <button onClick={() => { setChangePasswordOpen(true); setProfileOpen(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50 transition-colors">
+                      <KeyRound size={13} className="text-slate-400" /> Change Password
                     </button>
                     <button className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50 transition-colors">
                       <HelpCircle size={13} className="text-slate-400" /> Help & Support

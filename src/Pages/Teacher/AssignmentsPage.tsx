@@ -5,6 +5,7 @@ import {
   ChevronRight, School, BookOpen, UserCheck,
   RefreshCw, GraduationCap, Users, ClipboardList, UserCog,
   UserMinus, Edit2, ChevronDown, Layers, Shield, Info,
+  Search, Award,
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
@@ -38,9 +39,13 @@ const AssignModal = ({
   const [selected, setSelected] = useState(target.currentTeacherId ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [unassigning, setUnassigning] = useState(false);
+  const [unassignConfirm, setUnassignConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
   const isReassign = !!target.currentTeacherId;
+
+  const currentTeacher = teachers.find(t => t.id === target.currentTeacherId);
 
   const filteredTeachers = teachers.filter(t => {
     if (!search.trim()) return true;
@@ -49,7 +54,8 @@ const AssignModal = ({
   });
 
   const handleAssign = async () => {
-    if (!selected) { setError("Please select a teacher"); return; }
+    if (!selected) { setError("Please select a teacher first."); return; }
+    if (selected === target.currentTeacherId) { setError("This teacher is already assigned."); return; }
     setSubmitting(true); setError("");
     try {
       if (target.type === "class") {
@@ -60,13 +66,15 @@ const AssignModal = ({
         await api.updateSubject(target.subjectId, { teacherId: selected });
       } else {
         if (target.currentTeacherId) {
-          await api.removeTeacherFromSubject(target.subjectId, { teacherId: target.currentTeacherId });
+          await api.removeTeacherFromSubject(target.subjectId, { teacherId: target.currentTeacherId, sectionId: target.sectionId });
         }
         await api.addTeacherToSubject(target.subjectId, { teacherId: selected, sectionId: target.sectionId });
       }
-      onDone();
+      const teacherName = teachers.find(t => t.id === selected)?.name ?? "Teacher";
+      setSuccess(`${teacherName} assigned successfully.`);
+      setTimeout(() => { onDone(); }, 900);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Assignment failed");
+      setError(e?.response?.data?.message ?? "Assignment failed. Please try again.");
     } finally { setSubmitting(false); }
   };
 
@@ -80,66 +88,200 @@ const AssignModal = ({
       } else if (target.type === "subject-incharge") {
         await api.updateSubject(target.subjectId, { teacherId: null });
       } else if (target.currentTeacherId) {
-        await api.removeTeacherFromSubject(target.subjectId, { teacherId: target.currentTeacherId });
+        await api.removeTeacherFromSubject(target.subjectId, { teacherId: target.currentTeacherId, sectionId: target.sectionId });
       }
-      onDone();
+      setSuccess("Teacher unassigned successfully.");
+      setTimeout(() => { onDone(); }, 900);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Unassignment failed");
+      setError(e?.response?.data?.message ?? "Unassignment failed. Please try again.");
+      setUnassignConfirm(false);
     } finally { setUnassigning(false); }
   };
 
+  const typeLabel = target.type === "class" ? "Class Teacher"
+    : target.type === "section" ? "Section Teacher"
+    : target.type === "subject-incharge" ? "Subject Incharge"
+    : "Section Mapping";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">{isReassign ? "Change Teacher" : "Assign Teacher"}</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{target.label}</p>
+        <div className="px-6 py-4 border-b border-slate-100 shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isReassign ? "bg-amber-100" : "bg-emerald-100"}`}>
+                <UserCheck size={18} className={isReassign ? "text-amber-600" : "text-emerald-600"} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">
+                  {isReassign ? "Change Teacher" : "Assign Teacher"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  <span className="font-medium text-indigo-600">{typeLabel}</span> · {target.label}
+                </p>
+              </div>
             </div>
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"><X size={16} /></button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          {/* Search teachers */}
-          <input
-            type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search teachers by name or qualification…"
-            className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-slate-50 placeholder-slate-400"
-          />
-
-          {/* Teacher select */}
-          <select value={selected} onChange={e => setSelected(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white">
-            <option value="">Select a teacher…</option>
-            {filteredTeachers.map(t => (
-              <option key={t.id} value={t.id}>{t.name}{t.qualification ? ` (${t.qualification})` : ""}</option>
-            ))}
-          </select>
-
-          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-
-          <div className="flex gap-2 pt-1">
-            {isReassign && (
-              <button onClick={handleUnassign} disabled={unassigning || submitting}
-                className="px-3.5 py-2.5 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                {unassigning ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
-                {unassigning ? "Removing…" : "Unassign"}
-              </button>
-            )}
             <button onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-              Cancel
-            </button>
-            <button onClick={handleAssign} disabled={submitting || unassigning}
-              className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
-              {submitting ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
-              {submitting ? (isReassign ? "Changing…" : "Assigning…") : (isReassign ? "Change" : "Assign")}
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors shrink-0">
+              <X size={16} />
             </button>
           </div>
         </div>
+
+        {/* Success state */}
+        {success && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 py-10 px-6">
+            <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
+              <CheckCircle2 size={28} className="text-emerald-600" />
+            </div>
+            <p className="text-sm font-semibold text-slate-800 text-center">{success}</p>
+            <Loader2 size={16} className="animate-spin text-slate-400 mt-1" />
+          </div>
+        )}
+
+        {/* Unassign confirm */}
+        {!success && unassignConfirm && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 py-10 px-6">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+              <UserMinus size={26} className="text-red-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-slate-800">Remove {currentTeacher?.name ?? "this teacher"}?</p>
+              <p className="text-xs text-slate-500 mt-1">
+                This will unassign them from <span className="font-medium">{target.label}</span>. You can reassign later.
+              </p>
+            </div>
+            {error && (
+              <div className="w-full flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <AlertTriangle size={13} className="text-red-500 shrink-0" />
+                <p className="text-xs text-red-700">{error}</p>
+              </div>
+            )}
+            <div className="flex gap-2 w-full">
+              <button onClick={() => { setUnassignConfirm(false); setError(""); }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleUnassign} disabled={unassigning}
+                className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+                {unassigning ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
+                {unassigning ? "Removing…" : "Yes, Remove"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main form */}
+        {!success && !unassignConfirm && (
+          <>
+            {/* Current teacher banner */}
+            {currentTeacher && (
+              <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2.5 shrink-0">
+                <div className="w-7 h-7 bg-amber-200 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-amber-800 text-[10px] font-bold">{currentTeacher.name.charAt(0)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-amber-700">
+                    Currently: <span className="font-bold">{currentTeacher.name}</span>
+                    {currentTeacher.qualification && <span className="text-amber-600 font-normal"> · {currentTeacher.qualification}</span>}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setUnassignConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                >
+                  <UserMinus size={12} /> Unassign
+                </button>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="px-6 pt-4 shrink-0">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by name or qualification…"
+                  autoFocus
+                  className="w-full pl-9 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50 placeholder-slate-400"
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Teacher list */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 min-h-0">
+              {filteredTeachers.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <Users size={24} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-xs">No teachers match your search</p>
+                </div>
+              ) : filteredTeachers.map(t => {
+                const isCurrent = t.id === target.currentTeacherId;
+                const isSelected = t.id === selected;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelected(t.id)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all text-left ${
+                      isSelected
+                        ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-100"
+                        : isCurrent
+                        ? "bg-amber-50 border-amber-200 opacity-60"
+                        : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                      isSelected ? "bg-indigo-600 text-white" : isCurrent ? "bg-amber-400 text-white" : "bg-slate-200 text-slate-600"
+                    }`}>
+                      {t.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${isSelected ? "text-indigo-700" : "text-slate-700"}`}>{t.name}</p>
+                      {t.qualification && <p className="text-[10px] text-slate-400 truncate flex items-center gap-1"><Award size={9} />{t.qualification}</p>}
+                    </div>
+                    {isCurrent && <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full shrink-0">Current</span>}
+                    {isSelected && !isCurrent && <CheckCircle2 size={16} className="text-indigo-500 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Error + Actions */}
+            <div className="px-6 py-4 border-t border-slate-100 space-y-3 shrink-0">
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  <AlertTriangle size={13} className="text-red-500 shrink-0" />
+                  <p className="text-xs text-red-700">{error}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button onClick={onClose}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssign}
+                  disabled={!selected || selected === target.currentTeacherId || submitting}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {submitting ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
+                  {submitting ? (isReassign ? "Changing…" : "Assigning…") : (isReassign ? "Change Teacher" : "Assign Teacher")}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

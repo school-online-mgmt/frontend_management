@@ -87,13 +87,15 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" data-testid="login-form">
             {/* Phone Input */}
             <div>
               <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Phone Number</label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                 <input 
+                  id="phone-input"
+                  data-testid="phone-input"
                   type="tel"
                   inputMode="numeric"
                   placeholder="Enter your 10-digit phone number"
@@ -110,7 +112,7 @@ const Login: React.FC = () => {
                   }`}
                 />
               </div>
-              {errors.phone && <p className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
+              {errors.phone && <p data-testid="phone-error" className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
             </div>
 
             {/* Password Input */}
@@ -119,6 +121,8 @@ const Login: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                 <input
+                  id="password-input"
+                  data-testid="password-input"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
@@ -133,18 +137,21 @@ const Login: React.FC = () => {
                 />
                 <button 
                   type="button" 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50" 
+                  data-testid="toggle-password"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || isSuccess}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}
+              {errors.password && <p data-testid="password-error" className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}
             </div>
 
             <button 
-              type="submit" 
+              id="login-btn"
+              data-testid="login-btn"
+              type="submit"
               className="w-full py-4 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 disabled:hover:translate-y-0"
               disabled={isLoading || isSuccess}
             >
