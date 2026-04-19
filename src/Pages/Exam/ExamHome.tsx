@@ -340,6 +340,49 @@ const ExamHome = () => {
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers have been created for this session yet" />
                         ) : (
                             <>
+                                {/* ⚡ Action Required — pinned to top */}
+                                {(stats.byStatus["AWAITING_SYLLABUS"] ?? 0) > 0 && (
+                                    <div className="bg-gradient-to-r from-amber-400 to-orange-300 rounded-2xl shadow-md shadow-amber-100 p-2">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <AlertCircle size={17} className="animate-pulse" />
+                                                Action Required
+                                                <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                                    {stats.byStatus["AWAITING_SYLLABUS"]}
+                                                </span>
+                                            </h2>
+                                            <button
+                                                onClick={() => { setFilterStatus("AWAITING_SYLLABUS"); setTab("exams"); }}
+                                                className="text-[11px] font-semibold text-amber-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                                                View All <ArrowUpRight size={12} />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-amber-50 mb-3">
+                                            {stats.byStatus["AWAITING_SYLLABUS"]} exam{stats.byStatus["AWAITING_SYLLABUS"] !== 1 ? "s are" : " is"} waiting for syllabus to be submitted by teachers.
+                                        </p>
+                                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                            {filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").slice(0, 6).map(e => (
+                                                <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
+                                                    className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
+                                                    <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
+                                                        <AlertCircle size={14} className="text-white" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-white truncate">{e.examName}</p>
+                                                        <p className="text-[11px] text-amber-100 truncate">{e.subjectName} · {e.teacherName ?? "No teacher assigned"}</p>
+                                                    </div>
+                                                    <ArrowUpRight size={13} className="text-white/50 group-hover:text-white transition-colors shrink-0" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").length > 6 && (
+                                            <p className="text-[11px] text-amber-100 mt-2 text-center">
+                                                +{filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").length - 6} more — click "View All" to see them
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Stat cards */}
                                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                                     <StatCard label="Total Exams" value={stats.total} color="bg-slate-700" Icon={ClipboardList} />
@@ -493,30 +536,7 @@ const ExamHome = () => {
                                     </div>
                                 )}
 
-                                {/* Action Required */}
-                                {(stats.byStatus["AWAITING_SYLLABUS"] ?? 0) > 0 && (
-                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-6">
-                                        <h2 className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
-                                            <AlertCircle size={16} className="text-amber-600" /> Action Required
-                                        </h2>
-                                        <p className="text-xs text-amber-700 mb-4">
-                                            {stats.byStatus["AWAITING_SYLLABUS"]} exam(s) are waiting for syllabus to be submitted by teachers.
-                                        </p>
-                                        <div className="space-y-2">
-                                            {filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").slice(0, 5).map(e => (
-                                                <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
-                                                    className="flex items-center gap-3 bg-white rounded-lg p-3 cursor-pointer hover:shadow-md transition-all">
-                                                    <AlertCircle size={14} className="text-amber-500 shrink-0" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-slate-800 truncate">{e.examName}</p>
-                                                        <p className="text-xs text-slate-400">{e.subjectName} · {e.teacherName ?? "No teacher"}</p>
-                                                    </div>
-                                                    <span className="text-xs text-amber-600 font-medium">{e.examTerm?.replace("TERM", "T")}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+
                             </>
                         )}
                     </div>
