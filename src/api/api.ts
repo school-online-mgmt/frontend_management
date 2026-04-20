@@ -221,6 +221,28 @@ getSessions= async () => {
     return response.data.sessions;
 };
 
+// Create Session
+createSession = async (body: {
+    slug: string; name: string; startDate: string; endDate: string; description?: string;
+}) => {
+    const response = await apiClient.post("/management/session/create", body);
+    return response.data;
+};
+
+// Update Session
+updateSession = async (id: string, body: {
+    slug?: string; name?: string; startDate?: string; endDate?: string;
+}) => {
+    const response = await apiClient.put(`/management/session/${id}`, body);
+    return response.data;
+};
+
+// Delete Session
+deleteSession = async (id: string) => {
+    const response = await apiClient.delete(`/management/session/${id}`);
+    return response.data;
+};
+
 addTeacherToSubject = async (subjectId: string, body: { teacherId: string, sectionId: string }) => {
     const response = await apiClient.post(`/management/subject/${subjectId}/teachers`, body);
     return response.data;
@@ -1095,6 +1117,44 @@ createStudent = async (data: {
 
     deleteBusDetail = async (id: string) => {
         const res = await apiClient.delete(`/management/transport/bus-details/${id}`);
+        return res.data;
+    };
+
+    // ── Account & Support ────────────────────────────────────────────────────
+    getAccount = async () => {
+        const res = await apiClient.get('/management/support/account');
+        return res.data;
+    };
+
+    // Support Tickets
+    getSupportTickets = async () => {
+        const res = await apiClient.get('/management/support/tickets');
+        return res.data;
+    };
+    createSupportTicket = async (data: { subject: string; description: string; type?: string; category?: string; priority?: string }) => {
+        const res = await apiClient.post('/management/support/tickets', data);
+        return res.data;
+    };
+    getSupportTicket = async (id: string) => {
+        const res = await apiClient.get(`/management/support/tickets/${id}`);
+        return res.data;
+    };
+    replyToTicket = async (id: string, message: string) => {
+        const res = await apiClient.post(`/management/support/tickets/${id}/reply`, { message });
+        return res.data;
+    };
+    closeTicket = async (id: string) => {
+        const res = await apiClient.patch(`/management/support/tickets/${id}/close`);
+        return res.data;
+    };
+
+    // Feature Requests
+    getFeatureRequests = async () => {
+        const res = await apiClient.get('/management/support/feature-requests');
+        return res.data;
+    };
+    createFeatureRequest = async (data: { title: string; description: string; category?: string }) => {
+        const res = await apiClient.post('/management/support/feature-requests', data);
         return res.data;
     };
 }

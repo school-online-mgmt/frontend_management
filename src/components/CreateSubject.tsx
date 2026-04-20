@@ -55,7 +55,6 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
     try {
       const payload: any = { ...subjectData };
       if (!payload.teacherId) delete payload.teacherId;
-      if (!payload.bookName) delete payload.bookName;
       await api.createSubject(payload);
       onRefresh();
       onClose();
@@ -127,13 +126,14 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Textbook Name</label>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Textbook Name <span className="text-red-500">*</span></label>
             <input
               data-testid="subject-book-input"
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
               placeholder="e.g. NCERT Mathematics Class 10"
               value={subjectData.bookName}
               onChange={(e) => setSubjectData({ ...subjectData, bookName: e.target.value })}
+              required
             />
           </div>
 

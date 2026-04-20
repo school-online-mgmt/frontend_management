@@ -28,7 +28,9 @@ const NAV_SECTIONS = [
     collapsible: true,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
+      { path: "/student-admission", label: "Admission", icon: GraduationCap },
       { path: "/students-home", label: "Students", icon: Users },
+      { path: "/student-home", label: "Student Hub", icon: UserCheck },
       { path: "/staff", label: "Staff Accounts", icon: Settings },
     ],
   },
@@ -46,8 +48,11 @@ const NAV_SECTIONS = [
     icon: GraduationCap,
     collapsible: true,
     items: [
-      { path: "/subject-Home", label: "Subjects", icon: BookOpen },
+      { path: "/sessions", label: "Sessions", icon: CalendarDays },
       { path: "/class-Home", label: "Classes", icon: Layers },
+      { path: "/section-home", label: "Sections", icon: Layers },
+      { path: "/course-Home", label: "Courses", icon: BookMarked },
+      { path: "/subject-Home", label: "Subjects", icon: BookOpen },
     ],
   },
   {
@@ -93,6 +98,15 @@ const NAV_SECTIONS = [
     items: [
       { path: "/fees", label: "Fee Management", icon: CreditCard },
       { path: "/transport", label: "Transport", icon: Bus },
+    ],
+  },
+  {
+    label: "Account",
+    icon: School,
+    collapsible: true,
+    items: [
+      { path: "/account", label: "My Account", icon: School },
+      { path: "/support", label: "Support Center", icon: MessageSquare },
     ],
   },
 ];
