@@ -81,7 +81,7 @@ const CreateExamModal = ({
         );
 
     const filteredSubjects = subjects.filter((s) =>
-        s.description?.toLowerCase().includes(subjectSearch.toLowerCase())
+        s.name.toLowerCase().includes(subjectSearch.toLowerCase())
     );
     const unselected = filteredSubjects.filter((s) => !subjectIds.includes(s.id));
     const selected = subjects.filter((s) => subjectIds.includes(s.id));
@@ -259,7 +259,7 @@ const CreateExamModal = ({
                                 <option value="">— Select {filterType} —</option>
                                 {filterOptions.map((item) => (
                                     <option key={item.id} value={item.id}>
-                                        {item.description || item.name}
+                                        {item.name}
                                     </option>
                                 ))}
                             </select>
@@ -324,7 +324,7 @@ const CreateExamModal = ({
                                             key={s.id}
                                             className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full"
                                         >
-                                            {s.description}
+                                            {s.name}
                                             <button
                                                 onClick={() => toggleSubject(s.id)}
                                                 className="text-emerald-400 hover:text-emerald-700 leading-none"
@@ -358,7 +358,7 @@ const CreateExamModal = ({
                                             className="flex items-center gap-2.5 text-sm text-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 transition group"
                                         >
                                             <span className="w-4 h-4 rounded border border-slate-300 group-hover:border-emerald-400 flex-shrink-0 transition" />
-                                            {s.description}
+                                            {s.name}
                                         </div>
                                     ))
                                 ) : subjects.length === 0 ? (
