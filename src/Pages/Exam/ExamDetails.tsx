@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     BookOpen, Calendar, CheckCircle2, Clock, FileText,
-    Pencil, Trash2, User, BookMarked, GraduationCap
+    Pencil, Trash2, User, BookMarked, GraduationCap, Loader2
 } from "lucide-react";
 import api from "../../api/api";
 import BackButton from "../../components/common/BackButton";
@@ -13,28 +13,41 @@ import ScheduleExamModal from "../../components/Exam/ScheduleExamModal";
 import AddSyllabusModal from "../../components/Exam/AddSyllabusModal";
 import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import ExamReport from "../../components/Exam/ExamReport";
 
-// ─── Status badge ────────────────────────────────────────────────────────────
+// --- Status badge ---
 const STATUS_CONFIG: Record<string, {
     label: string; className: string; icon: ReactElement | null; description: string;
 }> = {
-    AWAITING_SYLLABUS_UPDATE: {
-        label: "Awaiting Syllabus",
+    AWAITING_SYLLABUS: {
+        label: "Syllabus Required",
         className: "bg-amber-100 text-amber-700 border border-amber-200",
         icon: <Clock size={14} />,
         description: "The assigned teacher needs to submit the syllabus for this exam paper.",
     },
-    AWAITING_DATE_SCHEDULING: {
-        label: "Awaiting Scheduling",
+    AWAITING_EXAM_DATE: {
+        label: "Ready to Schedule",
         className: "bg-blue-100 text-blue-700 border border-blue-200",
         icon: <Calendar size={14} />,
-        description: "Syllabus has been submitted. The principal needs to assign an exam date and publish.",
+        description: "Syllabus has been submitted. Schedule the exam date to proceed.",
+    },
+    EXAM_CONDUCTED: {
+        label: "Attendance In Progress",
+        className: "bg-purple-100 text-purple-700 border border-purple-200",
+        icon: <CheckCircle2 size={14} />,
+        description: "The exam has been conducted. Teachers are recording student attendance.",
+    },
+    AWAITING_RESULT: {
+        label: "Grading In Progress",
+        className: "bg-indigo-100 text-indigo-700 border border-indigo-200",
+        icon: <FileText size={14} />,
+        description: "Attendance is complete. Teachers are entering marks for present students.",
     },
     PUBLISHED: {
-        label: "Published",
+        label: "Results Published",
         className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
         icon: <CheckCircle2 size={14} />,
-        description: "This exam paper is published and ready for students.",
+        description: "All results have been published and are visible to students.",
     },
 };
 
@@ -53,21 +66,23 @@ const StatusBadge = ({ status }: { status: string }) => {
     );
 };
 
-// ─── Info card ───────────────────────────────────────────────────────────────
+// --- Info card ---
 const InfoItem = ({ icon, label, value }: { icon: ReactElement; label: string; value: string | number | null | undefined }) => (
     <div className="flex items-start gap-3">
         <div className="mt-0.5 text-slate-400">{icon}</div>
         <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
-            <p className="text-slate-800 font-medium mt-0.5">{value ?? "—"}</p>
+            <p className="text-slate-800 font-medium mt-0.5">{value ?? "-"}</p>
         </div>
     </div>
 );
 
-// ─── Workflow step indicator ─────────────────────────────────────────────────
+// --- Workflow step indicator ---
 const STEPS = [
-    { key: "AWAITING_SYLLABUS_UPDATE", label: "Syllabus" },
-    { key: "AWAITING_DATE_SCHEDULING", label: "Scheduling" },
+    { key: "AWAITING_SYLLABUS", label: "Syllabus" },
+    { key: "AWAITING_EXAM_DATE", label: "Scheduling" },
+    { key: "EXAM_CONDUCTED", label: "Attendance" },
+    { key: "AWAITING_RESULT", label: "Grading" },
     { key: "PUBLISHED", label: "Published" },
 ];
 
@@ -101,7 +116,7 @@ const WorkflowStepper = ({ status }: { status: string }) => {
     );
 };
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// --- Main Component ---
 const ExamDetails = () => {
     const { examId } = useParams() as { examId: string };
     const { role } = useAuth();
@@ -110,6 +125,7 @@ const ExamDetails = () => {
     const [exam, setExam] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [completingAttendance, setCompletingAttendance] = useState(false);
 
     const [editOpen, setEditOpen] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -119,6 +135,11 @@ const ExamDetails = () => {
 
     const [message, setMessage] = useState<string | null>(null);
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+
+    // Results state for AWAITING_RESULT status
+    const [examResults, setExamResults] = useState<any[]>([]);
+    const [resultsLoading, setResultsLoading] = useState(false);
+    const [publishing, setPublishing] = useState(false);
 
     const fetchExam = async () => {
         try {
@@ -132,6 +153,20 @@ const ExamDetails = () => {
     };
 
     useEffect(() => { fetchExam(); }, [examId]);
+
+    // Fetch results when exam is AWAITING_RESULT or PUBLISHED
+    useEffect(() => {
+        if (exam && (exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED")) {
+            setResultsLoading(true);
+            api.getExamResults(examId)
+                .then((data: any) => {
+                    const list = Array.isArray(data) ? data : (data.results || []);
+                    setExamResults(list);
+                })
+                .catch(() => setExamResults([]))
+                .finally(() => setResultsLoading(false));
+        }
+    }, [exam?.status, examId]);
 
     // Auto-dismiss messages
     useEffect(() => {
@@ -157,6 +192,36 @@ const ExamDetails = () => {
         }
     };
 
+    const handleCompleteAttendance = async () => {
+        try {
+            setCompletingAttendance(true);
+            await api.completeAttendance(examId);
+            setMessage("Attendance completed - exam status transitioned to Grading In Progress.");
+            setMessageType("success");
+            fetchExam();
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to complete attendance marking");
+            setMessageType("error");
+        } finally {
+            setCompletingAttendance(false);
+        }
+    };
+
+    const handlePublishResults = async () => {
+        try {
+            setPublishing(true);
+            await api.publishExamResults(examId);
+            setMessage("Results published successfully!");
+            setMessageType("success");
+            fetchExam();
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to publish results");
+            setMessageType("error");
+        } finally {
+            setPublishing(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -176,17 +241,19 @@ const ExamDetails = () => {
 
     const statusCfg = STATUS_CONFIG[exam.status] ?? { description: "" };
 
-    // ── Action visibility rules ──────────────────────────────────────────────
-    // Add Syllabus: teacher or principal when status is AWAITING_SYLLABUS_UPDATE
-    const canAddSyllabus = exam.status === "AWAITING_SYLLABUS_UPDATE"
+    // --- Action visibility rules ---
+    // Add Syllabus: teacher or principal when status is AWAITING_SYLLABUS
+    const canAddSyllabus = exam.status === "AWAITING_SYLLABUS"
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Add Question Paper: teacher or principal when status is AWAITING_DATE_SCHEDULING
-    const canAddQP = exam.status === "AWAITING_DATE_SCHEDULING"
+    // Add Question Paper: teacher or principal when status is AWAITING_EXAM_DATE
+    const canAddQP = exam.status === "AWAITING_EXAM_DATE"
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Schedule & Publish: principal only when status is AWAITING_DATE_SCHEDULING
-    const canSchedule = exam.status === "AWAITING_DATE_SCHEDULING" && isPrincipalOrAdmin;
+    // Schedule & Publish: principal only when status is AWAITING_EXAM_DATE and no date set yet
+    const canSchedule = exam.status === "AWAITING_EXAM_DATE" 
+        && isPrincipalOrAdmin 
+        && (!exam.examDate || exam.examDate === null);
 
     // Edit / Delete: principal only
 
@@ -238,12 +305,12 @@ const ExamDetails = () => {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
-                        <span>{exam.session?.name ?? "—"}</span>
-                        <span>·</span>
+                        <span>{exam.session?.name ?? "-"}</span>
+                        <span>/</span>
                         <span>{exam.examTerm}</span>
                     </div>
                     <h1 className="text-2xl font-bold text-slate-900">{exam.examName}</h1>
-                    <p className="text-slate-500 mt-0.5">{exam.subject?.name ?? "—"}</p>
+                    <p className="text-slate-500 mt-0.5">{exam.subject?.name ?? "-"}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     <StatusBadge status={exam.status} />
@@ -254,6 +321,26 @@ const ExamDetails = () => {
                         >
                             <Pencil size={14} />
                             Edit
+                        </button>
+                    )}
+                    {exam.status === "EXAM_CONDUCTED" && isPrincipalOrAdmin && (
+                        <button
+                            onClick={handleCompleteAttendance}
+                            disabled={completingAttendance}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                            <CheckCircle2 size={14} />
+                            {completingAttendance ? "Completing..." : "Complete Attendance"}
+                        </button>
+                    )}
+                    {exam.status === "AWAITING_RESULT" && isPrincipalOrAdmin && (
+                        <button
+                            onClick={handlePublishResults}
+                            disabled={publishing}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            <CheckCircle2 size={14} />
+                            {publishing ? "Publishing..." : "Publish Results"}
                         </button>
                     )}
                     {isPrincipalOrAdmin && (
@@ -301,17 +388,17 @@ const ExamDetails = () => {
             {/* Pending Actions Banner */}
             {(canAddSyllabus || canSchedule) && (
                 <div className={`rounded-2xl border-2 p-5 ${
-                    exam.status === "AWAITING_SYLLABUS_UPDATE"
+                    exam.status === "AWAITING_SYLLABUS"
                         ? "border-amber-200 bg-amber-50"
                         : "border-blue-200 bg-blue-50"
                 }`}>
                     <p className="font-semibold text-slate-800 mb-1">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
-                            ? "⚠️ Action Required: Submit Syllabus"
-                            : "📅 Action Required: Schedule Exam"}
+                        {exam.status === "AWAITING_SYLLABUS"
+                        ? "Action Required: Submit Syllabus"
+                            : "Action Required: Schedule Exam"}
                     </p>
                     <p className="text-sm text-slate-600 mb-4">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "Please add the syllabus for this exam paper to proceed to the scheduling stage."
                             : "The syllabus has been submitted. Please set an exam date to publish this paper."}
                     </p>
@@ -356,7 +443,7 @@ const ExamDetails = () => {
                     <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{exam.syllabus}</p>
                 ) : (
                     <p className="text-slate-400 italic text-sm">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "No syllabus submitted yet."
                             : "No syllabus on record."}
                     </p>
@@ -383,12 +470,112 @@ const ExamDetails = () => {
                     <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{exam.questionPaper}</p>
                 ) : (
                     <p className="text-slate-400 italic text-sm">
-                        {exam.status === "AWAITING_SYLLABUS_UPDATE"
+                        {exam.status === "AWAITING_SYLLABUS"
                             ? "Question paper can be added after the syllabus is submitted."
                             : "No question paper uploaded yet."}
                     </p>
                 )}
             </div>
+
+            {/* Results Overview - show for AWAITING_RESULT and PUBLISHED */}
+            {(exam.status === "AWAITING_RESULT" || exam.status === "PUBLISHED") && (
+                <div className="bg-white rounded-2xl border overflow-hidden">
+                    <div className="p-6 border-b bg-slate-50">
+                        <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+                            <FileText size={16} className="text-slate-400" />
+                            Exam Results
+                        </h2>
+                        {!resultsLoading && examResults.length > 0 && (() => {
+                            const present = examResults.filter((r: any) => r.attendanceStatus === "PRESENT");
+                            const absent = examResults.filter((r: any) => r.attendanceStatus === "ABSENT");
+                            const marksEntered = present.filter((r: any) => r.marks !== null && r.marks !== undefined);
+                            const marksMissing = present.length - marksEntered.length;
+                            return (
+                                <div className="flex flex-wrap gap-2 mt-3 text-sm font-medium">
+                                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
+                                        {examResults.length} Total
+                                    </span>
+                                    <span className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                        {present.length} Present
+                                    </span>
+                                    <span className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                                        {absent.length} Absent
+                                    </span>
+                                    <span className={`px-3 py-1.5 rounded-lg border ${
+                                        marksMissing === 0
+                                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                            : "bg-amber-50 border-amber-200 text-amber-700"
+                                    }`}>
+                                        {marksEntered.length}/{present.length} marks entered
+                                    </span>
+                                </div>
+                            );
+                        })()}
+                    </div>
+
+                    {resultsLoading ? (
+                        <div className="p-12 flex items-center justify-center">
+                            <Loader2 size={24} className="animate-spin text-indigo-600" />
+                        </div>
+                    ) : examResults.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-sm">No result records found.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 border-b">
+                                    <tr>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Student</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Roll No</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Section</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Attendance</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Marks</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {examResults.map((r: any) => (
+                                        <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
+                                            <td className="px-5 py-3 font-medium text-slate-800">
+                                                {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "-"}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-600">
+                                                {r.rollNo || r.academic?.rollNo || "-"}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-600">
+                                                {r.sectionName || r.academic?.section?.name || "-"}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {r.attendanceStatus === "PRESENT" ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Present</span>
+                                                ) : r.attendanceStatus === "ABSENT" ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Absent</span>
+                                                ) : (
+                                                    <span className="text-slate-400">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {r.attendanceStatus === "ABSENT" ? (
+                                                    <span className="text-slate-400 text-xs">N/A</span>
+                                                ) : r.marks !== null && r.marks !== undefined ? (
+                                                    <span className="font-medium text-slate-800">{r.marks} / {exam.fullMarks}</span>
+                                                ) : (
+                                                    <span className="text-amber-600 text-xs font-medium">Pending</span>
+                                                )}
+                                            </td>
+                                                <td className="px-5 py-3 text-slate-500 text-xs">{r.remarks || "-"}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Exam Performance Report - only for PUBLISHED exams */}
+            {exam.status === "PUBLISHED" && (
+                <ExamReport examId={examId} />
+            )}
 
         </div>
     );

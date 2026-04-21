@@ -1,8 +1,8 @@
-import { Eye } from "lucide-react";
-import { useState } from "react";
+import { Eye, Plus } from "lucide-react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const CoursesSection = ({ courses }: any) => {
+const CoursesSection = ({ courses, onCreateCourse }: { courses: any[]; onCreateCourse?: () => void }) => {
 
     const navigate = useNavigate();
     const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
@@ -22,8 +22,16 @@ const CoursesSection = ({ courses }: any) => {
 
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
                 <h2 className="text-lg font-bold text-slate-700">
-                    Available Courses
+                    Courses
                 </h2>
+                {onCreateCourse && (
+                    <button
+                        onClick={onCreateCourse}
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg flex items-center gap-2 text-sm"
+                    >
+                        <Plus size={15} /> Add Course
+                    </button>
+                )}
             </div>
 
             <table className="w-full text-left">
@@ -40,9 +48,8 @@ const CoursesSection = ({ courses }: any) => {
 
                 {courses.map((course: any) => (
 
-                    <>
+                    <React.Fragment key={course.id}>
                         <tr
-                            key={course.id}
                             onClick={() => navigate(`/course/${course.id}`)}
                             className="cursor-pointer hover:bg-slate-50"
                         >
@@ -99,7 +106,7 @@ const CoursesSection = ({ courses }: any) => {
                                 </td>
                             </tr>
                         )}
-                    </>
+                    </React.Fragment>
                 ))}
                 </tbody>
             </table>

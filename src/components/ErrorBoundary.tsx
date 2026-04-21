@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
             error,
             errorInfo,
         });
-        console.error('Error caught by boundary:', error, errorInfo);
+
     }
 
     handleReset = () => {
@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+                <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-8">
                         <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
                             <AlertTriangle className="text-red-600" size={24} />
@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
                         <div className="flex gap-3">
                             <button
-                                onClick={() => window.location.href = '/'}
+                                onClick={() => globalThis.location.href = '/'}
                                 className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition"
                             >
                                 Go Home

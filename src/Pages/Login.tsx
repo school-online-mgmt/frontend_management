@@ -3,6 +3,7 @@ import { Lock, Phone, Eye, EyeOff, Loader2, CheckCircle, School } from 'lucide-r
 import { useNavigate } from 'react-router-dom';
 import api from '../api/api.ts';
 import { useToast } from '../context/ToastContext';
+import { useAuthContext } from '../context/AuthContext';
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { refresh } = useAuthContext();
 
   // Validation function
   const validateForm = (): boolean => {
@@ -20,8 +22,8 @@ const Login: React.FC = () => {
     
     if (!phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{7,}$/.test(phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Enter a valid phone number (minimum 7 digits)';
+    } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
 
     if (!password) {
@@ -47,9 +49,8 @@ const Login: React.FC = () => {
       if (res.user?.id) {
         setIsSuccess(true);
         addToast(`Welcome back, ${res.user.name || 'Admin'}!`, 'success');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
+        await refresh();
+        navigate('/dashboard');
       } else {
         addToast('Invalid credentials', 'error');
       }
@@ -86,18 +87,23 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" data-testid="login-form">
             {/* Phone Input */}
             <div>
               <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Phone Number</label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                 <input 
-                  type="tel" 
-                  placeholder="Enter your phone number" 
-                  value={phone} 
+                  id="phone-input"
+                  data-testid="phone-input"
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="Enter your 10-digit phone number"
+                  value={phone}
+                  maxLength={10}
                   onChange={(e) => {
-                    setPhone(e.target.value);
+                    const digits = e.target.value.replace(/\D/g, '');
+                    setPhone(digits);
                     if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
                   }}
                   disabled={isLoading || isSuccess}
@@ -106,7 +112,7 @@ const Login: React.FC = () => {
                   }`}
                 />
               </div>
-              {errors.phone && <p className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
+              {errors.phone && <p data-testid="phone-error" className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
             </div>
 
             {/* Password Input */}
@@ -115,6 +121,8 @@ const Login: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
                 <input
+                  id="password-input"
+                  data-testid="password-input"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
@@ -129,18 +137,21 @@ const Login: React.FC = () => {
                 />
                 <button 
                   type="button" 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50" 
+                  data-testid="toggle-password"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || isSuccess}
                 >
-                  {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}
+              {errors.password && <p data-testid="password-error" className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}
             </div>
 
             <button 
-              type="submit" 
+              id="login-btn"
+              data-testid="login-btn"
+              type="submit"
               className="w-full py-4 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600 disabled:hover:translate-y-0"
               disabled={isLoading || isSuccess}
             >

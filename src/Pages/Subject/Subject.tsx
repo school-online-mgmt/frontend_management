@@ -1,402 +1,470 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Loader2, Plus, X, UserPlus, Pencil } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+    ArrowLeft, Trash2, Loader2, X, Pencil, BookOpen, Users,
+    GraduationCap, Hash, Calendar, Layers, AlertTriangle,
+    CheckCircle2, ChevronRight, UserX, School, ShieldCheck,
+} from 'lucide-react';
 import api from '../../api/api.ts';
 import ConfirmModal from '../../components/common/ConfirmModal.tsx';
+import type { Subject, CourseSubject } from '../../api/types';
 
-const Subject = () => {
+/* ── Sub-components ─────────────────────────────────────────────────────── */
+const StatPill = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) => (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${color}`}>
+        <div className="shrink-0">{icon}</div>
+        <div className="min-w-0">
+            <p className="text-xs text-slate-400 font-medium">{label}</p>
+            <p className="font-bold text-slate-800 text-sm truncate">{value || '—'}</p>
+        </div>
+    </div>
+);
+
+/* ── Main Page ──────────────────────────────────────────────────────────── */
+const SubjectDetailsPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
-    const [subject, setSubject] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-    const [teachers, setTeachers] = useState<any[]>([]);
-    const [sections, setSections] = useState<any[]>([]);
-    const [sessionsList, setSessionsList] = useState<any[]>([]);
-    const [assignedTeachers, setAssignedTeachers] = useState<any[]>([]);
-    const [selectedTeacherId, setSelectedTeacherId] = useState('');
-    const [selectedSectionId, setSelectedSectionId] = useState('');
-    const [isAddingTeacher, setIsAddingTeacher] = useState(false);
-    const [isSubmittingTeacher, setIsSubmittingTeacher] = useState(false);
-    const [teacherToRemove, setTeacherToRemove] = useState<any>(null);
-
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [teacherToRemove, setTeacherToRemove] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editData, setEditData] = useState({ name: '', slug: '', bookName: '', sessionId: '' });
-    const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+    const [editInitialized, setEditInitialized] = useState(false);
 
-    const isUsedInCourses = subject?.courseSubjects?.length > 0 || assignedTeachers.length > 0;
+    const { data: subjectData, isLoading: subjectLoading } = useQuery({
+        queryKey: ['subject', slug],
+        queryFn: () => api.getSubjectById(slug!),
+        enabled: !!slug,
+    });
 
-    const showMessage = (type: "success" | "error", text: string) => {
-        setMessage({ type, text });
-        setTimeout(() => setMessage(null), 2500);
-    };
+    const subject = (subjectData?.subject || subjectData) as (Subject & { courseSubjects?: CourseSubject[] }) | null;
 
-    const fetchAssignedTeachers = async (subjectId: string) => {
-        try {
-            const data = await api.getSubjectTeachers(subjectId);
-            setAssignedTeachers(Array.isArray(data) ? data : data?.teachers || []);
-        } catch (error) {
-            console.error("Error fetching assigned teachers", error);
-        }
-    };
-
-    const fetchSubjectDetails = async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getSubjectById(slug!);
-            const subject = data?.subject || data;
-            setSubject(subject);
-            setEditData({
-                name: subject.name || '',
-                slug: subject.slug || '',
-                bookName: subject.bookName || '',
-                sessionId: subject.sessionId || '',
-            });
-            await fetchAssignedTeachers(subject.id);
-        } catch (error) {
-            showMessage("error", "Failed to load subject details");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const fetchTeachers = async () => {
-        try {
-            const data = await api.getTeachers();
-            setTeachers(Array.isArray(data) ? data : data?.teachers || []);
-        } catch (error) {
-            console.error("Error fetching teachers", error);
-        }
-    };
-
-    const fetchSections = async () => {
-        try {
-            const data = await api.getSections();
-            setSections(Array.isArray(data) ? data : data?.sections || []);
-        } catch (error) {
-            console.error("Error fetching sections", error);
-        }
-    };
-
-    const fetchSessions = async () => {
-        try {
+    const { data: sessionsList = [] } = useQuery({
+        queryKey: ['sessions'],
+        queryFn: async () => {
             const data = await api.getSessions();
-            setSessionsList(Array.isArray(data) ? data : data?.sessions || []);
-        } catch (error) {
-            console.error("Error fetching sessions", error);
-        }
-    };
+            return Array.isArray(data) ? data : data?.sessions || [];
+        },
+    });
 
-    useEffect(() => {
-        if (slug) fetchSubjectDetails();
-        fetchTeachers();
-        fetchSections();
-        fetchSessions();
-    }, [slug]);
+    const { data: assignedTeachersData } = useQuery({
+        queryKey: ['assignedTeachers', subject?.id],
+        queryFn: () => api.getSubjectTeachers(subject!.id),
+        enabled: !!subject?.id,
+    });
 
-    const handleEditSubmit = async () => {
-        setIsSubmittingEdit(true);
-        try {
-            await api.updateSubject(subject.id, editData);
+    // Fetch incharge teacher
+    const { data: inchargeTeacherData } = useQuery({
+        queryKey: ['teacher', subject?.teacherId],
+        queryFn: () => api.getTeacherById(subject!.teacherId!),
+        enabled: !!subject?.teacherId,
+    });
+    const inchargeTeacher = (inchargeTeacherData?.teacher || inchargeTeacherData) as any;
+
+    // Drizzle join response shape: [{ subjectTeachers: {...}, teachers: {...}, sections: {...} }]
+    // Backend returns: { message, teachers: [...joinRows] }
+    const assignedTeachers: any[] = Array.isArray(assignedTeachersData)
+        ? assignedTeachersData
+        : (assignedTeachersData?.teachers ?? []);
+
+    // Normalise each row — Drizzle join uses JS variable name as key (subjectTeachers)
+    const rows = assignedTeachers.map((st: any) => ({
+        id:         st.subjectTeachers?.id       ?? st.subject_teachers?.id       ?? `${st.teachers?.id}-${st.sections?.id}`,
+        teacherId:  st.subjectTeachers?.teacherId ?? st.subject_teachers?.teacherId ?? st.teachers?.id,
+        sectionId:  st.subjectTeachers?.sectionId ?? st.subject_teachers?.sectionId ?? st.sections?.id ?? 'unassigned',
+        teacher:    st.teachers,
+        section:    st.sections,
+        raw:        st,
+    }));
+
+    // Unique teachers
+    const uniqueTeachersMap = new Map<string, any>();
+    rows.forEach(r => { if (r.teacher?.id) uniqueTeachersMap.set(r.teacher.id, r.teacher); });
+    const uniqueTeachers = Array.from(uniqueTeachersMap.values());
+
+    // Flat section→teacher rows (one per assignment)
+    const sectionAssignments = rows.map(r => ({
+        id:          r.id,
+        sectionId:   r.sectionId,
+        sectionName: r.section?.name ?? 'Unknown Section',
+        teacher:     r.teacher,
+        raw:         r.raw,
+    }));
+
+    /* ── Mutations ──────────────────────────────────────────────────────── */
+    const updateSubjectMutation = useMutation({
+        mutationFn: (data: any) => api.updateSubject(subject!.id, data),
+        onSuccess: () => {
+            showMessage('success', 'Subject updated successfully');
             setIsEditOpen(false);
-            navigate('/subject-Home');
-        } catch (error: any) {
-            showMessage("error", error?.response?.data?.message || "Failed to update subject");
-        } finally {
-            setIsSubmittingEdit(false);
-        }
-    };
+            queryClient.invalidateQueries({ queryKey: ['subject', slug] });
+        },
+        onError: (error: any) => showMessage('error', error?.response?.data?.message || 'Failed to update subject'),
+    });
 
-    const handleAddTeacher = async () => {
-        if (!selectedTeacherId || !selectedSectionId) return;
-        setIsSubmittingTeacher(true);
-        try {
-            await api.addTeacherToSubject(subject.id, {
-                teacherId: selectedTeacherId,
-                sectionId: selectedSectionId,
-            });
-            showMessage("success", "Teacher assigned successfully");
-            setSelectedTeacherId('');
-            setSelectedSectionId('');
-            setIsAddingTeacher(false);
-            fetchSubjectDetails();
-        } catch (error: any) {
-            showMessage("error", error?.response?.data?.message || "Failed to assign teacher");
-        } finally {
-            setIsSubmittingTeacher(false);
-        }
-    };
-
-    const handleRemoveTeacher = async () => {
-        if (!teacherToRemove) return;
-        try {
-            await api.removeTeacherFromSubject(subject.id, {
-                teacherId: teacherToRemove.subjectTeachers?.teacherId,
-            });
-            showMessage("success", "Teacher removed successfully");
+    const removeTeacherMutation = useMutation({
+        mutationFn: (teacherId: string) => api.removeTeacherFromSubject(subject!.id, { teacherId }),
+        onSuccess: () => {
+            showMessage('success', 'Teacher removed successfully');
             setTeacherToRemove(null);
-            fetchSubjectDetails();
-        } catch (error) {
-            showMessage("error", "Failed to remove teacher");
-            setTeacherToRemove(null);
-        }
+            queryClient.invalidateQueries({ queryKey: ['assignedTeachers', subject?.id] });
+        },
+        onError: () => { showMessage('error', 'Failed to remove teacher'); setTeacherToRemove(null); },
+    });
+
+    const deleteSubjectMutation = useMutation({
+        mutationFn: () => api.deleteSubject(subject!.id),
+        onSuccess: () => {
+            setIsConfirmOpen(false);
+            showMessage('success', `${subject?.name} deleted`);
+            setTimeout(() => navigate(-1), 600);
+        },
+        onError: () => { showMessage('error', 'Failed to delete subject'); setIsConfirmOpen(false); },
+    });
+
+    const showMessage = (type: 'success' | 'error', text: string) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 3000);
     };
 
-    const confirmDelete = async () => {
-        if (!subject) return;
-        try {
-            await api.deleteSubject(subject.id);
-            setIsConfirmOpen(false);
-            showMessage("success", `${subject.name} deleted successfully`);
-            navigate('/subject-Home');
-        } catch (error) {
-            showMessage("error", "Failed to delete subject");
-            setIsConfirmOpen(false);
-        }
-    };
+    // Initialize edit form once subject loads
+    if (subject && !editInitialized) {
+        setEditData({ name: subject.name || '', slug: subject.slug || '', bookName: subject.bookName || '', sessionId: subject.sessionId || '' });
+        setEditInitialized(true);
+    }
 
-    if (isLoading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline" size={32} /></div>;
+    const currentSession = sessionsList.find((s: any) => s.id === subject?.sessionId);
+    const isUsedInCourses = (subject?.courseSubjects?.length ?? 0) > 0 || assignedTeachers.length > 0;
+
+    /* ── Loading / error states ─────────────────────────────────────────── */
+    if (subjectLoading) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="animate-spin text-emerald-600" size={32} />
+        </div>
+    );
+    if (!subject) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+                <AlertTriangle size={32} className="text-amber-400 mx-auto mb-3" />
+                <p className="text-slate-600 font-medium">Subject not found</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="p-8 lg:p-12 max-w-6xl mx-auto space-y-8">
+        <div className="min-h-full bg-slate-50 pb-16">
+
+            {/* ── Modals ────────────────────────────────────────────────── */}
             {isConfirmOpen && (
                 <ConfirmModal
                     title="Delete Subject"
-                    message={`Are you sure you want to delete ${subject?.name}? This action cannot be undone.`}
-                    confirmText="Delete"
-                    cancelText="Cancel"
-                    onConfirm={confirmDelete}
+                    message={`Are you sure you want to delete "${subject?.name}"? This action cannot be undone.`}
+                    confirmText="Delete" cancelText="Cancel"
+                    onConfirm={() => deleteSubjectMutation.mutate()}
                     onCancel={() => setIsConfirmOpen(false)}
                 />
             )}
-
             {teacherToRemove && (
                 <ConfirmModal
                     title="Remove Teacher"
-                    message={`Are you sure you want to remove ${teacherToRemove.teachers?.name} from this subject?`}
-                    confirmText="Remove"
-                    cancelText="Cancel"
-                    onConfirm={handleRemoveTeacher}
+                    message={`Remove ${teacherToRemove.teachers?.name ?? 'this teacher'} from this subject?`}
+                    confirmText="Remove" cancelText="Cancel"
+                    onConfirm={() => {
+                        const teacherId = teacherToRemove.subjectTeachers?.teacherId
+                            ?? teacherToRemove.subject_teachers?.teacherId
+                            ?? teacherToRemove.teachers?.id;
+                        removeTeacherMutation.mutate(teacherId);
+                    }}
                     onCancel={() => setTeacherToRemove(null)}
                 />
             )}
 
             {/* Edit Modal */}
             {isEditOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[9999]" onClick={() => setIsEditOpen(false)}>
-                    <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-white text-2xl font-bold mb-6 text-center">Edit Subject</h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[9999] p-4"
+                    onClick={() => setIsEditOpen(false)}>
+                    <div className="bg-white w-full max-w-lg rounded-2xl p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Subject</h3>
+                            <button onClick={() => setIsEditOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition"><X size={18} /></button>
+                        </div>
                         <div className="space-y-4">
-                            <input
-                                className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                                placeholder="Name"
-                                value={editData.name}
-                                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                            />
-                            <div className="flex gap-4">
-                                <input
-                                    className="flex-1 p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                                    placeholder="Slug"
-                                    value={editData.slug}
-                                    onChange={(e) => setEditData({ ...editData, slug: e.target.value })}
-                                />
-                                <input
-                                    className="flex-1 p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                                    placeholder="Book Name"
-                                    value={editData.bookName}
-                                    onChange={(e) => setEditData({ ...editData, bookName: e.target.value })}
-                                />
+                            <div>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Subject Name</label>
+                                <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                    placeholder="Name" value={editData.name}
+                                    onChange={e => setEditData({ ...editData, name: e.target.value })} />
                             </div>
-                            <select
-                                className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                                value={editData.sessionId}
-                                onChange={(e) => setEditData({ ...editData, sessionId: e.target.value })}
-                            >
-                                <option value="" disabled>Select a Session</option>
-                                {sessionsList.map((session: any) => (
-                                    <option key={session.id} value={session.id}>
-                                        {session.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="flex gap-4 pt-4">
-                                <button
-                                    type="button"
-                                    className="flex-1 py-3 bg-slate-800 text-white rounded-lg"
-                                    onClick={() => setIsEditOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    className="flex-1 py-3 bg-emerald-600 text-white rounded-lg font-bold disabled:opacity-50"
-                                    onClick={handleEditSubmit}
-                                    disabled={isSubmittingEdit}
-                                >
-                                    {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
-                                </button>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Slug</label>
+                                    <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                        placeholder="slug" value={editData.slug}
+                                        onChange={e => setEditData({ ...editData, slug: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Book Name</label>
+                                    <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                        placeholder="Book Name" value={editData.bookName}
+                                        onChange={e => setEditData({ ...editData, bookName: e.target.value })} />
+                                </div>
                             </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Session</label>
+                                <select className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                    value={editData.sessionId}
+                                    onChange={e => setEditData({ ...editData, sessionId: e.target.value })}>
+                                    <option value="" disabled>Select a Session</option>
+                                    {sessionsList.map((s: any) => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button onClick={() => setIsEditOpen(false)}
+                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition text-sm">
+                                Cancel
+                            </button>
+                            <button onClick={() => updateSubjectMutation.mutate(editData)}
+                                disabled={updateSubjectMutation.isPending}
+                                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 transition text-sm flex items-center justify-center gap-2">
+                                {updateSubjectMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Pencil size={15} />}
+                                {updateSubjectMutation.isPending ? 'Saving…' : 'Save Changes'}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <header className="flex justify-between items-end">
-                <div>
-                    <button onClick={() => navigate("/subject-Home")} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition">
-                        <ArrowLeft size={20} /> <span className="font-medium">Back to Subjects</span>
-                    </button>
-                    <h1 className="text-3xl font-bold mt-4">{subject?.name}</h1>
-                    <p className="text-slate-500">Subject details and configuration</p>
-                </div>
+            {/* ── Hero Header ───────────────────────────────────────────── */}
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 px-6 lg:px-10 pt-8 pb-10">
+                <button onClick={() => navigate(-1)}
+                    className="flex items-center gap-2 text-emerald-100 hover:text-white transition text-sm font-medium mb-6">
+                    <ArrowLeft size={16} /> Back
+                </button>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsEditOpen(true)}
-                        className="px-3 py-1.5 border border-slate-200 bg-white text-slate-600 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition"
-                    >
-                        <Pencil size={16} />
-                        Edit Subject
-                    </button>
-                    <button
-                        onClick={() => setIsConfirmOpen(true)}
-                        disabled={isUsedInCourses}
-                        className={`px-3 py-1.5 border rounded-xl flex items-center gap-2 transition ${
-                            isUsedInCourses
-                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                                : "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
-                        }`}
-                    >
-                        <Trash2 size={16} />
-                        {isUsedInCourses ? "Subject in use" : "Delete Subject"}
-                    </button>
-                </div>
-            </header>
-
-            {message && (
-                <div className={`px-4 py-3 rounded-lg border text-sm font-medium ${message.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
-                    {message.text}
-                </div>
-            )}
-
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
-                <h2 className="text-lg font-semibold border-b pb-2">Subject Information</h2>
-                <div className="grid grid-cols-2 gap-6">
-                    <div>
-                        <p className="text-sm text-slate-500">Name</p>
-                        <p className="font-medium">{subject.name}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-slate-500">Slug</p>
-                        <p className="font-mono text-slate-700">{subject.slug}</p>
-                    </div>
-                    <div className="col-span-2">
-                        <p className="text-sm text-slate-500">Description</p>
-                        <p className="text-slate-700">{subject.description || "No description provided."}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-100">
-                <div className="p-4 border-b font-semibold">Courses containing this subject</div>
-                <div className="divide-y">
-                    {subject.courseSubjects?.length === 0 ? (
-                        <p className="p-6 text-slate-500">Not assigned to any courses.</p>
-                    ) : (
-                        subject.courseSubjects?.map((cs: any) => (
-                            <div key={cs.course.id} className="flex justify-between items-center p-4">
-                                <span
-                                    onClick={() => navigate(`/course/${cs.course.id}`)}
-                                    className="font-medium hover:underline cursor-pointer"
-                                >{cs.course.name}</span>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-sm">
+                            <BookOpen size={26} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-white leading-tight">{subject.name}</h1>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span className="text-xs font-mono bg-white/10 text-emerald-100 px-2.5 py-0.5 rounded-lg border border-white/20">#{subject.slug}</span>
+                                {currentSession && (
+                                    <span className="flex items-center gap-1 text-xs text-emerald-100 bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/20">
+                                        <Calendar size={11} /> {currentSession.name}
+                                    </span>
+                                )}
+                                {subject.bookName && (
+                                    <span className="flex items-center gap-1 text-xs text-emerald-100 bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/20">
+                                        📖 {subject.bookName}
+                                    </span>
+                                )}
                             </div>
-                        ))
-                    )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => setIsEditOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
+                            <Pencil size={14} /> Edit
+                        </button>
+                        <button onClick={() => setIsConfirmOpen(true)}
+                            disabled={isUsedInCourses || deleteSubjectMutation.isPending}
+                            title={isUsedInCourses ? 'Subject is in use' : 'Delete subject'}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-300/30 text-red-100 text-sm font-semibold rounded-xl hover:bg-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm">
+                            <Trash2 size={14} />
+                            {isUsedInCourses ? 'In Use' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Quick stats row */}
+                <div className="flex items-center gap-6 mt-6 flex-wrap">
+                    {[
+                        { icon: <Layers size={14} />, label: `${subject.courseSubjects?.length ?? 0} course${(subject.courseSubjects?.length ?? 0) !== 1 ? 's' : ''}` },
+                        { icon: <GraduationCap size={14} />, label: `${uniqueTeachers.length} teacher${uniqueTeachers.length !== 1 ? 's' : ''}` },
+                        { icon: <Users size={14} />, label: `${sectionAssignments.length} section assignment${sectionAssignments.length !== 1 ? 's' : ''}` },
+                    ].map(s => (
+                        <div key={s.label} className="flex items-center gap-1.5 text-sm text-emerald-100">
+                            {s.icon} {s.label}
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Teachers Section */}
-            <div className="bg-white rounded-2xl border border-slate-100">
-                <div className="p-4 border-b flex items-center justify-between">
-                    <span className="font-semibold">Assigned Teachers</span>
-                    <button
-                        onClick={() => {
-                            setIsAddingTeacher(!isAddingTeacher);
-                            setSelectedTeacherId('');
-                            setSelectedSectionId('');
-                        }}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition text-sm"
-                    >
-                        {isAddingTeacher ? <X size={16} /> : <UserPlus size={16} />}
-                        {isAddingTeacher ? "Cancel" : "Add Teacher"}
-                    </button>
-                </div>
+            {/* ── Content ───────────────────────────────────────────────── */}
+            <div className="max-w-5xl mx-auto px-6 lg:px-10 -mt-4 space-y-5">
 
-                {isAddingTeacher && (
-                    <div className="p-4 border-b bg-slate-50 flex items-center gap-3">
-                        <select
-                            className="flex-1 p-2.5 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            value={selectedTeacherId}
-                            onChange={(e) => setSelectedTeacherId(e.target.value)}
-                        >
-                            <option value="" disabled>Select a Teacher</option>
-                            {teachers.map((teacher: any) => (
-                                <option key={teacher.id} value={teacher.id}>
-                                    {teacher.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            className="flex-1 p-2.5 border border-slate-200 rounded-lg bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            value={selectedSectionId}
-                            onChange={(e) => setSelectedSectionId(e.target.value)}
-                        >
-                            <option value="" disabled>Select a Section</option>
-                            {sections.map((section: any) => (
-                                <option key={section.id} value={section.id}>
-                                    {section.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        <button
-                            onClick={handleAddTeacher}
-                            disabled={!selectedTeacherId || !selectedSectionId || isSubmittingTeacher}
-                            className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            {isSubmittingTeacher ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                            Assign
-                        </button>
+                {/* Toast */}
+                {message && (
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-sm ${
+                        message.type === 'success'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                            : 'bg-red-50 border-red-200 text-red-700'
+                    }`}>
+                        {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                        {message.text}
                     </div>
                 )}
 
-                <div className="divide-y">
-                    {assignedTeachers.length === 0 ? (
-                        <p className="p-6 text-slate-500">No teachers assigned yet.</p>
-                    ) : (
-                        assignedTeachers.map((st: any) => (
-                            <div key={st.subjectTeachers?.id} className="flex justify-between items-center p-4">
-                                <div>
-                                    <p className="font-medium">{st.teachers?.name}</p>
-                                    <p className="text-sm text-slate-500">{st.teachers?.qualification}</p>
-                                </div>
-                                <button
-                                    onClick={() => setTeacherToRemove(st)}
-                                    className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 flex items-center gap-2 text-sm transition"
-                                >
-                                    <X size={14} /> Remove
-                                </button>
+                {/* Info pills */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <StatPill icon={<Hash size={15} className="text-slate-400" />} label="Book" value={subject.bookName || '—'} color="bg-white border-slate-100" />
+                    <StatPill icon={<Calendar size={15} className="text-slate-400" />} label="Session" value={currentSession?.name || '—'} color="bg-white border-slate-100" />
+                    <StatPill icon={<Layers size={15} className="text-indigo-400" />} label="In Courses" value={subject.courseSubjects?.length ?? 0} color="bg-white border-slate-100" />
+                    <StatPill icon={<GraduationCap size={15} className="text-emerald-500" />} label="Teachers" value={uniqueTeachers.length} color="bg-white border-slate-100" />
+                </div>
+
+                {/* ── Incharge Teacher ─────────────────────────────────────── */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-violet-50 rounded-lg flex items-center justify-center">
+                                <ShieldCheck size={15} className="text-violet-600" />
                             </div>
-                        ))
+                            <h2 className="font-bold text-slate-800">Subject Incharge</h2>
+                        </div>
+                        <span className="text-xs bg-violet-50 text-violet-600 px-2.5 py-1 rounded-full font-semibold border border-violet-100">Owner</span>
+                    </div>
+                    {!subject.teacherId ? (
+                        <div className="px-6 py-4 flex items-center gap-3">
+                            <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+                            <p className="text-sm text-amber-700 font-medium">No incharge teacher assigned to this subject.</p>
+                        </div>
+                    ) : inchargeTeacher ? (
+                        <div className="flex items-center gap-4 px-6 py-3 group">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center font-bold text-white text-sm shrink-0 shadow-sm">
+                                {inchargeTeacher.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-900 text-sm">{inchargeTeacher.name}</p>
+                                <p className="text-xs text-slate-400">{inchargeTeacher.qualification || 'Teacher'}{inchargeTeacher.phone ? ` · ${inchargeTeacher.phone}` : ''}</p>
+                            </div>
+                            <span className="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 rounded-lg font-medium">Incharge</span>
+                            <button onClick={() => navigate(`/teacher/${inchargeTeacher.id}`)}
+                                className="p-2 text-slate-300 group-hover:text-violet-500 rounded-lg hover:bg-violet-50 transition-colors">
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="px-6 py-3">
+                            <div className="h-4 bg-slate-100 rounded animate-pulse w-48" />
+                        </div>
                     )}
                 </div>
+
+                {/* ── Teachers (Owners) ─────────────────────────────────── */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">
+                                <GraduationCap size={15} className="text-emerald-600" />
+                            </div>
+                            <h2 className="font-bold text-slate-800">Subject Teachers</h2>
+                        </div>
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-semibold">
+                            {uniqueTeachers.length} teacher{uniqueTeachers.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+
+                    {uniqueTeachers.length === 0 ? (
+                        <div className="p-10 text-center">
+                            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-100">
+                                <UserX size={24} className="text-amber-400" />
+                            </div>
+                            <p className="font-semibold text-slate-700">No teachers assigned yet</p>
+                            <p className="text-sm text-slate-400 mt-1">Assign teachers to this subject from the <button onClick={() => navigate('/assignments')} className="text-emerald-600 hover:underline font-medium">Assignments page</button>.</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-50">
+                            {uniqueTeachers.map((t: any) => {
+                                const teacherSections = rows
+                                    .filter(r => r.teacher?.id === t.id)
+                                    .map(r => r.section?.name)
+                                    .filter(Boolean);
+                                return (
+                                    <div key={t.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors group">
+                                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center font-bold text-white text-base shrink-0 shadow-sm">
+                                            {t.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-slate-900">{t.name}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">{t.qualification || 'Teacher'}</p>
+                                        </div>
+                                        {teacherSections.length > 0 && (
+                                            <div className="hidden sm:flex items-center gap-1.5 flex-wrap justify-end max-w-xs">
+                                                {teacherSections.map((sn: string) => (
+                                                    <span key={sn} className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-lg font-medium">
+                                                        <Layers size={9} /> {sn}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <button onClick={() => navigate(`/teacher/${t.id}`)}
+                                            className="p-2 text-slate-300 group-hover:text-emerald-500 rounded-lg hover:bg-emerald-50 transition-colors">
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Courses ───────────────────────────────────────────── */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center">
+                                <School size={15} className="text-blue-600" />
+                            </div>
+                            <h2 className="font-bold text-slate-800">Courses Using This Subject</h2>
+                        </div>
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-semibold">
+                            {subject.courseSubjects?.length ?? 0}
+                        </span>
+                    </div>
+
+                    {(subject.courseSubjects?.length ?? 0) === 0 ? (
+                        <div className="p-10 text-center">
+                            <School size={28} className="text-slate-200 mx-auto mb-3" />
+                            <p className="text-slate-500 font-medium text-sm">Not assigned to any courses yet</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-50">
+                            {subject.courseSubjects?.map((cs: any) => (
+                                <button key={cs.course.id}
+                                    onClick={() => navigate(`/course/${cs.course.id}`)}
+                                    className="w-full flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors group text-left">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                                        <BookOpen size={15} className="text-blue-500" />
+                                    </div>
+                                    <span className="flex-1 font-medium text-slate-800 text-sm">{cs.course.name}</span>
+                                    <ChevronRight size={15} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Description */}
+                {subject?.description && (
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Description</p>
+                        <p className="text-slate-700 leading-relaxed text-sm">{subject.description}</p>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-export default Subject;
+export default SubjectDetailsPage;
+
