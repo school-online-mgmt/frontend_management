@@ -10,6 +10,7 @@ import type { Student } from '../../api/types';
 import AdmitStudentModal from '../../components/Student/AdmitStudentModal';
 import PageHeader from '../../components/PageHeader';
 import NewStudentModal from '../../components/Student/NewStudentModal';
+import { useToast } from '../../context/ToastContext';
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   APPLIED:     { label: 'Applied',     dot: 'bg-slate-400',   bg: 'bg-slate-100',   text: 'text-slate-600'   },
@@ -42,6 +43,7 @@ function avatarColor(name: string) {
 }
 
 const StudentsHome: React.FC = () => {
+  const { addToast } = useToast();
   const [students, setStudents]           = useState<Student[]>([]);
   const [loading, setLoading]             = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -63,13 +65,17 @@ const StudentsHome: React.FC = () => {
     try {
       const response = await api.getStudents();
       setStudents(Array.isArray(response) ? response : []);
-    } catch { setStudents([]); }
+    } catch (err: any) {
+      addToast(err?.response?.data?.message || 'Failed to load students. Please refresh.', 'error');
+      setStudents([]);
+    }
     finally { setLoading(false); }
   };
 
   const handleAdmit = async (formData: any) => {
     if (!selectedStudent) return;
     await api.admitStudent(selectedStudent.id, formData);
+    addToast(`${selectedStudent.firstName} admitted successfully.`, 'success');
     fetchStudents();
   };
 

@@ -45,7 +45,7 @@ const CourseDetails = () => {
             const data = await api.getCourseById(courseId);
             setCourse(data);
         } catch {
-            alert("Failed to load course");
+            showMessage("error", "Failed to load course");
         } finally {
             setIsLoading(false);
         }

@@ -1,5 +1,14 @@
 import axios from 'axios';
-import type { CreateClassData, UpdateTeacherData, UpdateExamPayload, UpdateSchoolEventData, UpdateLibraryBookData } from './types';
+import type {
+    CreateClassData,
+    UpdateTeacherData,
+    UpdateExamPayload,
+    UpdateSchoolEventData,
+    UpdateLibraryBookData,
+    AdmitCardRelease,
+    PublishAdmitCardPayload,
+    GenerateInvoicesResult,
+} from './types';
 
 // Create an Axios instance with a base URL from environment variables
 const apiClient = axios.create({
@@ -790,49 +799,34 @@ createStudent = async (data: {
         const res = await apiClient.get("/management/fees/invoices", { params });
         return res.data;
     };
-    generateInvoices = async (data: { month: number; year: number; sessionId: string; dueDate: string }) => {
+    generateInvoices = async (data: {
+        month: number;
+        year: number;
+        sessionId: string;
+        dueDate: string;
+    }): Promise<GenerateInvoicesResult & { message?: string }> => {
         const res = await apiClient.post("/management/fees/invoices/generate", data);
         return res.data;
     };
 
-    /**
-     * Stream invoice generation with real-time progress via SSE.
-     */
-    generateInvoicesStream = async (
-        data: { month: number; year: number; sessionId: string; dueDate: string },
-        onProgress: (event: { type: string; generated: number; skipped: number; processed: number; total: number }) => void,
-    ): Promise<{ generated: number; skipped: number; total: number }> => {
-        const baseURL = apiClient.defaults.baseURL || "";
-        const response = await fetch(`${baseURL}/management/fees/invoices/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
-            credentials: "include",
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ message: "Generation failed" }));
-            throw new Error(err.message || "Generation failed");
-        }
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let result: any = { generated: 0, skipped: 0, total: 0 };
+    // ── Admit Cards ──────────────────────────────────────────────────────────
+    getAdmitCardReleases = async (): Promise<{ success: boolean; data: AdmitCardRelease[] }> => {
+        const res = await apiClient.get("/management/exam/admit-cards");
+        return res.data;
+    };
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const payload = JSON.parse(line.slice(6));
-                    onProgress(payload);
-                    if (payload.type === "complete") result = payload;
-                }
-            }
-        }
-        return result;
+    publishAdmitCardRelease = async (
+        payload: PublishAdmitCardPayload,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post("/management/exam/admit-cards/publish", payload);
+        return res.data;
+    };
+
+    revokeAdmitCardRelease = async (
+        id: string,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post(`/management/exam/admit-cards/${id}/revoke`);
+        return res.data;
     };
 
     getFeeInvoiceById = async (id: string) => {

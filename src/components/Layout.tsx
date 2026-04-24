@@ -7,7 +7,7 @@ import {
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff,
+  KeyRound, Eye, EyeOff, Ticket,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import api from "../api/api";
@@ -61,6 +61,7 @@ const NAV_SECTIONS = [
     collapsible: true,
     items: [
       { path: "/exam-home", label: "Exams", icon: ClipboardList },
+      { path: "/exam/admit-cards", label: "Admit Cards", icon: Ticket },
       { path: "/performance", label: "Performance", icon: BarChart3 },
     ],
   },

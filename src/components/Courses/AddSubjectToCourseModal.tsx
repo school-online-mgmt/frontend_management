@@ -39,7 +39,7 @@ const AddSubjectToCourseModal = ({ course, onClose, onRefresh, showMessage }: an
                 );
             }
         } catch {
-            alert("Failed to add subject");
+            showMessage("error", "Failed to add subject");
         }
     };
 

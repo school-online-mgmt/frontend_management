@@ -3,7 +3,8 @@ import type { ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     BookOpen, Calendar, CheckCircle2, Clock, FileText,
-    Pencil, Trash2, User, BookMarked, GraduationCap, Loader2
+    Pencil, Trash2, User, BookMarked, GraduationCap, Loader2,
+    PlayCircle, FileDown, ShieldCheck, XCircle,
 } from "lucide-react";
 import api from "../../api/api";
 import BackButton from "../../components/common/BackButton";
@@ -12,6 +13,7 @@ import UpdateExamModal from "../../components/Exam/UpdateExamModal";
 import ScheduleExamModal from "../../components/Exam/ScheduleExamModal";
 import AddSyllabusModal from "../../components/Exam/AddSyllabusModal";
 import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
+import ConductExamModal from "../../components/Exam/ConductExamModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import ExamReport from "../../components/Exam/ExamReport";
 
@@ -29,7 +31,13 @@ const STATUS_CONFIG: Record<string, {
         label: "Ready to Schedule",
         className: "bg-blue-100 text-blue-700 border border-blue-200",
         icon: <Calendar size={14} />,
-        description: "Syllabus has been submitted. Schedule the exam date to proceed.",
+        description: "Syllabus has been submitted. Set an exam date to publish admit cards.",
+    },
+    EXAM_SCHEDULED: {
+        label: "Exam Scheduled",
+        className: "bg-teal-100 text-teal-700 border border-teal-200",
+        icon: <ShieldCheck size={14} />,
+        description: "Exam date is set. Publish admit cards so students can download them. Once the exam takes place, mark it as conducted.",
     },
     EXAM_CONDUCTED: {
         label: "Attendance In Progress",
@@ -81,6 +89,7 @@ const InfoItem = ({ icon, label, value }: { icon: ReactElement; label: string; v
 const STEPS = [
     { key: "AWAITING_SYLLABUS", label: "Syllabus" },
     { key: "AWAITING_EXAM_DATE", label: "Scheduling" },
+    { key: "EXAM_SCHEDULED", label: "Scheduled" },
     { key: "EXAM_CONDUCTED", label: "Attendance" },
     { key: "AWAITING_RESULT", label: "Grading" },
     { key: "PUBLISHED", label: "Published" },
@@ -131,7 +140,14 @@ const ExamDetails = () => {
     const [scheduleOpen, setScheduleOpen] = useState(false);
     const [syllabusOpen, setSyllabusOpen] = useState(false);
     const [qpOpen, setQpOpen] = useState(false);
+    const [conductOpen, setConductOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
+
+    // Admit card release for this exam's scope
+    const [admitCardRelease, setAdmitCardRelease] = useState<any>(null);
+    const [admitCardLoading, setAdmitCardLoading] = useState(false);
+    const [publishingAdmitCard, setPublishingAdmitCard] = useState(false);
+    const [revokingAdmitCard, setRevokingAdmitCard] = useState(false);
 
     const [message, setMessage] = useState<string | null>(null);
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
@@ -168,6 +184,26 @@ const ExamDetails = () => {
         }
     }, [exam?.status, examId]);
 
+    // Fetch active admit card release for EXAM_SCHEDULED and later
+    const ADMIT_CARD_STATUSES = ["EXAM_SCHEDULED", "EXAM_CONDUCTED", "AWAITING_RESULT", "PUBLISHED"];
+    useEffect(() => {
+        if (!exam || !ADMIT_CARD_STATUSES.includes(exam.status)) return;
+        setAdmitCardLoading(true);
+        api.getAdmitCardReleases()
+            .then(res => {
+                const releases: any[] = res?.data ?? [];
+                const match = releases.find((r: any) =>
+                    r.sessionId === exam.sessionId &&
+                    r.examTerm === exam.examTerm &&
+                    (r.examName ?? null) === (exam.examName ?? null) &&
+                    !r.revokedAt
+                );
+                setAdmitCardRelease(match ?? null);
+            })
+            .catch(() => setAdmitCardRelease(null))
+            .finally(() => setAdmitCardLoading(false));
+    }, [exam?.status, exam?.sessionId, exam?.examTerm]);
+
     // Auto-dismiss messages
     useEffect(() => {
         if (!message) return;
@@ -177,6 +213,42 @@ const ExamDetails = () => {
 
     const isPrincipalOrAdmin = role === "PRINCIPAL" || role === "SUPER_ADMIN";
     const isTeacher = role === "TEACHER";
+
+    const handlePublishAdmitCard = async () => {
+        if (!exam) return;
+        setPublishingAdmitCard(true);
+        try {
+            const res = await api.publishAdmitCardRelease({
+                sessionId: exam.sessionId,
+                examTerm: exam.examTerm,
+                examName: exam.examName ?? undefined,
+            });
+            setAdmitCardRelease(res.data);
+            setMessage("Admit cards published. Students can now download them.");
+            setMessageType("success");
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to publish admit cards.");
+            setMessageType("error");
+        } finally {
+            setPublishingAdmitCard(false);
+        }
+    };
+
+    const handleRevokeAdmitCard = async () => {
+        if (!admitCardRelease) return;
+        setRevokingAdmitCard(true);
+        try {
+            await api.revokeAdmitCardRelease(admitCardRelease.id);
+            setAdmitCardRelease(null);
+            setMessage("Admit card release revoked.");
+            setMessageType("success");
+        } catch (err: any) {
+            setMessage(err?.response?.data?.message || "Failed to revoke admit card release.");
+            setMessageType("error");
+        } finally {
+            setRevokingAdmitCard(false);
+        }
+    };
 
     const handleDelete = async () => {
         try {
@@ -246,14 +318,20 @@ const ExamDetails = () => {
     const canAddSyllabus = exam.status === "AWAITING_SYLLABUS"
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Add Question Paper: teacher or principal when status is AWAITING_EXAM_DATE
-    const canAddQP = exam.status === "AWAITING_EXAM_DATE"
+    // Add Question Paper: teacher or principal when status allows it
+    const canAddQP = (exam.status === "AWAITING_EXAM_DATE" || exam.status === "EXAM_SCHEDULED")
         && (isTeacher || isPrincipalOrAdmin);
 
-    // Schedule & Publish: principal only when status is AWAITING_EXAM_DATE and no date set yet
-    const canSchedule = exam.status === "AWAITING_EXAM_DATE" 
-        && isPrincipalOrAdmin 
+    // Schedule: principal only when status is AWAITING_EXAM_DATE and no date set yet
+    const canSchedule = exam.status === "AWAITING_EXAM_DATE"
+        && isPrincipalOrAdmin
         && (!exam.examDate || exam.examDate === null);
+
+    // Conduct: principal only when exam is EXAM_SCHEDULED
+    const canConduct = exam.status === "EXAM_SCHEDULED" && isPrincipalOrAdmin;
+
+    // Admit card publish/revoke: principal only when EXAM_SCHEDULED or later
+    const canManageAdmitCard = ADMIT_CARD_STATUSES.includes(exam.status) && isPrincipalOrAdmin;
 
     // Edit / Delete: principal only
 
@@ -276,6 +354,14 @@ const ExamDetails = () => {
             {qpOpen && (
                 <AddQuestionPaperModal examId={exam.id} onClose={() => setQpOpen(false)}
                     onRefresh={fetchExam} setMessage={setMessage} setMessageType={setMessageType} />
+            )}
+            {conductOpen && (
+                <ConductExamModal
+                    examId={exam.id}
+                    examName={exam.examName}
+                    onClose={() => setConductOpen(false)}
+                    onSuccess={() => { fetchExam(); setMessage("Exam conducted. Result shells created for enrolled students."); setMessageType("success"); }}
+                />
             )}
             {deleteOpen && (
                 <ConfirmModal
@@ -321,6 +407,15 @@ const ExamDetails = () => {
                         >
                             <Pencil size={14} />
                             Edit
+                        </button>
+                    )}
+                    {canConduct && (
+                        <button
+                            onClick={() => setConductOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white rounded-xl text-sm hover:bg-teal-700"
+                        >
+                            <PlayCircle size={14} />
+                            Mark as Conducted
                         </button>
                     )}
                     {exam.status === "EXAM_CONDUCTED" && isPrincipalOrAdmin && (
@@ -386,40 +481,105 @@ const ExamDetails = () => {
             </div>
 
             {/* Pending Actions Banner */}
-            {(canAddSyllabus || canSchedule) && (
+            {(canAddSyllabus || canSchedule || canConduct) && (
                 <div className={`rounded-2xl border-2 p-5 ${
-                    exam.status === "AWAITING_SYLLABUS"
-                        ? "border-amber-200 bg-amber-50"
-                        : "border-blue-200 bg-blue-50"
+                    exam.status === "AWAITING_SYLLABUS" ? "border-amber-200 bg-amber-50"
+                    : exam.status === "EXAM_SCHEDULED"  ? "border-teal-200 bg-teal-50"
+                    : "border-blue-200 bg-blue-50"
                 }`}>
                     <p className="font-semibold text-slate-800 mb-1">
-                        {exam.status === "AWAITING_SYLLABUS"
-                        ? "Action Required: Submit Syllabus"
-                            : "Action Required: Schedule Exam"}
+                        {exam.status === "AWAITING_SYLLABUS" ? "Action Required: Submit Syllabus"
+                        : exam.status === "EXAM_SCHEDULED"  ? "Action Required: Publish Admit Cards & Conduct Exam"
+                        : "Action Required: Schedule Exam"}
                     </p>
                     <p className="text-sm text-slate-600 mb-4">
                         {exam.status === "AWAITING_SYLLABUS"
                             ? "Please add the syllabus for this exam paper to proceed to the scheduling stage."
-                            : "The syllabus has been submitted. Please set an exam date to publish this paper."}
+                        : exam.status === "EXAM_SCHEDULED"
+                            ? "Exam date is set. Publish admit cards so students can download them. Once the exam is held, mark it as conducted."
+                        : "The syllabus has been submitted. Please set an exam date so admit cards can be published."}
                     </p>
                     <div className="flex flex-wrap gap-3">
                         {canAddSyllabus && (
-                            <button
-                                onClick={() => setSyllabusOpen(true)}
-                                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm hover:bg-amber-700 font-medium"
-                            >
+                            <button onClick={() => setSyllabusOpen(true)}
+                                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm hover:bg-amber-700 font-medium">
                                 {exam.syllabus ? "Update Syllabus" : "Add Syllabus"}
                             </button>
                         )}
                         {canSchedule && (
-                            <button
-                                onClick={() => setScheduleOpen(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 font-medium"
-                            >
-                                Schedule &amp; Publish
+                            <button onClick={() => setScheduleOpen(true)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 font-medium">
+                                Set Exam Date
+                            </button>
+                        )}
+                        {canConduct && !admitCardRelease && canManageAdmitCard && (
+                            <button onClick={handlePublishAdmitCard} disabled={publishingAdmitCard}
+                                className="px-4 py-2 bg-teal-600 text-white rounded-xl text-sm hover:bg-teal-700 font-medium disabled:opacity-50 flex items-center gap-1.5">
+                                <FileDown size={14} />
+                                {publishingAdmitCard ? "Publishing…" : "Publish Admit Cards"}
+                            </button>
+                        )}
+                        {canConduct && (
+                            <button onClick={() => setConductOpen(true)}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm hover:bg-purple-700 font-medium flex items-center gap-1.5">
+                                <PlayCircle size={14} />
+                                Mark as Conducted
                             </button>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Admit Card Release Section */}
+            {canManageAdmitCard && (
+                <div className="bg-white p-6 rounded-2xl border">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+                            <FileDown size={16} className="text-teal-500" />
+                            Admit Cards
+                        </h2>
+                        {admitCardLoading && <Loader2 size={15} className="animate-spin text-slate-400" />}
+                    </div>
+                    {admitCardRelease ? (
+                        <div className="flex items-start justify-between gap-4 p-4 bg-teal-50 border border-teal-200 rounded-xl">
+                            <div>
+                                <p className="text-sm font-semibold text-teal-800 flex items-center gap-1.5">
+                                    <ShieldCheck size={14} /> Admit Cards Published
+                                </p>
+                                <p className="text-xs text-teal-600 mt-1">
+                                    Students can download their admit cards.
+                                    Published {new Date(admitCardRelease.publishedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}.
+                                </p>
+                                {admitCardRelease.notes && (
+                                    <p className="text-xs text-slate-500 mt-1 italic">{admitCardRelease.notes}</p>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleRevokeAdmitCard}
+                                disabled={revokingAdmitCard}
+                                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50 shrink-0 disabled:opacity-50">
+                                <XCircle size={13} />
+                                {revokingAdmitCard ? "Revoking…" : "Revoke"}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                            <p className="text-sm text-slate-500">
+                                {exam.status === "EXAM_SCHEDULED"
+                                    ? "Admit cards have not been published yet. Students cannot download them."
+                                    : "No admit card release was active for this exam."}
+                            </p>
+                            {exam.status === "EXAM_SCHEDULED" && canManageAdmitCard && (
+                                <button
+                                    onClick={handlePublishAdmitCard}
+                                    disabled={publishingAdmitCard}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white rounded-xl text-sm hover:bg-teal-700 shrink-0 disabled:opacity-50">
+                                    <FileDown size={14} />
+                                    {publishingAdmitCard ? "Publishing…" : "Publish Admit Cards"}
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -472,7 +632,9 @@ const ExamDetails = () => {
                     <p className="text-slate-400 italic text-sm">
                         {exam.status === "AWAITING_SYLLABUS"
                             ? "Question paper can be added after the syllabus is submitted."
-                            : "No question paper uploaded yet."}
+                            : exam.status === "AWAITING_EXAM_DATE" || exam.status === "EXAM_SCHEDULED"
+                            ? "No question paper uploaded yet."
+                            : "No question paper on record."}
                     </p>
                 )}
             </div>

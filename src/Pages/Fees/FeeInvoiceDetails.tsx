@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer } from 'lucide-react';
+import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer, AlertCircle } from 'lucide-react';
 import api from '../../api/api';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -42,6 +42,9 @@ export default function FeeInvoiceDetails() {
     const [showWaive, setShowWaive] = useState(false);
     const [showCancel, setShowCancel] = useState(false);
     const [actionRemarks, setActionRemarks] = useState('');
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const showError = (msg: string) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(null), 5000); };
 
     const reload = async () => {
         if (!id) return;
@@ -49,7 +52,9 @@ export default function FeeInvoiceDetails() {
         try {
             const data = await api.getFeeInvoiceById(id);
             setInvoice(data.invoice); setItems(data.items); setPayments(data.payments);
-        } catch { navigate('/fees'); }
+        } catch (err: any) {
+            showError(err?.response?.data?.message || 'Failed to load invoice.');
+        }
         finally { setLoading(false); }
     };
 
@@ -61,7 +66,7 @@ export default function FeeInvoiceDetails() {
         try {
             await api.recordPayment(id, { ...payForm, amount: parseFloat(payForm.amount) });
             await reload(); setShowPayment(false); setPayForm(p => ({ ...p, amount: '', referenceNo: '', remarks: '' }));
-        } catch { alert('Payment recording failed'); }
+        } catch (e: any) { showError(e?.response?.data?.message || 'Payment recording failed'); }
         finally { setSaving(false); }
     };
 
@@ -168,6 +173,11 @@ ${payments.length > 0 ? `
 
     return (
         <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
+            {errorMsg && (
+                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    <AlertCircle size={16} className="shrink-0" />{errorMsg}
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">

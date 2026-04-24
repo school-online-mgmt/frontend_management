@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CreditCard, BookOpen, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
+    CreditCard, BookOpen, AlertCircle, Plus, Trash2, Edit3, CheckCircle, CheckCircle2,
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
 } from 'lucide-react';
 import api from '../../api/api';
 import PageHeader from '../../components/PageHeader';
+import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+
+/** Tiny card used inside the invoice-generation completion summary. */
+const ResultStat = ({ label, value, className = '' }: { label: string; value: number; className?: string }) => (
+    <div className={`rounded-lg border px-3 py-2 flex flex-col items-start ${className}`}>
+        <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70">{label}</span>
+        <span className="text-base font-bold leading-tight">{value}</span>
+    </div>
+);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -76,6 +86,7 @@ export default function FeesHub() {
 // SUMMARY TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function SummaryTab() {
+    const { addToast } = useToast();
     const [summary, setSummary] = useState<Summary | null>(null);
     const [month, setMonth] = useState('');
     const [year, setYear] = useState(String(currentYear));
@@ -89,8 +100,9 @@ function SummaryTab() {
             if (year) p.year = Number.parseInt(year);
             const data = await api.getFeeSummary(p as any);
             setSummary(data.summary);
-        } catch { /* ignore */ }
-        finally { setLoading(false); }
+        } catch (err: any) {
+            addToast(err?.response?.data?.message || 'Failed to load fee summary', 'error');
+        } finally { setLoading(false); }
     }, [month, year]);
 
     useEffect(() => { fetch(); }, [fetch]);
@@ -163,6 +175,8 @@ function SummaryTab() {
 // COURSE FEES TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function CourseFeesTab() {
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [fees, setFees] = useState<CourseFee[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
     const [showForm, setShowForm] = useState(false);
@@ -172,11 +186,17 @@ function CourseFeesTab() {
     const [editingId, setEditingId] = useState<string | null>(null);
 
     useEffect(() => {
-        api.getCourseFees().then(d => setFees(d.courseFees || [])).catch(() => {});
-        api.getCourses().then(d => setCourses(Array.isArray(d) ? d : [])).catch(() => {});
+        api.getCourseFees().then(d => setFees(d.courseFees || [])).catch((err: any) => {
+            addToast(err?.response?.data?.message || 'Failed to load course fees', 'error');
+        });
+        api.getCourses().then(d => setCourses(Array.isArray(d) ? d : [])).catch((err: any) => {
+            addToast(err?.response?.data?.message || 'Failed to load courses', 'error');
+        });
     }, []);
 
-    const reload = () => api.getCourseFees().then(d => setFees(d.courseFees || [])).catch(() => {});
+    const reload = () => api.getCourseFees().then(d => setFees(d.courseFees || [])).catch((err: any) => {
+        addToast(err?.response?.data?.message || 'Failed to reload course fees', 'error');
+    });
 
     const startEdit = (cf: CourseFee) => {
         setCourseId(cf.courseId); setTuitionFee(String(cf.tuitionFee));
@@ -189,18 +209,36 @@ function CourseFeesTab() {
         try {
             await api.setCourseFee(courseId, Number.parseInt(tuitionFee));
             await reload(); setShowForm(false); setCourseId(''); setTuitionFee(''); setEditingId(null);
-        } catch { /* ignore */ }
-        finally { setSaving(false); }
+            addToast('Course fee saved', 'success');
+        } catch (err: any) {
+            addToast(err?.response?.data?.message || 'Failed to save course fee', 'error');
+        } finally { setSaving(false); }
     };
 
-    const del = async (id: string) => {
-        if (!confirm('Remove this fee?')) return;
-        await api.deleteCourseFee(id); await reload();
+    const del = (id: string, courseName?: string) => {
+        confirm({
+            title: 'Remove course fee?',
+            message: courseName
+                ? `Students in ${courseName} will no longer be billed tuition automatically.`
+                : 'This course will no longer be billed tuition automatically.',
+            confirmText: 'Remove',
+            onConfirm: async () => {
+                try {
+                    await api.deleteCourseFee(id);
+                    await reload();
+                    addToast('Course fee removed', 'success');
+                } catch (err: any) {
+                    addToast('Failed to remove fee', 'error', err?.response?.data?.message);
+                    throw err;
+                }
+            },
+        });
     };
 
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-500">Set monthly tuition fee per course. One fee per course.</p>
                 <button onClick={() => { setShowForm(true); setEditingId(null); setCourseId(''); setTuitionFee(''); }}
@@ -254,7 +292,7 @@ function CourseFeesTab() {
                                 <td className="px-4 py-3">
                                     <div className="flex gap-1">
                                         <button onClick={() => startEdit(f)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800"><Edit3 size={14}/></button>
-                                        <button onClick={() => del(f.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
+                                        <button onClick={() => del(f.id, f.courseName)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
                                     </div>
                                 </td>
                             </tr>
@@ -288,6 +326,8 @@ const paymentStatusColor: Record<string, string> = {
 
 function PaymentsTab() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [payments, setPayments] = useState<PaymentRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [from, setFrom] = useState('');
@@ -307,9 +347,10 @@ function PaymentsTab() {
             if (status) params.paymentStatus = status;
             const data = await api.getFeePayments(params);
             setPayments(data.payments || []);
-        } catch { /* ignore */ }
-        finally { setLoading(false); }
-    }, [from, to, mode, status]);
+        } catch (err: any) {
+            addToast(err?.response?.data?.message || 'Failed to load payments', 'error');
+        } finally { setLoading(false); }
+    }, [from, to, mode, status, addToast]);
 
     useEffect(() => { reload(); }, [reload]);
 
@@ -322,20 +363,28 @@ function PaymentsTab() {
             if (mode) params.paymentMode = mode;
             if (status) params.paymentStatus = status;
             await api.exportFeePayments(params);
-        } catch { alert('Export failed'); }
+            addToast('Export started', 'success', 'Your download should begin momentarily.');
+        } catch (err: any) { addToast('Export failed', 'error', err?.response?.data?.message); }
         finally { setExporting(false); }
     };
 
-    const handleRefund = async (p: PaymentRow) => {
-        if (!confirm(`Refund ₹${p.amount.toLocaleString('en-IN')} to ${p.studentFirstName} ${p.studentLastName}?\n\nThis will issue a full refund via Razorpay.`)) return;
-        setRefunding(p.id);
-        try {
-            const data = await api.refundPayment(p.id);
-            alert(data.message || 'Refunded successfully');
-            await reload();
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Refund failed');
-        } finally { setRefunding(null); }
+    const handleRefund = (p: PaymentRow) => {
+        confirm({
+            title: `Refund ${fmt(p.amount)}?`,
+            message: `A full refund will be issued via Razorpay to ${p.studentFirstName} ${p.studentLastName}. This cannot be undone.`,
+            confirmText: 'Refund',
+            onConfirm: async () => {
+                setRefunding(p.id);
+                try {
+                    const data = await api.refundPayment(p.id);
+                    addToast(data.message || 'Refund successful', 'success');
+                    await reload();
+                } catch (err: any) {
+                    addToast('Refund failed', 'error', err?.response?.data?.message);
+                    throw err;
+                } finally { setRefunding(null); }
+            },
+        });
     };
 
     const totalAmount = payments.reduce((s, p) => s + (['CAPTURED', 'AUTHORIZED'].includes(p.paymentStatus) ? p.amount : 0), 0);
@@ -344,6 +393,7 @@ function PaymentsTab() {
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             {/* Filters */}
             <div className="flex flex-wrap gap-3 items-end justify-between">
                 <div className="flex gap-3 items-end flex-wrap">
@@ -441,6 +491,8 @@ function PaymentsTab() {
 // EXTRA CHARGES TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function ExtraChargesTab() {
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [charges, setCharges] = useState<ExtraCharge[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [studentAcademics, setStudentAcademics] = useState<Academic[]>([]);
@@ -453,11 +505,15 @@ function ExtraChargesTab() {
         const p: Record<string, unknown> = {};
         if (filterMonth) p.month = Number.parseInt(filterMonth);
         if (filterYear) p.year = Number.parseInt(filterYear);
-        api.getExtraCharges(p as any).then(d => setCharges(d.extraCharges || [])).catch(() => {});
-    }, [filterMonth, filterYear]);
+        api.getExtraCharges(p as any).then(d => setCharges(d.extraCharges || [])).catch((err: any) => {
+            addToast(err?.response?.data?.message || 'Failed to load extra charges', 'error');
+        });
+    }, [filterMonth, filterYear, addToast]);
 
     useEffect(() => { reload(); }, [reload]);
-    useEffect(() => { api.getStudents().then(d => setStudents(Array.isArray(d) ? d : d.students || [])).catch(() => {}); }, []);
+    useEffect(() => { api.getStudents().then(d => setStudents(Array.isArray(d) ? d : d.students || [])).catch((err: any) => {
+        addToast(err?.response?.data?.message || 'Failed to load students', 'error');
+    }); }, [addToast]);
 
     // When student changes, load their academic records
     useEffect(() => {
@@ -470,18 +526,43 @@ function ExtraChargesTab() {
     }, [form.studentId]);
 
     const save = async () => {
-        if (!form.studentId || !form.amount || !form.academicId) { alert('Please fill all required fields'); return; }
+        if (!form.studentId || !form.amount || !form.academicId) {
+            addToast('Please fill all required fields', 'warning');
+            return;
+        }
         setSaving(true);
         try {
             await api.addExtraCharge({ ...form, amount: Number.parseInt(form.amount), month: Number.parseInt(form.month), year: Number.parseInt(form.year) });
-            await reload(); setShowForm(false); setForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
-        } catch { alert('Failed to add charge'); } finally { setSaving(false); }
+            await reload();
+            setShowForm(false);
+            setForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
+            addToast('Charge added', 'success');
+        } catch (err: any) {
+            addToast('Failed to add charge', 'error', err?.response?.data?.message);
+        } finally { setSaving(false); }
     };
 
-    const del = async (id: string) => { if (!confirm('Remove this charge?')) return; await api.deleteExtraCharge(id); await reload(); };
+    const del = (id: string) => {
+        confirm({
+            title: 'Remove this charge?',
+            message: 'The student will no longer be billed for this extra charge.',
+            confirmText: 'Remove',
+            onConfirm: async () => {
+                try {
+                    await api.deleteExtraCharge(id);
+                    await reload();
+                    addToast('Charge removed', 'success');
+                } catch (err: any) {
+                    addToast('Failed to remove charge', 'error', err?.response?.data?.message);
+                    throw err;
+                }
+            },
+        });
+    };
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex gap-3 items-end flex-wrap">
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
@@ -575,6 +656,8 @@ function ExtraChargesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 function InvoicesTab() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(false);
@@ -582,7 +665,7 @@ function InvoicesTab() {
     const [showGenerate, setShowGenerate] = useState(false);
     const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
     const [generating, setGenerating] = useState(false);
-    const [genProgress, setGenProgress] = useState<{ generated: number; skipped: number; processed: number; total: number } | null>(null);
+    const [genResult, setGenResult] = useState<{ generated: number; skipped: number; total: number; lateFeesApplied: number; errors: number } | null>(null);
     // Default year to '' so ALL invoices load on first visit
     const [filterMonth, setFilterMonth] = useState('');
     const [filterYear, setFilterYear] = useState('');
@@ -609,30 +692,62 @@ function InvoicesTab() {
     useEffect(() => { api.getSessions().then(d => setSessions(Array.isArray(d) ? d : d.sessions || [])).catch(() => {}); }, []);
 
     const generate = async () => {
-        if (!gen.sessionId || !gen.dueDate) { alert('Please fill all fields'); return; }
+        if (!gen.sessionId || !gen.dueDate) {
+            addToast('Please fill all required fields', 'warning');
+            return;
+        }
         setGenerating(true);
-        setGenProgress(null);
+        setGenResult(null);
         try {
-            const data = await api.generateInvoicesStream(
-                { month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate },
-                (evt) => setGenProgress({ generated: evt.generated, skipped: evt.skipped, processed: evt.processed, total: evt.total }),
+            const data = await api.generateInvoices({
+                month: Number.parseInt(gen.month),
+                year: Number.parseInt(gen.year),
+                sessionId: gen.sessionId,
+                dueDate: gen.dueDate,
+            });
+            setGenResult({
+                generated: data.generated,
+                skipped: data.skipped,
+                total: data.total,
+                lateFeesApplied: data.lateFeesApplied,
+                errors: data.errors,
+            });
+            await reload();
+            addToast(
+                data.errors > 0 ? 'Generation finished with errors' : 'Invoices generated',
+                data.errors > 0 ? 'warning' : 'success',
+                `${data.generated} new · ${data.skipped} skipped · ${data.lateFeesApplied} late fees · ${data.errors} errors`,
             );
-            alert(`Done! Generated: ${data.generated}, Skipped (already exist): ${data.skipped}`);
-            await reload(); setShowGenerate(false);
-        } catch { alert('Generation failed'); }
-        finally { setGenerating(false); setGenProgress(null); }
+        } catch (err: any) {
+            addToast('Generation failed', 'error', err?.response?.data?.message);
+        } finally {
+            setGenerating(false);
+        }
     };
 
-    const markOverdue = async () => {
-        if (!confirm('Mark all past-due PENDING invoices as OVERDUE?')) return;
-        const d = await api.markOverdueInvoices();
-        alert(d.message); await reload();
+    const markOverdue = () => {
+        confirm({
+            title: 'Mark past-due invoices as overdue?',
+            message: 'All PENDING and PARTIALLY_PAID invoices with a due date in the past will be flipped to OVERDUE. Students with overdue invoices will be charged a ₹100 late fee on their next monthly invoice.',
+            confirmText: 'Mark Overdue',
+            onConfirm: async () => {
+                try {
+                    const d = await api.markOverdueInvoices();
+                    addToast(d.message || 'Invoices updated', 'success');
+                    await reload();
+                } catch (err: any) {
+                    addToast('Failed to mark overdue', 'error', err?.response?.data?.message);
+                    throw err;
+                }
+            },
+        });
     };
 
     const totalOutstanding = invoices.filter(i => !['PAID','WAIVED','CANCELLED'].includes(i.status)).reduce((s,i) => s + (i.totalAmount - i.paidAmount), 0);
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             {/* Filters + Actions */}
             <div className="flex flex-wrap gap-3 items-end justify-between">
                 <div className="flex gap-3 items-end flex-wrap">
@@ -713,27 +828,45 @@ function InvoicesTab() {
                             <input type="date" value={gen.dueDate} onChange={e => setGen(g=>({...g,dueDate:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
+                        <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm disabled:opacity-60">
                             <RefreshCw size={15} className={generating?'animate-spin':''}/>{generating?'Generating…':'Generate'}
                         </button>
-                        <button onClick={() => setShowGenerate(false)} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
+                        <button onClick={() => { setShowGenerate(false); setGenResult(null); }} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">
+                            {genResult ? 'Close' : 'Cancel'}
+                        </button>
                     </div>
-                    {generating && genProgress && genProgress.total > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs text-slate-600">
-                                <span>Processing {genProgress.processed} / {genProgress.total} students</span>
-                                <span>{Math.round((genProgress.processed / genProgress.total) * 100)}%</span>
+
+                    {/* Loading pulse while request is in flight */}
+                    {generating && (
+                        <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                            <RefreshCw size={13} className="animate-spin text-emerald-500" />
+                            <span>Generating invoices — this may take a moment for large sessions…</span>
+                        </div>
+                    )}
+
+                    {/* Completion summary with the new counters */}
+                    {!generating && genResult && (
+                        <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                                <CheckCircle2 size={15} /> Generation complete
                             </div>
-                            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                                <div
-                                    className="bg-emerald-500 h-3 rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.round((genProgress.processed / genProgress.total) * 100)}%` }}
-                                />
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                                <ResultStat label="Total Students" value={genResult.total} className="bg-white text-slate-700 border-slate-200" />
+                                <ResultStat label="Generated"    value={genResult.generated} className="bg-emerald-100 text-emerald-800 border-emerald-200" />
+                                <ResultStat label="Skipped"      value={genResult.skipped}   className="bg-slate-100 text-slate-600 border-slate-200" />
+                                <ResultStat label="Late Fees"    value={genResult.lateFeesApplied} className={genResult.lateFeesApplied > 0 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-slate-100 text-slate-600 border-slate-200"} />
+                                <ResultStat label="Errors"       value={genResult.errors}     className={genResult.errors > 0 ? "bg-red-100 text-red-800 border-red-200" : "bg-slate-100 text-slate-600 border-slate-200"} />
                             </div>
-                            <div className="flex gap-4 text-xs">
-                                <span className="text-green-600">✓ Generated: {genProgress.generated}</span>
-                                <span className="text-slate-400">⊘ Skipped: {genProgress.skipped}</span>
-                            </div>
+                            {genResult.lateFeesApplied > 0 && (
+                                <p className="text-[11px] text-amber-700">
+                                    ₹100 late fee was added to {genResult.lateFeesApplied} invoice{genResult.lateFeesApplied === 1 ? '' : 's'} where a previous invoice is still unpaid.
+                                </p>
+                            )}
+                            {genResult.errors > 0 && (
+                                <p className="text-[11px] text-red-700">
+                                    {genResult.errors} invoice{genResult.errors === 1 ? '' : 's'} failed. Check server logs for details.
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>

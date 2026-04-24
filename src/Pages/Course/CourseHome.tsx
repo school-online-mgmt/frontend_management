@@ -20,8 +20,9 @@ const CourseHome = () => {
         try {
             const data = await api.getCourses();
             setCourses(Array.isArray(data) ? data : []);
-        } catch (error) {
-
+        } catch {
+            setMessage("Failed to load courses. Please refresh.");
+            setMessageType("error");
             setCourses([]);
         } finally {
             setIsLoading(false);

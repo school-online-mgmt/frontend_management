@@ -13,14 +13,15 @@ import PageHeader from "../../components/PageHeader";
 
 // --- Status config ------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; bg: string; dot: string; text: string; icon: typeof Clock }> = {
-    AWAITING_SYLLABUS:  { label: "Syllabus Pending",      bg: "bg-amber-50",    dot: "bg-amber-500",   text: "text-amber-700",   icon: AlertCircle   },
-    AWAITING_EXAM_DATE: { label: "Ready to Schedule",     bg: "bg-blue-50",     dot: "bg-blue-500",    text: "text-blue-700",    icon: Calendar      },
-    EXAM_CONDUCTED:     { label: "Attendance Pending",    bg: "bg-purple-50",   dot: "bg-purple-500",  text: "text-purple-700",  icon: Users         },
-    AWAITING_RESULT:    { label: "Grading In Progress",   bg: "bg-indigo-50",   dot: "bg-indigo-500",  text: "text-indigo-700",  icon: ClipboardList },
-    PUBLISHED:          { label: "Published",             bg: "bg-emerald-50",  dot: "bg-emerald-500", text: "text-emerald-700", icon: CheckCircle   },
+    AWAITING_SYLLABUS:  { label: "Syllabus Pending",   bg: "bg-amber-50",   dot: "bg-amber-500",   text: "text-amber-700",   icon: AlertCircle   },
+    AWAITING_EXAM_DATE: { label: "Ready to Schedule",  bg: "bg-blue-50",    dot: "bg-blue-500",    text: "text-blue-700",    icon: Calendar      },
+    EXAM_SCHEDULED:     { label: "Exam Scheduled",     bg: "bg-teal-50",    dot: "bg-teal-500",    text: "text-teal-700",    icon: Calendar      },
+    EXAM_CONDUCTED:     { label: "Attendance Pending", bg: "bg-purple-50",  dot: "bg-purple-500",  text: "text-purple-700",  icon: Users         },
+    AWAITING_RESULT:    { label: "Grading In Progress",bg: "bg-indigo-50",  dot: "bg-indigo-500",  text: "text-indigo-700",  icon: ClipboardList },
+    PUBLISHED:          { label: "Published",          bg: "bg-emerald-50", dot: "bg-emerald-500", text: "text-emerald-700", icon: CheckCircle   },
 };
 
-const STATUS_ORDER = ["AWAITING_SYLLABUS", "AWAITING_EXAM_DATE", "EXAM_CONDUCTED", "AWAITING_RESULT", "PUBLISHED"];
+const STATUS_ORDER = ["AWAITING_SYLLABUS", "AWAITING_EXAM_DATE", "EXAM_SCHEDULED", "EXAM_CONDUCTED", "AWAITING_RESULT", "PUBLISHED"];
 const TERMS = ["TERM1", "TERM2", "TERM3"];
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -383,14 +384,61 @@ const ExamHome = () => {
                                     </div>
                                 )}
 
+                                {/* Ready to Schedule alert */}
+                                {(stats.byStatus["AWAITING_EXAM_DATE"] ?? 0) > 0 && (
+                                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-md shadow-blue-100 p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <Calendar size={17} />
+                                                Date Not Set
+                                                <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                                    {stats.byStatus["AWAITING_EXAM_DATE"]}
+                                                </span>
+                                            </h2>
+                                            <button
+                                                onClick={() => { setFilterStatus("AWAITING_EXAM_DATE"); setTab("exams"); }}
+                                                className="text-[11px] font-semibold text-blue-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                                                View All <ArrowUpRight size={12} />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-blue-50">
+                                            {stats.byStatus["AWAITING_EXAM_DATE"]} exam{stats.byStatus["AWAITING_EXAM_DATE"] !== 1 ? "s have" : " has"} syllabus submitted but no exam date set yet. Set dates so admit cards can be published.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Exam Scheduled — admit card reminder */}
+                                {(stats.byStatus["EXAM_SCHEDULED"] ?? 0) > 0 && (
+                                    <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl shadow-md shadow-teal-100 p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <Calendar size={17} />
+                                                Admit Cards Needed
+                                                <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                                    {stats.byStatus["EXAM_SCHEDULED"]}
+                                                </span>
+                                            </h2>
+                                            <button
+                                                onClick={() => { setFilterStatus("EXAM_SCHEDULED"); setTab("exams"); }}
+                                                className="text-[11px] font-semibold text-teal-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                                                View All <ArrowUpRight size={12} />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-teal-50">
+                                            {stats.byStatus["EXAM_SCHEDULED"]} exam{stats.byStatus["EXAM_SCHEDULED"] !== 1 ? "s are" : " is"} scheduled. Publish admit cards for students to download and mark as conducted after the exam.
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Stat cards */}
-                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                                     <StatCard label="Total Exams" value={stats.total} color="bg-slate-700" Icon={ClipboardList} />
                                     <StatCard label="Published" value={stats.published}
                                         sub={`${stats.completionRate}% complete`}
                                         color="bg-emerald-600" Icon={CheckCircle} />
                                     <StatCard label="Syllabus Pending" value={stats.byStatus["AWAITING_SYLLABUS"] ?? 0} color="bg-amber-500" Icon={AlertCircle} />
-                                    <StatCard label="Scheduled" value={stats.byStatus["AWAITING_EXAM_DATE"] ?? 0} color="bg-blue-600" Icon={Calendar} />
+                                    <StatCard label="Needs Scheduling" value={stats.byStatus["AWAITING_EXAM_DATE"] ?? 0} color="bg-blue-600" Icon={Calendar} />
+                                    <StatCard label="Date Set" value={stats.byStatus["EXAM_SCHEDULED"] ?? 0} color="bg-teal-600" Icon={Calendar} />
                                     <StatCard label="Grading" value={(stats.byStatus["AWAITING_RESULT"] ?? 0) + (stats.byStatus["EXAM_CONDUCTED"] ?? 0)}
                                         color="bg-purple-600" Icon={ClipboardList} />
                                 </div>

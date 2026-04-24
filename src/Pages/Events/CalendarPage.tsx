@@ -6,6 +6,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../context/ToastContext";
 
 /* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface CalendarEvent {
@@ -50,6 +52,8 @@ const emptyForm = { title: "", description: "", type: "OTHER", date: "", endDate
 
 /* ═══════════════════════ Component ═══════════════════════ */
 const CalendarPage = () => {
+    const { confirm, dialog } = useConfirm();
+    const { addToast } = useToast();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [activeSession, setActiveSession] = useState<Session | null>(null);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -93,10 +97,13 @@ const CalendarPage = () => {
             const to = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
             const res = await api.getCalendarEvents(from, to);
             setEvents(res.events ?? res ?? []);
+        } catch (err: any) {
+            addToast(err?.response?.data?.message || 'Failed to load calendar events', 'error');
+            setEvents([]);
         } finally {
             setLoading(false);
         }
-    }, [currentDate]);
+    }, [currentDate, addToast]);
 
     useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
@@ -173,12 +180,16 @@ const CalendarPage = () => {
         } finally { setSaving(false); }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Delete this event?")) return;
-        try {
-            await api.deleteSchoolEvent(id);
-            fetchEvents();
-        } catch {}
+    const handleDelete = (id: string, title: string) => {
+        confirm({
+            title: "Delete Event",
+            message: `Delete "${title}"? This cannot be undone.`,
+            confirmText: "Delete",
+            onConfirm: async () => {
+                await api.deleteSchoolEvent(id);
+                fetchEvents();
+            },
+        });
     };
 
     const toggleAllEvents = async () => {
@@ -193,6 +204,7 @@ const CalendarPage = () => {
 
     return (
         <div className="min-h-full bg-slate-50">
+            {dialog}
             <PageHeader
                 icon={CalendarIcon}
                 title="Academic Calendar"
@@ -344,7 +356,7 @@ const CalendarPage = () => {
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-xs font-medium">
                                                             <Edit2 size={14} /> Edit
                                                         </button>
-                                                        <button onClick={() => handleDelete(ev.id)}
+                                                        <button onClick={() => handleDelete(ev.id, ev.title)}
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-xs font-medium">
                                                             <Trash2 size={14} /> Delete
                                                         </button>
@@ -473,7 +485,7 @@ const CalendarPage = () => {
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-blue-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Edit2 size={12} /> Edit
                                                     </button>
-                                                    <button onClick={() => handleDelete(ev.id)}
+                                                    <button onClick={() => handleDelete(ev.id, ev.title)}
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-red-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Trash2 size={12} /> Delete
                                                     </button>

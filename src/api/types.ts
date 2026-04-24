@@ -237,3 +237,39 @@ export interface UpdateLibraryBookData {
   requiresApproval?: boolean;
   restrictedToClassIds?: string[];
 }
+
+// ── Admit Cards ──────────────────────────────────────────────────────────────
+
+export type ExamTerm = "TERM1" | "TERM2" | "TERM3";
+
+export interface AdmitCardRelease {
+  id: string;
+  tenantId: string;
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName: string | null;
+  notes: string | null;
+  publishedBy: string | null;
+  publishedAt: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublishAdmitCardPayload {
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName?: string;
+  notes?: string;
+}
+
+// ── Invoice Generation Result (extended) ─────────────────────────────────────
+
+export interface GenerateInvoicesResult {
+  generated: number;
+  skipped: number;
+  total: number;
+  lateFeesApplied: number;
+  errors: number;
+}

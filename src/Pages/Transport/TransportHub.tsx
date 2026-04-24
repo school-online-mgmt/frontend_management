@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 const fmt = (n: number) => `₹${(n ?? 0).toLocaleString("en-IN")}`;
@@ -419,6 +420,7 @@ const emptyBus = () => ({
 
 function BusFleetTab({ zones }: { zones: any[] }) {
     const qc = useQueryClient();
+    const { confirm: confirmDialog, dialog } = useConfirm();
     const [filterZone, setFilterZone] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
@@ -469,6 +471,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
 
     return (
         <div className="space-y-5">
+            {dialog}
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2 justify-between">
                 <div className="flex items-center gap-2">
@@ -603,7 +606,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                                     <div className="flex gap-1 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => startEdit(b)} title="Edit"
                                             className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-slate-100"><Pencil size={12} /></button>
-                                        <button onClick={() => { if (confirm(`Remove ${b.busNumber}?`)) deleteMut.mutate(b.id); }} title="Delete"
+                                        <button onClick={() => confirmDialog({ title: "Remove Vehicle", message: `Remove vehicle ${b.busNumber}? This cannot be undone.`, confirmText: "Remove", onConfirm: async () => { deleteMut.mutate(b.id); } })} title="Delete"
                                             className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 border border-slate-100"><Trash2 size={12} /></button>
                                     </div>
                                 </div>
@@ -664,6 +667,7 @@ const emptyZone = () => ({ name: "", description: "", price: 0 });
 
 function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLoading: boolean; refetchZones: () => void }) {
     const qc = useQueryClient();
+    const { confirm: confirmDialog, dialog } = useConfirm();
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
     const [form, setForm] = useState(emptyZone());
@@ -692,6 +696,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
 
     return (
         <div className="space-y-5">
+            {dialog}
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm font-bold text-slate-800">Transport Zones</p>
@@ -775,7 +780,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
                                     </div>
                                     <div className="flex gap-1 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => startEdit(z)} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-slate-100"><Pencil size={12} /></button>
-                                        <button onClick={() => { if (confirm(`Delete "${z.name}"?`)) deleteMut.mutate(z.id); }}
+                                        <button onClick={() => confirmDialog({ title: "Delete Zone", message: `Delete zone "${z.name}"? Any students assigned to this zone will be unassigned.`, confirmText: "Delete", onConfirm: async () => { deleteMut.mutate(z.id); } })}
                                             className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 border border-slate-100"><Trash2 size={12} /></button>
                                     </div>
                                 </div>

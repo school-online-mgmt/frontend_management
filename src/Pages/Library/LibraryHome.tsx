@@ -2,15 +2,20 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     BookOpen, Plus, RefreshCcw, Search, ToggleLeft, ToggleRight,
-    BookMarked, AlertTriangle, ClipboardList, RotateCcw, X,
+    BookMarked, AlertTriangle, ClipboardList, RotateCcw, X, CheckCircle, XCircle,
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
 
 type Tab = "catalog" | "issues" | "requests" | "renewals";
 
+type RejectModal = { requestId: string; reason: string; submitting: boolean } | null;
+type RenewalModal = { renewalId: string; action: "APPROVED" | "REJECTED"; remarks: string; submitting: boolean } | null;
+
 const LibraryHome = () => {
     const navigate = useNavigate();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [tab, setTab] = useState<Tab>("catalog");
     const [stats, setStats] = useState<any>(null);
     const [books, setBooks] = useState<any[]>([]);
@@ -26,6 +31,8 @@ const LibraryHome = () => {
     const [requestFilter, setRequestFilter] = useState("PENDING");
     const [renewalFilter, setRenewalFilter] = useState("PENDING");
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [rejectModal, setRejectModal] = useState<RejectModal>(null);
+    const [renewalModal, setRenewalModal] = useState<RenewalModal>(null);
 
     const showMsg = (type: "success" | "error", text: string) => {
         setMessage({ type, text });
@@ -89,31 +96,53 @@ const LibraryHome = () => {
         } catch { showMsg("error", "Failed to toggle book status"); }
     };
 
-    const handleApproveRequest = async (requestId: string) => {
-        if (!confirm("Approve this request? The book will be marked as ISSUED immediately.")) return;
-        try {
-            await api.approveLibraryRequest(requestId);
-            showMsg("success", "Request approved and book issued");
-            fetchRequests(); fetchStats();
-        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to approve"); }
+    const handleApproveRequest = (requestId: string) => {
+        confirm({
+            title: "Approve Borrow Request",
+            message: "Approve this request? The book will be marked as ISSUED immediately.",
+            confirmText: "Approve & Issue",
+            onConfirm: async () => {
+                await api.approveLibraryRequest(requestId);
+                showMsg("success", "Request approved and book issued");
+                fetchRequests(); fetchStats();
+            },
+        });
     };
 
-    const handleRejectRequest = async (requestId: string) => {
-        const reason = prompt("Rejection reason (optional):");
+    const handleRejectRequest = (requestId: string) => {
+        setRejectModal({ requestId, reason: "", submitting: false });
+    };
+
+    const submitReject = async () => {
+        if (!rejectModal) return;
+        setRejectModal(m => m ? { ...m, submitting: true } : null);
         try {
-            await api.rejectLibraryRequest(requestId, reason || "");
+            await api.rejectLibraryRequest(rejectModal.requestId, rejectModal.reason);
             showMsg("success", "Request rejected");
             fetchRequests(); fetchStats();
-        } catch { showMsg("error", "Failed to reject"); }
+            setRejectModal(null);
+        } catch {
+            showMsg("error", "Failed to reject");
+            setRejectModal(m => m ? { ...m, submitting: false } : null);
+        }
     };
 
-    const handleRespondRenewal = async (renewalId: string, action: "APPROVED" | "REJECTED") => {
-        const remarks = action === "REJECTED" ? (prompt("Remarks:") || "") : "";
+    const handleRespondRenewal = (renewalId: string, action: "APPROVED" | "REJECTED") => {
+        setRenewalModal({ renewalId, action, remarks: "", submitting: false });
+    };
+
+    const submitRenewal = async () => {
+        if (!renewalModal) return;
+        setRenewalModal(m => m ? { ...m, submitting: true } : null);
         try {
-            await api.respondLibraryRenewal(renewalId, action, remarks);
-            showMsg("success", `Renewal ${action.toLowerCase()}`);
+            await api.respondLibraryRenewal(renewalModal.renewalId, renewalModal.action, renewalModal.remarks);
+            showMsg("success", `Renewal ${renewalModal.action.toLowerCase()}`);
             fetchRenewals(); fetchStats();
-        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to respond"); }
+            setRenewalModal(null);
+        } catch (e: any) {
+            showMsg("error", e?.response?.data?.message || "Failed to respond");
+            setRenewalModal(m => m ? { ...m, submitting: false } : null);
+        }
     };
 
     const handleMarkOverdue = async () => {
@@ -150,6 +179,75 @@ const LibraryHome = () => {
 
     return (
         <div className="min-h-full bg-slate-50">
+            {confirmDialog}
+
+            {/* Reject Request Modal */}
+            {rejectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-bold text-slate-800">Reject Borrow Request</h3>
+                            <button onClick={() => setRejectModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-4">Optionally provide a reason for the student.</p>
+                        <textarea
+                            value={rejectModal.reason}
+                            onChange={e => setRejectModal(m => m ? { ...m, reason: e.target.value } : null)}
+                            placeholder="Rejection reason (optional)"
+                            rows={3}
+                            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                        />
+                        <div className="flex gap-3 mt-4">
+                            <button onClick={() => setRejectModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button onClick={submitReject} disabled={rejectModal.submitting}
+                                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                                {rejectModal.submitting ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Rejecting…</> : <><XCircle size={15} />Reject</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Renewal Response Modal */}
+            {renewalModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-bold text-slate-800">
+                                {renewalModal.action === "APPROVED" ? "Approve Renewal" : "Reject Renewal"}
+                            </h3>
+                            <button onClick={() => setRenewalModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        </div>
+                        {renewalModal.action === "REJECTED" && (
+                            <>
+                                <p className="text-sm text-slate-500 mb-4">Optionally provide remarks for the student.</p>
+                                <textarea
+                                    value={renewalModal.remarks}
+                                    onChange={e => setRenewalModal(m => m ? { ...m, remarks: e.target.value } : null)}
+                                    placeholder="Remarks (optional)"
+                                    rows={3}
+                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                                />
+                            </>
+                        )}
+                        {renewalModal.action === "APPROVED" && (
+                            <p className="text-sm text-slate-500 mb-4">This will extend the book's due date by 21 days from today.</p>
+                        )}
+                        <div className="flex gap-3 mt-4">
+                            <button onClick={() => setRenewalModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button onClick={submitRenewal} disabled={renewalModal.submitting}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 text-white
+                                    ${renewalModal.action === "APPROVED" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
+                                {renewalModal.submitting
+                                    ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Processing…</>
+                                    : renewalModal.action === "APPROVED"
+                                        ? <><CheckCircle size={15} />Approve</>
+                                        : <><XCircle size={15} />Reject</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <PageHeader
                 icon={BookOpen}
                 title="Library Management"
