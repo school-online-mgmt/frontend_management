@@ -558,6 +558,62 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Publish exam (CREATED → PUBLISHED)
+    publishExam = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-exam`);
+        return res.data;
+    };
+
+    // Mark exam as conducted without payload (READY_TO_CONDUCT → CONDUCTED)
+    markConducted = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/conduct`);
+        return res.data;
+    };
+
+    // Get per-section marks progress summary
+    getExamSections = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/sections`);
+        return res.data;
+    };
+
+    // ── Exam Lifecycle Stage Transitions ──────────────────────────────────────
+
+    // CREATED → SYLLABUS_CONFIRMED
+    confirmSyllabus = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-syllabus`);
+        return res.data;
+    };
+
+    // SYLLABUS_CONFIRMED → DATE_CONFIRMED
+    confirmDate = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-date`);
+        return res.data;
+    };
+
+    // DATE_CONFIRMED → PAPER_SET
+    setPaper = async (examId: string, payload?: { questionPaper?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/set-paper`, payload ?? {});
+        return res.data;
+    };
+
+    // PAPER_SET → ADMIT_CARD_PUBLISHED
+    examPublishAdmitCards = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-admit-cards`);
+        return res.data;
+    };
+
+    // ADMIT_CARD_PUBLISHED → READY_TO_CONDUCT
+    readyToConduct = async (examId: string, payload?: { readyToConductNotes?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/ready-to-conduct`, payload ?? {});
+        return res.data;
+    };
+
+    // CONDUCTED → PAPER_EVALUATED
+    evaluatePaper = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/evaluate-paper`);
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
 
     // Get all applicants

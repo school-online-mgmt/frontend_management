@@ -32,9 +32,9 @@ const AddSyllabusModal = ({
             onClose();
 
         } catch (err: any) {
-            setMessage(err?.response?.data?.message || "Failed");
+            const fieldErr = err?.response?.data?.errors?.fieldErrors?.syllabus?.[0];
+            setMessage(fieldErr || err?.response?.data?.message || "Failed to save syllabus");
             setMessageType("error");
-            onClose();
         } finally {
             setLoading(false);
         }
