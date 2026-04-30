@@ -45,7 +45,7 @@ const CourseDetails = () => {
             const data = await api.getCourseById(courseId);
             setCourse(data);
         } catch {
-            alert("Failed to load course");
+            showMessage("error", "Failed to load course");
         } finally {
             setIsLoading(false);
         }
@@ -212,6 +212,7 @@ const CourseDetails = () => {
                         </span>
                     </div>
                     <button
+                        data-testid="add-subject-to-course-btn"
                         onClick={() => setIsAddModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition"
                     >

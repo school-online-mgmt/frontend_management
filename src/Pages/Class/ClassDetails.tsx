@@ -116,7 +116,7 @@ const ClassDetails = () => {
                         <h2 className="text-base font-bold text-slate-800">Sections</h2>
                         <p className="text-xs text-slate-500 mt-0.5">{classData.sections?.length ?? 0} section{classData.sections?.length !== 1 ? 's' : ''} in this class</p>
                     </div>
-                    <button onClick={() => setShowSectionModal(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-1.5">
+                    <button data-testid="add-section-btn" onClick={() => setShowSectionModal(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition flex items-center gap-1.5">
                         <Plus size={15} /> Add Section
                     </button>
                 </div>
@@ -132,6 +132,7 @@ const ClassDetails = () => {
                         {classData.sections.map((section: any) => (
                             <div
                                 key={section.id}
+                                data-testid={`section-row-${section.slug}`}
                                 onClick={() => navigate(`/section/${section.id}`)}
                                 className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 cursor-pointer transition-colors group"
                             >
@@ -177,7 +178,7 @@ const ClassDetails = () => {
                         <h2 className="text-base font-bold text-slate-800">Courses</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Academic courses offered in {classData.name}</p>
                     </div>
-                    <button onClick={() => setShowCreateCourseModal(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition flex items-center gap-1.5">
+                    <button data-testid="add-course-btn" onClick={() => setShowCreateCourseModal(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition flex items-center gap-1.5">
                         <Plus size={15} /> Add Course
                     </button>
                 </div>

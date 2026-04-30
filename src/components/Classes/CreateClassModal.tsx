@@ -43,6 +43,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
             onCancel={onClose}
         >
             <input
+                data-testid="class-slug-input"
                 value={slug}
                 onChange={e => setSlug(e.target.value)}
                 placeholder="Slug"
@@ -50,6 +51,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
             />
 
             <input
+                data-testid="class-name-input"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Class Name"

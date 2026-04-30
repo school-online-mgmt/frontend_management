@@ -20,8 +20,9 @@ const CourseHome = () => {
         try {
             const data = await api.getCourses();
             setCourses(Array.isArray(data) ? data : []);
-        } catch (error) {
-
+        } catch {
+            setMessage("Failed to load courses. Please refresh.");
+            setMessageType("error");
             setCourses([]);
         } finally {
             setIsLoading(false);
@@ -63,7 +64,7 @@ const CourseHome = () => {
                             className="px-3 py-2 bg-white/10 border border-white/20 text-white rounded-xl flex items-center gap-2 text-sm hover:bg-white/20 transition backdrop-blur-sm">
                             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
                         </button>
-                        <button onClick={() => setIsCreateModalOpen(true)}
+                        <button data-testid="create-course-btn" onClick={() => setIsCreateModalOpen(true)}
                             className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm">
                             <Plus size={18} /> Create Course
                         </button>
@@ -107,6 +108,7 @@ const CourseHome = () => {
                                 courses.map((course: any) => (
                                     <tr
                                         key={course.id}
+                                        data-testid={`course-row-${course.slug}`}
                                         onClick={() => navigate(`/course/${course.id}`)}
                                         className="hover:bg-slate-50 cursor-pointer transition"
                                     >

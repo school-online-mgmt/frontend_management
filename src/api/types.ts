@@ -237,3 +237,83 @@ export interface UpdateLibraryBookData {
   requiresApproval?: boolean;
   restrictedToClassIds?: string[];
 }
+
+// ── Admit Cards ──────────────────────────────────────────────────────────────
+
+export type ExamTerm = "TERM1" | "TERM2" | "TERM3";
+
+export interface AdmitCardRelease {
+  id: string;
+  tenantId: string;
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName: string | null;
+  notes: string | null;
+  publishedBy: string | null;
+  publishedAt: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublishAdmitCardPayload {
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName?: string;
+  notes?: string;
+}
+
+// ── Invoice Generation Result (extended) ─────────────────────────────────────
+
+export interface GenerateInvoicesResult {
+  generated: number;
+  skipped: number;
+  total: number;
+  lateFeesApplied: number;
+  errors: number;
+}
+
+// ── Fee Structure ─────────────────────────────────────────────────────────────
+
+export type FeeItemType = 'TUITION' | 'TRANSPORT' | 'LIBRARY' | 'LAB' | 'SPORTS' | 'COMPUTER' | 'DEVELOPMENT' | 'EXAM' | 'ADMISSION' | 'BOOKS' | 'UNIFORM' | 'ID_CARD' | 'MISC';
+export type FeeScope     = 'GLOBAL' | 'CLASS' | 'COURSE';
+export type FeeFrequency = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'ONE_TIME';
+
+export interface FeeStructureItem {
+  id: string;
+  name: string;
+  feeType: FeeItemType;
+  scope: FeeScope;
+  classId: string | null;
+  className: string | null;
+  courseId: string | null;
+  courseName: string | null;
+  amount: number;
+  frequency: FeeFrequency;
+  isOptional: boolean;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+// ── Teacher Application ───────────────────────────────────────────────────────
+
+export interface TeacherApplication {
+  id: string;
+  name: string;
+  gender: string;
+  age: number | null;
+  qualification: string;
+  experienceYears: number | null;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  subjectsInterested: string | null;
+  message: string | null;
+  status: 'APPLIED' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
+  comments: string | null;
+  tenantId: string;
+  createdAt: string;
+  updatedAt: string;
+}

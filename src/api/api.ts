@@ -1,5 +1,16 @@
 import axios from 'axios';
-import type { CreateClassData, UpdateTeacherData, UpdateExamPayload, UpdateSchoolEventData, UpdateLibraryBookData } from './types';
+import type {
+    CreateClassData,
+    UpdateTeacherData,
+    UpdateExamPayload,
+    UpdateSchoolEventData,
+    UpdateLibraryBookData,
+    AdmitCardRelease,
+    PublishAdmitCardPayload,
+    GenerateInvoicesResult,
+    TeacherApplication,
+    FeeStructureItem,
+} from './types';
 
 // Create an Axios instance with a base URL from environment variables
 const apiClient = axios.create({
@@ -21,7 +32,11 @@ export const setLogoutCallback = (callback: () => void) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't trigger logout for verifyAuth — it's used to CHECK auth, not make real API calls.
+    // A 401 there just means "not authenticated yet"; the AuthContext handles that state.
+    const url: string = error.config?.url ?? '';
+    const isAuthCheck = url.includes('/management/auth/verifyAuth');
+    if (error.response?.status === 401 && !isAuthCheck) {
       if (logoutCallback) {
           logoutCallback();
       }
@@ -219,6 +234,28 @@ class API {
 getSessions= async () => {
     const response = await apiClient.get("/management/session");
     return response.data.sessions;
+};
+
+// Create Session
+createSession = async (body: {
+    slug: string; name: string; startDate: string; endDate: string; description?: string;
+}) => {
+    const response = await apiClient.post("/management/session/create", body);
+    return response.data;
+};
+
+// Update Session
+updateSession = async (id: string, body: {
+    slug?: string; name?: string; startDate?: string; endDate?: string;
+}) => {
+    const response = await apiClient.put(`/management/session/${id}`, body);
+    return response.data;
+};
+
+// Delete Session
+deleteSession = async (id: string) => {
+    const response = await apiClient.delete(`/management/session/${id}`);
+    return response.data;
 };
 
 addTeacherToSubject = async (subjectId: string, body: { teacherId: string, sectionId: string }) => {
@@ -527,6 +564,62 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Publish exam (CREATED → PUBLISHED)
+    publishExam = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-exam`);
+        return res.data;
+    };
+
+    // Mark exam as conducted without payload (READY_TO_CONDUCT → CONDUCTED)
+    markConducted = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/conduct`);
+        return res.data;
+    };
+
+    // Get per-section marks progress summary
+    getExamSections = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/sections`);
+        return res.data;
+    };
+
+    // ── Exam Lifecycle Stage Transitions ──────────────────────────────────────
+
+    // CREATED → SYLLABUS_CONFIRMED
+    confirmSyllabus = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-syllabus`);
+        return res.data;
+    };
+
+    // SYLLABUS_CONFIRMED → DATE_CONFIRMED
+    confirmDate = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-date`);
+        return res.data;
+    };
+
+    // DATE_CONFIRMED → PAPER_SET
+    setPaper = async (examId: string, payload?: { questionPaper?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/set-paper`, payload ?? {});
+        return res.data;
+    };
+
+    // PAPER_SET → ADMIT_CARD_PUBLISHED
+    examPublishAdmitCards = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-admit-cards`);
+        return res.data;
+    };
+
+    // ADMIT_CARD_PUBLISHED → READY_TO_CONDUCT
+    readyToConduct = async (examId: string, payload?: { readyToConductNotes?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/ready-to-conduct`, payload ?? {});
+        return res.data;
+    };
+
+    // CONDUCTED → PAPER_EVALUATED
+    evaluatePaper = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/evaluate-paper`);
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
 
     // Get all applicants
@@ -645,6 +738,16 @@ createStudent = async (data: {
         return res.data;
     };
 
+    getTeacherApplications = async (status?: string): Promise<{ applications: TeacherApplication[] }> => {
+        const res = await apiClient.get('/management/teacher/applications', { params: status ? { status } : {} });
+        return res.data;
+    };
+
+    updateTeacherApplicationStatus = async (id: string, data: { status: string; comments?: string }) => {
+        const res = await apiClient.patch(`/management/teacher/applications/${id}`, data);
+        return res.data;
+    };
+
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
@@ -754,6 +857,14 @@ createStudent = async (data: {
         const res = await apiClient.post("/management/fees/extra-charges", data);
         return res.data;
     };
+    previewBulkExtraCharge = async (params: { sessionId: string; classId?: string; sectionId?: string; courseId?: string }) => {
+        const res = await apiClient.get("/management/fees/extra-charges/bulk/preview", { params });
+        return res.data as { students: Array<{ academicId: string; studentId: string; firstName: string; lastName: string; phone: string }>; total: number };
+    };
+    addBulkExtraCharge = async (data: { type: string; description?: string; amount: number; month: number; year: number; sessionId: string; classId?: string; sectionId?: string; courseId?: string; studentIds?: string[]; applyToAll?: boolean }) => {
+        const res = await apiClient.post("/management/fees/extra-charges/bulk", data);
+        return res.data as { message: string; created: number; total: number };
+    };
     updateExtraCharge = async (id: string, data: Partial<{ type: string; description: string; amount: number; month: number; year: number }>) => {
         const res = await apiClient.patch(`/management/fees/extra-charges/${id}`, data);
         return res.data;
@@ -768,49 +879,34 @@ createStudent = async (data: {
         const res = await apiClient.get("/management/fees/invoices", { params });
         return res.data;
     };
-    generateInvoices = async (data: { month: number; year: number; sessionId: string; dueDate: string }) => {
+    generateInvoices = async (data: {
+        month: number;
+        year: number;
+        sessionId: string;
+        dueDate: string;
+    }): Promise<GenerateInvoicesResult & { message?: string }> => {
         const res = await apiClient.post("/management/fees/invoices/generate", data);
         return res.data;
     };
 
-    /**
-     * Stream invoice generation with real-time progress via SSE.
-     */
-    generateInvoicesStream = async (
-        data: { month: number; year: number; sessionId: string; dueDate: string },
-        onProgress: (event: { type: string; generated: number; skipped: number; processed: number; total: number }) => void,
-    ): Promise<{ generated: number; skipped: number; total: number }> => {
-        const baseURL = apiClient.defaults.baseURL || "";
-        const response = await fetch(`${baseURL}/management/fees/invoices/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
-            credentials: "include",
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ message: "Generation failed" }));
-            throw new Error(err.message || "Generation failed");
-        }
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let result: any = { generated: 0, skipped: 0, total: 0 };
+    // ── Admit Cards ──────────────────────────────────────────────────────────
+    getAdmitCardReleases = async (): Promise<{ success: boolean; data: AdmitCardRelease[] }> => {
+        const res = await apiClient.get("/management/exam/admit-cards");
+        return res.data;
+    };
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const payload = JSON.parse(line.slice(6));
-                    onProgress(payload);
-                    if (payload.type === "complete") result = payload;
-                }
-            }
-        }
-        return result;
+    publishAdmitCardRelease = async (
+        payload: PublishAdmitCardPayload,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post("/management/exam/admit-cards/publish", payload);
+        return res.data;
+    };
+
+    revokeAdmitCardRelease = async (
+        id: string,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post(`/management/exam/admit-cards/${id}/revoke`);
+        return res.data;
     };
 
     getFeeInvoiceById = async (id: string) => {
@@ -835,6 +931,54 @@ createStudent = async (data: {
     };
     getFeeSummary = async (params?: { month?: number; year?: number }) => {
         const res = await apiClient.get("/management/fees/summary", { params });
+        return res.data;
+    };
+
+    // ── Fee Structures ────────────────────────────────────────────────────────
+
+    getFeeStructures = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/fees/structures', { params: sessionId ? { sessionId } : {} });
+        return res.data as { structures: Array<{ id: string; name: string; sessionId: string; sessionName: string; isActive: boolean; itemCount: number; createdAt: string }> };
+    };
+
+    createFeeStructure = async (data: { sessionId: string; name: string; description?: string; isActive: boolean }) => {
+        const res = await apiClient.post('/management/fees/structures', data);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean } };
+    };
+
+    getFeeStructureById = async (id: string) => {
+        const res = await apiClient.get(`/management/fees/structures/${id}`);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean; items: FeeStructureItem[] } };
+    };
+
+    createFeeStructureItem = async (structureId: string, data: {
+        name: string; feeType: string; scope: 'GLOBAL' | 'COURSE';
+        amount: number; frequency: string;
+        courseId?: string; description?: string;
+    }) => {
+        const res = await apiClient.post(`/management/fees/structures/${structureId}/items`, data);
+        return res.data;
+    };
+
+    updateFeeStructureItem = async (structureId: string, itemId: string, data: Partial<{
+        name: string; amount: number; frequency: string; description: string;
+    }>) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}/items/${itemId}`, data);
+        return res.data;
+    };
+
+    deleteFeeStructureItem = async (structureId: string, itemId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}/items/${itemId}`);
+        return res.data;
+    };
+
+    updateFeeStructure = async (structureId: string, data: { name?: string; description?: string; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}`, data);
+        return res.data as { structure: { id: string; name: string; isActive: boolean } };
+    };
+
+    deleteFeeStructure = async (structureId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}`);
         return res.data;
     };
 
@@ -1096,6 +1240,150 @@ createStudent = async (data: {
     deleteBusDetail = async (id: string) => {
         const res = await apiClient.delete(`/management/transport/bus-details/${id}`);
         return res.data;
+    };
+
+    // ── Account & Support ────────────────────────────────────────────────────
+    getAccount = async () => {
+        const res = await apiClient.get('/management/support/account');
+        return res.data;
+    };
+
+    // Support Tickets
+    getSupportTickets = async () => {
+        const res = await apiClient.get('/management/support/tickets');
+        return res.data;
+    };
+    createSupportTicket = async (data: { subject: string; description: string; type?: string; category?: string; priority?: string }) => {
+        const res = await apiClient.post('/management/support/tickets', data);
+        return res.data;
+    };
+    getSupportTicket = async (id: string) => {
+        const res = await apiClient.get(`/management/support/tickets/${id}`);
+        return res.data;
+    };
+    replyToTicket = async (id: string, message: string) => {
+        const res = await apiClient.post(`/management/support/tickets/${id}/reply`, { message });
+        return res.data;
+    };
+    closeTicket = async (id: string) => {
+        const res = await apiClient.patch(`/management/support/tickets/${id}/close`);
+        return res.data;
+    };
+
+    // Feature Requests
+    getFeatureRequests = async () => {
+        const res = await apiClient.get('/management/support/feature-requests');
+        return res.data;
+    };
+    createFeatureRequest = async (data: { title: string; description: string; category?: string }) => {
+        const res = await apiClient.post('/management/support/feature-requests', data);
+        return res.data;
+    };
+
+    // Onboarding
+    getOnboardingStatus = async (): Promise<{
+        isComplete: boolean;
+        steps: {
+            session:          { complete: boolean; count: number };
+            classAndSection:  { complete: boolean; classCount: number; sectionCount: number };
+            subjectAndCourse: { complete: boolean; subjectCount: number; courseCount: number };
+            teacher:          { complete: boolean; count: number };
+            principal:        { complete: boolean; count: number };
+            fees:             { complete: boolean; courseFeeCount: number; feeStructureCount: number };
+            transport:        { complete: boolean; count: number };
+            noticeBoard:      { complete: boolean; count: number };
+        };
+    }> => {
+        const res = await apiClient.get('/management/onboarding/status');
+        return res.data;
+    };
+
+    // ── Staff Management ──────────────────────────────────────────────────────
+
+    getStaff = async (): Promise<{ staff: Array<{
+        id: string; firstName: string; middleName?: string; lastName: string;
+        phone: string; email: string; role: string | null; createdAt: string;
+        permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> | null;
+    }> }> => {
+        const res = await apiClient.get('/management/staff');
+        return res.data;
+    };
+
+    createStaff = async (data: {
+        firstName: string; lastName: string; phone: string; email: string;
+        password: string; role?: string;
+        permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
+    }) => {
+        const res = await apiClient.post('/management/staff', data);
+        return res.data;
+    };
+
+    updateStaff = async (id: string, data: {
+        firstName?: string; lastName?: string; phone?: string; email?: string;
+        role?: string; password?: string;
+    }) => {
+        const res = await apiClient.patch(`/management/staff/${id}`, data);
+        return res.data;
+    };
+
+    deleteStaff = async (id: string) => {
+        const res = await apiClient.delete(`/management/staff/${id}`);
+        return res.data;
+    };
+
+    updateStaffPermissions = async (id: string, permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>) => {
+        const res = await apiClient.put(`/management/staff/${id}/permissions`, { permissions });
+        return res.data;
+    };
+
+    // Tenant Config / School Settings
+    getTenantConfig = async () => {
+        const res = await apiClient.get("/management/settings/config");
+        return res.data;
+    };
+    updateTenantConfig = async (data: {
+        schoolName: string;
+        tagline?: string | null;
+        bio?: string | null;
+        address?: string | null;
+        city?: string | null;
+        state?: string | null;
+        country?: string | null;
+        pincode?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        logoUrl?: string | null;
+        footerText?: string | null;
+        acceptingApplications?: boolean;
+        acceptingOnlineFees?: boolean;
+        establishedYear?: number | null;
+        boardAffiliation?: string | null;
+        schoolType?: string | null;
+        emergencyContact?: string | null;
+        principalName?: string | null;
+    }) => {
+        const res = await apiClient.patch("/management/settings/config", data);
+        return res.data;
+    };
+
+    getPlatformCharge = async () => {
+        const res = await apiClient.get("/management/settings/platform-charge");
+        return res.data as { costPerStudent: number };
+    };
+
+    getMyAdmissionCharges = async () => {
+        const res = await apiClient.get("/management/settings/admission-charges");
+        return res.data as {
+            charges: Array<{
+                id: string; studentName: string; amount: number; status: string;
+                paidAt: string | null; notes: string | null; createdAt: string;
+            }>;
+            summary: {
+                total: number; pendingCount: number; paidCount: number;
+                pendingAmount: number; paidAmount: number; totalAmount: number;
+            } | null;
+        };
     };
 }
 export default new API();

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.tsx';
+import { OnboardingProvider } from './context/OnboardingContext.tsx';
+import OnboardingGate from './components/OnboardingGate.tsx';
 import SubjectHomePage from './Pages/Subject/SubjectHome.tsx';
 import SubjectDetails from './Pages/Subject/Subject.tsx';
 import LoginPage from './Pages/Login';
@@ -11,17 +13,15 @@ import CourseDetails from "./Pages/Course/CourseDetails.tsx";
 import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
 import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
 import AssignmentsPage from './Pages/Teacher/AssignmentsPage.tsx';
-import SectionHome from "./Pages/Section/SectionHome.tsx";
 import ClassHome from "./Pages/Class/ClassHome.tsx";
 import ClassDetails from "./Pages/Class/ClassDetails.tsx";
-import StudentHome from "./Pages/Student/StudentHome.tsx";
 import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
 import ApplicantDetails from "./Pages/Applicants/ApplicantDetails.tsx";
 import StudentDetails from "./Pages/Students/StudentDetails.tsx";
-import StudentAdmission from "./Pages/StudentAdmission.tsx";
 import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
+import AdmitCardsPage from "./Pages/Exam/AdmitCardsPage.tsx";
 import ResultsPerformancePage from "./Pages/Performance/ResultsPerformancePage.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
@@ -36,19 +36,25 @@ import BookDetailsPage from "./Pages/Library/BookDetails.tsx";
 import SectionDetails from "./Pages/Section/SectionDetails.tsx";
 import StaffHome from "./Pages/Staff/StaffHome.tsx";
 import TransportHub from "./Pages/Transport/TransportHub.tsx";
+import SessionsPage from "./Pages/Sessions/SessionsPage.tsx";
+import AccountPage from "./Pages/Account/AccountPage.tsx";
+import SupportCenter from "./Pages/Support/SupportCenter.tsx";
+import TeacherApply from "./Pages/TeacherApply.tsx";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <OnboardingProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-        
+          <Route path="/teacher-apply" element={<TeacherApply />} />
+
         <Route element={<ProtectedRoute />}>
+          <Route element={<OnboardingGate />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/student-admission" element={<StudentAdmission />} />
             <Route path="/applicants-home" element={<ApplicantsHome />} />
             <Route path="/students-home" element={<StudentsHome />} />
             <Route path="/subject-Home" element={<SubjectHomePage />} />
@@ -57,6 +63,7 @@ function App() {
             <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/exam-home" element={<ExamHome />} />
             <Route path="/exam/:examId" element={<ExamDetails />} />
+            <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
             <Route path="/performance" element={<ResultsPerformancePage />} />
             <Route path="/notices" element={<NoticeBoardHome />} />
             <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
@@ -69,9 +76,7 @@ function App() {
             <Route path="/assignments" element={<AssignmentsPage />} />
             <Route path="/class-Home" element={<ClassHome />} />
             <Route path="/class/:classId" element={<ClassDetails />} />
-            <Route path="/section-home" element={<SectionHome />} />
             <Route path="/section/:sectionId" element={<SectionDetails />} />
-            <Route path="/student-home" element={<StudentHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/fees" element={<FeesHub />} />
@@ -83,11 +88,16 @@ function App() {
             <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
             <Route path="/staff" element={<StaffHome />} />
             <Route path="/transport" element={<TransportHub />} />
+            <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/support" element={<SupportCenter />} />
+            </Route>
           </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
+        </OnboardingProvider>
       </AuthProvider>
     </BrowserRouter>
   );

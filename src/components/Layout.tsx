@@ -10,14 +10,17 @@ import {
   KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
+import { useAuthContext } from "../context/AuthContext";
 import api from "../api/api";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
+// module: matches AppModule enum. null = always visible (no permission needed)
 const NAV_SECTIONS = [
   {
     label: "Overview",
     icon: LayoutDashboard,
     collapsible: false,
+    module: null,
     items: [
       { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
@@ -26,6 +29,7 @@ const NAV_SECTIONS = [
     label: "People",
     icon: Users,
     collapsible: true,
+    module: "PEOPLE" as const,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
       { path: "/students-home", label: "Students", icon: Users },
@@ -36,6 +40,7 @@ const NAV_SECTIONS = [
     label: "Teachers",
     icon: UserCog,
     collapsible: true,
+    module: "TEACHERS" as const,
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
       { path: "/assignments", label: "Assignments", icon: ClipboardList },
@@ -45,15 +50,19 @@ const NAV_SECTIONS = [
     label: "Academics",
     icon: GraduationCap,
     collapsible: true,
+    module: "ACADEMICS" as const,
     items: [
-      { path: "/subject-Home", label: "Subjects", icon: BookOpen },
+      { path: "/sessions", label: "Sessions", icon: CalendarDays },
       { path: "/class-Home", label: "Classes", icon: Layers },
+      { path: "/course-Home", label: "Courses", icon: BookMarked },
+      { path: "/subject-Home", label: "Subjects", icon: BookOpen },
     ],
   },
   {
     label: "Studies",
     icon: BookMarked,
     collapsible: true,
+    module: "STUDIES" as const,
     items: [
       { path: "/exam-home", label: "Exams", icon: ClipboardList },
       { path: "/performance", label: "Performance", icon: BarChart3 },
@@ -63,6 +72,7 @@ const NAV_SECTIONS = [
     label: "Attendance",
     icon: ClipboardCheck,
     collapsible: true,
+    module: "ATTENDANCE" as const,
     items: [
       { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck },
       { path: "/teacher-attendance", label: "Teacher Attendance", icon: UserCheck },
@@ -73,6 +83,7 @@ const NAV_SECTIONS = [
     label: "Library",
     icon: Library,
     collapsible: true,
+    module: "LIBRARY" as const,
     items: [
       { path: "/library", label: "Library", icon: Library },
     ],
@@ -81,6 +92,7 @@ const NAV_SECTIONS = [
     label: "Communication",
     icon: MessageSquare,
     collapsible: true,
+    module: "COMMUNICATION" as const,
     items: [
       { path: "/notices", label: "Notice Board", icon: Megaphone },
       { path: "/calendar", label: "Calendar", icon: Calendar },
@@ -90,9 +102,20 @@ const NAV_SECTIONS = [
     label: "Finance",
     icon: Wallet,
     collapsible: true,
+    module: "FINANCE" as const,
     items: [
       { path: "/fees", label: "Fee Management", icon: CreditCard },
       { path: "/transport", label: "Transport", icon: Bus },
+    ],
+  },
+  {
+    label: "Account",
+    icon: School,
+    collapsible: true,
+    module: null,
+    items: [
+      { path: "/account", label: "My Account", icon: School },
+      { path: "/support", label: "Support Center", icon: MessageSquare },
     ],
   },
 ];
@@ -203,6 +226,7 @@ const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { hasModule } = useAuthContext();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -274,6 +298,12 @@ const Layout = () => {
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
     const showFull = !collapsed || isMobile;
+    const role = user?.role;
+    const hideAccount = role === 'PRINCIPAL' || role === 'DIRECTOR';
+    const visibleSections = NAV_SECTIONS.filter(s => {
+      if (s.label === 'Account' && hideAccount) return false;
+      return s.module === null || hasModule(s.module);
+    });
 
     return (
       <div className="flex flex-col h-full bg-slate-900">
@@ -300,7 +330,7 @@ const Layout = () => {
         {/* Navigation */}
         <nav ref={isMobile ? undefined : navRef} className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
           <div className="space-y-0.5">
-            {NAV_SECTIONS.map((section) => {
+            {visibleSections.map((section) => {
               const sectionActive = isSectionActive(section);
               const isExpanded = expandedSections[section.label] ?? false;
               const SectionIcon = section.icon;

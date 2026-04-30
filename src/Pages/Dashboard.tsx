@@ -5,7 +5,7 @@ import {
   CreditCard, AlertTriangle, CheckCircle2, UserPlus, Layers,
   ClipboardCheck, Library, Bell, Loader2, RefreshCw,
   ChevronRight, Sparkles, BookMarked, Wallet, CalendarDays,
-  School, UserCog,
+  School, UserCog, CalendarRange,
 } from "lucide-react";
 import api from "../api/api";
 import useAuth from "../hooks/useAuth";
@@ -128,6 +128,7 @@ const Dashboard = () => {
   const totalPendingActions = pendingLeaves.length + pendingNotices.length;
 
   const QUICK_LINKS = [
+    { to: "/sessions",       label: "Sessions",   icon: CalendarRange, bg: "bg-violet-50", text: "text-violet-700", desc: "Academic year setup" },
     { to: "/applicants-home", label: "Applicants", icon: UserPlus, bg: "bg-blue-50", text: "text-blue-700", desc: "Review applications" },
     { to: "/students-home", label: "Students", icon: Users, bg: "bg-indigo-50", text: "text-indigo-700", desc: "Manage students" },
     { to: "/teacher-home", label: "Teachers", icon: GraduationCap, bg: "bg-purple-50", text: "text-purple-700", desc: "Staff management" },

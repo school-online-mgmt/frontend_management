@@ -47,6 +47,7 @@ const AddSectionModal = ({ classId, onClose, onSuccess }: any) => {
       onCancel={onClose}
     >
       <input
+        data-testid="section-slug-input"
         value={slug}
         onChange={e => setSlug(e.target.value)}
         placeholder="Slug"
@@ -54,6 +55,7 @@ const AddSectionModal = ({ classId, onClose, onSuccess }: any) => {
       />
 
       <input
+        data-testid="section-name-input"
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="Section Name"

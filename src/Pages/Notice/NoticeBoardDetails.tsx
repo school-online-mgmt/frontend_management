@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import useAuth from "../../hooks/useAuth";
+import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../context/ToastContext";
 
 // ─── Priority config ──────────────────────────────────────────────────────────
 const PRIORITY_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
@@ -270,7 +272,7 @@ const NoticeCard = ({
                     </button>
                 )}
                 {isPrincipal && (
-                    <button onClick={() => onDelete(notice.id)}
+                    <button onClick={() => onDelete(notice.id, notice.title)}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors ml-auto">
                         <Trash2 size={13} /> Delete
                     </button>
@@ -284,8 +286,10 @@ const NoticeCard = ({
 const NoticeBoardDetails = () => {
     const { boardId } = useParams<{ boardId: string }>();
     const navigate = useNavigate();
-    const { role } = useAuth();
-    const isPrincipal = role === "PRINCIPAL" || role === "SUPER_ADMIN";
+    const { hasModuleAdmin } = useAuth();
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
+    const isPrincipal = hasModuleAdmin('COMMUNICATION');
 
     const [board, setBoard] = useState<any>(null);
     const [notices, setNotices] = useState<any[]>([]);
@@ -342,13 +346,25 @@ const NoticeBoardDetails = () => {
         } finally { setActionSaving(false); }
     };
 
-    const handleDelete = async (noticeId: string) => {
-        if (!confirm("Delete this notice? This action cannot be undone.")) return;
-        setActionSaving(true);
-        try {
-            await api.deleteNotice(noticeId);
-            await load();
-        } finally { setActionSaving(false); }
+    const handleDelete = (noticeId: string, title?: string) => {
+        confirm({
+            title: "Delete this notice?",
+            message: title
+                ? `"${title}" will be permanently removed from this board.`
+                : "The notice will be permanently removed from this board.",
+            confirmText: "Delete",
+            onConfirm: async () => {
+                setActionSaving(true);
+                try {
+                    await api.deleteNotice(noticeId);
+                    await load();
+                    addToast("Notice deleted", "success");
+                } catch (err: any) {
+                    addToast("Failed to delete notice", "error", err?.response?.data?.message);
+                    throw err;
+                } finally { setActionSaving(false); }
+            },
+        });
     };
 
     // Filter notices by tab
@@ -394,6 +410,7 @@ const NoticeBoardDetails = () => {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
+            {confirmDialog}
             {/* Header */}
             <div className="mb-6">
                 <button onClick={() => navigate(-1)}

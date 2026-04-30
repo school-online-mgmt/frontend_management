@@ -77,7 +77,7 @@ const ClassHome = () => {
                         <button onClick={fetchClasses} className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex items-center gap-2 text-sm text-white hover:bg-white/20 transition backdrop-blur-sm">
                             <RefreshCcw size={15} className={isLoading ? "animate-spin" : ""} /> Refresh
                         </button>
-                        <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm">
+                        <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm" data-testid="create-class-btn">
                             <Plus size={16} /> Create Class
                         </button>
                     </div>
@@ -129,6 +129,7 @@ const ClassHome = () => {
                     {filtered.map(cls => (
                         <div
                             key={cls.id}
+                            data-testid={`class-card-${cls.slug}`}
                             onClick={() => navigate(`/class/${cls.id}`)}
                             className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all cursor-pointer group"
                         >

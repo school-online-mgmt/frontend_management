@@ -2,13 +2,23 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useNavigate } from "react-router-dom";
 import api, { setLogoutCallback } from "../api/api";
 
-interface User {
+export type ModulePermission = { module: string; level: 'READ' | 'ADMIN' };
+
+// ADMIN + PRINCIPAL have full write access; DIRECTOR has read-only to all modules
+export const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL'] as const;
+export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE'] as const;
+export type AppModule = typeof ALL_MODULES[number];
+
+export interface User {
     id: string;
     firstName?: string;
     lastName?: string;
     email?: string;
     role?: string;
     phone?: string;
+    tenantId?: string;
+    // null = full access (admin/principal/director), array = explicit grants, missing = loading
+    permissions?: ModulePermission[] | null;
 }
 
 interface AuthState {
@@ -21,6 +31,14 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
     refresh: () => Promise<void>;
     logout: () => Promise<void>;
+    /** Directly set auth from a login response without an extra checkAuth round-trip */
+    loginDirect: (user: User) => void;
+    /** Returns true if the current user has at least READ access to the given module */
+    hasModule: (module: AppModule) => boolean;
+    /** Returns true if the current user has ADMIN access to the given module */
+    hasModuleAdmin: (module: AppModule) => boolean;
+    /** True for ADMIN / PRINCIPAL / DIRECTOR */
+    isFullAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -30,6 +48,10 @@ const AuthContext = createContext<AuthContextValue>({
     user: null,
     refresh: async () => {},
     logout: async () => {},
+    loginDirect: () => {},
+    hasModule: () => true,
+    hasModuleAdmin: () => true,
+    isFullAccess: true,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const navigate = useNavigate();
     const verifyInProgressRef = useRef(false);
+    // Set to true by loginDirect so the immediate background verify doesn't kick user out on failure
+    const freshLoginRef = useRef(false);
 
     const verify = useCallback(async () => {
         // Prevent multiple concurrent verify calls
@@ -52,20 +76,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const response = await api.checkAuth();
             const user = response?.user;
-
+            freshLoginRef.current = false;
             setAuth({
                 isAuthenticated: !!user?.id,
                 role: user?.role ?? null,
                 userId: user?.id ?? null,
                 user: user ?? null,
             });
-        } catch (error) {
-            setAuth({ 
-                isAuthenticated: false, 
-                role: null, 
-                userId: null,
-                user: null 
-            });
+        } catch (error: any) {
+            if (freshLoginRef.current) {
+                // First verify right after loginDirect — ignore failure (could be DB issue,
+                // not an auth failure). The user just successfully logged in.
+                freshLoginRef.current = false;
+            } else {
+                const status = error?.response?.status;
+                // Only reset auth state on an explicit 401 (unauthenticated).
+                // For server errors (5xx) or network failures, keep current state.
+                if (status === 401 || !status) {
+                    setAuth({ isAuthenticated: false, role: null, userId: null, user: null });
+                }
+            }
         } finally {
             verifyInProgressRef.current = false;
         }
@@ -116,12 +146,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => clearInterval(interval);
     }, [auth.isAuthenticated, verify]);
 
+    const loginDirect = useCallback((user: User) => {
+        freshLoginRef.current = true;
+        setAuth({
+            isAuthenticated: true,
+            role: user.role ?? null,
+            userId: user.id,
+            user,
+        });
+    }, []);
+
+    const isFullAccess = FULL_ACCESS_ROLES.includes((auth.user?.role ?? '') as any);
+
+    const hasModule = (module: AppModule): boolean => {
+        if (isFullAccess) return true;                         // ADMIN, PRINCIPAL
+        if (auth.user?.role === 'DIRECTOR') return true;      // Director has read access to all modules
+        const perms = auth.user?.permissions;
+        if (perms === null) return true;
+        if (!perms) return false;
+        return perms.some(p => p.module === module);
+    };
+
+    const hasModuleAdmin = (module: AppModule): boolean => {
+        if (isFullAccess) return true;                         // ADMIN, PRINCIPAL
+        if (auth.user?.role === 'DIRECTOR') return false;     // Director is read-only
+        const perms = auth.user?.permissions;
+        if (perms === null) return true;
+        if (!perms) return false;
+        return perms.some(p => p.module === module && p.level === 'ADMIN');
+    };
+
     return (
-        <AuthContext.Provider value={{ ...auth, refresh: verify, logout }}>
+        <AuthContext.Provider value={{ ...auth, refresh: verify, logout, loginDirect, hasModule, hasModuleAdmin, isFullAccess }}>
             {children}
         </AuthContext.Provider>
     );
 };
+
 
 export const useAuthContext = () => {
     const context = useContext(AuthContext);

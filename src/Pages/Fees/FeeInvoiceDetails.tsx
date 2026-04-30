@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer } from 'lucide-react';
+import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer, AlertCircle, GraduationCap, Calendar } from 'lucide-react';
 import api from '../../api/api';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -16,7 +16,8 @@ const statusColor: Record<string, string> = {
 };
 
 interface InvoiceDetail {
-    id: string; invoiceNo: string; month: number; year: number; dueDate: string;
+    id: string; invoiceNo: string; invoiceType: string; month: number; year: number; dueDate: string;
+    academicId: string;
     tuitionFee: number; transportFee: number; extraChargesTotal: number;
     totalAmount: number; paidAmount: number; status: string; remarks?: string; createdAt: string;
     studentId: string; studentFirstName: string; studentMiddleName?: string; studentLastName: string;
@@ -24,6 +25,7 @@ interface InvoiceDetail {
 }
 interface Item { id: string; description: string; amount: number; itemType: string; }
 interface Payment { id: string; amount: number; paymentMode: string; referenceNo?: string; paymentDate: string; remarks?: string; receivedByName?: string; }
+interface AdmissionCharge { id: string; amount: number; status: string; paidAt: string | null; }
 
 export default function FeeInvoiceDetails() {
     const { id } = useParams<{ id: string }>();
@@ -31,6 +33,7 @@ export default function FeeInvoiceDetails() {
     const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
     const [items, setItems] = useState<Item[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [admissionCharge, setAdmissionCharge] = useState<AdmissionCharge | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Payment form
@@ -42,6 +45,9 @@ export default function FeeInvoiceDetails() {
     const [showWaive, setShowWaive] = useState(false);
     const [showCancel, setShowCancel] = useState(false);
     const [actionRemarks, setActionRemarks] = useState('');
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const showError = (msg: string) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(null), 5000); };
 
     const reload = async () => {
         if (!id) return;
@@ -49,7 +55,10 @@ export default function FeeInvoiceDetails() {
         try {
             const data = await api.getFeeInvoiceById(id);
             setInvoice(data.invoice); setItems(data.items); setPayments(data.payments);
-        } catch { navigate('/fees'); }
+            setAdmissionCharge(data.admissionCharge ?? null);
+        } catch (err: any) {
+            showError(err?.response?.data?.message || 'Failed to load invoice.');
+        }
         finally { setLoading(false); }
     };
 
@@ -61,7 +70,7 @@ export default function FeeInvoiceDetails() {
         try {
             await api.recordPayment(id, { ...payForm, amount: parseFloat(payForm.amount) });
             await reload(); setShowPayment(false); setPayForm(p => ({ ...p, amount: '', referenceNo: '', remarks: '' }));
-        } catch { alert('Payment recording failed'); }
+        } catch (e: any) { showError(e?.response?.data?.message || 'Payment recording failed'); }
         finally { setSaving(false); }
     };
 
@@ -168,13 +177,31 @@ ${payments.length > 0 ? `
 
     return (
         <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
+            {errorMsg && (
+                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    <AlertCircle size={16} className="shrink-0" />{errorMsg}
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"><ArrowLeft size={18}/></button>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">{invoice.invoiceNo}</h1>
-                        <p className="text-slate-500 text-sm mt-0.5">{MONTHS[invoice.month-1]} {invoice.year} Fee Invoice</p>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-bold text-slate-900">{invoice.invoiceNo}</h1>
+                            {invoice.invoiceType === 'ADMISSION' ? (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-semibold border border-violet-200">
+                                    <GraduationCap size={11}/> Admission
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold border border-blue-200">
+                                    <Calendar size={11}/> Monthly
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-slate-500 text-sm mt-0.5">
+                            {invoice.invoiceType === 'ADMISSION' ? 'Admission Invoice' : `${MONTHS[invoice.month-1]} ${invoice.year} Fee Invoice`}
+                        </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -202,17 +229,41 @@ ${payments.length > 0 ? `
                     {/* Fee Breakdown */}
                     <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                         <div className="flex items-center gap-2 mb-4 text-slate-700 font-semibold"><CreditCard size={16}/> Fee Breakdown</div>
+                        {items.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-2">No line items recorded for this invoice.</p>
+                        ) : (
+                        <>
                         <table className="w-full text-sm">
-                            <thead><tr className="bg-slate-50"><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase">Description</th><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase">Type</th><th className="px-3 py-2 text-right text-xs text-slate-500 uppercase">Amount</th></tr></thead>
+                            <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase tracking-wide">Description</th><th className="px-3 py-2 text-left text-xs text-slate-500 uppercase tracking-wide">Type</th><th className="px-3 py-2 text-right text-xs text-slate-500 uppercase tracking-wide">Amount</th></tr></thead>
                             <tbody className="divide-y divide-slate-50">
                                 {items.map(it => (
-                                    <tr key={it.id}><td className="px-3 py-2.5">{it.description}</td><td className="px-3 py-2.5 text-slate-500 text-xs">{it.itemType.replaceAll('_', ' ')}</td><td className="px-3 py-2.5 text-right font-semibold">{fmt(it.amount)}</td></tr>
+                                    it.itemType === 'PLATFORM_FEE' ? (
+                                        <tr key={it.id} className="bg-violet-50/40">
+                                            <td className="px-3 py-2.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-violet-800">{it.description}</span>
+                                                    {admissionCharge && (
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${admissionCharge.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            {admissionCharge.status === 'PAID' ? '✓ Settled' : '⏳ Pending'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-violet-500 mt-0.5">Charged by EduPilots · Annual</p>
+                                            </td>
+                                            <td className="px-3 py-2.5"><span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded text-xs font-medium">Platform Fee</span></td>
+                                            <td className="px-3 py-2.5 text-right font-bold text-violet-700">{fmt(it.amount)}</td>
+                                        </tr>
+                                    ) : (
+                                        <tr key={it.id}><td className="px-3 py-2.5 font-medium text-slate-700">{it.description}</td><td className="px-3 py-2.5"><span className="text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">{it.itemType.replaceAll('_', ' ')}</span></td><td className="px-3 py-2.5 text-right font-semibold text-slate-800">{fmt(it.amount)}</td></tr>
+                                    )
                                 ))}
-                                <tr className="bg-slate-50 font-bold"><td colSpan={2} className="px-3 py-2.5">Total</td><td className="px-3 py-2.5 text-right">{fmt(invoice.totalAmount)}</td></tr>
+                                <tr className="bg-slate-50 font-bold border-t border-slate-200"><td colSpan={2} className="px-3 py-2.5">Total</td><td className="px-3 py-2.5 text-right">{fmt(invoice.totalAmount)}</td></tr>
                                 <tr><td colSpan={2} className="px-3 py-2.5 text-green-700">Paid</td><td className="px-3 py-2.5 text-right text-green-700 font-semibold">{fmt(invoice.paidAmount)}</td></tr>
                                 <tr className="bg-red-50 font-bold"><td colSpan={2} className="px-3 py-2.5 text-red-700">Balance Due</td><td className="px-3 py-2.5 text-right text-red-700">{fmt(balance)}</td></tr>
                             </tbody>
                         </table>
+                        </>
+                        )}
                     </div>
 
                     {/* Payment History */}

@@ -6,8 +6,10 @@ import ConfirmAdmissionModal from "../../components/Student/ConfirmAdmissionModa
 import Button from "../../components/common/Button";
 import { Card, CardContent, Badge, EmptyState } from "../../components/common/FormComponents";
 import { PageWrapper, PageContent, PageHeader, Section } from "../../components/common/PageWrappers";
+import { useToast } from "../../context/ToastContext";
 
 const StudentHome = () => {
+    const { addToast } = useToast();
     const [students, setStudents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -21,8 +23,8 @@ const StudentHome = () => {
         try {
             const data = await api.getAppliedStudents();
             setStudents(Array.isArray(data) ? data : []);
-        } catch (error) {
-
+        } catch (error: any) {
+            addToast(error?.response?.data?.message || "Failed to load applications. Please refresh.", "error");
             setStudents([]);
         } finally {
             setIsLoading(false);
@@ -47,9 +49,10 @@ const StudentHome = () => {
         if (!selectedApplicant) return;
         try {
             await api.confirmStudentAdmission(selectedApplicant.id, data);
+            addToast("Admission confirmed successfully.", "success");
             fetchStudents();
-        } catch (error) {
-
+        } catch (error: any) {
+            addToast(error?.response?.data?.message || "Failed to confirm admission. Please try again.", "error");
         } finally {
             setIsConfirmModalOpen(false);
         }

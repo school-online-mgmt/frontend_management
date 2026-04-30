@@ -232,6 +232,8 @@ const AssignModal = ({
                 return (
                   <button
                     key={t.id}
+                    data-testid={`teacher-option`}
+                    data-teacher-name={t.name}
                     onClick={() => setSelected(t.id)}
                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all text-left ${
                       isSelected
@@ -271,6 +273,7 @@ const AssignModal = ({
                   Cancel
                 </button>
                 <button
+                  data-testid="assign-confirm-btn"
                   onClick={handleAssign}
                   disabled={!selected || selected === target.currentTeacherId || submitting}
                   className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
@@ -317,8 +320,8 @@ const AssignedChip = ({ teacher, onReassign, variant }: { teacher: TeacherRef; o
   </button>
 );
 
-const UnassignedChip = ({ onAssign, label }: { onAssign: () => void; label?: string }) => (
-  <button onClick={onAssign}
+const UnassignedChip = ({ onAssign, label, testId }: { onAssign: () => void; label?: string; testId?: string }) => (
+  <button onClick={onAssign} data-testid={testId ?? "unassigned-chip"}
     className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-2.5 py-1 hover:bg-amber-100 active:scale-95 transition-all">
     <AlertTriangle size={12} className="shrink-0" />
     <span className="text-xs font-semibold">{label ?? "Unassigned"}</span>
@@ -573,6 +576,7 @@ const AssignmentsPage = () => {
           <div className="flex border-b border-slate-100 mt-3">
             {TABS.map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                data-testid={tab.key === "classes-sections" ? "staff-tab-classes" : "staff-tab-subjects"}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all ${
                   activeTab === tab.key
                     ? "border-indigo-500 text-indigo-700 bg-indigo-50/40"
@@ -602,7 +606,7 @@ const AssignmentsPage = () => {
                 return (
                   <div key={cls.id}>
                     {/* Class row */}
-                    <div className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors group ${(!cls.teacher || cls.sections.some(s => !s.teacher)) ? "border-l-2 border-amber-400" : ""}`}>
+                    <div data-testid={`class-row`} data-class-name={cls.name} className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors group ${(!cls.teacher || cls.sections.some(s => !s.teacher)) ? "border-l-2 border-amber-400" : ""}`}>
                       {/* Expand toggle */}
                       <button onClick={() => toggleClass(cls.id)}
                         className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors shrink-0">
@@ -623,7 +627,7 @@ const AssignmentsPage = () => {
                       <div className="shrink-0">
                         {cls.teacher
                           ? <AssignedChip teacher={cls.teacher} onReassign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}`, currentTeacherId: cls.teacher!.id })} />
-                          : <UnassignedChip onAssign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}` })} />
+                          : <UnassignedChip testId="unassigned-badge" onAssign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}` })} />
                         }
                       </div>
                       <button onClick={() => navigate(`/class/${cls.id}`)}

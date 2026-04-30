@@ -55,7 +55,6 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
     try {
       const payload: any = { ...subjectData };
       if (!payload.teacherId) delete payload.teacherId;
-      if (!payload.bookName) delete payload.bookName;
       await api.createSubject(payload);
       onRefresh();
       onClose();
@@ -86,10 +85,11 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4" data-testid="create-subject-form">
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Subject Name <span className="text-red-500">*</span></label>
             <input
+              data-testid="subject-name-input"
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
               placeholder="e.g. Mathematics, English Literature"
               value={subjectData.name}
@@ -102,6 +102,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Slug <span className="text-red-500">*</span></label>
               <input
+                data-testid="subject-slug-input"
                 className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent font-mono bg-white"
                 placeholder="mathematics"
                 value={subjectData.slug}
@@ -112,6 +113,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Type <span className="text-red-500">*</span></label>
               <select
+                data-testid="subject-type-select"
                 className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
                 value={subjectData.type}
                 onChange={(e) => setSubjectData({ ...subjectData, type: e.target.value })}
@@ -124,18 +126,21 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Textbook Name</label>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Textbook Name <span className="text-red-500">*</span></label>
             <input
+              data-testid="subject-book-input"
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
               placeholder="e.g. NCERT Mathematics Class 10"
               value={subjectData.bookName}
               onChange={(e) => setSubjectData({ ...subjectData, bookName: e.target.value })}
+              required
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Session <span className="text-red-500">*</span></label>
             <select
+              data-testid="subject-session-select"
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
               value={subjectData.sessionId}
               onChange={(e) => setSubjectData({ ...subjectData, sessionId: e.target.value })}
@@ -151,6 +156,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Subject Incharge (Teacher)</label>
             <select
+              data-testid="subject-teacher-select"
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
               value={subjectData.teacherId}
               onChange={(e) => setSubjectData({ ...subjectData, teacherId: e.target.value })}
@@ -171,7 +177,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             <button type="button" className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2" disabled={isSubmitting}>
+            <button data-testid="subject-submit-btn" type="submit" className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2" disabled={isSubmitting}>
               {isSubmitting ? <><Loader2 size={14} className="animate-spin" /> Creating…</> : 'Create Subject'}
             </button>
           </div>

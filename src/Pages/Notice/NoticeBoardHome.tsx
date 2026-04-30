@@ -171,8 +171,8 @@ const CreateBoardModal = ({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const NoticeBoardHome = () => {
     const navigate = useNavigate();
-    const { role } = useAuth();
-    const isPrincipal = role === "PRINCIPAL" || role === "SUPER_ADMIN";
+    const { hasModuleAdmin } = useAuth();
+    const isPrincipal = hasModuleAdmin('COMMUNICATION');
 
     const [boards, setBoards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);

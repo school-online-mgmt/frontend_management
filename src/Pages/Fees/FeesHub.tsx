@@ -1,11 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CreditCard, BookOpen, AlertCircle, Plus, Trash2, Edit3, CheckCircle,
+    CreditCard, AlertCircle, Plus, Trash2, Edit3, CheckCircle, CheckCircle2,
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
+    Users, UserCheck, Receipt, Tag, Globe, Layers,
+    GraduationCap, X, Check, ToggleLeft, ToggleRight, School,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import api from '../../api/api';
+import type { FeeStructureItem } from '../../api/types';
 import PageHeader from '../../components/PageHeader';
+import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+
+type ApiError = { response?: { data?: { message?: string } } };
+const apiMsg = (e: unknown, fallback: string) =>
+    (e as ApiError)?.response?.data?.message ?? fallback;
+
+/** Tiny card used inside the invoice-generation completion summary. */
+const ResultStat = ({ label, value, className = '' }: { label: string; value: number; className?: string }) => (
+    <div className={`rounded-lg border px-3 py-2 flex flex-col items-start ${className}`}>
+        <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70">{label}</span>
+        <span className="text-base font-bold leading-tight">{value}</span>
+    </div>
+);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -25,18 +43,20 @@ const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 const currentYear = new Date().getFullYear();
 
 // ── types ─────────────────────────────────────────────────────────────────────
-interface CourseFee { id: string; courseId: string; courseName: string; courseSlug: string; tuitionFee: number; }
 interface ExtraCharge { id: string; studentId: string; academicId: string; type: string; description?: string; amount: number; month: number; year: number; studentFirstName: string; studentLastName: string; }
 interface Invoice { id: string; invoiceNo: string; month: number; year: number; dueDate: string; tuitionFee: number; transportFee: number; extraChargesTotal: number; totalAmount: number; paidAmount: number; status: string; studentId: string; studentFirstName: string; studentLastName: string; studentPhone: string; }
 interface Summary { totalInvoices: number; totalDemand: number; totalCollected: number; outstanding: number; pending: number; partiallyPaid: number; paid: number; overdue: number; waived: number; cancelled: number; }
 interface Course { id: string; name: string; slug: string; }
 interface Student { id: string; firstName: string; lastName: string; phone: string; }
 interface Academic { id: string; studentId: string; courseId?: string; }
-interface Session { id: string; name: string; slug: string; }
+interface Session { id: string; name: string; slug: string; startDate?: string; endDate?: string; }
+interface ClassInfo { id: string; name: string; }
+interface SectionInfo { id: string; name: string; classId: string; }
+interface BulkPreviewStudent { academicId: string; studentId: string; firstName: string; lastName: string; phone: string; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeesHub() {
-    const [tab, setTab] = useState<'summary' | 'course-fees' | 'extra' | 'invoices' | 'payments'>('summary');
+    const [tab, setTab] = useState<'summary' | 'fee-structure' | 'extra' | 'invoices' | 'payments'>('summary');
     return (
         <div className="min-h-full bg-slate-50">
             <PageHeader
@@ -50,7 +70,7 @@ export default function FeesHub() {
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap" data-testid="fees-tabs">
                 {[
                     { key: 'summary', label: 'Summary', icon: TrendingUp },
-                    { key: 'course-fees', label: 'Course Fees', icon: BookOpen },
+                    { key: 'fee-structure', label: 'Fee Structure', icon: Receipt },
                     { key: 'extra', label: 'Extra Charges', icon: AlertCircle },
                     { key: 'invoices', label: 'Invoices', icon: CreditCard },
                     { key: 'payments', label: 'Payments', icon: Wallet },
@@ -63,7 +83,7 @@ export default function FeesHub() {
             </div>
 
             {tab === 'summary' && <SummaryTab />}
-            {tab === 'course-fees' && <CourseFeesTab />}
+            {tab === 'fee-structure' && <FeeStructureTab />}
             {tab === 'extra' && <ExtraChargesTab />}
             {tab === 'invoices' && <InvoicesTab />}
             {tab === 'payments' && <PaymentsTab />}
@@ -76,24 +96,24 @@ export default function FeesHub() {
 // SUMMARY TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function SummaryTab() {
+    const { addToast } = useToast();
     const [summary, setSummary] = useState<Summary | null>(null);
     const [month, setMonth] = useState('');
     const [year, setYear] = useState(String(currentYear));
     const [loading, setLoading] = useState(false);
+    const [tick, setTick] = useState(0);
 
-    const fetch = useCallback(async () => {
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
-        try {
-            const p: Record<string, unknown> = {};
-            if (month) p.month = Number.parseInt(month);
-            if (year) p.year = Number.parseInt(year);
-            const data = await api.getFeeSummary(p as any);
-            setSummary(data.summary);
-        } catch { /* ignore */ }
-        finally { setLoading(false); }
-    }, [month, year]);
-
-    useEffect(() => { fetch(); }, [fetch]);
+        const params: Record<string, number> = {};
+        if (month) params.month = Number.parseInt(month);
+        if (year) params.year = Number.parseInt(year);
+        api.getFeeSummary(params)
+            .then(data => setSummary(data.summary))
+            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load fee summary'), 'error'))
+            .finally(() => setLoading(false));
+    }, [month, year, tick, addToast]);
 
     const statCards = summary ? [
         { label: 'Total Demand', value: fmt(summary.totalDemand), icon: Wallet, color: 'bg-blue-50 text-blue-700' },
@@ -121,7 +141,7 @@ function SummaryTab() {
                         {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
                     </select>
                 </div>
-                <button onClick={fetch} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700">
+                <button onClick={() => setTick(t => t + 1)} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700">
                     <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
                 </button>
             </div>
@@ -160,108 +180,552 @@ function SummaryTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COURSE FEES TAB
+// FEE STRUCTURE TAB
 // ─────────────────────────────────────────────────────────────────────────────
-function CourseFeesTab() {
-    const [fees, setFees] = useState<CourseFee[]>([]);
+const FEE_TYPES_LIST = ['TUITION','TRANSPORT','LIBRARY','LAB','SPORTS','COMPUTER','DEVELOPMENT','EXAM','ADMISSION','BOOKS','UNIFORM','ID_CARD','MISC'] as const;
+const FREQ_LIST = ['MONTHLY','QUARTERLY','SEMI_ANNUAL','ANNUAL','ONE_TIME'] as const;
+const FREQ_LABELS: Record<string, string> = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', SEMI_ANNUAL: 'Semi-Annual', ANNUAL: 'Annual', ONE_TIME: 'One-Time' };
+const FREQ_COLORS: Record<string, string> = {
+    MONTHLY:    'bg-blue-100 text-blue-700',
+    QUARTERLY:  'bg-cyan-100 text-cyan-700',
+    SEMI_ANNUAL:'bg-violet-100 text-violet-700',
+    ANNUAL:     'bg-emerald-100 text-emerald-700',
+    ONE_TIME:   'bg-amber-100 text-amber-700',
+};
+
+const SCOPE_CONFIG: Record<string, { label: string; desc: string; icon: LucideIcon; bg: string; text: string; border: string }> = {
+    GLOBAL: { label: 'Global', desc: 'Applies to all students', icon: Globe,        bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200'   },
+    CLASS:  { label: 'Class-Specific', desc: 'Applies to a specific class', icon: School,       bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+    COURSE: { label: 'Course-Specific', desc: 'Applies to a specific course', icon: GraduationCap, bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+};
+
+interface StructureMeta { id: string; name: string; sessionId: string; sessionName: string; isActive: boolean; itemCount: number; }
+type ItemScope = 'GLOBAL' | 'CLASS' | 'COURSE';
+
+const blankItem = () => ({ name: '', feeType: 'TUITION' as string, scope: 'GLOBAL' as ItemScope, classId: '', courseId: '', frequency: 'MONTHLY' as string, amount: '', isOptional: false });
+
+function FeeStructureTab() {
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
+
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [sessionId, setSessionId] = useState('');
+    const [structures, setStructures] = useState<StructureMeta[]>([]);
+    const [structureId, setStructureId] = useState('');
+    const [items, setItems] = useState<FeeStructureItem[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
+    const [classes, setClasses] = useState<ClassInfo[]>([]);
+
     const [showForm, setShowForm] = useState(false);
-    const [courseId, setCourseId] = useState('');
-    const [tuitionFee, setTuitionFee] = useState('');
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [form, setForm] = useState(blankItem());
     const [saving, setSaving] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const [showCreateStructure, setShowCreateStructure] = useState(false);
+    const [structureName, setStructureName] = useState('Main Fee Structure');
+    const [creatingStructure, setCreatingStructure] = useState(false);
 
     useEffect(() => {
-        api.getCourseFees().then(d => setFees(d.courseFees || [])).catch(() => {});
-        api.getCourses().then(d => setCourses(Array.isArray(d) ? d : [])).catch(() => {});
+        api.getSessions().then((s: Session[]) => {
+            setSessions(Array.isArray(s) ? s : []);
+            const now = Date.now();
+            const active = Array.isArray(s) ? s.find((x: Session) => new Date(x.startDate ?? '').getTime() <= now && new Date(x.endDate ?? '').getTime() >= now) ?? s[0] : null;
+            if (active) setSessionId(active.id);
+        }).catch(() => {});
+        api.getCourses().then((c: Course[]) => setCourses(Array.isArray(c) ? c : [])).catch(() => {});
+        api.getClasses().then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setClasses(Array.isArray(d) ? d : d.classes ?? [])).catch(() => {});
     }, []);
 
-    const reload = () => api.getCourseFees().then(d => setFees(d.courseFees || [])).catch(() => {});
+    useEffect(() => {
+        if (!sessionId) return;
+        api.getFeeStructures(sessionId).then(d => {
+            const list = d.structures ?? [];
+            setStructures(list);
+            const active = list.find((s: StructureMeta) => s.isActive) ?? list[0];
+            if (active) setStructureId(active.id);
+            else setStructureId('');
+        }).catch(() => { setStructures([]); setStructureId(''); });
+    }, [sessionId]);
 
-    const startEdit = (cf: CourseFee) => {
-        setCourseId(cf.courseId); setTuitionFee(String(cf.tuitionFee));
-        setEditingId(cf.id); setShowForm(true);
+    const [itemsTick, setItemsTick] = useState(0);
+    const refreshItems = useCallback(() => setItemsTick(t => t + 1), []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (!structureId) { setItems([]); return; }
+        api.getFeeStructureById(structureId)
+            .then(d => setItems(d.structure.items ?? []))
+            .catch(() => setItems([]));
+    }, [structureId, itemsTick]);
+
+    const handleCreateStructure = async () => {
+        if (!sessionId || !structureName.trim()) return;
+        setCreatingStructure(true);
+        try {
+            const d = await api.createFeeStructure({ sessionId, name: structureName.trim(), isActive: true });
+            setStructureId(d.structure.id);
+            setShowCreateStructure(false);
+            setStructureName('Main Fee Structure');
+            const refreshed = await api.getFeeStructures(sessionId);
+            setStructures(refreshed.structures ?? []);
+            addToast('Fee structure created', 'success');
+        } catch (err: unknown) {
+            addToast(apiMsg(err, 'Failed to create fee structure'), 'error');
+        } finally { setCreatingStructure(false); }
     };
 
-    const save = async () => {
-        if (!courseId || !tuitionFee) return;
+    const handleToggleActive = async () => {
+        const meta = structures.find(s => s.id === structureId);
+        if (!meta) return;
+        try {
+            await api.updateFeeStructure(structureId, { isActive: !meta.isActive });
+            const refreshed = await api.getFeeStructures(sessionId);
+            setStructures(refreshed.structures ?? []);
+            addToast(`Structure ${meta.isActive ? 'deactivated' : 'activated'}`, 'success');
+        } catch (err: unknown) {
+            addToast(apiMsg(err, 'Failed to update structure'), 'error');
+        }
+    };
+
+    const saveItem = async () => {
+        if (!structureId || !form.name.trim() || !form.amount) return;
         setSaving(true);
         try {
-            await api.setCourseFee(courseId, Number.parseInt(tuitionFee));
-            await reload(); setShowForm(false); setCourseId(''); setTuitionFee(''); setEditingId(null);
-        } catch { /* ignore */ }
-        finally { setSaving(false); }
+            const payload: Record<string, unknown> = {
+                name: form.name.trim(), feeType: form.feeType,
+                scope: form.scope, frequency: form.frequency,
+                amount: parseInt(String(form.amount), 10) || 0,
+                isOptional: form.isOptional,
+                ...(form.scope === 'CLASS'  && form.classId  ? { classId:  form.classId  } : {}),
+                ...(form.scope === 'COURSE' && form.courseId ? { courseId: form.courseId } : {}),
+            };
+            if (editingItemId) {
+                await api.updateFeeStructureItem(structureId, editingItemId, payload as Partial<{ name: string; amount: number; frequency: string; description: string; }>);
+            } else {
+                await api.createFeeStructureItem(structureId, payload as { name: string; feeType: string; scope: 'GLOBAL' | 'COURSE'; amount: number; frequency: string; courseId?: string; });
+            }
+            refreshItems();
+            setShowForm(false); setEditingItemId(null); setForm(blankItem());
+            addToast(editingItemId ? 'Fee item updated' : 'Fee item added', 'success');
+        } catch (err: unknown) {
+            addToast(apiMsg(err, 'Failed to save fee item'), 'error');
+        } finally { setSaving(false); }
     };
 
-    const del = async (id: string) => {
-        if (!confirm('Remove this fee?')) return;
-        await api.deleteCourseFee(id); await reload();
+    const startEdit = (item: FeeStructureItem) => {
+        setForm({
+            name: item.name, feeType: item.feeType, scope: item.scope as ItemScope,
+            classId: item.classId ?? '', courseId: item.courseId ?? '',
+            frequency: item.frequency, amount: String(item.amount), isOptional: item.isOptional,
+        });
+        setEditingItemId(item.id);
+        setShowForm(true);
     };
 
+    const deleteItem = (item: FeeStructureItem) => {
+        confirm({
+            title: 'Remove fee item?',
+            message: `"${item.name}" will be permanently removed from this fee structure.`,
+            confirmText: 'Remove',
+            onConfirm: async () => {
+                try {
+                    await api.deleteFeeStructureItem(structureId, item.id);
+                    refreshItems();
+                    addToast('Fee item removed', 'success');
+                } catch (err: unknown) {
+                    addToast('Failed to remove item', 'error', apiMsg(err, ''));
+                    throw err;
+                }
+            },
+        });
+    };
+
+    const currentStructure = structures.find(s => s.id === structureId);
+
+    // Group items by scope
+    const byScope: Record<ItemScope, FeeStructureItem[]> = { GLOBAL: [], CLASS: [], COURSE: [] };
+    for (const item of items) {
+        const s = (item.scope as ItemScope);
+        if (byScope[s]) byScope[s].push(item);
+    }
+    const scopeOrder: ItemScope[] = ['GLOBAL', 'CLASS', 'COURSE'];
+    const activeScopeGroups = scopeOrder.filter(s => byScope[s].length > 0);
+
+    // Subtotal per frequency across all items (for the structure overview)
+    const totalByFreq = FREQ_LIST.reduce((acc, f) => {
+        const total = items.filter(i => i.frequency === f).reduce((s, i) => s + i.amount, 0);
+        if (total > 0) acc[f] = total;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const ItemRow = ({ item, hideScopeCol = false }: { item: FeeStructureItem; hideScopeCol?: boolean }) => (
+        <tr className="hover:bg-slate-50/60 group transition-colors">
+            <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800 text-sm">{item.name}</span>
+                    {item.isOptional && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded">Optional</span>
+                    )}
+                </div>
+                {item.description && <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{item.description}</p>}
+            </td>
+            <td className="px-4 py-3">
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-medium">{item.feeType.replace(/_/g, ' ')}</span>
+            </td>
+            {!hideScopeCol && (
+                <td className="px-4 py-3">
+                    {(item.courseName || item.className) ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${item.scope === 'COURSE' ? 'bg-orange-50 text-orange-700' : 'bg-violet-50 text-violet-700'}`}>
+                            {item.scope === 'COURSE' ? <GraduationCap size={11}/> : <School size={11}/>}
+                            {item.scope === 'COURSE' ? item.courseName : item.className}
+                        </span>
+                    ) : (
+                        <span className="text-slate-300 text-xs">—</span>
+                    )}
+                </td>
+            )}
+            <td className="px-4 py-3">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${FREQ_COLORS[item.frequency] ?? 'bg-slate-100 text-slate-600'}`}>
+                    {FREQ_LABELS[item.frequency] ?? item.frequency}
+                </span>
+            </td>
+            <td className="px-4 py-3 font-bold text-emerald-700 text-sm">{fmt(item.amount)}</td>
+            <td className="px-4 py-3">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => startEdit(item)}
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors">
+                        <Edit3 size={13}/>
+                    </button>
+                    <button onClick={() => deleteItem(item)}
+                        className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors">
+                        <Trash2 size={13}/>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">Set monthly tuition fee per course. One fee per course.</p>
-                <button onClick={() => { setShowForm(true); setEditingId(null); setCourseId(''); setTuitionFee(''); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
-                    <Plus size={16} /> Set Fee
-                </button>
+        <div className="space-y-5">
+            {confirmDialog}
+
+            {/* Session & structure selectors */}
+            <div className="flex flex-wrap items-end gap-3">
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Academic Session</label>
+                    <select value={sessionId} onChange={e => setSessionId(e.target.value)}
+                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm min-w-[220px] focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none">
+                        <option value="">Select session…</option>
+                        {sessions.map((s: Session) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                </div>
+                {structures.length > 1 && (
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fee Structure</label>
+                        <select value={structureId} onChange={e => setStructureId(e.target.value)}
+                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm min-w-[220px] focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none">
+                            {structures.map(s => <option key={s.id} value={s.id}>{s.name}{s.isActive ? ' ✓ Active' : ''}</option>)}
+                        </select>
+                    </div>
+                )}
             </div>
 
-            {showForm && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h3 className="font-semibold text-slate-800">{editingId ? 'Edit Course Fee' : 'Set Course Fee'}</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Course</label>
-                            <select value={courseId} onChange={e => setCourseId(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                <option value="">Select course…</option>
-                                {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Monthly Fee (₹)</label>
-                            <input type="number" value={tuitionFee} onChange={e => setTuitionFee(e.target.value)} placeholder="e.g. 2500"
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={save} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
-                            <Save size={15} />{saving ? 'Saving…' : 'Save'}
-                        </button>
-                        <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
-                    </div>
+            {!sessionId && (
+                <div className="bg-white border border-slate-100 rounded-2xl p-12 text-center shadow-sm">
+                    <Layers size={36} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-slate-600 font-semibold mb-1">Select an Academic Session</p>
+                    <p className="text-slate-400 text-sm">Choose a session above to view and manage its fee structure.</p>
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            {['Course','Slug','Monthly Fee','Actions'].map(h => (
-                                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {fees.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">No course fees set yet</td></tr>}
-                        {fees.map(f => (
-                            <tr key={f.id} className="hover:bg-slate-50">
-                                <td className="px-4 py-3 font-medium text-slate-800">{f.courseName}</td>
-                                <td className="px-4 py-3 text-slate-500 font-mono text-xs">{f.courseSlug}</td>
-                                <td className="px-4 py-3 font-semibold text-emerald-700">{fmt(f.tuitionFee)}/mo</td>
-                                <td className="px-4 py-3">
-                                    <div className="flex gap-1">
-                                        <button onClick={() => startEdit(f)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800"><Edit3 size={14}/></button>
-                                        <button onClick={() => del(f.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
+            {sessionId && structures.length === 0 && (
+                <div className="bg-white border border-slate-100 rounded-2xl p-12 text-center shadow-sm">
+                    <Receipt size={36} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-slate-700 font-semibold mb-1">No fee structure defined</p>
+                    <p className="text-slate-400 text-sm mb-6">Create a fee structure to define tuition, transport, and other charges for this session.</p>
+                    {!showCreateStructure ? (
+                        <button onClick={() => setShowCreateStructure(true)}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm">
+                            <Plus size={16}/> Create Fee Structure
+                        </button>
+                    ) : (
+                        <div className="max-w-sm mx-auto space-y-3 text-left">
+                            <input value={structureName} onChange={e => setStructureName(e.target.value)}
+                                placeholder="e.g. Main Fee Structure 2025-26"
+                                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none" />
+                            <div className="flex gap-2">
+                                <button onClick={handleCreateStructure} disabled={creatingStructure}
+                                    className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                                    {creatingStructure ? 'Creating…' : 'Create'}
+                                </button>
+                                <button onClick={() => setShowCreateStructure(false)}
+                                    className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {sessionId && structureId && currentStructure && (
+                <>
+                    {/* Structure header card */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                                    <Receipt size={18} className="text-emerald-600" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-slate-800">{currentStructure.name}</h3>
+                                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentStructure.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                            {currentStructure.isActive ? '● Active' : '○ Inactive'}
+                                        </span>
                                     </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                    <p className="text-xs text-slate-500 mt-0.5">{currentStructure.itemCount} line item{currentStructure.itemCount !== 1 ? 's' : ''} · {currentStructure.sessionName}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handleToggleActive}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                                    {currentStructure.isActive ? <ToggleRight size={14} className="text-emerald-600"/> : <ToggleLeft size={14}/>}
+                                    {currentStructure.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onClick={() => { setShowForm(true); setEditingItemId(null); setForm(blankItem()); }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors">
+                                    <Plus size={15}/> Add Fee Item
+                                </button>
+                            </div>
+                        </div>
+                        {/* Frequency summary pills */}
+                        {Object.keys(totalByFreq).length > 0 && (
+                            <div className="flex flex-wrap gap-3 px-5 py-3">
+                                {FREQ_LIST.filter(f => totalByFreq[f]).map(f => (
+                                    <div key={f} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${FREQ_COLORS[f]}`}>
+                                        <span>{FREQ_LABELS[f]}</span>
+                                        <span className="opacity-60">·</span>
+                                        <span>{fmt(totalByFreq[f])}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Add / Edit form */}
+                    {showForm && (
+                        <div className="bg-white border-2 border-emerald-200 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <h3 className="font-bold text-slate-800">{editingItemId ? 'Edit Fee Item' : 'Add New Fee Item'}</h3>
+                                    <p className="text-xs text-slate-400 mt-0.5">Fill in the details for this fee line item</p>
+                                </div>
+                                <button onClick={() => { setShowForm(false); setEditingItemId(null); setForm(blankItem()); }}
+                                    className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+                                    <X size={16}/>
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="sm:col-span-2 lg:col-span-2">
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Item Name *</label>
+                                    <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                                        placeholder="e.g. Tuition Fee, Library Charges"
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Amount (₹) *</label>
+                                    <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
+                                        placeholder="0"
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fee Type</label>
+                                    <select value={form.feeType} onChange={e => setForm(f => ({...f, feeType: e.target.value}))}
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none">
+                                        {FEE_TYPES_LIST.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Frequency</label>
+                                    <select value={form.frequency} onChange={e => setForm(f => ({...f, frequency: e.target.value}))}
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none">
+                                        {FREQ_LIST.map(f => <option key={f} value={f}>{FREQ_LABELS[f]}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Scope</label>
+                                    <select value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value as ItemScope, classId: '', courseId: ''}))}
+                                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none">
+                                        <option value="GLOBAL">Global — All Students</option>
+                                        <option value="CLASS">Class-Specific</option>
+                                        <option value="COURSE">Course-Specific</option>
+                                    </select>
+                                </div>
+                                {form.scope === 'CLASS' && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Class *</label>
+                                        <select value={form.classId} onChange={e => setForm(f => ({...f, classId: e.target.value}))}
+                                            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none">
+                                            <option value="">Select class…</option>
+                                            {classes.map((c: ClassInfo) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {form.scope === 'COURSE' && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Course *</label>
+                                        <select value={form.courseId} onChange={e => setForm(f => ({...f, courseId: e.target.value}))}
+                                            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none">
+                                            <option value="">Select course…</option>
+                                            {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-3">
+                                    <label className="flex items-center gap-2.5 cursor-pointer group select-none">
+                                        <input type="checkbox" checked={form.isOptional}
+                                            onChange={e => setForm(f => ({...f, isOptional: e.target.checked}))}
+                                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-400 cursor-pointer" />
+                                        <span className="text-sm text-slate-700 group-hover:text-slate-900">Mark as optional (student can opt out)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pt-4 border-t border-slate-100 mt-5">
+                                <button onClick={saveItem} disabled={saving || !form.name.trim() || !form.amount}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 shadow-sm transition-colors">
+                                    {saving ? <><RefreshCw size={14} className="animate-spin"/>Saving…</> : <><Check size={14}/>{editingItemId ? 'Update Item' : 'Add Item'}</>}
+                                </button>
+                                <button onClick={() => { setShowForm(false); setEditingItemId(null); setForm(blankItem()); }}
+                                    className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Items grouped by scope */}
+                    {items.length === 0 && !showForm ? (
+                        <div className="bg-white border border-slate-100 rounded-2xl p-12 text-center shadow-sm">
+                            <Tag size={32} className="mx-auto text-slate-300 mb-3" />
+                            <p className="text-slate-600 font-semibold mb-1">No fee items yet</p>
+                            <p className="text-slate-400 text-sm">Add tuition, transport, and other charges using the button above.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {activeScopeGroups.map(scope => {
+                                const cfg = SCOPE_CONFIG[scope];
+                                const ScopeIcon = cfg.icon;
+                                const scopeItems = byScope[scope];
+                                const scopeTotal = scopeItems.reduce((s, i) => s + i.amount, 0);
+
+                                // For COURSE / CLASS scopes: build ordered subgroups by entity name
+                                type SubGroup = { key: string; label: string; items: FeeStructureItem[] };
+                                const subgroups: SubGroup[] = [];
+                                if (scope === 'COURSE' || scope === 'CLASS') {
+                                    const seen = new Map<string, SubGroup>();
+                                    for (const item of scopeItems) {
+                                        const key = scope === 'COURSE'
+                                            ? (item.courseId ?? 'unknown')
+                                            : (item.classId ?? 'unknown');
+                                        const label = scope === 'COURSE'
+                                            ? (item.courseName ?? 'Unknown Course')
+                                            : (item.className ?? 'Unknown Class');
+                                        if (!seen.has(key)) {
+                                            const g: SubGroup = { key, label, items: [] };
+                                            seen.set(key, g);
+                                            subgroups.push(g);
+                                        }
+                                        seen.get(key)!.items.push(item);
+                                    }
+                                }
+
+                                return (
+                                    <div key={scope} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                                        {/* Scope group header */}
+                                        <div className={`flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 ${cfg.bg}`}>
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cfg.bg} border ${cfg.border}`}>
+                                                <ScopeIcon size={14} className={cfg.text} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <span className={`text-sm font-bold ${cfg.text}`}>{cfg.label}</span>
+                                                <span className="text-xs text-slate-500 ml-2">— {cfg.desc}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                                                <span>{scopeItems.length} item{scopeItems.length !== 1 ? 's' : ''}</span>
+                                                <span className={`font-bold ${cfg.text}`}>{fmt(scopeTotal)}</span>
+                                            </div>
+                                        </div>
+
+                                        {scope === 'GLOBAL' ? (
+                                            /* Global: flat table */
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b border-slate-50">
+                                                        {['Name & Description', 'Fee Type', 'Frequency', 'Amount', ''].map(h => (
+                                                            <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">{h}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-50">
+                                                    {scopeItems.map(item => <ItemRow key={item.id} item={item} hideScopeCol />)}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="bg-slate-50/50 border-t border-slate-100">
+                                                        <td colSpan={3} className="px-4 py-2 text-xs text-slate-400 font-medium">Applies to all enrolled students</td>
+                                                        <td className={`px-4 py-2 text-xs font-bold ${cfg.text}`}>{fmt(scopeTotal)}</td>
+                                                        <td />
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        ) : (
+                                            /* Course / Class: subgroup tables */
+                                            <div className="divide-y divide-slate-100">
+                                                {subgroups.map((grp, gi) => {
+                                                    const grpTotal = grp.items.reduce((s, i) => s + i.amount, 0);
+                                                    const SubIcon = scope === 'COURSE' ? GraduationCap : School;
+                                                    return (
+                                                        <div key={grp.key}>
+                                                            {/* Sub-group header */}
+                                                            <div className={`flex items-center gap-2.5 px-5 py-2.5 ${gi > 0 ? '' : ''} bg-slate-50/70`}>
+                                                                <SubIcon size={13} className={cfg.text} />
+                                                                <span className={`text-xs font-bold ${cfg.text}`}>{grp.label}</span>
+                                                                <span className="text-xs text-slate-400 ml-1">
+                                                                    · {grp.items.length} item{grp.items.length !== 1 ? 's' : ''}
+                                                                </span>
+                                                                <span className={`ml-auto text-xs font-bold ${cfg.text}`}>{fmt(grpTotal)}</span>
+                                                            </div>
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr className="border-b border-slate-50">
+                                                                        {['Name & Description', 'Fee Type', 'Frequency', 'Amount', ''].map(h => (
+                                                                            <th key={h} className="px-4 py-2 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">{h}</th>
+                                                                        ))}
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-50">
+                                                                    {grp.items.map(item => <ItemRow key={item.id} item={item} hideScopeCol />)}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {/* Scope footer total */}
+                                                <div className={`flex items-center justify-between px-5 py-2.5 ${cfg.bg} border-t ${cfg.border}`}>
+                                                    <span className="text-xs text-slate-500">
+                                                        {subgroups.length} {scope === 'COURSE' ? 'course' : 'class'}{subgroups.length !== 1 ? 's' : ''} · {scopeItems.length} items total
+                                                    </span>
+                                                    <span className={`text-xs font-bold ${cfg.text}`}>{fmt(scopeTotal)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }
@@ -288,6 +752,8 @@ const paymentStatusColor: Record<string, string> = {
 
 function PaymentsTab() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [payments, setPayments] = useState<PaymentRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [from, setFrom] = useState('');
@@ -297,21 +763,23 @@ function PaymentsTab() {
     const [exporting, setExporting] = useState(false);
     const [refunding, setRefunding] = useState<string | null>(null);
 
-    const reload = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params: Record<string, string> = {};
-            if (from) params.from = from;
-            if (to) params.to = to;
-            if (mode) params.paymentMode = mode;
-            if (status) params.paymentStatus = status;
-            const data = await api.getFeePayments(params);
-            setPayments(data.payments || []);
-        } catch { /* ignore */ }
-        finally { setLoading(false); }
-    }, [from, to, mode, status]);
+    const [tick, setTick] = useState(0);
 
-    useEffect(() => { reload(); }, [reload]);
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoading(true);
+        const params: Record<string, string> = {};
+        if (from) params.from = from;
+        if (to) params.to = to;
+        if (mode) params.paymentMode = mode;
+        if (status) params.paymentStatus = status;
+        api.getFeePayments(params)
+            .then(data => setPayments(data.payments || []))
+            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load payments'), 'error'))
+            .finally(() => setLoading(false));
+    }, [from, to, mode, status, tick, addToast]);
+
+    const reload = useCallback(() => setTick(t => t + 1), []);
 
     const handleExport = async () => {
         setExporting(true);
@@ -322,20 +790,28 @@ function PaymentsTab() {
             if (mode) params.paymentMode = mode;
             if (status) params.paymentStatus = status;
             await api.exportFeePayments(params);
-        } catch { alert('Export failed'); }
+            addToast('Export started', 'success', 'Your download should begin momentarily.');
+        } catch (err: unknown) { addToast('Export failed', 'error', apiMsg(err, '')); }
         finally { setExporting(false); }
     };
 
-    const handleRefund = async (p: PaymentRow) => {
-        if (!confirm(`Refund ₹${p.amount.toLocaleString('en-IN')} to ${p.studentFirstName} ${p.studentLastName}?\n\nThis will issue a full refund via Razorpay.`)) return;
-        setRefunding(p.id);
-        try {
-            const data = await api.refundPayment(p.id);
-            alert(data.message || 'Refunded successfully');
-            await reload();
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Refund failed');
-        } finally { setRefunding(null); }
+    const handleRefund = (p: PaymentRow) => {
+        confirm({
+            title: `Refund ${fmt(p.amount)}?`,
+            message: `A full refund will be issued via Razorpay to ${p.studentFirstName} ${p.studentLastName}. This cannot be undone.`,
+            confirmText: 'Refund',
+            onConfirm: async () => {
+                setRefunding(p.id);
+                try {
+                    const data = await api.refundPayment(p.id);
+                    addToast(data.message || 'Refund successful', 'success');
+                    await reload();
+                } catch (err: unknown) {
+                    addToast('Refund failed', 'error', apiMsg(err, ''));
+                    throw err;
+                } finally { setRefunding(null); }
+            },
+        });
     };
 
     const totalAmount = payments.reduce((s, p) => s + (['CAPTURED', 'AUTHORIZED'].includes(p.paymentStatus) ? p.amount : 0), 0);
@@ -344,6 +820,7 @@ function PaymentsTab() {
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             {/* Filters */}
             <div className="flex flex-wrap gap-3 items-end justify-between">
                 <div className="flex gap-3 items-end flex-wrap">
@@ -441,47 +918,173 @@ function PaymentsTab() {
 // EXTRA CHARGES TAB
 // ─────────────────────────────────────────────────────────────────────────────
 function ExtraChargesTab() {
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [charges, setCharges] = useState<ExtraCharge[]>([]);
-    const [students, setStudents] = useState<Student[]>([]);
-    const [studentAcademics, setStudentAcademics] = useState<Academic[]>([]);
-    const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ studentId:'', academicId:'', type:'FINE', description:'', amount:'', month:String(new Date().getMonth()+1), year:String(currentYear) });
-    const [saving, setSaving] = useState(false);
-    const [filterMonth, setFilterMonth] = useState(''); const [filterYear, setFilterYear] = useState(String(currentYear));
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterYear, setFilterYear] = useState(String(currentYear));
+    // Mode: 'single' = individual student, 'bulk' = bulk apply
+    const [mode, setMode] = useState<'single' | 'bulk'>('single');
 
-    const reload = useCallback(async () => {
-        const p: Record<string, unknown> = {};
+    // ── Single mode state ──────────────────────────────────────────────────────
+    const [showSingleForm, setShowSingleForm] = useState(false);
+    const [singleStudents, setSingleStudents] = useState<Student[]>([]);
+    const [studentAcademics, setStudentAcademics] = useState<Academic[]>([]);
+    const [singleForm, setSingleForm] = useState({ studentId:'', academicId:'', type:'FINE', description:'', amount:'', month:String(new Date().getMonth()+1), year:String(currentYear) });
+    const [saving, setSaving] = useState(false);
+
+    // ── Bulk mode state ────────────────────────────────────────────────────────
+    const [bulkSessions, setBulkSessions] = useState<Session[]>([]);
+    const [bulkClasses, setBulkClasses] = useState<ClassInfo[]>([]);
+    const [bulkSections, setBulkSections] = useState<SectionInfo[]>([]);
+    const [bulkCourses, setBulkCourses] = useState<Course[]>([]);
+    const [previewStudents, setPreviewStudents] = useState<BulkPreviewStudent[]>([]);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [bulkApplying, setBulkApplying] = useState(false);
+    const [showBulkForm, setShowBulkForm] = useState(false);
+    const [bulkFilters, setBulkFilters] = useState({ sessionId:'', classId:'', sectionId:'', courseId:'' });
+    const [bulkCharge, setBulkCharge] = useState({ type:'FINE', description:'', amount:'', month:String(new Date().getMonth()+1), year:String(currentYear) });
+
+    const [chargeTick, setChargeTick] = useState(0);
+    const reload = useCallback(() => setChargeTick(t => t + 1), []);
+
+    useEffect(() => {
+        const p: Record<string, number> = {};
         if (filterMonth) p.month = Number.parseInt(filterMonth);
         if (filterYear) p.year = Number.parseInt(filterYear);
-        api.getExtraCharges(p as any).then(d => setCharges(d.extraCharges || [])).catch(() => {});
-    }, [filterMonth, filterYear]);
+        api.getExtraCharges(p)
+            .then(d => setCharges(d.extraCharges || []))
+            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load extra charges'), 'error'));
+    }, [filterMonth, filterYear, chargeTick, addToast]);
 
-    useEffect(() => { reload(); }, [reload]);
-    useEffect(() => { api.getStudents().then(d => setStudents(Array.isArray(d) ? d : d.students || [])).catch(() => {}); }, []);
-
-    // When student changes, load their academic records
+    // Load students for single mode
     useEffect(() => {
-        if (!form.studentId) { setStudentAcademics([]); return; }
-        api.getStudentById(form.studentId).then((d: any) => {
+        if (mode === 'single' && showSingleForm && singleStudents.length === 0) {
+            api.getStudents().then(d => setSingleStudents(Array.isArray(d) ? d : d.students || [])).catch(() => {});
+        }
+    }, [mode, showSingleForm, singleStudents.length]);
+
+    // Load student academics on student change
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (!singleForm.studentId) { setStudentAcademics([]); return; }
+        api.getStudentById(singleForm.studentId).then((d: { academics?: Academic[] }) => {
             const acads = d.academics || [];
             setStudentAcademics(acads);
-            if (acads.length > 0) setForm(f => ({ ...f, academicId: acads[0].id }));
+            if (acads.length > 0) setSingleForm(f => ({ ...f, academicId: acads[0].id }));
         }).catch(() => setStudentAcademics([]));
-    }, [form.studentId]);
+    }, [singleForm.studentId]);
 
-    const save = async () => {
-        if (!form.studentId || !form.amount || !form.academicId) { alert('Please fill all required fields'); return; }
+    // Load sessions/classes/courses for bulk mode
+    useEffect(() => {
+        if (mode === 'bulk' && showBulkForm) {
+            if (bulkSessions.length === 0) api.getSessions().then(d => setBulkSessions(Array.isArray(d) ? d : d.sessions || [])).catch(() => {});
+            if (bulkClasses.length === 0) api.getClasses().then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setBulkClasses(Array.isArray(d) ? d : d.classes || [])).catch(() => {});
+            if (bulkCourses.length === 0) api.getCourses().then((c: Course[]) => setBulkCourses(Array.isArray(c) ? c : [])).catch(() => {});
+        }
+    }, [mode, showBulkForm, bulkSessions.length, bulkClasses.length, bulkCourses.length]);
+
+    // Load sections when class changes
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (!bulkFilters.classId) { setBulkSections([]); return; }
+        api.getSectionsByClass(bulkFilters.classId).then((d: { sections?: SectionInfo[] } | SectionInfo[]) => setBulkSections(Array.isArray(d) ? d : d.sections || [])).catch(() => {});
+    }, [bulkFilters.classId]);
+
+    // Preview students when filters change
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (!bulkFilters.sessionId) { setPreviewStudents([]); return; }
+        setPreviewLoading(true);
+        const params: { sessionId: string; classId?: string; sectionId?: string; courseId?: string } = { sessionId: bulkFilters.sessionId };
+        if (bulkFilters.classId) params.classId = bulkFilters.classId;
+        if (bulkFilters.sectionId) params.sectionId = bulkFilters.sectionId;
+        if (bulkFilters.courseId) params.courseId = bulkFilters.courseId;
+        api.previewBulkExtraCharge(params)
+            .then(data => {
+                setPreviewStudents(data.students);
+                setSelectedStudentIds(new Set(data.students.map((s: BulkPreviewStudent) => s.studentId)));
+            })
+            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load preview'), 'error'))
+            .finally(() => setPreviewLoading(false));
+    }, [bulkFilters, addToast]);
+
+    // ── Single save ─────────────────────────────────────────────────────────────
+    const saveSingle = async () => {
+        if (!singleForm.studentId || !singleForm.amount || !singleForm.academicId) {
+            addToast('Please fill all required fields', 'warning');
+            return;
+        }
         setSaving(true);
         try {
-            await api.addExtraCharge({ ...form, amount: Number.parseInt(form.amount), month: Number.parseInt(form.month), year: Number.parseInt(form.year) });
-            await reload(); setShowForm(false); setForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
-        } catch { alert('Failed to add charge'); } finally { setSaving(false); }
+            await api.addExtraCharge({ ...singleForm, amount: Number.parseInt(singleForm.amount), month: Number.parseInt(singleForm.month), year: Number.parseInt(singleForm.year) });
+            reload();
+            setShowSingleForm(false);
+            setSingleForm(f => ({ ...f, studentId:'', academicId:'', description:'', amount:'' }));
+            addToast('Charge added', 'success');
+        } catch (err: unknown) {
+            addToast('Failed to add charge', 'error', apiMsg(err, ''));
+        } finally { setSaving(false); }
     };
 
-    const del = async (id: string) => { if (!confirm('Remove this charge?')) return; await api.deleteExtraCharge(id); await reload(); };
+    // ── Bulk apply ──────────────────────────────────────────────────────────────
+    const applyBulk = async () => {
+        if (!bulkFilters.sessionId || !bulkCharge.amount) {
+            addToast('Session and amount are required', 'warning');
+            return;
+        }
+        if (selectedStudentIds.size === 0) {
+            addToast('No students selected', 'warning');
+            return;
+        }
+        setBulkApplying(true);
+        try {
+            const studentIds = Array.from(selectedStudentIds);
+            const result = await api.addBulkExtraCharge({
+                ...bulkCharge,
+                amount: Number.parseInt(bulkCharge.amount),
+                month: Number.parseInt(bulkCharge.month),
+                year: Number.parseInt(bulkCharge.year),
+                sessionId: bulkFilters.sessionId,
+                studentIds,
+            });
+            reload();
+            addToast(result.message, 'success');
+            setShowBulkForm(false);
+            setPreviewStudents([]);
+            setSelectedStudentIds(new Set());
+            setBulkFilters({ sessionId:'', classId:'', sectionId:'', courseId:'' });
+        } catch (err: unknown) {
+            addToast(apiMsg(err, 'Bulk apply failed'), 'error');
+        } finally { setBulkApplying(false); }
+    };
+
+    const del = (id: string) => {
+        confirm({
+            title: 'Remove this charge?',
+            message: 'The student will no longer be billed for this extra charge.',
+            confirmText: 'Remove',
+            onConfirm: async () => {
+                try {
+                    await api.deleteExtraCharge(id);
+                    reload();
+                    addToast('Charge removed', 'success');
+                } catch (err: unknown) {
+                    addToast('Failed to remove charge', 'error', apiMsg(err, ''));
+                    throw err;
+                }
+            },
+        });
+    };
+
+    const selCls = "border border-slate-200 rounded-lg px-3 py-2 text-sm w-full";
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
+
+            {/* Top bar */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex gap-3 items-end flex-wrap">
                     <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
@@ -494,56 +1097,195 @@ function ExtraChargesTab() {
                             {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
                         </select></div>
                 </div>
-                <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
-                    <Plus size={16}/> Add Charge
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={() => { setMode('single'); setShowSingleForm(s => !s); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
+                        <UserCheck size={15}/> Single Student
+                    </button>
+                    <button onClick={() => { setMode('bulk'); setShowBulkForm(s => !s); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 shadow-sm">
+                        <Users size={15}/> Bulk Apply
+                    </button>
+                </div>
             </div>
 
-            {showForm && (
+            {/* Single-student form */}
+            {mode === 'single' && showSingleForm && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h3 className="font-semibold text-slate-800">Add Extra Charge</h3>
+                    <h3 className="font-semibold text-slate-800">Add Charge — Individual Student</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-slate-600 mb-1">Student <span className="text-red-500">*</span></label>
-                            <select value={form.studentId} onChange={e => setForm(f=>({...f, studentId: e.target.value, academicId:''}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <select value={singleForm.studentId} onChange={e => setSingleForm(f=>({...f, studentId: e.target.value, academicId:''}))} className={selCls}>
                                 <option value="">Select…</option>
-                                {students.map((s: any) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
+                                {singleStudents.map((s: Student) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.phone})</option>)}
                             </select>
                         </div>
                         {studentAcademics.length > 0 && (
                             <div>
-                                <label className="block text-xs font-medium text-slate-600 mb-1">Academic Session <span className="text-red-500">*</span></label>
-                                <select value={form.academicId} onChange={e => setForm(f=>({...f, academicId: e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                    {studentAcademics.map((a: any) => <option key={a.id} value={a.id}>{a.sessionName || a.id.slice(0,8)}</option>)}
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Session <span className="text-red-500">*</span></label>
+                                <select value={singleForm.academicId} onChange={e => setSingleForm(f=>({...f, academicId: e.target.value}))} className={selCls}>
+                                    {studentAcademics.map((a: Academic) => <option key={a.id} value={a.id}>{(a as Academic & { sessionName?: string }).sessionName || a.id.slice(0,8)}</option>)}
                                 </select>
                             </div>
                         )}
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Charge Type</label>
-                            <select value={form.type} onChange={e => setForm(f=>({...f, type:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <select value={singleForm.type} onChange={e => setSingleForm(f=>({...f, type:e.target.value}))} className={selCls}>
                                 {EXTRA_CHARGE_TYPES.map(t => <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
-                            <input type="number" value={form.amount} onChange={e => setForm(f=>({...f, amount:e.target.value}))} placeholder="e.g. 500" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
+                            <input type="number" value={singleForm.amount} onChange={e => setSingleForm(f=>({...f, amount:e.target.value}))} placeholder="e.g. 500" className={selCls}/></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
-                            <input value={form.description} onChange={e => setForm(f=>({...f, description:e.target.value}))} placeholder="Optional note" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
+                            <input value={singleForm.description} onChange={e => setSingleForm(f=>({...f, description:e.target.value}))} placeholder="Optional note" className={selCls}/></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
-                            <select value={form.month} onChange={e => setForm(f=>({...f, month:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <select value={singleForm.month} onChange={e => setSingleForm(f=>({...f, month:e.target.value}))} className={selCls}>
                                 {MONTHS.map((m,i) => <option key={i+1} value={String(i+1)}>{m}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Year</label>
-                            <select value={form.year} onChange={e => setForm(f=>({...f, year:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                            <select value={singleForm.year} onChange={e => setSingleForm(f=>({...f, year:e.target.value}))} className={selCls}>
                                 {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
                             </select></div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={save} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
+                        <button onClick={saveSingle} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
                             <Save size={15}/>{saving?'Saving…':'Add Charge'}
                         </button>
-                        <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
+                        <button onClick={() => setShowSingleForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
                     </div>
                 </div>
             )}
 
+            {/* Bulk apply form */}
+            {mode === 'bulk' && showBulkForm && (
+                <div className="bg-white border border-indigo-200 rounded-2xl p-5 shadow-sm space-y-5">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <Users size={16} className="text-indigo-600" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-slate-800">Bulk Charge Application</h3>
+                            <p className="text-xs text-slate-500">Apply a fine/charge to multiple students at once using scope filters</p>
+                        </div>
+                    </div>
+
+                    {/* Scope filters */}
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-3">
+                        <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Step 1 — Select Scope</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Session <span className="text-red-500">*</span></label>
+                                <select value={bulkFilters.sessionId} onChange={e => setBulkFilters(f=>({...f, sessionId:e.target.value}))} className={selCls}>
+                                    <option value="">Select session…</option>
+                                    {bulkSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Class (optional)</label>
+                                <select value={bulkFilters.classId} onChange={e => setBulkFilters(f=>({...f, classId:e.target.value, sectionId:''}))} className={selCls}>
+                                    <option value="">All classes</option>
+                                    {bulkClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Section (optional)</label>
+                                <select value={bulkFilters.sectionId} onChange={e => setBulkFilters(f=>({...f, sectionId:e.target.value}))} className={selCls} disabled={!bulkFilters.classId}>
+                                    <option value="">All sections</option>
+                                    {bulkSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Course (optional)</label>
+                                <select value={bulkFilters.courseId} onChange={e => setBulkFilters(f=>({...f, courseId:e.target.value}))} className={selCls}>
+                                    <option value="">All courses</option>
+                                    {bulkCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Preview student list */}
+                    {bulkFilters.sessionId && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    Step 2 — Review Students
+                                    {previewLoading && <span className="ml-2 text-indigo-500">Loading…</span>}
+                                    {!previewLoading && <span className="ml-2 text-slate-400">({previewStudents.length} matched)</span>}
+                                </p>
+                                {previewStudents.length > 0 && (
+                                    <div className="flex gap-2 text-xs">
+                                        <button onClick={() => setSelectedStudentIds(new Set(previewStudents.map(s => s.studentId)))}
+                                            className="text-indigo-600 hover:underline font-medium">Select All</button>
+                                        <span className="text-slate-300">|</span>
+                                        <button onClick={() => setSelectedStudentIds(new Set())}
+                                            className="text-slate-500 hover:underline">Deselect All</button>
+                                    </div>
+                                )}
+                            </div>
+                            {previewStudents.length > 0 && (
+                                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-50">
+                                    {previewStudents.map(s => (
+                                        <label key={s.studentId} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer">
+                                            <input type="checkbox"
+                                                checked={selectedStudentIds.has(s.studentId)}
+                                                onChange={e => {
+                                                    const next = new Set(selectedStudentIds);
+                                                    if (e.target.checked) next.add(s.studentId); else next.delete(s.studentId);
+                                                    setSelectedStudentIds(next);
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 rounded border-slate-300" />
+                                            <span className="text-sm font-medium text-slate-800">{s.firstName} {s.lastName}</span>
+                                            <span className="text-xs text-slate-400 ml-auto font-mono">{s.phone}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                            {!previewLoading && previewStudents.length === 0 && (
+                                <div className="text-center py-6 text-slate-400 text-sm border border-slate-100 rounded-xl">
+                                    No students found for the selected filters
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Charge details */}
+                    {bulkFilters.sessionId && selectedStudentIds.size > 0 && (
+                        <div className="space-y-3">
+                            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                Step 3 — Charge Details
+                                <span className="ml-2 text-indigo-500 font-semibold normal-case">({selectedStudentIds.size} students selected)</span>
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div><label className="block text-xs font-medium text-slate-600 mb-1">Charge Type</label>
+                                    <select value={bulkCharge.type} onChange={e => setBulkCharge(f=>({...f, type:e.target.value}))} className={selCls}>
+                                        {EXTRA_CHARGE_TYPES.map(t => <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>)}
+                                    </select></div>
+                                <div><label className="block text-xs font-medium text-slate-600 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
+                                    <input type="number" value={bulkCharge.amount} onChange={e => setBulkCharge(f=>({...f, amount:e.target.value}))} placeholder="e.g. 200" className={selCls}/></div>
+                                <div><label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                                    <input value={bulkCharge.description} onChange={e => setBulkCharge(f=>({...f, description:e.target.value}))} placeholder="Optional note" className={selCls}/></div>
+                                <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
+                                    <select value={bulkCharge.month} onChange={e => setBulkCharge(f=>({...f, month:e.target.value}))} className={selCls}>
+                                        {MONTHS.map((m,i) => <option key={i+1} value={String(i+1)}>{m}</option>)}
+                                    </select></div>
+                                <div><label className="block text-xs font-medium text-slate-600 mb-1">Year</label>
+                                    <select value={bulkCharge.year} onChange={e => setBulkCharge(f=>({...f, year:e.target.value}))} className={selCls}>
+                                        {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
+                                    </select></div>
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button onClick={applyBulk} disabled={bulkApplying}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
+                                    <Users size={15}/>{bulkApplying ? 'Applying…' : `Apply to ${selectedStudentIds.size} Students`}
+                                </button>
+                                <button onClick={() => setShowBulkForm(false)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm">Cancel</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Charges list */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b border-slate-100">
@@ -575,6 +1317,8 @@ function ExtraChargesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 function InvoicesTab() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(false);
@@ -582,57 +1326,88 @@ function InvoicesTab() {
     const [showGenerate, setShowGenerate] = useState(false);
     const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
     const [generating, setGenerating] = useState(false);
-    const [genProgress, setGenProgress] = useState<{ generated: number; skipped: number; processed: number; total: number } | null>(null);
+    const [genResult, setGenResult] = useState<{ generated: number; skipped: number; total: number; lateFeesApplied: number; errors: number } | null>(null);
     // Default year to '' so ALL invoices load on first visit
     const [filterMonth, setFilterMonth] = useState('');
     const [filterYear, setFilterYear] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
 
-    const reload = useCallback(async () => {
+    const [invTick, setInvTick] = useState(0);
+    const reload = useCallback(() => setInvTick(t => t + 1), []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         setLoadError(null);
-        try {
-            const p: Record<string, unknown> = {};
-            if (filterMonth) p.month = Number.parseInt(filterMonth);
-            if (filterYear) p.year = Number.parseInt(filterYear);
-            if (filterStatus) p.status = filterStatus;
-            const data = await api.getFeeInvoices(p as any);
-            setInvoices(data.invoices || []);
-        } catch (err: any) {
-            setLoadError(err?.response?.data?.message || 'Failed to load invoices. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, [filterMonth, filterYear, filterStatus]);
+        const p: Record<string, string | number> = {};
+        if (filterMonth) p.month = Number.parseInt(filterMonth);
+        if (filterYear) p.year = Number.parseInt(filterYear);
+        if (filterStatus) p.status = filterStatus;
+        api.getFeeInvoices(p)
+            .then(data => setInvoices(data.invoices || []))
+            .catch((err: unknown) => setLoadError(apiMsg(err, 'Failed to load invoices. Please try again.')))
+            .finally(() => setLoading(false));
+    }, [filterMonth, filterYear, filterStatus, invTick]);
 
-    useEffect(() => { reload(); }, [reload]);
     useEffect(() => { api.getSessions().then(d => setSessions(Array.isArray(d) ? d : d.sessions || [])).catch(() => {}); }, []);
 
     const generate = async () => {
-        if (!gen.sessionId || !gen.dueDate) { alert('Please fill all fields'); return; }
+        if (!gen.sessionId || !gen.dueDate) {
+            addToast('Please fill all required fields', 'warning');
+            return;
+        }
         setGenerating(true);
-        setGenProgress(null);
+        setGenResult(null);
         try {
-            const data = await api.generateInvoicesStream(
-                { month: Number.parseInt(gen.month), year: Number.parseInt(gen.year), sessionId: gen.sessionId, dueDate: gen.dueDate },
-                (evt) => setGenProgress({ generated: evt.generated, skipped: evt.skipped, processed: evt.processed, total: evt.total }),
+            const data = await api.generateInvoices({
+                month: Number.parseInt(gen.month),
+                year: Number.parseInt(gen.year),
+                sessionId: gen.sessionId,
+                dueDate: gen.dueDate,
+            });
+            setGenResult({
+                generated: data.generated,
+                skipped: data.skipped,
+                total: data.total,
+                lateFeesApplied: data.lateFeesApplied,
+                errors: data.errors,
+            });
+            reload();
+            addToast(
+                data.errors > 0 ? 'Generation finished with errors' : 'Invoices generated',
+                data.errors > 0 ? 'warning' : 'success',
+                `${data.generated} new · ${data.skipped} skipped · ${data.lateFeesApplied} late fees · ${data.errors} errors`,
             );
-            alert(`Done! Generated: ${data.generated}, Skipped (already exist): ${data.skipped}`);
-            await reload(); setShowGenerate(false);
-        } catch { alert('Generation failed'); }
-        finally { setGenerating(false); setGenProgress(null); }
+        } catch (err: unknown) {
+            addToast('Generation failed', 'error', apiMsg(err, ''));
+        } finally {
+            setGenerating(false);
+        }
     };
 
-    const markOverdue = async () => {
-        if (!confirm('Mark all past-due PENDING invoices as OVERDUE?')) return;
-        const d = await api.markOverdueInvoices();
-        alert(d.message); await reload();
+    const markOverdue = () => {
+        confirm({
+            title: 'Mark past-due invoices as overdue?',
+            message: 'All PENDING and PARTIALLY_PAID invoices with a due date in the past will be flipped to OVERDUE. Students with overdue invoices will be charged a ₹100 late fee on their next monthly invoice.',
+            confirmText: 'Mark Overdue',
+            onConfirm: async () => {
+                try {
+                    const d = await api.markOverdueInvoices();
+                    addToast(d.message || 'Invoices updated', 'success');
+                    reload();
+                } catch (err: unknown) {
+                    addToast('Failed to mark overdue', 'error', apiMsg(err, ''));
+                    throw err;
+                }
+            },
+        });
     };
 
     const totalOutstanding = invoices.filter(i => !['PAID','WAIVED','CANCELLED'].includes(i.status)).reduce((s,i) => s + (i.totalAmount - i.paidAmount), 0);
 
     return (
         <div className="space-y-4">
+            {confirmDialog}
             {/* Filters + Actions */}
             <div className="flex flex-wrap gap-3 items-end justify-between">
                 <div className="flex gap-3 items-end flex-wrap">
@@ -707,33 +1482,51 @@ function InvoicesTab() {
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Session</label>
                             <select value={gen.sessionId} onChange={e => setGen(g=>({...g,sessionId:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 <option value="">Select session…</option>
-                                {sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {sessions.map((s: Session) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
                             <input type="date" value={gen.dueDate} onChange={e => setGen(g=>({...g,dueDate:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
+                        <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm disabled:opacity-60">
                             <RefreshCw size={15} className={generating?'animate-spin':''}/>{generating?'Generating…':'Generate'}
                         </button>
-                        <button onClick={() => setShowGenerate(false)} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
+                        <button onClick={() => { setShowGenerate(false); setGenResult(null); }} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">
+                            {genResult ? 'Close' : 'Cancel'}
+                        </button>
                     </div>
-                    {generating && genProgress && genProgress.total > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs text-slate-600">
-                                <span>Processing {genProgress.processed} / {genProgress.total} students</span>
-                                <span>{Math.round((genProgress.processed / genProgress.total) * 100)}%</span>
+
+                    {/* Loading pulse while request is in flight */}
+                    {generating && (
+                        <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                            <RefreshCw size={13} className="animate-spin text-emerald-500" />
+                            <span>Generating invoices — this may take a moment for large sessions…</span>
+                        </div>
+                    )}
+
+                    {/* Completion summary with the new counters */}
+                    {!generating && genResult && (
+                        <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                                <CheckCircle2 size={15} /> Generation complete
                             </div>
-                            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                                <div
-                                    className="bg-emerald-500 h-3 rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.round((genProgress.processed / genProgress.total) * 100)}%` }}
-                                />
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                                <ResultStat label="Total Students" value={genResult.total} className="bg-white text-slate-700 border-slate-200" />
+                                <ResultStat label="Generated"    value={genResult.generated} className="bg-emerald-100 text-emerald-800 border-emerald-200" />
+                                <ResultStat label="Skipped"      value={genResult.skipped}   className="bg-slate-100 text-slate-600 border-slate-200" />
+                                <ResultStat label="Late Fees"    value={genResult.lateFeesApplied} className={genResult.lateFeesApplied > 0 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-slate-100 text-slate-600 border-slate-200"} />
+                                <ResultStat label="Errors"       value={genResult.errors}     className={genResult.errors > 0 ? "bg-red-100 text-red-800 border-red-200" : "bg-slate-100 text-slate-600 border-slate-200"} />
                             </div>
-                            <div className="flex gap-4 text-xs">
-                                <span className="text-green-600">✓ Generated: {genProgress.generated}</span>
-                                <span className="text-slate-400">⊘ Skipped: {genProgress.skipped}</span>
-                            </div>
+                            {genResult.lateFeesApplied > 0 && (
+                                <p className="text-[11px] text-amber-700">
+                                    ₹100 late fee was added to {genResult.lateFeesApplied} invoice{genResult.lateFeesApplied === 1 ? '' : 's'} where a previous invoice is still unpaid.
+                                </p>
+                            )}
+                            {genResult.errors > 0 && (
+                                <p className="text-[11px] text-red-700">
+                                    {genResult.errors} invoice{genResult.errors === 1 ? '' : 's'} failed. Check server logs for details.
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
