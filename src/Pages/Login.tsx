@@ -56,6 +56,8 @@ const Login: React.FC = () => {
           email: res.user.email,
           phone: res.user.phone,
           role: res.user.role,
+          tenantId: res.user.tenantId,
+          permissions: res.user.permissions,
         });
         setIsSuccess(true);
         addToast(`Welcome back, ${res.user.firstName || 'Admin'}!`, 'success');

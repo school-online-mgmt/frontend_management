@@ -286,10 +286,10 @@ const NoticeCard = ({
 const NoticeBoardDetails = () => {
     const { boardId } = useParams<{ boardId: string }>();
     const navigate = useNavigate();
-    const { role } = useAuth();
+    const { hasModuleAdmin } = useAuth();
     const { addToast } = useToast();
     const { confirm, dialog: confirmDialog } = useConfirm();
-    const isPrincipal = role === "PRINCIPAL" || role === "SUPER_ADMIN";
+    const isPrincipal = hasModuleAdmin('COMMUNICATION');
 
     const [board, setBoard] = useState<any>(null);
     const [notices, setNotices] = useState<any[]>([]);

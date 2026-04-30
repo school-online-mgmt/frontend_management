@@ -1367,6 +1367,11 @@ createStudent = async (data: {
         return res.data;
     };
 
+    getPlatformCharge = async () => {
+        const res = await apiClient.get("/management/settings/platform-charge");
+        return res.data as { costPerStudent: number };
+    };
+
     getMyAdmissionCharges = async () => {
         const res = await apiClient.get("/management/settings/admission-charges");
         return res.data as {

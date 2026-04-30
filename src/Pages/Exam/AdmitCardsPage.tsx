@@ -34,12 +34,10 @@ const formatDate = (iso: string) =>
         minute: "2-digit",
     });
 
-const CAN_MUTATE_ROLES = ["PRINCIPAL", "DIRECTOR", "SUPER_ADMIN", "MANAGEMENT_STAFF"];
-
 export default function AdmitCardsPage() {
     const { addToast } = useToast();
-    const { role } = useAuth();
-    const canMutate = CAN_MUTATE_ROLES.includes(role ?? "");
+    const { hasModuleAdmin } = useAuth();
+    const canMutate = hasModuleAdmin('ACADEMICS');
 
     const [releases, setReleases] = useState<AdmitCardRelease[]>([]);
     const [sessions, setSessions] = useState<Session[]>([]);

@@ -126,7 +126,7 @@ function SchoolProfileTab({ user }: { user: any }) {
   const [savedFlash, setSavedFlash] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof ConfigForm, string>>>({});
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'].includes(user?.role ?? '');
 
   useEffect(() => {
     api.getTenantConfig()
@@ -241,7 +241,7 @@ function SchoolProfileTab({ user }: { user: any }) {
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 bg-slate-50 border-b border-slate-100">
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Operational Settings</p>
-          {!isAdmin && <p className="text-[11px] text-slate-400 mt-0.5">Only the ADMIN user can change these settings.</p>}
+          {!isAdmin && <p className="text-[11px] text-slate-400 mt-0.5">Only Admin, Principal, or Director can change these settings.</p>}
         </div>
         <div className="p-5 space-y-3">
           {[
@@ -556,11 +556,18 @@ function SchoolProfileTab({ user }: { user: any }) {
 
 function PlatformFeesTab() {
   const [data, setData] = useState<Awaited<ReturnType<typeof api.getMyAdmissionCharges>> | null>(null);
+  const [costPerStudent, setCostPerStudent] = useState<number>(150);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    api.getMyAdmissionCharges().then(setData).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      api.getMyAdmissionCharges(),
+      api.getPlatformCharge(),
+    ]).then(([charges, charge]) => {
+      setData(charges);
+      setCostPerStudent(charge.costPerStudent);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const summary = data?.summary;
@@ -577,7 +584,9 @@ function PlatformFeesTab() {
     <div className="space-y-5">
       <div>
         <h3 className="text-base font-bold text-slate-900">Platform Fees to EduPilots</h3>
-        <p className="text-xs text-slate-500 mt-0.5">₹150 is billed per admitted student. Payments are made offline to the EduPilots team.</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          ₹{costPerStudent.toLocaleString("en-IN")} is billed per admitted student. Payments are made offline to the EduPilots team.
+        </p>
       </div>
 
       {/* Info banner */}
@@ -586,7 +595,8 @@ function PlatformFeesTab() {
         <div>
           <p className="text-sm font-bold text-violet-800">How platform fees work</p>
           <p className="text-xs text-violet-700 mt-0.5 leading-relaxed">
-            Every time your school admits a new student (via the Admit flow), EduPilots records a ₹150 platform charge.
+            Every time your school admits a new student (via the Admit flow), EduPilots records a{' '}
+            <strong>₹{costPerStudent.toLocaleString("en-IN")}</strong> platform charge.
             These are collected offline — once you've paid, the EduPilots team will mark them as settled.
           </p>
         </div>
@@ -604,7 +614,7 @@ function PlatformFeesTab() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Total Admitted", value: String(summary.total), sub: "students", color: "text-slate-900", bg: "bg-white border-slate-200" },
-              { label: "Total Billed", value: fmt(summary.totalAmount), sub: `${summary.total} × ₹150`, color: "text-slate-900", bg: "bg-white border-slate-200" },
+              { label: "Total Billed", value: fmt(summary.totalAmount), sub: `${summary.total} × ₹${costPerStudent.toLocaleString("en-IN")}`, color: "text-slate-900", bg: "bg-white border-slate-200" },
               { label: "Paid to EduPilots", value: fmt(summary.paidAmount), sub: `${summary.paidCount} settled`, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
               { label: "Outstanding", value: fmt(summary.pendingAmount), sub: `${summary.pendingCount} pending`, color: summary.pendingAmount > 0 ? "text-amber-700" : "text-slate-400", bg: summary.pendingAmount > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200" },
             ].map(({ label, value, sub, color, bg }) => (
@@ -717,7 +727,7 @@ export default function AccountPage() {
 
   const { tenant, subscription: sub, user, trialDaysRemaining } = data;
   const urgentAlert = sub?.status === 'trial' && (trialDaysRemaining ?? Infinity) <= 5;
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'].includes(user?.role ?? '');
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">

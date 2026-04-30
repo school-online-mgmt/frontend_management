@@ -86,7 +86,7 @@ const LifecyclePipeline = ({ byStatus, total }: { byStatus: Record<string, numbe
 
 // --- Main Component -----------------------------------------------------------
 const ExamHome = () => {
-    const { role } = useAuth();
+    const { hasModuleAdmin } = useAuth();
     const navigate = useNavigate();
 
     const [tab, setTab] = useState<"dashboard" | "exams">("dashboard");
@@ -112,7 +112,7 @@ const ExamHome = () => {
 
     const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({ TERM1: true, TERM2: true, TERM3: true });
 
-    const canCreate = ["PRINCIPAL", "SUPER_ADMIN", "DIRECTOR", "MANAGEMENT_STAFF"].includes(role ?? "");
+    const canCreate = hasModuleAdmin('ACADEMICS');
 
     useEffect(() => {
         api.getSessions().then((s: any) => {

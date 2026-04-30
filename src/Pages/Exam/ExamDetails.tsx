@@ -145,7 +145,7 @@ const CheckItem = ({ done, label }: { done: boolean; label: string }) => (
 
 const ExamDetails = () => {
     const { examId } = useParams() as { examId: string };
-    const { role } = useAuth();
+    const { hasModuleAdmin } = useAuth();
     const navigate = useNavigate();
 
     const [exam, setExam]             = useState<any>(null);
@@ -217,7 +217,7 @@ const ExamDetails = () => {
         return () => clearTimeout(t);
     }, [message]);
 
-    const isPrincipalOrAdmin = role === "PRINCIPAL" || role === "SUPER_ADMIN" || role === "DIRECTOR";
+    const isPrincipalOrAdmin = hasModuleAdmin('ACADEMICS');
 
     // ── Action runner ─────────────────────────────────────────────────────────
 
