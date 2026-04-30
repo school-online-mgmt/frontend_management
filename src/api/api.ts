@@ -8,6 +8,8 @@ import type {
     AdmitCardRelease,
     PublishAdmitCardPayload,
     GenerateInvoicesResult,
+    TeacherApplication,
+    FeeStructureItem,
 } from './types';
 
 // Create an Axios instance with a base URL from environment variables
@@ -30,7 +32,11 @@ export const setLogoutCallback = (callback: () => void) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't trigger logout for verifyAuth — it's used to CHECK auth, not make real API calls.
+    // A 401 there just means "not authenticated yet"; the AuthContext handles that state.
+    const url: string = error.config?.url ?? '';
+    const isAuthCheck = url.includes('/management/auth/verifyAuth');
+    if (error.response?.status === 401 && !isAuthCheck) {
       if (logoutCallback) {
           logoutCallback();
       }
@@ -732,6 +738,16 @@ createStudent = async (data: {
         return res.data;
     };
 
+    getTeacherApplications = async (status?: string): Promise<{ applications: TeacherApplication[] }> => {
+        const res = await apiClient.get('/management/teacher/applications', { params: status ? { status } : {} });
+        return res.data;
+    };
+
+    updateTeacherApplicationStatus = async (id: string, data: { status: string; comments?: string }) => {
+        const res = await apiClient.patch(`/management/teacher/applications/${id}`, data);
+        return res.data;
+    };
+
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
@@ -841,6 +857,14 @@ createStudent = async (data: {
         const res = await apiClient.post("/management/fees/extra-charges", data);
         return res.data;
     };
+    previewBulkExtraCharge = async (params: { sessionId: string; classId?: string; sectionId?: string; courseId?: string }) => {
+        const res = await apiClient.get("/management/fees/extra-charges/bulk/preview", { params });
+        return res.data as { students: Array<{ academicId: string; studentId: string; firstName: string; lastName: string; phone: string }>; total: number };
+    };
+    addBulkExtraCharge = async (data: { type: string; description?: string; amount: number; month: number; year: number; sessionId: string; classId?: string; sectionId?: string; courseId?: string; studentIds?: string[]; applyToAll?: boolean }) => {
+        const res = await apiClient.post("/management/fees/extra-charges/bulk", data);
+        return res.data as { message: string; created: number; total: number };
+    };
     updateExtraCharge = async (id: string, data: Partial<{ type: string; description: string; amount: number; month: number; year: number }>) => {
         const res = await apiClient.patch(`/management/fees/extra-charges/${id}`, data);
         return res.data;
@@ -907,6 +931,54 @@ createStudent = async (data: {
     };
     getFeeSummary = async (params?: { month?: number; year?: number }) => {
         const res = await apiClient.get("/management/fees/summary", { params });
+        return res.data;
+    };
+
+    // ── Fee Structures ────────────────────────────────────────────────────────
+
+    getFeeStructures = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/fees/structures', { params: sessionId ? { sessionId } : {} });
+        return res.data as { structures: Array<{ id: string; name: string; sessionId: string; sessionName: string; isActive: boolean; itemCount: number; createdAt: string }> };
+    };
+
+    createFeeStructure = async (data: { sessionId: string; name: string; description?: string; isActive: boolean }) => {
+        const res = await apiClient.post('/management/fees/structures', data);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean } };
+    };
+
+    getFeeStructureById = async (id: string) => {
+        const res = await apiClient.get(`/management/fees/structures/${id}`);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean; items: FeeStructureItem[] } };
+    };
+
+    createFeeStructureItem = async (structureId: string, data: {
+        name: string; feeType: string; scope: 'GLOBAL' | 'COURSE';
+        amount: number; frequency: string;
+        courseId?: string; description?: string;
+    }) => {
+        const res = await apiClient.post(`/management/fees/structures/${structureId}/items`, data);
+        return res.data;
+    };
+
+    updateFeeStructureItem = async (structureId: string, itemId: string, data: Partial<{
+        name: string; amount: number; frequency: string; description: string;
+    }>) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}/items/${itemId}`, data);
+        return res.data;
+    };
+
+    deleteFeeStructureItem = async (structureId: string, itemId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}/items/${itemId}`);
+        return res.data;
+    };
+
+    updateFeeStructure = async (structureId: string, data: { name?: string; description?: string; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}`, data);
+        return res.data as { structure: { id: string; name: string; isActive: boolean } };
+    };
+
+    deleteFeeStructure = async (structureId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}`);
         return res.data;
     };
 
@@ -1206,6 +1278,107 @@ createStudent = async (data: {
     createFeatureRequest = async (data: { title: string; description: string; category?: string }) => {
         const res = await apiClient.post('/management/support/feature-requests', data);
         return res.data;
+    };
+
+    // Onboarding
+    getOnboardingStatus = async (): Promise<{
+        isComplete: boolean;
+        steps: {
+            session:          { complete: boolean; count: number };
+            classAndSection:  { complete: boolean; classCount: number; sectionCount: number };
+            subjectAndCourse: { complete: boolean; subjectCount: number; courseCount: number };
+            teacher:          { complete: boolean; count: number };
+            principal:        { complete: boolean; count: number };
+            fees:             { complete: boolean; courseFeeCount: number; feeStructureCount: number };
+            transport:        { complete: boolean; count: number };
+            noticeBoard:      { complete: boolean; count: number };
+        };
+    }> => {
+        const res = await apiClient.get('/management/onboarding/status');
+        return res.data;
+    };
+
+    // ── Staff Management ──────────────────────────────────────────────────────
+
+    getStaff = async (): Promise<{ staff: Array<{
+        id: string; firstName: string; middleName?: string; lastName: string;
+        phone: string; email: string; role: string | null; createdAt: string;
+        permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> | null;
+    }> }> => {
+        const res = await apiClient.get('/management/staff');
+        return res.data;
+    };
+
+    createStaff = async (data: {
+        firstName: string; lastName: string; phone: string; email: string;
+        password: string; role?: string;
+        permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
+    }) => {
+        const res = await apiClient.post('/management/staff', data);
+        return res.data;
+    };
+
+    updateStaff = async (id: string, data: {
+        firstName?: string; lastName?: string; phone?: string; email?: string;
+        role?: string; password?: string;
+    }) => {
+        const res = await apiClient.patch(`/management/staff/${id}`, data);
+        return res.data;
+    };
+
+    deleteStaff = async (id: string) => {
+        const res = await apiClient.delete(`/management/staff/${id}`);
+        return res.data;
+    };
+
+    updateStaffPermissions = async (id: string, permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>) => {
+        const res = await apiClient.put(`/management/staff/${id}/permissions`, { permissions });
+        return res.data;
+    };
+
+    // Tenant Config / School Settings
+    getTenantConfig = async () => {
+        const res = await apiClient.get("/management/settings/config");
+        return res.data;
+    };
+    updateTenantConfig = async (data: {
+        schoolName: string;
+        tagline?: string | null;
+        bio?: string | null;
+        address?: string | null;
+        city?: string | null;
+        state?: string | null;
+        country?: string | null;
+        pincode?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        logoUrl?: string | null;
+        footerText?: string | null;
+        acceptingApplications?: boolean;
+        acceptingOnlineFees?: boolean;
+        establishedYear?: number | null;
+        boardAffiliation?: string | null;
+        schoolType?: string | null;
+        emergencyContact?: string | null;
+        principalName?: string | null;
+    }) => {
+        const res = await apiClient.patch("/management/settings/config", data);
+        return res.data;
+    };
+
+    getMyAdmissionCharges = async () => {
+        const res = await apiClient.get("/management/settings/admission-charges");
+        return res.data as {
+            charges: Array<{
+                id: string; studentName: string; amount: number; status: string;
+                paidAt: string | null; notes: string | null; createdAt: string;
+            }>;
+            summary: {
+                total: number; pendingCount: number; paidCount: number;
+                pendingAmount: number; paidAmount: number; totalAmount: number;
+            } | null;
+        };
     };
 }
 export default new API();

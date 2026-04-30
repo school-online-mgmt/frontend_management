@@ -14,7 +14,7 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { refresh } = useAuthContext();
+  const { refresh, loginDirect } = useAuthContext();
 
   // Validation function
   const validateForm = (): boolean => {
@@ -47,10 +47,21 @@ const Login: React.FC = () => {
     try {
       const res = await api.login(phone, password);
       if (res.user?.id) {
+        // Set auth state immediately from the login response so navigation works
+        // even if the follow-up checkAuth call takes time
+        loginDirect({
+          id: res.user.id,
+          firstName: res.user.firstName,
+          lastName: res.user.lastName,
+          email: res.user.email,
+          phone: res.user.phone,
+          role: res.user.role,
+        });
         setIsSuccess(true);
-        addToast(`Welcome back, ${res.user.name || 'Admin'}!`, 'success');
-        await refresh();
-        navigate('/dashboard');
+        addToast(`Welcome back, ${res.user.firstName || 'Admin'}!`, 'success');
+        navigate('/dashboard', { replace: true });
+        // Background refresh to get full permissions
+        refresh();
       } else {
         addToast('Invalid credentials', 'error');
       }

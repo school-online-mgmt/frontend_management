@@ -273,3 +273,47 @@ export interface GenerateInvoicesResult {
   lateFeesApplied: number;
   errors: number;
 }
+
+// ── Fee Structure ─────────────────────────────────────────────────────────────
+
+export type FeeItemType = 'TUITION' | 'TRANSPORT' | 'LIBRARY' | 'LAB' | 'SPORTS' | 'COMPUTER' | 'DEVELOPMENT' | 'EXAM' | 'ADMISSION' | 'BOOKS' | 'UNIFORM' | 'ID_CARD' | 'MISC';
+export type FeeScope     = 'GLOBAL' | 'CLASS' | 'COURSE';
+export type FeeFrequency = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'ONE_TIME';
+
+export interface FeeStructureItem {
+  id: string;
+  name: string;
+  feeType: FeeItemType;
+  scope: FeeScope;
+  classId: string | null;
+  className: string | null;
+  courseId: string | null;
+  courseName: string | null;
+  amount: number;
+  frequency: FeeFrequency;
+  isOptional: boolean;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+// ── Teacher Application ───────────────────────────────────────────────────────
+
+export interface TeacherApplication {
+  id: string;
+  name: string;
+  gender: string;
+  age: number | null;
+  qualification: string;
+  experienceYears: number | null;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  subjectsInterested: string | null;
+  message: string | null;
+  status: 'APPLIED' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
+  comments: string | null;
+  tenantId: string;
+  createdAt: string;
+  updatedAt: string;
+}
