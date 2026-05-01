@@ -193,6 +193,7 @@ const ClassDetails = () => {
                         {classData.courses?.map((course: any) => (
                             <div
                                 key={course.id}
+                                data-testid={`course-row-${course.slug}`}
                                 onClick={() => navigate(`/course/${course.id}`)}
                                 className="px-6 py-4 hover:bg-slate-50/60 cursor-pointer transition-colors group"
                             >

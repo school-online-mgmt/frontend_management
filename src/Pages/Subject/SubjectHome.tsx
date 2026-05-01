@@ -58,6 +58,7 @@ const SubjectCard = ({
   const TypeIcon = cfg.icon;
   return (
     <div
+      data-testid={`subject-card-${subject.slug}`}
       onClick={onClick}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group flex flex-col"
     >
@@ -461,7 +462,7 @@ const SubjectPage = () => {
 
         ) : viewMode === "grid" ? (
           /* ── Grid View ───────────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div data-testid="subject-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((subject) => (
               <SubjectCard
                 key={subject.id}
@@ -496,6 +497,7 @@ const SubjectPage = () => {
                     return (
                       <tr
                         key={subject.id}
+                        data-testid={`subject-row-${subject.slug}`}
                         onClick={() => navigate(`/subject/${subject.slug}`)}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                       >

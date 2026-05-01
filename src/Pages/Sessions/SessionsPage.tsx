@@ -296,7 +296,7 @@ const SessionCard: React.FC<{
     : status === "expired" ? 100 : 0;
 
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden group
+    <div data-testid={`session-card-${session.slug}`} className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden group
       ${status === "active" ? "border-emerald-200 ring-1 ring-emerald-100" : "border-slate-200"}`}>
       {/* Top stripe */}
       <div className={`h-1 ${status === "active" ? "bg-gradient-to-r from-emerald-400 to-teal-400" : status === "upcoming" ? "bg-gradient-to-r from-blue-400 to-indigo-400" : "bg-slate-200"}`} />
@@ -568,7 +568,7 @@ const SessionsPage: React.FC = () => {
 
         {/* Session grid */}
         {!loading && sessions.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div data-testid="session-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sorted.map(session => (
               <SessionCard
                 key={session.id}

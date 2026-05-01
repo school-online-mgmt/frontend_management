@@ -40,6 +40,7 @@ import SessionsPage from "./Pages/Sessions/SessionsPage.tsx";
 import AccountPage from "./Pages/Account/AccountPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
+import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
 
 function App() {
   return (
@@ -91,6 +92,7 @@ function App() {
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/support" element={<SupportCenter />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
           </Route>
         </Route>

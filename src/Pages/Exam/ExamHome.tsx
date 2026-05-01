@@ -214,6 +214,7 @@ const ExamHome = () => {
                         </button>
                         {canCreate && (
                             <button onClick={() => setIsCreateOpen(true)}
+                                data-testid="create-exam-btn"
                                 className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition-all backdrop-blur-sm">
                                 <Plus size={16} /> Create Exam
                             </button>

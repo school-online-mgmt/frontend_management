@@ -1327,6 +1327,7 @@ function InvoicesTab() {
     const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
     const [generating, setGenerating] = useState(false);
     const [genResult, setGenResult] = useState<{ generated: number; skipped: number; total: number; lateFeesApplied: number; errors: number } | null>(null);
+    const [genProgress, setGenProgress] = useState<{ processed: number; total: number; percentage: number; generated: number; skipped: number; errors: number } | null>(null);
     // Default year to '' so ALL invoices load on first visit
     const [filterMonth, setFilterMonth] = useState('');
     const [filterYear, setFilterYear] = useState('');
@@ -1358,30 +1359,83 @@ function InvoicesTab() {
         }
         setGenerating(true);
         setGenResult(null);
+        setGenProgress(null);
         try {
-            const data = await api.generateInvoices({
-                month: Number.parseInt(gen.month),
-                year: Number.parseInt(gen.year),
-                sessionId: gen.sessionId,
-                dueDate: gen.dueDate,
+            const baseUrl = (import.meta.env.VITE_BACKEND_HOST as string) ?? '';
+            const response = await fetch(`${baseUrl}/management/fees/invoices/generate/stream`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    month: Number.parseInt(gen.month),
+                    year: Number.parseInt(gen.year),
+                    sessionId: gen.sessionId,
+                    dueDate: gen.dueDate,
+                }),
             });
-            setGenResult({
-                generated: data.generated,
-                skipped: data.skipped,
-                total: data.total,
-                lateFeesApplied: data.lateFeesApplied,
-                errors: data.errors,
-            });
-            reload();
-            addToast(
-                data.errors > 0 ? 'Generation finished with errors' : 'Invoices generated',
-                data.errors > 0 ? 'warning' : 'success',
-                `${data.generated} new · ${data.skipped} skipped · ${data.lateFeesApplied} late fees · ${data.errors} errors`,
-            );
+
+            if (!response.ok || !response.body) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                // SSE events are separated by double newlines
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop() ?? '';
+                for (const chunk of parts) {
+                    const dataLine = chunk.replace(/^data:\s*/m, '').trim();
+                    if (!dataLine) continue;
+                    try {
+                        const event = JSON.parse(dataLine) as {
+                            type: string;
+                            processed?: number; total?: number; percentage?: number;
+                            generated?: number; skipped?: number; errors?: number;
+                            lateFeesApplied?: number; message?: string;
+                        };
+                        if (event.type === 'progress') {
+                            setGenProgress({
+                                processed: event.processed ?? 0,
+                                total: event.total ?? 0,
+                                percentage: event.percentage ?? 0,
+                                generated: event.generated ?? 0,
+                                skipped: event.skipped ?? 0,
+                                errors: event.errors ?? 0,
+                            });
+                        } else if (event.type === 'done') {
+                            setGenResult({
+                                generated: event.generated ?? 0,
+                                skipped: event.skipped ?? 0,
+                                total: event.total ?? 0,
+                                lateFeesApplied: event.lateFeesApplied ?? 0,
+                                errors: event.errors ?? 0,
+                            });
+                            reload();
+                            addToast(
+                                (event.errors ?? 0) > 0 ? 'Generation finished with errors' : 'Invoices generated',
+                                (event.errors ?? 0) > 0 ? 'warning' : 'success',
+                                `${event.generated ?? 0} new · ${event.skipped ?? 0} skipped · ${event.lateFeesApplied ?? 0} late fees · ${event.errors ?? 0} errors`,
+                            );
+                        } else if (event.type === 'error') {
+                            throw new Error(event.message ?? 'Generation failed');
+                        }
+                    } catch (parseErr) {
+                        // skip malformed chunks
+                    }
+                }
+            }
         } catch (err: unknown) {
             addToast('Generation failed', 'error', apiMsg(err, ''));
         } finally {
             setGenerating(false);
+            setGenProgress(null);
         }
     };
 
@@ -1491,16 +1545,37 @@ function InvoicesTab() {
                         <button onClick={generate} disabled={generating} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm disabled:opacity-60">
                             <RefreshCw size={15} className={generating?'animate-spin':''}/>{generating?'Generating…':'Generate'}
                         </button>
-                        <button onClick={() => { setShowGenerate(false); setGenResult(null); }} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">
+                        <button onClick={() => { setShowGenerate(false); setGenResult(null); setGenProgress(null); }} disabled={generating} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">
                             {genResult ? 'Close' : 'Cancel'}
                         </button>
                     </div>
 
-                    {/* Loading pulse while request is in flight */}
-                    {generating && (
+                    {/* Real-time progress bar (streams from SSE) */}
+                    {generating && genProgress && (
+                        <div className="space-y-2 bg-slate-50 border border-slate-100 rounded-lg px-4 py-3">
+                            <div className="flex justify-between items-center text-xs text-slate-600">
+                                <span className="font-medium">Generating invoices…</span>
+                                <span className="tabular-nums">{genProgress.processed} / {genProgress.total} students ({genProgress.percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="bg-emerald-500 h-2 rounded-full transition-all duration-200"
+                                    style={{ width: `${genProgress.percentage}%` }}
+                                />
+                            </div>
+                            <div className="flex gap-4 text-[11px] text-slate-500">
+                                <span className="text-emerald-700 font-medium">{genProgress.generated} generated</span>
+                                <span>{genProgress.skipped} skipped</span>
+                                {genProgress.errors > 0 && <span className="text-red-600">{genProgress.errors} errors</span>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Waiting for first event */}
+                    {generating && !genProgress && (
                         <div className="flex items-center gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
                             <RefreshCw size={13} className="animate-spin text-emerald-500" />
-                            <span>Generating invoices — this may take a moment for large sessions…</span>
+                            <span>Connecting — this may take a moment for large sessions…</span>
                         </div>
                     )}
 

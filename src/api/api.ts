@@ -230,6 +230,18 @@ class API {
     return response.data;
   };
 
+  getSchoolStats = async () => {
+    const response = await apiClient.get("/management/dashboard/school-stats");
+    return response.data as {
+      students: { total: number; active: number; withDisability: number; byGender: { gender: string; count: number }[]; byStatus: { status: string; count: number }[] };
+      teachers: { total: number; active: number; byGender: { gender: string; count: number }[] };
+      transport: { opted: number; notOpted: number; optedPercent: number; byZone: { zoneName: string; zonePrice: number; count: number }[] };
+      ratios: { studentsPerTeacher: number };
+      byClass: { className: string; count: number }[];
+      currentSession: { id: string; name: string; startDate: string; endDate: string } | null;
+    };
+  };
+
 //get All Sessions
 getSessions= async () => {
     const response = await apiClient.get("/management/session");
