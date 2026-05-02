@@ -13,12 +13,24 @@ import PageHeader from "../../components/PageHeader";
 interface SchoolSummary {
     totalExams: number; totalResults: number; appeared: number; absent: number;
     averagePercentage: number; passRate: number; highestPct: number;
+    lowestPct?: number; medianPct?: number;
     gradeDistribution: Record<string, number>;
 }
-interface ClassRow { classId: string; className: string; students: number; avgPercentage: number; passRate: number; totalResults: number; }
-interface SectionRow { sectionId: string; sectionName: string; className: string; students: number; avgPercentage: number; passRate: number; totalResults: number; }
-interface SubjectRow { subjectId: string; subjectName: string; avgPercentage: number; passRate: number; totalResults: number; highest: number; }
-interface TopPerformer { studentId: string; studentName: string; className: string; sectionName: string; rollNo: string; avgPercentage: number; examsCount: number; grade: string; pcts: number[]; }
+interface ClassRow { classId: string; className: string; students: number; sections?: number; avgPercentage: number; passRate: number; totalResults: number; highest?: number; }
+interface SectionRow { sectionId: string; sectionName: string; classId?: string; className: string; students: number; avgPercentage: number; passRate: number; totalResults: number; highest?: number; }
+interface SubjectRow { subjectId: string; subjectName: string; avgPercentage: number; passRate: number; totalResults: number; highest: number; lowest?: number; }
+interface TopPerformer { studentId: string; studentName: string; className: string; sectionName: string; rollNo: string; avgPercentage: number; examsCount: number; grade: string; classId?: string; sectionId?: string; pcts?: number[]; }
+interface TermBlock {
+    term: string;
+    examCount: number;
+    summary: SchoolSummary;
+    classBreakdown: ClassRow[];
+    sectionBreakdown: SectionRow[];
+    subjectBreakdown: SubjectRow[];
+    topPerformers: TopPerformer[];
+    radar: { label: string; value: number }[];
+}
+interface ApiInsight { type: "warning" | "success" | "info"; message: string; }
 
 interface ExamReportData {
     exam: { id: string; examName: string; subjectName: string; sessionName: string; teacherName: string; examTerm: string; fullMarks: number; status: string; };
@@ -92,7 +104,32 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: typeof Users
 );
 
 // â”€â”€ Improvement Insights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary: SchoolSummary; subjectBreakdown: SubjectRow[]; classBreakdown: ClassRow[] }) => {
+// Prefers backend-computed insights when available (richer, includes term momentum)
+// and falls back to a local heuristic otherwise.
+const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown, backendInsights }: { summary: SchoolSummary; subjectBreakdown: SubjectRow[]; classBreakdown: ClassRow[]; backendInsights?: ApiInsight[] }) => {
+    if (backendInsights && backendInsights.length > 0) {
+        return (
+            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <Lightbulb size={16} className="text-amber-500" /> Improvement Insights & Recommendations
+                </h3>
+                <div className="space-y-3">
+                    {backendInsights.map((ins, i) => (
+                        <div key={i} className={`flex items-start gap-3 p-3 rounded-xl ${
+                            ins.type === "warning" ? "bg-amber-50 border border-amber-100" :
+                            ins.type === "success" ? "bg-emerald-50 border border-emerald-100" :
+                            "bg-blue-50 border border-blue-100"
+                        }`}>
+                            {ins.type === "warning" ? <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" /> :
+                             ins.type === "success" ? <TrendingUp size={16} className="text-emerald-600 shrink-0 mt-0.5" /> :
+                             <Zap size={16} className="text-blue-600 shrink-0 mt-0.5" />}
+                            <p className="text-sm text-slate-700">{ins.message}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
     const insights: { type: "warning" | "success" | "info"; message: string }[] = [];
 
     // Weak subjects (below 50% avg)
@@ -160,6 +197,233 @@ const InsightsPanel = ({ summary, subjectBreakdown, classBreakdown }: { summary:
     );
 };
 
+// ── Term progression line chart ──────────────────────────────────────────────
+// Shows school average % across terms with the 40% pass threshold marked.
+const TermProgressionChart = ({ byTerm }: { byTerm: TermBlock[] }) => {
+    const W = 720, H = 220, PL = 40, PR = 40, PT = 20, PB = 36;
+    const innerW = W - PL - PR, innerH = H - PT - PB;
+    const points = byTerm.map(t => t.summary.averagePercentage);
+    const xFor = (i: number) => points.length === 1
+        ? PL + innerW / 2
+        : PL + (i / (points.length - 1)) * innerW;
+    const yFor = (v: number) => PT + innerH - (v / 100) * innerH;
+    const linePts = points.map((v, i) => `${xFor(i)},${yFor(v)}`).join(" ");
+    const areaPts = `${PL},${H - PB} ${linePts} ${W - PR},${H - PB}`;
+    const fmt = (t: string) => t === "ANNUAL" ? "Annual" : t.replace("TERM", "Term ");
+    return (
+        <div className="overflow-x-auto">
+            <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px]" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="termAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+                    </linearGradient>
+                </defs>
+                {[0, 25, 50, 75, 100].map(g => (
+                    <g key={g}>
+                        <line x1={PL} x2={W - PR} y1={yFor(g)} y2={yFor(g)} stroke="#f1f5f9" strokeWidth="1" />
+                        <text x={PL - 6} y={yFor(g)} fontSize="9" fill="#94a3b8" textAnchor="end" dominantBaseline="middle">{g}%</text>
+                    </g>
+                ))}
+                <line x1={PL} x2={W - PR} y1={yFor(40)} y2={yFor(40)} stroke="#fca5a5" strokeWidth="0.8" strokeDasharray="3 3" />
+                <text x={W - PR} y={yFor(40) - 3} fontSize="8" fill="#ef4444" textAnchor="end" fontWeight="600">PASS 40%</text>
+                {byTerm.map((t, i) => (
+                    <text key={t.term} x={xFor(i)} y={H - PB / 2 + 8} fontSize="10" fill="#64748b" textAnchor="middle" fontWeight="700">
+                        {fmt(t.term)}
+                    </text>
+                ))}
+                <polygon points={areaPts} fill="url(#termAreaGradient)" />
+                <polyline points={linePts} fill="none" stroke="#6366f1" strokeWidth="2.4" strokeLinejoin="round" />
+                {points.map((v, i) => (
+                    <g key={i}>
+                        <circle cx={xFor(i)} cy={yFor(v)} r="5" fill="white" stroke="#6366f1" strokeWidth="2" />
+                        <text x={xFor(i)} y={yFor(v) - 11} fontSize="10" fontWeight="700" fill="#4338ca" textAnchor="middle">{v}%</text>
+                    </g>
+                ))}
+            </svg>
+        </div>
+    );
+};
+
+// ── Mini bar chart for per-term breakdowns ───────────────────────────────────
+const HorizontalBar = ({ label, value, max = 100, accent = "bg-indigo-500" }: { label: string; value: number; max?: number; accent?: string }) => (
+    <div className="flex items-center gap-3 text-xs">
+        <span className="w-32 text-slate-700 font-medium truncate" title={label}>{label}</span>
+        <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div className={`h-full rounded-full ${accent}`} style={{ width: `${Math.min((value / max) * 100, 100)}%` }} />
+        </div>
+        <span className="w-10 text-right font-bold text-slate-700">{value}%</span>
+    </div>
+);
+
+// ── Per-term detail card (school summary + class/section/subject/top in that term) ─
+const TermDetailCard = ({ term, onJumpToClass, onJumpToSection }: {
+    term: TermBlock;
+    onJumpToClass: () => void;
+    onJumpToSection: () => void;
+}) => {
+    const fmt = (t: string) => t === "ANNUAL" ? "Annual" : t.replace("TERM", "Term ");
+    const dist = term.summary.gradeDistribution;
+    const maxCnt = Math.max(...Object.values(dist), 1);
+    const avgGrade = term.summary.averagePercentage >= 90 ? "A+"
+        : term.summary.averagePercentage >= 80 ? "A"
+        : term.summary.averagePercentage >= 70 ? "B+"
+        : term.summary.averagePercentage >= 60 ? "B"
+        : term.summary.averagePercentage >= 50 ? "C"
+        : term.summary.averagePercentage >= 40 ? "D" : "F";
+    const gc = GRADE_COLORS[avgGrade] ?? GRADE_COLORS.F;
+    return (
+        <section className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+            {/* Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 flex items-center justify-between">
+                <div>
+                    <p className="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-0.5">Term Report</p>
+                    <h3 className="text-base font-bold text-white">{fmt(term.term)}</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                        {term.examCount} exam{term.examCount !== 1 ? "s" : ""} · {term.summary.appeared} attempts · {term.summary.absent} absent
+                    </p>
+                </div>
+                <div className="text-right">
+                    <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl border-2 text-xl font-black ${gc.bg} ${gc.border} ${gc.text}`}>{avgGrade}</div>
+                    <p className="text-[11px] text-slate-400 mt-1.5 font-semibold">{term.summary.averagePercentage}% avg</p>
+                </div>
+            </div>
+
+            {/* Stat strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 border-b border-slate-100 bg-slate-50/60">
+                {[
+                    { label: "Avg",     value: `${term.summary.averagePercentage}%`, sub: "school" },
+                    { label: "Pass",    value: `${term.summary.passRate}%`, sub: term.summary.passRate >= 75 ? "good" : "watch" },
+                    { label: "Highest", value: `${term.summary.highestPct}%`, sub: "best paper" },
+                    { label: "Lowest",  value: `${term.summary.lowestPct ?? 0}%`, sub: "worst paper" },
+                    { label: "Median",  value: `${term.summary.medianPct ?? 0}%`, sub: "midpoint" },
+                ].map(s => (
+                    <div key={s.label} className="px-4 py-3 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{s.label}</p>
+                        <p className="text-base sm:text-lg font-bold mt-0.5 text-slate-800">{s.value}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Two columns: subject coverage radar + grade distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                <div className="p-5">
+                    <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+                        <Target size={12} className="text-indigo-500" /> Subject Coverage
+                    </h4>
+                    {term.radar.length >= 3 ? (
+                        <RadarChart data={term.radar} size={260} color="#6366f1" />
+                    ) : (
+                        <div className="space-y-2 mt-2">
+                            {term.subjectBreakdown.map(s => (
+                                <HorizontalBar key={s.subjectId} label={s.subjectName} value={s.avgPercentage} accent="bg-indigo-500" />
+                            ))}
+                            {term.subjectBreakdown.length === 0 && <p className="text-xs text-slate-400 italic">No subject data</p>}
+                        </div>
+                    )}
+                </div>
+                <div className="p-5">
+                    <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+                        <Award size={12} className="text-indigo-500" /> Grade Distribution
+                    </h4>
+                    <div className="space-y-1.5">
+                        {GRADE_ORDER.filter(g => (dist[g] ?? 0) > 0).map(g => {
+                            const c = GRADE_COLORS[g];
+                            return (
+                                <div key={g} className="flex items-center gap-2 text-xs">
+                                    <span className={`w-9 text-center font-bold py-0.5 rounded ${c.bg} ${c.text} border ${c.border}`}>{g}</span>
+                                    <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
+                                        <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${Math.round(((dist[g] ?? 0) / maxCnt) * 100)}%` }} />
+                                    </div>
+                                    <span className="w-8 text-right font-semibold text-slate-700">{dist[g]}</span>
+                                </div>
+                            );
+                        })}
+                        {Object.values(dist).every(v => v === 0) && <p className="text-xs text-slate-400 italic">No graded results</p>}
+                    </div>
+                </div>
+            </div>
+
+            {/* Class breakdown */}
+            <div className="border-t border-slate-100 p-5">
+                <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <School size={12} className="text-indigo-500" /> By Class
+                    </h4>
+                    <button onClick={onJumpToClass} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
+                        View all →
+                    </button>
+                </div>
+                {term.classBreakdown.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No class data</p>
+                ) : (
+                    <div className="space-y-1.5">
+                        {term.classBreakdown.slice(0, 5).map(c => (
+                            <div key={c.classId} className="flex items-center gap-2 text-xs">
+                                <span className="w-32 text-slate-700 font-semibold truncate">{c.className}</span>
+                                <span className="text-[10px] text-slate-400 w-20 shrink-0">{c.students} stu · {c.sections ?? 1} sec</span>
+                                <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="h-full rounded-full bg-violet-500" style={{ width: `${c.avgPercentage}%` }} />
+                                </div>
+                                <span className="w-12 text-right font-bold text-slate-700">{c.avgPercentage}%</span>
+                                <span className={`w-12 text-right text-[10px] font-bold rounded px-1 py-0.5 ${c.passRate >= 75 ? "bg-emerald-100 text-emerald-700" : c.passRate >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>{c.passRate}%</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Section breakdown */}
+            <div className="border-t border-slate-100 p-5">
+                <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Users size={12} className="text-indigo-500" /> By Section
+                    </h4>
+                    <button onClick={onJumpToSection} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
+                        View all →
+                    </button>
+                </div>
+                {term.sectionBreakdown.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No section data</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {term.sectionBreakdown.slice(0, 8).map(s => (
+                            <div key={s.sectionId} className="flex items-center gap-2 text-xs bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                                <span className="font-semibold text-slate-800 truncate flex-1" title={`${s.className} · ${s.sectionName}`}>{s.className} · {s.sectionName}</span>
+                                <span className="text-[10px] text-slate-400">{s.students} stu</span>
+                                <span className="font-bold text-slate-700">{s.avgPercentage}%</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Top performers */}
+            {term.topPerformers.length > 0 && (
+                <div className="border-t border-slate-100 p-5">
+                    <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-3">
+                        <Trophy size={12} className="text-amber-500" /> Top Performers
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                        {term.topPerformers.slice(0, 5).map((p, i) => (
+                            <div key={p.studentId} className={`relative p-3 rounded-xl border ${i === 0 ? "border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100" : "border-slate-100 bg-slate-50"}`}>
+                                <div className="absolute top-2 right-2 text-[10px] font-bold text-slate-400">#{i + 1}</div>
+                                <p className="text-sm font-bold text-slate-800 truncate pr-6">{p.studentName}</p>
+                                <p className="text-[10px] text-slate-400 truncate">{p.className} · {p.sectionName}</p>
+                                <div className="flex items-baseline gap-1 mt-1.5">
+                                    <span className="text-lg font-black text-slate-900">{p.avgPercentage}%</span>
+                                    <span className="text-[10px] text-slate-400">{p.examsCount} exam{p.examsCount > 1 ? "s" : ""}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+};
+
 // â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ResultsPerformancePage: React.FC = () => {
     const [sessions, setSessions] = useState<any[]>([]);
@@ -170,7 +434,7 @@ const ResultsPerformancePage: React.FC = () => {
     const [sectionId, setSectionId] = useState("");
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [tab, setTab] = useState<"overview" | "class" | "section" | "subject" | "students" | "report-card">("overview");
+    const [tab, setTab] = useState<"overview" | "by-term" | "class" | "section" | "subject" | "students" | "report-card">("overview");
 
     // Report card state
     const [publishedExams, setPublishedExams] = useState<any[]>([]);
@@ -223,6 +487,8 @@ const ResultsPerformancePage: React.FC = () => {
     const sectionBreakdown: SectionRow[] = data?.sectionBreakdown ?? [];
     const subjectBreakdown: SubjectRow[] = data?.subjectBreakdown ?? [];
     const topPerformers: TopPerformer[] = data?.topPerformers ?? [];
+    const byTerm: TermBlock[] = data?.byTerm ?? [];
+    const apiInsights: ApiInsight[] = data?.insights ?? [];
 
     const radarSubjects = useMemo(() => subjectBreakdown.map(s => ({ label: s.subjectName, value: s.avgPercentage })), [subjectBreakdown]);
     const radarClasses = useMemo(() => classBreakdown.map(c => ({ label: c.className, value: c.avgPercentage })), [classBreakdown]);
@@ -233,6 +499,7 @@ const ResultsPerformancePage: React.FC = () => {
 
     const TABS = [
         { key: "overview",     label: "Overview",       icon: BarChart3     },
+        { key: "by-term",      label: "By Term",        icon: ClipboardList },
         { key: "class",        label: "By Class",       icon: School        },
         { key: "section",      label: "By Section",     icon: Users         },
         { key: "subject",      label: "By Subject",     icon: BookOpen      },
@@ -346,7 +613,7 @@ const ResultsPerformancePage: React.FC = () => {
                                 </div>
 
                                 {/* Insights */}
-                                <InsightsPanel summary={summary} subjectBreakdown={subjectBreakdown} classBreakdown={classBreakdown} />
+                                <InsightsPanel summary={summary} subjectBreakdown={subjectBreakdown} classBreakdown={classBreakdown} backendInsights={apiInsights} />
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {/* Radar — Subject Performance */}
@@ -420,6 +687,37 @@ const ResultsPerformancePage: React.FC = () => {
                                             })}
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── BY TERM TAB ─────────────────────────────────────────────── */}
+                        {tab === "by-term" && (
+                            <div className="space-y-6">
+                                {byTerm.length === 0 ? (
+                                    <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center text-sm text-slate-400">
+                                        No term data — publish exam results to see term-wise analytics.
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Term-over-term progression */}
+                                        {byTerm.length >= 2 && (
+                                            <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-1">
+                                                    <TrendingUp size={15} className="text-indigo-500" /> Term-over-Term Progression
+                                                </h3>
+                                                <p className="text-[11px] text-slate-400 mb-4">School average % for each term</p>
+                                                <TermProgressionChart byTerm={byTerm} />
+                                            </div>
+                                        )}
+
+                                        {/* One detailed card per term */}
+                                        {byTerm.map(t => (
+                                            <TermDetailCard key={t.term} term={t}
+                                                onJumpToClass={() => { setTab("class"); }}
+                                                onJumpToSection={() => { setTab("section"); }} />
+                                        ))}
+                                    </>
                                 )}
                             </div>
                         )}
@@ -548,7 +846,7 @@ const ResultsPerformancePage: React.FC = () => {
                                     <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white">
                                         <div className="flex items-center gap-3 mb-1">
                                             <Medal size={20} className="text-amber-400" />
-                                            <h3 className="text-base font-bold">ðŸ† School Top Performers</h3>
+                                            <h3 className="text-base font-bold">School Top Performers</h3>
                                         </div>
                                         <p className="text-xs text-slate-400 mb-5">Top students by average percentage across all published exams</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

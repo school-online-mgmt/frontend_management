@@ -408,7 +408,7 @@ const PerformanceDashboard: React.FC = () => {
                                 <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white">
                                     <div className="flex items-center gap-3 mb-1">
                                         <Medal size={20} className="text-amber-400" />
-                                        <h3 className="text-base font-bold">ðŸ† School Top Performers</h3>
+                                        <h3 className="text-base font-bold">School Top Performers</h3>
                                     </div>
                                     <p className="text-xs text-slate-400 mb-4">Top 10 students by average percentage across all published exams</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

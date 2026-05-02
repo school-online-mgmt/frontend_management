@@ -588,7 +588,7 @@ const PerformancePage: React.FC = () => {
                                 <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
                                     <div className="flex items-center gap-3 mb-1">
                                         <Medal size={22} className="text-amber-400" />
-                                        <h3 className="text-lg font-bold">ðŸ† School Top Performers</h3>
+                                        <h3 className="text-lg font-bold">School Top Performers</h3>
                                     </div>
                                     <p className="text-xs text-slate-400 mb-5">Top 10 students by average percentage across all published exams{term ? ` (${TERMS.find(t => t.value === term)?.label})` : ""}</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
