@@ -12,6 +12,7 @@ import {
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
 import api from "../api/api";
+import DesktopOnlyGate from "./DesktopOnlyGate";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
 // module: matches AppModule enum. null = always visible (no permission needed)
@@ -321,8 +322,10 @@ const Layout = () => {
             )}
           </Link>
           {isMobile && (
-            <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
-              <X size={16} />
+            <button onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+              className="ml-auto w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors active:bg-white/20">
+              <X size={20} />
             </button>
           )}
         </div>
@@ -437,8 +440,9 @@ const Layout = () => {
           </div>
         </nav>
 
-        {/* Bottom user area */}
-        <div className={`border-t border-white/[0.06] shrink-0 ${showFull ? "p-2.5" : "p-2"}`}>
+        {/* Bottom user area — pads for iOS home indicator on mobile */}
+        <div className={`border-t border-white/[0.06] shrink-0 ${showFull ? "p-2.5" : "p-2"}`}
+          style={isMobile ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined}>
           {showFull ? (
             <>
               <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/[0.04] mb-1.5">
@@ -473,6 +477,8 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
+      {/* Mobile devices see a desktop-required gate instead of the cramped layout */}
+      <DesktopOnlyGate />
       {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
@@ -492,29 +498,36 @@ const Layout = () => {
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Mobile Sidebar */}
-      <aside className={`fixed left-0 top-0 bottom-0 z-50 w-[260px] shadow-2xl transform transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {/* Mobile Sidebar — capped width so it never covers the whole screen on tiny devices */}
+      <aside className={`fixed left-0 top-0 bottom-0 z-50 w-[min(280px,85vw)] shadow-2xl transform transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <SidebarContent isMobile />
       </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
-        <header className="h-12 bg-slate-900 border-b border-white/[0.06] flex items-center gap-3 px-4 lg:px-5 shrink-0 z-10">
+        {/* Header — sticky topbar with iOS safe-area inset on mobile */}
+        <header
+          className="bg-slate-900 border-b border-white/[0.06] flex items-center gap-2 px-3 sm:px-4 lg:px-5 shrink-0 z-10"
+          style={{ paddingTop: "env(safe-area-inset-top)", minHeight: "calc(48px + env(safe-area-inset-top))" }}
+        >
           <button onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-1.5 -ml-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-            <Menu size={18} />
+            aria-label="Open navigation"
+            className="lg:hidden w-10 h-10 -ml-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors">
+            <Menu size={20} />
           </button>
           <div className="flex-1 min-w-0" />
 
           <div className="flex items-center gap-1">
-            <button className="relative p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-              <Bell size={16} />
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-slate-900" />
+            <button
+              aria-label="Notifications"
+              className="relative w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors">
+              <Bell size={18} />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-slate-900" />
             </button>
             <div ref={profileRef} className="relative">
               <button onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-white/[0.06] transition-colors">
+                aria-label="Open account menu"
+                className="flex items-center gap-1.5 px-1.5 h-10 rounded-lg hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors">
                 <div className="w-7 h-7 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
                   <span className="text-emerald-400 text-[10px] font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
                 </div>

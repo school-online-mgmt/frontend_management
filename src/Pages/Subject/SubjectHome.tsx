@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, BookOpen, RefreshCcw, Filter, Search, X,
   ChevronRight, Loader2, CheckCircle2, XCircle,
   BarChart3, AlignJustify, BookMarked, FlaskConical,
   Languages, Calculator, Palette, UserCheck, AlertTriangle,
+  CalendarDays,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -135,6 +136,7 @@ const SubjectPage = () => {
   const [search, setSearch]                       = useState("");
   const [showFilters, setShowFilters]             = useState(false);
   const [viewMode, setViewMode]                   = useState<"grid" | "table">("grid");
+  const [sessionPicked, setSessionPicked]         = useState(false);
 
   const {
     data: subjects = [], isLoading: subjectsLoading, refetch: refetchSubjects,
@@ -142,6 +144,7 @@ const SubjectPage = () => {
     queryKey: ["subjects"],
     queryFn: () => api.getSubjects(),
     staleTime: 5 * 60 * 1000,
+    enabled: sessionPicked,
   });
 
   const {
@@ -154,6 +157,16 @@ const SubjectPage = () => {
     },
     staleTime: 10 * 60 * 1000,
   });
+
+  // Auto-pick the ACTIVE session once sessions load.
+  useEffect(() => {
+    if (selectedSession || sessions.length === 0) return;
+    const active = (sessions as any[]).find(s => s.status === "ACTIVE") ?? sessions[0];
+    if (active) {
+      setSelectedSession(active.id);
+      setSessionPicked(true);
+    }
+  }, [sessions, selectedSession]);
 
   const {
     data: teachers = [],
@@ -215,11 +228,11 @@ const SubjectPage = () => {
   }, [subjects, selectedSession, selectedType, statusFilter, search]);
 
   const activeFilterCount = [
-    selectedSession, selectedType, statusFilter !== "all" ? statusFilter : "",
+    selectedType, statusFilter !== "all" ? statusFilter : "",
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setSelectedSession(""); setSelectedType(""); setStatusFilter("all"); setSearch("");
+    setSelectedType(""); setStatusFilter("all"); setSearch("");
   };
 
   /* ── Full-page loading ───────────────────────────────────────────────── */
@@ -264,6 +277,53 @@ const SubjectPage = () => {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 
+        {/* ── Session selector (required) ──────────────────────────────────── */}
+        <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-xl p-3 sm:p-4 text-white shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
+                <CalendarDays size={17} />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-white/70">Academic Session</p>
+                <p className="text-[11px] text-white/80">Pick a session to view its subjects</p>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <select
+                data-testid="subjects-session-select"
+                value={selectedSession}
+                onChange={e => { setSelectedSession(e.target.value); setSessionPicked(!!e.target.value); }}
+                disabled={sessionsLoading}
+                className="w-full px-3 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
+              >
+                {sessionsLoading && <option>Loading sessions…</option>}
+                {!sessionsLoading && sessions.length === 0 && <option value="">No sessions found</option>}
+                {!sessionsLoading && sessions.length > 0 && <option value="">— Select a session —</option>}
+                {sessions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{(s as any).status && (s as any).status !== "ACTIVE" ? ` (${(s as any).status.toLowerCase()})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Empty gate */}
+        {!selectedSession && !sessionsLoading && (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-100">
+              <CalendarDays size={26} className="text-amber-400" />
+            </div>
+            <p className="text-sm font-bold text-slate-700 mb-1">Pick a session to begin</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Subjects are scoped to a single academic session. Choose one above.
+            </p>
+          </div>
+        )}
+
+        {selectedSession && (<>
         {/* ── Stat Cards ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={BookOpen}   label="Total Subjects"  value={stats.total}    bg="bg-indigo-50"  iconColor="text-indigo-600" />
@@ -344,29 +404,7 @@ const SubjectPage = () => {
 
           {/* Expanded filter panel */}
           {showFilters && (
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Session */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Session</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setSelectedSession("")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${!selectedSession ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
-                  >
-                    All
-                  </button>
-                  {sessions.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedSession(selectedSession === s.id ? "" : s.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${selectedSession === s.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
-                    >
-                      {s.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Type */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Subject Type</p>
@@ -557,6 +595,7 @@ const SubjectPage = () => {
             </div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   );

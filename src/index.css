@@ -14,6 +14,21 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* ── Mobile UX defaults ─────────────────────────────────────────────────── */
+/* iOS: stop input zoom (font-size < 16px triggers zoom); render at 14px on mobile
+   to preserve density without forcing the tap-to-zoom behavior. */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px; }
+  /* Keep all interactive controls at a min 32px tap target on mobile so dense
+     desktop UIs stay usable on touch screens without resizing every component. */
+  button, a[role="button"], [role="button"] {
+    min-height: 32px;
+  }
+  /* Hide horizontal scrollbars on mobile when content overflows narrowly. */
+  .scrollbar-hide-mobile::-webkit-scrollbar { display: none; }
+  .scrollbar-hide-mobile { scrollbar-width: none; }
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #f1f5f9;

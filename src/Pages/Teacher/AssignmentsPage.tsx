@@ -98,8 +98,8 @@ const AssignModal = ({
     } finally { setUnassigning(false); }
   };
 
-  const typeLabel = target.type === "class" ? "Class Teacher"
-    : target.type === "section" ? "Section Teacher"
+  const typeLabel = target.type === "class" ? "Class Incharge"
+    : target.type === "section" ? "Section Incharge"
     : target.type === "subject-incharge" ? "Subject Incharge"
     : "Section Mapping";
 
@@ -567,7 +567,7 @@ const AssignmentsPage = () => {
             {/* Legend */}
             <div className="hidden lg:flex items-center gap-3 text-[10px] text-slate-400">
               <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-400 rounded-full" /> Incharge</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-full" /> Section Teacher</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-full" /> Section Incharge</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-400 rounded-full" /> Unassigned</span>
             </div>
           </div>

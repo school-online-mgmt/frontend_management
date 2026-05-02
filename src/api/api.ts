@@ -270,6 +270,68 @@ deleteSession = async (id: string) => {
     return response.data;
 };
 
+// ── Session End Workflow ───────────────────────────────────────────────
+initiateEndSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/initiate-end`);
+    return response.data;
+};
+
+cancelEndSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/cancel-end`);
+    return response.data;
+};
+
+getEndSessionProgress = async (id: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-progress`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED"; endInitiatedAt: string | null; endedAt: string | null };
+        totals: { pending: number; promote: number; holdBack: number; total: number };
+        teachers: { teacherId: string | null; teacherName: string | null; total: number; pending: number; promote: number; holdBack: number }[];
+        canEnd: boolean;
+    };
+};
+
+endSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/end`);
+    return response.data;
+};
+
+// Per-section review (acknowledgement is purely UI-side, no DB).
+getEndSessionSections = async (id: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-sections`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED" };
+        sections: {
+            sectionId: string; sectionName: string | null;
+            classId: string | null; className: string | null;
+            teacherName: string | null;
+            total: number; pending: number; promote: number; holdBack: number;
+        }[];
+    };
+};
+
+getEndSessionSectionDetail = async (id: string, sectionId: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-sections/${sectionId}`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED" };
+        section: { id: string; name: string; className: string | null; teacherName: string | null };
+        students: {
+            academicId: string; studentId: string; rollNo: string | null;
+            promotionStatus: "PENDING" | "PROMOTE" | "HOLD_BACK";
+            decidedBy: string | null; decidedAt: string | null; decisionNote: string | null;
+            decidedByName: string | null;
+            firstName: string; lastName: string; gender: string | null;
+        }[];
+    };
+};
+
+bulkUpdateSectionDecisions = async (id: string, sectionId: string, body: {
+    updates: { academicId: string; decision: "PROMOTE" | "HOLD_BACK" | "PENDING"; note?: string }[];
+}) => {
+    const response = await apiClient.patch(`/management/session/${id}/end-sections/${sectionId}/decisions`, body);
+    return response.data;
+};
+
 addTeacherToSubject = async (subjectId: string, body: { teacherId: string, sectionId: string }) => {
     const response = await apiClient.post(`/management/subject/${subjectId}/teachers`, body);
     return response.data;
@@ -412,11 +474,12 @@ acceptApplication = async (applicantId: string) => {
     return response.data;
 };
 
-getStudents = async (subjectId?: string, sessionId?: string) => {
+getStudents = async (subjectId?: string, sessionId?: string, bySession?: string) => {
     const response = await apiClient.get('/management/student/', {
         params: {
             ...(subjectId && { subjectId }),
             ...(sessionId && { sessionId }),
+            ...(bySession && { bySession }),
         },
     });
     return response.data;

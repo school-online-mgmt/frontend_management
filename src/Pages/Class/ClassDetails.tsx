@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import AddSectionModal from "../../components/Classes/AddSectionModal";
 import CreateCourseInClassModal from "../../components/Courses/CreateCourseInClassModal.tsx";
+import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
 
 const ClassDetails = () => {
     const { classId } = useParams() as { classId: string };
@@ -170,6 +171,14 @@ const ClassDetails = () => {
                     </div>
                 )}
             </div>
+
+            {/* Students enrolled in this class for the chosen session */}
+            <SessionStudentsTable
+                filterClassId={classId}
+                title={`Students in ${classData.name}`}
+                subtitle="Pick a session to see who's enrolled — click any row to open the student profile."
+                accent="indigo"
+            />
 
             {/* Courses */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

@@ -36,6 +36,19 @@ export interface Student {
   createdAt: string;
   updatedAt: string;
   tenantId: string;
+  // Set by GET /management/student?bySession=<id>: enrollment for the chosen session, or null.
+  sessionEnrollment?: {
+    academicId: string;
+    classId: string | null;
+    sectionId: string | null;
+    courseId: string | null;
+    rollNo: string | null;
+    admissionId: string | null;
+    className: string | null;
+    sectionName: string | null;
+    courseName: string | null;
+    promotionStatus: "PENDING" | "PROMOTE" | "HOLD_BACK" | null;
+  } | null;
 }
 
 export interface Academics {

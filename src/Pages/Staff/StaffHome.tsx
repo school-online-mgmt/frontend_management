@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Users, Loader2, RefreshCcw, KeyRound, Eye, EyeOff, X, Phone, Mail,
     Shield, Search, GraduationCap, UserPlus, Trash2, Pencil, ShieldCheck,
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
+    TrendingUp, Activity,
 } from 'lucide-react';
 import api from '../../api/api';
 import PageHeader from '../../components/PageHeader';
@@ -768,6 +769,55 @@ const StaffHome: React.FC = () => {
     const fullAccessCount  = staffList.filter(u => isFullAccess(u.role)).length;
     const staffOnlyCount   = staffList.filter(u => !isFullAccess(u.role)).length;
 
+    // Richer insights: role breakdown, recent additions, teachers split,
+    // module reach, and "needs attention" count for staff with zero permissions.
+    const insights = useMemo(() => {
+        // eslint-disable-next-line react-hooks/purity
+        const now = Date.now();
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+        const byRole: Record<string, number> = {};
+        for (const s of staffList) {
+            const r = s.role ?? 'UNASSIGNED';
+            byRole[r] = (byRole[r] ?? 0) + 1;
+        }
+
+        const newStaffWeek = staffList.filter(s => s.createdAt && now - new Date(s.createdAt).getTime() < SEVEN_DAYS).length;
+        const newStaffMonth = staffList.filter(s => s.createdAt && now - new Date(s.createdAt).getTime() < THIRTY_DAYS).length;
+        const newTeacherWeek = teachers.filter(t => t.createdAt && now - new Date(t.createdAt).getTime() < SEVEN_DAYS).length;
+
+        const activeTeachers = teachers.filter(t => t.isActive).length;
+        const inactiveTeachers = teachers.length - activeTeachers;
+
+        // Custom-access staff with empty permission grids — likely an admin oversight.
+        const noPermsCount = staffList.filter(s =>
+            !isFullAccess(s.role) && (!s.permissions || s.permissions.length === 0),
+        ).length;
+
+        // Module coverage: number of distinct modules at least one staff has READ/ADMIN on.
+        const reachedModules = new Set<string>();
+        for (const s of staffList) {
+            if (isFullAccess(s.role)) {
+                ALL_MODULES.forEach(m => reachedModules.add(m));
+                break;
+            }
+            for (const p of s.permissions ?? []) reachedModules.add(p.module);
+        }
+
+        return {
+            byRole,
+            newStaffWeek,
+            newStaffMonth,
+            newTeacherWeek,
+            activeTeachers,
+            inactiveTeachers,
+            noPermsCount,
+            reachedModules: reachedModules.size,
+            totalModules: ALL_MODULES.length,
+        };
+    }, [staffList, teachers]);
+
     // ── Render ─────────────────────────────────────────────────────────────
 
     return (
@@ -810,42 +860,141 @@ const StaffHome: React.FC = () => {
                 gradient="from-indigo-600 via-violet-600 to-purple-700"
             />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-5">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 mt-3 space-y-2.5">
 
-                {/* ── Stats ── */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* ── Primary stat strip (compact) ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
-                        { label: 'Total Personnel', count: staffList.length + teachers.length, icon: Users, bg: 'bg-indigo-50', ic: 'text-indigo-500', border: 'border-indigo-100' },
-                        { label: 'Management Accounts', count: staffList.length,   icon: Shield,       bg: 'bg-violet-50', ic: 'text-violet-500', border: 'border-violet-100' },
-                        { label: 'Full-Access Roles',   count: fullAccessCount,    icon: ShieldCheck,  bg: 'bg-emerald-50',ic: 'text-emerald-500',border: 'border-emerald-100'},
-                        { label: 'Teachers',            count: teachers.length,    icon: GraduationCap,bg: 'bg-blue-50',   ic: 'text-blue-500',  border: 'border-blue-100'   },
-                    ].map(({ label, count, icon: Icon, bg, ic, border }) => (
-                        <div key={label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 shadow-sm shadow-slate-100">
-                            <div className={`w-10 h-10 rounded-xl ${bg} border ${border} flex items-center justify-center shrink-0`}>
-                                <Icon size={17} className={ic} />
+                        {
+                            label: 'Total Personnel', count: staffList.length + teachers.length,
+                            sub: insights.newStaffMonth + insights.newTeacherWeek > 0 ? `+${insights.newStaffMonth} staff this month` : undefined,
+                            icon: Users, bg: 'bg-indigo-50', ic: 'text-indigo-500', border: 'border-indigo-100',
+                        },
+                        {
+                            label: 'Management Accounts', count: staffList.length,
+                            sub: staffOnlyCount > 0 ? `${staffOnlyCount} with custom access` : undefined,
+                            icon: Shield, bg: 'bg-violet-50', ic: 'text-violet-500', border: 'border-violet-100',
+                        },
+                        {
+                            label: 'Full-Access Roles', count: fullAccessCount,
+                            sub: fullAccessCount > 0 && staffList.length > 0 ? `${Math.round((fullAccessCount / staffList.length) * 100)}% of accounts` : undefined,
+                            icon: ShieldCheck, bg: 'bg-emerald-50', ic: 'text-emerald-500', border: 'border-emerald-100',
+                        },
+                        {
+                            label: 'Teachers', count: teachers.length,
+                            sub: insights.activeTeachers > 0 ? `${insights.activeTeachers} active · ${insights.inactiveTeachers} inactive` : undefined,
+                            icon: GraduationCap, bg: 'bg-blue-50', ic: 'text-blue-500', border: 'border-blue-100',
+                        },
+                    ].map(({ label, count, sub, icon: Icon, bg, ic, border }) => (
+                        <div key={label} className="bg-white rounded-lg border border-slate-200 p-2.5 flex items-center gap-2.5 shadow-sm shadow-slate-100">
+                            <div className={`w-8 h-8 rounded-lg ${bg} border ${border} flex items-center justify-center shrink-0`}>
+                                <Icon size={14} className={ic} />
                             </div>
-                            <div>
-                                <p className="text-2xl font-black text-slate-900 leading-none">{count}</p>
-                                <p className="text-xs text-slate-500 font-medium mt-1">{label}</p>
+                            <div className="min-w-0">
+                                <p className="text-lg font-black text-slate-900 leading-tight">{count}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">{label}</p>
+                                {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
                             </div>
                         </div>
                     ))}
                 </div>
 
+                {/* ── Secondary insights row ── */}
+                {staffList.length + teachers.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {/* Role breakdown — inline mini stacked bar */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Crown size={12} className="text-slate-400" />
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500">Role mix</p>
+                                {insights.noPermsCount > 0 && (
+                                    <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                                        <AlertTriangle size={10} /> {insights.noPermsCount} unset
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center h-2.5 rounded-full overflow-hidden bg-slate-100">
+                                {(['ADMIN', 'PRINCIPAL', 'DIRECTOR', 'MANAGEMENT_STAFF'] as const).map(r => {
+                                    const c = insights.byRole[r] ?? 0;
+                                    if (c === 0 || staffList.length === 0) return null;
+                                    const pct = (c / staffList.length) * 100;
+                                    const cls =
+                                        r === 'ADMIN' ? 'bg-emerald-500'
+                                        : r === 'PRINCIPAL' ? 'bg-blue-500'
+                                        : r === 'DIRECTOR' ? 'bg-amber-500'
+                                        : 'bg-violet-500';
+                                    return <div key={r} className={cls} style={{ width: `${pct}%` }} title={`${ROLE_BADGE[r]?.label ?? r}: ${c}`} />;
+                                })}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[10px] font-semibold text-slate-500">
+                                {(['ADMIN', 'PRINCIPAL', 'DIRECTOR', 'MANAGEMENT_STAFF'] as const).map(r => {
+                                    const c = insights.byRole[r] ?? 0;
+                                    if (c === 0) return null;
+                                    const dot =
+                                        r === 'ADMIN' ? 'bg-emerald-500'
+                                        : r === 'PRINCIPAL' ? 'bg-blue-500'
+                                        : r === 'DIRECTOR' ? 'bg-amber-500'
+                                        : 'bg-violet-500';
+                                    return (
+                                        <span key={r} className="flex items-center gap-1">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                                            {ROLE_BADGE[r]?.label ?? r} {c}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* New this week */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5 flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center shrink-0">
+                                <TrendingUp size={14} className="text-violet-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{insights.newStaffWeek + insights.newTeacherWeek}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Added this week</p>
+                                {(insights.newStaffWeek > 0 || insights.newTeacherWeek > 0) && (
+                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                        {insights.newStaffWeek > 0 && `${insights.newStaffWeek} staff`}
+                                        {insights.newStaffWeek > 0 && insights.newTeacherWeek > 0 && ' · '}
+                                        {insights.newTeacherWeek > 0 && `${insights.newTeacherWeek} teacher${insights.newTeacherWeek > 1 ? 's' : ''}`}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Module coverage */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5 flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-cyan-50 rounded-lg flex items-center justify-center shrink-0">
+                                <Activity size={14} className="text-cyan-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{insights.reachedModules}<span className="text-slate-400 font-normal text-xs"> / {insights.totalModules}</span></p>
+                                <p className="text-[10px] text-slate-500 font-medium">Modules covered by staff</p>
+                            </div>
+                            {insights.reachedModules < insights.totalModules && (
+                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                                    {insights.totalModules - insights.reachedModules} gap
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* ── Toolbar ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     {/* Tab switcher */}
-                    <div className="flex bg-white border border-slate-200 rounded-xl p-1 gap-1 shadow-sm shadow-slate-100 shrink-0">
+                    <div className="flex bg-white border border-slate-200 rounded-lg p-1 gap-1 shadow-sm shadow-slate-100 shrink-0">
                         {(['staff', 'teachers'] as TabKey[]).map(t => (
                             <button key={t} onClick={() => setTab(t)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                                     tab === t
                                         ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-300'
                                         : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                                 }`}>
-                                {t === 'staff' ? <Shield size={13} /> : <GraduationCap size={13} />}
+                                {t === 'staff' ? <Shield size={12} /> : <GraduationCap size={12} />}
                                 {t === 'staff' ? 'Management' : 'Teachers'}
-                                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
                                     tab === t ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                                 }`}>
                                     {t === 'staff' ? staffList.length : teachers.length}
@@ -856,39 +1005,39 @@ const StaffHome: React.FC = () => {
 
                     {/* Search */}
                     <div className="relative flex-1 max-w-sm">
-                        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
                             value={search} onChange={e => setSearch(e.target.value)}
                             placeholder="Search by name, email, or phone…"
-                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors shadow-sm shadow-slate-100" />
+                            className="w-full pl-8 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors shadow-sm shadow-slate-100" />
                         {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                                <X size={13} />
+                            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <X size={12} />
                             </button>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-1.5 ml-auto">
                         <button onClick={fetchAll} disabled={loading}
                             title="Refresh"
-                            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all disabled:opacity-50 shadow-sm shadow-slate-100">
-                            <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} />
+                            className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all disabled:opacity-50 shadow-sm shadow-slate-100">
+                            <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} />
                         </button>
                         {canManageStaff && tab === 'staff' && (
                             <button onClick={() => setShowCreate(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-300">
-                                <UserPlus size={14} /> Add Staff
+                                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-300">
+                                <UserPlus size={12} /> Add Staff
                             </button>
                         )}
                     </div>
                 </div>
 
                 {/* ── Table ── */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm shadow-slate-100 overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm shadow-slate-100 overflow-hidden">
 
                     {/* Column headers */}
                     {!loading && ((tab === 'staff' && filteredStaff.length > 0) || (tab === 'teachers' && filteredTeachers.length > 0)) && (
-                        <div className={`grid ${tab === 'staff' ? 'grid-cols-[2fr_1fr_2fr_auto]' : 'grid-cols-[2fr_1fr_1fr_auto]'} gap-4 px-5 py-2.5 bg-slate-50 border-b border-slate-200`}>
+                        <div className={`grid ${tab === 'staff' ? 'grid-cols-[2fr_1fr_2fr_auto]' : 'grid-cols-[2fr_1fr_1fr_auto]'} gap-3 px-4 py-2 bg-slate-50 border-b border-slate-200`}>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Member</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{tab === 'staff' ? 'Role' : 'Status'}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{tab === 'staff' ? 'Module Access' : 'Contact'}</p>
@@ -902,22 +1051,22 @@ const StaffHome: React.FC = () => {
                         </div>
                     ) : tab === 'staff' ? (
                         filteredStaff.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                    <Shield size={24} className="text-slate-300" />
+                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                                    <Shield size={20} className="text-slate-300" />
                                 </div>
                                 <p className="text-sm font-bold text-slate-600 mb-1">
                                     {search ? 'No matching staff found' : 'No management accounts yet'}
                                 </p>
-                                <p className="text-xs text-slate-400 max-w-xs mb-5">
+                                <p className="text-xs text-slate-400 max-w-xs mb-4">
                                     {search
                                         ? 'Try a different search term.'
                                         : 'Create staff accounts to give your team access to the management portal with specific module permissions.'}
                                 </p>
                                 {canManageStaff && !search && (
                                     <button onClick={() => setShowCreate(true)}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
-                                        <UserPlus size={14} /> Create First Staff Member
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                                        <UserPlus size={12} /> Create First Staff Member
                                     </button>
                                 )}
                             </div>
@@ -935,24 +1084,24 @@ const StaffHome: React.FC = () => {
 
                                     return (
                                         <div key={user.id}
-                                            className="grid grid-cols-[2fr_1fr_2fr_auto] gap-4 items-center px-5 py-4 hover:bg-slate-50/60 transition-colors">
-                                            {/* Member */}
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGrad} text-white flex items-center justify-center font-black text-sm shrink-0`}>
+                                            className="grid grid-cols-[2fr_1fr_2fr_auto] gap-2 sm:gap-3 items-center px-3 sm:px-4 py-3 sm:py-2.5 hover:bg-slate-50/60 transition-colors">
+                                            {/* Member — bigger text on mobile */}
+                                            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                                <div className={`w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br ${avatarGrad} text-white flex items-center justify-center font-black text-xs sm:text-[11px] shrink-0`}>
                                                     {initials}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <p className="text-sm font-bold text-slate-900 truncate">{fullName}</p>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <p className="text-xs font-bold text-slate-900 truncate">{fullName}</p>
                                                         {isSelf && (
-                                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full">You</span>
+                                                            <span className="text-[10px] sm:text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 sm:px-1 py-0.5 rounded-full">You</span>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                        <span className="flex items-center gap-1 text-[11px] sm:text-[10px] text-slate-400">
                                                             <Phone size={9} /> {user.phone}
                                                         </span>
-                                                        <span className="flex items-center gap-1 text-[11px] text-slate-400 truncate">
+                                                        <span className="flex items-center gap-1 text-[11px] sm:text-[10px] text-slate-400 truncate">
                                                             <Mail size={9} /> {user.email}
                                                         </span>
                                                     </div>
@@ -969,32 +1118,43 @@ const StaffHome: React.FC = () => {
                                                 <PermSummary permissions={user.permissions} role={user.role} />
                                             </div>
 
-                                            {/* Actions */}
+                                            {/* Actions — bigger tap targets on mobile */}
                                             <div className="flex items-center gap-1 justify-end shrink-0">
                                                 {canManageStaff && !fullR && (
                                                     <button
                                                         onClick={() => setPermTarget(user)}
                                                         title="Edit module access"
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg transition-colors">
-                                                        <Lock size={11} /> Access
+                                                        className="hidden sm:flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-md transition-colors">
+                                                        <Lock size={10} /> Access
                                                     </button>
                                                 )}
                                                 {canManageStaff && (
                                                     <>
-                                                        <button onClick={() => setEditTarget(user)} title="Edit staff member"
-                                                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                                            <Pencil size={14} />
+                                                        {!fullR && (
+                                                            <button
+                                                                onClick={() => setPermTarget(user)}
+                                                                aria-label="Edit module access"
+                                                                className="sm:hidden w-9 h-9 flex items-center justify-center text-violet-600 hover:bg-violet-50 active:bg-violet-100 rounded-md transition-colors">
+                                                                <Lock size={14} />
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => setEditTarget(user)} aria-label="Edit staff member"
+                                                            className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 rounded-md transition-colors">
+                                                            <Pencil size={14} className="sm:hidden" />
+                                                            <Pencil size={12} className="hidden sm:block" />
                                                         </button>
                                                         <button onClick={() => setResetTarget({ id: user.id, name: fullName, type: 'staff' })}
-                                                            title="Reset password"
-                                                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                                                            <KeyRound size={14} />
+                                                            aria-label="Reset password"
+                                                            className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:bg-amber-100 rounded-md transition-colors">
+                                                            <KeyRound size={14} className="sm:hidden" />
+                                                            <KeyRound size={12} className="hidden sm:block" />
                                                         </button>
                                                         {!isSelf && (
                                                             <button onClick={() => setDeleteTarget({ id: user.id, name: fullName })}
-                                                                title="Delete staff member"
-                                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                                                <Trash2 size={14} />
+                                                                aria-label="Delete staff member"
+                                                                className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded-md transition-colors">
+                                                                <Trash2 size={14} className="sm:hidden" />
+                                                                <Trash2 size={12} className="hidden sm:block" />
                                                             </button>
                                                         )}
                                                     </>
@@ -1008,9 +1168,9 @@ const StaffHome: React.FC = () => {
                     ) : (
                         /* ── Teachers Tab ── */
                         filteredTeachers.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                    <GraduationCap size={24} className="text-slate-300" />
+                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                                    <GraduationCap size={20} className="text-slate-300" />
                                 </div>
                                 <p className="text-sm font-bold text-slate-600 mb-1">
                                     {search ? 'No matching teachers' : 'No teachers yet'}
@@ -1025,21 +1185,21 @@ const StaffHome: React.FC = () => {
                                     const initials = t.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
                                     return (
                                         <div key={t.id}
-                                            className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 items-center px-5 py-4 hover:bg-slate-50/60 transition-colors">
+                                            className="grid grid-cols-[2fr_1fr_1fr_auto] gap-3 items-center px-4 py-2.5 hover:bg-slate-50/60 transition-colors">
                                             {/* Member */}
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-sm shrink-0">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-[11px] shrink-0">
                                                     {initials}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 truncate">{t.name}</p>
-                                                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">{t.qualification} · {t.gender} · Age {t.age}</p>
+                                                    <p className="text-xs font-bold text-slate-900 truncate">{t.name}</p>
+                                                    <p className="text-[10px] text-slate-400 truncate">{t.qualification} · {t.gender} · Age {t.age}</p>
                                                 </div>
                                             </div>
 
                                             {/* Status */}
                                             <div>
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full border ${
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border ${
                                                     t.isActive
                                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                                         : 'bg-slate-50 text-slate-500 border-slate-200'
@@ -1050,13 +1210,13 @@ const StaffHome: React.FC = () => {
                                             </div>
 
                                             {/* Contact */}
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                                                    <Phone size={10} className="text-slate-300" /> {t.phone}
+                                            <div className="space-y-0">
+                                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                                    <Phone size={9} className="text-slate-300" /> {t.phone}
                                                 </div>
                                                 {t.email && (
-                                                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
-                                                        <Mail size={10} className="text-slate-300" /> {t.email}
+                                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 truncate">
+                                                        <Mail size={9} className="text-slate-300" /> {t.email}
                                                     </div>
                                                 )}
                                             </div>
@@ -1067,8 +1227,8 @@ const StaffHome: React.FC = () => {
                                                     <button
                                                         onClick={() => setResetTarget({ id: t.id, name: t.name, type: 'teacher' })}
                                                         title="Reset teacher password"
-                                                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                                                        <KeyRound size={14} />
+                                                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors">
+                                                        <KeyRound size={12} />
                                                     </button>
                                                 )}
                                             </div>
@@ -1082,7 +1242,7 @@ const StaffHome: React.FC = () => {
 
                 {/* Footer note */}
                 {!loading && tab === 'staff' && filteredStaff.length > 0 && (
-                    <p className="text-xs text-slate-400 text-center pb-2">
+                    <p className="text-[11px] text-slate-400 text-center pb-2">
                         {filteredStaff.length} management account{filteredStaff.length !== 1 ? 's' : ''}
                         {staffOnlyCount > 0 && ` · ${staffOnlyCount} with custom access`}
                         {fullAccessCount > 0 && ` · ${fullAccessCount} full access`}

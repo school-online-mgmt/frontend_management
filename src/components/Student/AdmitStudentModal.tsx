@@ -6,11 +6,14 @@ type AdmitStudentModalProps = {
     student: any;
     onClose: () => void;
     onAdmit: (data: any) => void;
+    // When set, the session selector is locked to this id (used by the
+    // session-aware students list so admit always targets the chosen session).
+    preselectedSessionId?: string;
 };
 
-const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps) => {
+const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: AdmitStudentModalProps) => {
     const [form, setForm] = useState({
-        sessionId: "",
+        sessionId: preselectedSessionId ?? "",
         classId: "",
         sectionId: "",
         courseId: "",
@@ -138,7 +141,8 @@ const AdmitStudentModal = ({ student, onClose, onAdmit }: AdmitStudentModalProps
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Session <span className="text-red-500">*</span></label>
                                 <select name="sessionId" value={form.sessionId} onChange={handleChange} required
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                                    disabled={!!preselectedSessionId}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed bg-white">
                                     <option value="">Select Session</option>
                                     {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
