@@ -543,6 +543,12 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Get enrolled students eligible for an exam (READY_TO_CONDUCT onwards)
+    getExamEnrolledStudents = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/enrolled-students`);
+        return res.data;
+    };
+
     // Get exam results
     getExamResults = async (examId: string) => {
         const res = await apiClient.get(`/management/exam/${examId}/results`);

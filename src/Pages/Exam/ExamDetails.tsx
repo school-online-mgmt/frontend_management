@@ -28,7 +28,7 @@ const STAGE_MAP: Record<string, number> = {
     EXAM_SCHEDULED: 2,
     READY_TO_CONDUCT: 2,
     ADMIT_CARD_PUBLISHED: 2,
-    PAPER_SET: 2,
+    PAPER_SET: 1,
     SYLLABUS_CONFIRMED: 1,
     DATE_CONFIRMED: 1,
     EXAM_CONDUCTED: 3,
@@ -162,6 +162,10 @@ const ExamDetails = () => {
     // Action loading key
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+    // Enrolled students (READY_TO_CONDUCT — before result shells exist)
+    const [enrolledStudents, setEnrolledStudents]   = useState<any[]>([]);
+    const [enrolledLoading, setEnrolledLoading]     = useState(false);
+
     // Results & sections
     const [examResults, setExamResults]   = useState<any[]>([]);
     const [resultsLoading, setResultsLoading] = useState(false);
@@ -184,6 +188,18 @@ const ExamDetails = () => {
     };
 
     useEffect(() => { fetchExam(); }, [examId]);
+
+    // Fetch enrolled students at stage 2 (READY_TO_CONDUCT — no result shells yet)
+    useEffect(() => {
+        if (!exam) return;
+        const stage = getStageIndex(exam.status);
+        if (stage !== 2) { setEnrolledStudents([]); return; }
+        setEnrolledLoading(true);
+        api.getExamEnrolledStudents(examId)
+            .then((data: any) => setEnrolledStudents(data.students ?? []))
+            .catch(() => setEnrolledStudents([]))
+            .finally(() => setEnrolledLoading(false));
+    }, [exam?.status, examId]);
 
     // Fetch results for stages 3+
     const RESULTS_STAGES = [3, 4];
@@ -548,13 +564,74 @@ const ExamDetails = () => {
                 <div className="bg-white rounded-2xl border-2 border-teal-200 p-6 space-y-5">
                     <div>
                         <h2 className="font-semibold text-slate-800 text-base mb-1">Ready to Conduct</h2>
-                        <p className="text-sm text-slate-500">Admit cards are auto-published to enrolled students. Once the exam has taken place, mark it as conducted.</p>
+                        <p className="text-sm text-slate-500">Admit cards are published to enrolled students. The assigned teacher will mark attendance. Once done, mark the exam as conducted below.</p>
                     </div>
 
                     {/* Admit cards badge */}
                     <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 font-medium">
                         <CheckCircle2 size={15} className="shrink-0" />
                         Admit cards are published — students can download them
+                    </div>
+
+                    {/* Enrolled students list */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                                <GraduationCap size={15} className="text-slate-400" />
+                                Enrolled Students
+                                {!enrolledLoading && (
+                                    <span className="ml-1.5 px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full font-medium">
+                                        {enrolledStudents.length}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        {enrolledLoading ? (
+                            <div className="flex items-center justify-center py-6">
+                                <Loader2 size={18} className="animate-spin text-slate-400" />
+                            </div>
+                        ) : enrolledStudents.length === 0 ? (
+                            <div className="rounded-xl border border-slate-100 bg-slate-50 py-6 text-center text-sm text-slate-400">
+                                No eligible students found for this exam.
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 border-b">
+                                        <tr>
+                                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide">Student</th>
+                                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide">Roll No</th>
+                                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide">Class / Section</th>
+                                            <th className="px-4 py-2.5 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide">Attendance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {enrolledStudents.map((s: any) => (
+                                            <tr key={s.academicId} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-4 py-3 font-medium text-slate-800">{s.studentName || "—"}</td>
+                                                <td className="px-4 py-3 text-slate-500">{s.rollNo}</td>
+                                                <td className="px-4 py-3 text-slate-500">{s.className} · {s.sectionName}</td>
+                                                <td className="px-4 py-3">
+                                                    {s.attendanceStatus === "PRESENT" ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                            <CheckCircle2 size={11} />Present
+                                                        </span>
+                                                    ) : s.attendanceStatus === "ABSENT" ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                                            <XCircle size={11} />Absent
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                                            <Clock size={11} />Pending
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Optional: question paper */}
@@ -576,17 +653,32 @@ const ExamDetails = () => {
                     </div>
 
                     {/* Primary CTA */}
-                    <div className="pt-2 border-t border-slate-100">
-                        <button
-                            onClick={handleMarkConducted}
-                            disabled={actionLoading === "conduct"}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-                            {actionLoading === "conduct"
-                                ? <Loader2 size={15} className="animate-spin" />
-                                : <CheckCircle2 size={15} />}
-                            Mark as Conducted
-                        </button>
-                    </div>
+                    {(() => {
+                        const pendingCount = enrolledStudents.filter((s: any) => !s.attendanceStatus).length;
+                        const allMarked = !enrolledLoading && enrolledStudents.length > 0 && pendingCount === 0;
+                        const noneEnrolled = !enrolledLoading && enrolledStudents.length === 0;
+                        return (
+                            <div className="pt-2 border-t border-slate-100 space-y-3">
+                                {!enrolledLoading && pendingCount > 0 && (
+                                    <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                                        <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                                        <span>
+                                            <strong>{pendingCount}</strong> student{pendingCount !== 1 ? "s" : ""} still need attendance marked before this exam can be conducted.
+                                        </span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={handleMarkConducted}
+                                    disabled={actionLoading === "conduct" || enrolledLoading || (!allMarked && !noneEnrolled)}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                    {actionLoading === "conduct"
+                                        ? <Loader2 size={15} className="animate-spin" />
+                                        : <CheckCircle2 size={15} />}
+                                    Mark as Conducted
+                                </button>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
