@@ -13,15 +13,14 @@ import PageHeader from "../../components/PageHeader";
 
 // --- Status config ------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; bg: string; dot: string; text: string; icon: typeof Clock }> = {
-    AWAITING_SYLLABUS:  { label: "Syllabus Pending",   bg: "bg-amber-50",   dot: "bg-amber-500",   text: "text-amber-700",   icon: AlertCircle   },
-    AWAITING_EXAM_DATE: { label: "Ready to Schedule",  bg: "bg-blue-50",    dot: "bg-blue-500",    text: "text-blue-700",    icon: Calendar      },
-    EXAM_SCHEDULED:     { label: "Exam Scheduled",     bg: "bg-teal-50",    dot: "bg-teal-500",    text: "text-teal-700",    icon: Calendar      },
-    EXAM_CONDUCTED:     { label: "Attendance Pending", bg: "bg-purple-50",  dot: "bg-purple-500",  text: "text-purple-700",  icon: Users         },
-    AWAITING_RESULT:    { label: "Grading In Progress",bg: "bg-indigo-50",  dot: "bg-indigo-500",  text: "text-indigo-700",  icon: ClipboardList },
-    PUBLISHED:          { label: "Published",          bg: "bg-emerald-50", dot: "bg-emerald-500", text: "text-emerald-700", icon: CheckCircle   },
+    CREATED:          { label: "Setup Required",    bg: "bg-amber-50",   dot: "bg-amber-500",   text: "text-amber-700",   icon: AlertCircle   },
+    PUBLISHED:        { label: "Published",         bg: "bg-blue-50",    dot: "bg-blue-500",    text: "text-blue-700",    icon: BookOpen      },
+    READY_TO_CONDUCT: { label: "Attendance Needed", bg: "bg-orange-50",  dot: "bg-orange-500",  text: "text-orange-700",  icon: Users         },
+    CONDUCTED:        { label: "Marks Entry",       bg: "bg-purple-50",  dot: "bg-purple-500",  text: "text-purple-700",  icon: ClipboardList },
+    RESULT_PUBLISHED: { label: "Results Published", bg: "bg-emerald-50", dot: "bg-emerald-500", text: "text-emerald-700", icon: CheckCircle   },
 };
 
-const STATUS_ORDER = ["AWAITING_SYLLABUS", "AWAITING_EXAM_DATE", "EXAM_SCHEDULED", "EXAM_CONDUCTED", "AWAITING_RESULT", "PUBLISHED"];
+const STATUS_ORDER = ["CREATED", "PUBLISHED", "READY_TO_CONDUCT", "CONDUCTED", "RESULT_PUBLISHED"];
 const TERMS = ["TERM1", "TERM2", "TERM3"];
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -54,35 +53,39 @@ const StatCard = ({ label, value, sub, color, Icon }: { label: string; value: nu
 );
 
 // --- Lifecycle Pipeline -------------------------------------------------------
-const LifecyclePipeline = ({ byStatus, total }: { byStatus: Record<string, number>; total: number }) => (
-    <div className="bg-white rounded-2xl border border-slate-100 p-6">
-        <h2 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <Target size={16} className="text-emerald-600" /> Exam Lifecycle Pipeline
-        </h2>
-        <div className="flex items-center gap-1">
-            {STATUS_ORDER.map((status, i) => {
-                const cfg = STATUS_CONFIG[status];
-                const count = byStatus[status] ?? 0;
-                const pct = total > 0 ? (count / total) * 100 : 0;
-                return (
-                    <div key={status} className="flex-1 group relative">
-                        <div className={`h-12 ${cfg.bg} ${i === 0 ? "rounded-l-xl" : ""} ${i === STATUS_ORDER.length - 1 ? "rounded-r-xl" : ""} flex items-center justify-center transition-all hover:scale-y-110 cursor-default`}
-                            style={{ flex: Math.max(pct, 5) }}>
-                            <span className={`text-xs font-bold ${cfg.text}`}>{count}</span>
+const LifecyclePipeline = ({ byStatus, total }: { byStatus: Record<string, number>; total: number }) => {
+    const activeStatuses = STATUS_ORDER.filter(s => (byStatus[s] ?? 0) > 0);
+    const displayStatuses = activeStatuses.length > 0 ? activeStatuses : STATUS_ORDER.slice(0, 6);
+    return (
+        <div className="bg-white rounded-2xl border border-slate-100 p-6">
+            <h2 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <Target size={16} className="text-emerald-600" /> Exam Lifecycle Pipeline
+            </h2>
+            <div className="flex items-center gap-1">
+                {displayStatuses.map((status, i) => {
+                    const cfg = STATUS_CONFIG[status];
+                    const count = byStatus[status] ?? 0;
+                    const pct = total > 0 ? (count / total) * 100 : 0;
+                    return (
+                        <div key={status} className="flex-1 group relative">
+                            <div className={`h-12 ${cfg.bg} ${i === 0 ? "rounded-l-xl" : ""} ${i === displayStatuses.length - 1 ? "rounded-r-xl" : ""} flex items-center justify-center transition-all hover:scale-y-110 cursor-default`}
+                                style={{ flex: Math.max(pct, 5) }}>
+                                <span className={`text-xs font-bold ${cfg.text}`}>{count}</span>
+                            </div>
+                            <div className="text-center mt-2">
+                                <p className="text-[10px] font-semibold text-slate-500 leading-tight">{cfg.label}</p>
+                                <p className="text-[10px] text-slate-400">{pct.toFixed(0)}%</p>
+                            </div>
+                            {i < displayStatuses.length - 1 && (
+                                <ChevronRight size={12} className="absolute right-[-8px] top-3 text-slate-300 z-10" />
+                            )}
                         </div>
-                        <div className="text-center mt-2">
-                            <p className="text-[10px] font-semibold text-slate-500 leading-tight">{cfg.label}</p>
-                            <p className="text-[10px] text-slate-400">{pct.toFixed(0)}%</p>
-                        </div>
-                        {i < STATUS_ORDER.length - 1 && (
-                            <ChevronRight size={12} className="absolute right-[-8px] top-3 text-slate-300 z-10" />
-                        )}
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // --- Main Component -----------------------------------------------------------
 const ExamHome = () => {
@@ -183,11 +186,11 @@ const ExamHome = () => {
             if (e.subjectId) {
                 if (!subjMap[e.subjectId]) subjMap[e.subjectId] = { name: e.subjectName ?? "—", count: 0, published: 0 };
                 subjMap[e.subjectId].count++;
-                if (e.status === "PUBLISHED") subjMap[e.subjectId].published++;
+                if (e.status === "RESULT_PUBLISHED") subjMap[e.subjectId].published++;
             }
         }
         Object.values(subjMap).forEach(v => bySubject.push(v));
-        const published = byStatus["PUBLISHED"] ?? 0;
+        const published = byStatus["RESULT_PUBLISHED"] ?? 0;
         const completionRate = total > 0 ? Math.round((published / total) * 100) : 0;
         return { total, byStatus, byTerm, bySubject, published, completionRate };
     }, [filteredExams]);
@@ -342,28 +345,28 @@ const ExamHome = () => {
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers have been created for this session yet" />
                         ) : (
                             <>
-                                {/* Action Required — Syllabus Required */}
-                                {(stats.byStatus["AWAITING_SYLLABUS"] ?? 0) > 0 && (
+                                {/* Action Required — Setup Required */}
+                                {(stats.byStatus["CREATED"] ?? 0) > 0 && (
                                     <div className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl shadow-md shadow-amber-100 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <h2 className="text-sm font-bold text-white flex items-center gap-2">
                                                 <AlertCircle size={17} className="animate-pulse" />
-                                                Action Required — Syllabus Required
+                                                Action Required — Setup Required
                                                 <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
-                                                    {stats.byStatus["AWAITING_SYLLABUS"]}
+                                                    {stats.byStatus["CREATED"]}
                                                 </span>
                                             </h2>
                                             <button
-                                                onClick={() => { setFilterStatus("AWAITING_SYLLABUS"); setTab("exams"); }}
+                                                onClick={() => { setFilterStatus("CREATED"); setTab("exams"); }}
                                                 className="text-[11px] font-semibold text-amber-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
                                                 View All <ArrowUpRight size={12} />
                                             </button>
                                         </div>
                                         <p className="text-xs text-amber-50 mb-3">
-                                            {stats.byStatus["AWAITING_SYLLABUS"]} exam{stats.byStatus["AWAITING_SYLLABUS"] !== 1 ? "s are" : " is"} waiting for syllabus to be submitted by teachers.
+                                            {stats.byStatus["CREATED"]} exam{stats.byStatus["CREATED"] !== 1 ? "s need" : " needs"} syllabus and exam date set before they can be published.
                                         </p>
                                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                            {filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").slice(0, 6).map(e => (
+                                            {filteredExams.filter(e => e.status === "CREATED").slice(0, 6).map(e => (
                                                 <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
                                                     className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
                                                     <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
@@ -377,91 +380,64 @@ const ExamHome = () => {
                                                 </div>
                                             ))}
                                         </div>
-                                        {filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").length > 6 && (
+                                        {filteredExams.filter(e => e.status === "CREATED").length > 6 && (
                                             <p className="text-[11px] text-amber-100 mt-2 text-center">
-                                                +{filteredExams.filter(e => e.status === "AWAITING_SYLLABUS").length - 6} more — click "View All" to see them
+                                                +{filteredExams.filter(e => e.status === "CREATED").length - 6} more — click "View All" to see them
                                             </p>
                                         )}
                                     </div>
                                 )}
 
-                                {/* Date Required */}
-                                {(stats.byStatus["AWAITING_EXAM_DATE"] ?? 0) > 0 && (
-                                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-md shadow-blue-100 p-5">
+                                {/* Attendance Needed — READY_TO_CONDUCT */}
+                                {(stats.byStatus["READY_TO_CONDUCT"] ?? 0) > 0 && (
+                                    <div className="bg-gradient-to-r from-orange-400 to-orange-500 rounded-2xl shadow-md shadow-orange-100 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                                                <Calendar size={17} className="animate-pulse" />
-                                                Date Required
+                                                <Users size={17} className="animate-pulse" />
+                                                Attendance Needed
                                                 <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
-                                                    {stats.byStatus["AWAITING_EXAM_DATE"]}
+                                                    {stats.byStatus["READY_TO_CONDUCT"]}
                                                 </span>
                                             </h2>
                                             <button
-                                                onClick={() => { setFilterStatus("AWAITING_EXAM_DATE"); setTab("exams"); }}
-                                                className="text-[11px] font-semibold text-blue-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
+                                                onClick={() => { setFilterStatus("READY_TO_CONDUCT"); setTab("exams"); }}
+                                                className="text-[11px] font-semibold text-orange-900 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
                                                 View All <ArrowUpRight size={12} />
                                             </button>
                                         </div>
-                                        <p className="text-xs text-blue-50 mb-3">
-                                            {stats.byStatus["AWAITING_EXAM_DATE"]} exam{stats.byStatus["AWAITING_EXAM_DATE"] !== 1 ? "s have" : " has"} syllabus submitted but no exam date set yet. Set dates so admit cards can be published.
+                                        <p className="text-xs text-orange-50 mb-3">
+                                            {stats.byStatus["READY_TO_CONDUCT"]} exam{stats.byStatus["READY_TO_CONDUCT"] !== 1 ? "s are" : " is"} ready to conduct. Teachers must mark attendance before the exam can be marked as conducted.
                                         </p>
                                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                            {filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").slice(0, 6).map(e => (
+                                            {filteredExams.filter(e => e.status === "READY_TO_CONDUCT").slice(0, 6).map(e => (
                                                 <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
                                                     className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
                                                     <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
-                                                        <Calendar size={14} className="text-white" />
+                                                        <Users size={14} className="text-white" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-semibold text-white truncate">{e.examName}</p>
-                                                        <p className="text-[11px] text-blue-100 truncate">{e.subjectName} · {e.teacherName ?? "No teacher assigned"}</p>
+                                                        <p className="text-[11px] text-orange-100 truncate">{e.subjectName} · {e.teacherName ?? "No teacher assigned"}</p>
                                                     </div>
                                                     <ArrowUpRight size={13} className="text-white/50 group-hover:text-white transition-colors shrink-0" />
                                                 </div>
                                             ))}
                                         </div>
-                                        {filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").length > 6 && (
-                                            <p className="text-[11px] text-blue-100 mt-2 text-center">
-                                                +{filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").length - 6} more — click "View All" to see them
+                                        {filteredExams.filter(e => e.status === "READY_TO_CONDUCT").length > 6 && (
+                                            <p className="text-[11px] text-orange-100 mt-2 text-center">
+                                                +{filteredExams.filter(e => e.status === "READY_TO_CONDUCT").length - 6} more — click "View All" to see them
                                             </p>
                                         )}
                                     </div>
                                 )}
 
-                                {/* Exam Scheduled — admit card reminder */}
-                                {(stats.byStatus["EXAM_SCHEDULED"] ?? 0) > 0 && (
-                                    <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl shadow-md shadow-teal-100 p-5">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                                                <Calendar size={17} />
-                                                Admit Cards Needed
-                                                <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
-                                                    {stats.byStatus["EXAM_SCHEDULED"]}
-                                                </span>
-                                            </h2>
-                                            <button
-                                                onClick={() => { setFilterStatus("EXAM_SCHEDULED"); setTab("exams"); }}
-                                                className="text-[11px] font-semibold text-teal-800 bg-white/30 hover:bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all">
-                                                View All <ArrowUpRight size={12} />
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-teal-50">
-                                            {stats.byStatus["EXAM_SCHEDULED"]} exam{stats.byStatus["EXAM_SCHEDULED"] !== 1 ? "s are" : " is"} scheduled. Publish admit cards for students to download and mark as conducted after the exam.
-                                        </p>
-                                    </div>
-                                )}
-
                                 {/* Stat cards */}
-                                <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                                     <StatCard label="Total Exams" value={stats.total} color="bg-slate-700" Icon={ClipboardList} />
-                                    <StatCard label="Published" value={stats.published}
-                                        sub={`${stats.completionRate}% complete`}
-                                        color="bg-emerald-600" Icon={CheckCircle} />
-                                    <StatCard label="Syllabus Pending" value={stats.byStatus["AWAITING_SYLLABUS"] ?? 0} color="bg-amber-500" Icon={AlertCircle} />
-                                    <StatCard label="Needs Scheduling" value={stats.byStatus["AWAITING_EXAM_DATE"] ?? 0} color="bg-blue-600" Icon={Calendar} />
-                                    <StatCard label="Date Set" value={stats.byStatus["EXAM_SCHEDULED"] ?? 0} color="bg-teal-600" Icon={Calendar} />
-                                    <StatCard label="Grading" value={(stats.byStatus["AWAITING_RESULT"] ?? 0) + (stats.byStatus["EXAM_CONDUCTED"] ?? 0)}
-                                        color="bg-purple-600" Icon={ClipboardList} />
+                                    <StatCard label="Completed" value={stats.published} sub={`${stats.completionRate}% complete`} color="bg-emerald-600" Icon={CheckCircle} />
+                                    <StatCard label="Setup Required" value={stats.byStatus["CREATED"] ?? 0} color="bg-amber-500" Icon={AlertCircle} />
+                                    <StatCard label="Attendance Needed" value={stats.byStatus["READY_TO_CONDUCT"] ?? 0} color="bg-orange-500" Icon={Users} />
+                                    <StatCard label="Marks Entry" value={stats.byStatus["CONDUCTED"] ?? 0} color="bg-purple-600" Icon={ClipboardList} />
                                 </div>
 
                                 {/* Lifecycle Pipeline */}
@@ -477,7 +453,7 @@ const ExamHome = () => {
                                         <div className="space-y-4">
                                             {TERMS.map(term => {
                                                 const termExams = stats.byTerm[term] ?? [];
-                                                const published = termExams.filter((e: any) => e.status === "PUBLISHED").length;
+                                                const published = termExams.filter((e: any) => e.status === "RESULT_PUBLISHED").length;
                                                 const total = termExams.length;
                                                 const pct = total > 0 ? Math.round((published / total) * 100) : 0;
                                                 return (

@@ -5,7 +5,7 @@ import {
     BookOpen, Calendar, CheckCircle2, Clock, FileText,
     Pencil, Trash2, User, BookMarked, GraduationCap, Loader2,
     AlertCircle, ChevronRight, Award, BarChart3,
-    XCircle, FileDown, ShieldCheck,
+    XCircle, FileDown, ShieldCheck, Zap, Users, ClipboardList,
 } from "lucide-react";
 import api from "../../api/api";
 import BackButton from "../../components/common/BackButton";
@@ -22,25 +22,95 @@ import ExamReport from "../../components/Exam/ExamReport";
 const STAGE_MAP: Record<string, number> = {
     CREATED: 0,
     PUBLISHED: 1,
-    AWAITING_SYLLABUS: 1,
-    AWAITING_EXAM_DATE: 1,
-    AWAITING_DATE_SCHEDULING: 1,
-    EXAM_SCHEDULED: 2,
     READY_TO_CONDUCT: 2,
-    ADMIT_CARD_PUBLISHED: 2,
-    PAPER_SET: 1,
-    SYLLABUS_CONFIRMED: 1,
-    DATE_CONFIRMED: 1,
-    EXAM_CONDUCTED: 3,
     CONDUCTED: 3,
-    AWAITING_RESULT: 3,
-    PAPER_EVALUATED: 3,
     RESULT_PUBLISHED: 4,
 };
 
 function getStageIndex(status: string): number {
     return STAGE_MAP[status] ?? 0;
 }
+
+// ── Stage Priority Config ─────────────────────────────────────────────────────
+
+const STAGE_PRIORITY: Record<number, {
+    label: string;
+    sublabel: string;
+    icon: typeof Clock;
+    pill: string;
+    border: string;
+    header: string;
+    badge: string;
+}> = {
+    0: {
+        label:    "Setup Required",
+        sublabel: "Add syllabus & exam date, then publish to teachers",
+        icon:     AlertCircle,
+        pill:     "bg-amber-100 text-amber-700 border border-amber-300",
+        border:   "border-amber-300",
+        header:   "bg-amber-50",
+        badge:    "bg-amber-500",
+    },
+    1: {
+        label:    "Action Needed",
+        sublabel: "Review details and mark exam ready to conduct",
+        icon:     Zap,
+        pill:     "bg-blue-100 text-blue-700 border border-blue-300",
+        border:   "border-blue-300",
+        header:   "bg-blue-50",
+        badge:    "bg-blue-500",
+    },
+    2: {
+        label:    "Urgent — Attendance",
+        sublabel: "Teacher must mark attendance before exam can be conducted",
+        icon:     Users,
+        pill:     "bg-orange-100 text-orange-700 border border-orange-300",
+        border:   "border-orange-300",
+        header:   "bg-orange-50",
+        badge:    "bg-orange-500",
+    },
+    3: {
+        label:    "Marks Entry Pending",
+        sublabel: "Section teachers are entering marks for present students",
+        icon:     ClipboardList,
+        pill:     "bg-purple-100 text-purple-700 border border-purple-300",
+        border:   "border-purple-300",
+        header:   "bg-purple-50",
+        badge:    "bg-purple-500",
+    },
+    4: {
+        label:    "Complete",
+        sublabel: "Results published — students can view their scores",
+        icon:     CheckCircle2,
+        pill:     "bg-emerald-100 text-emerald-700 border border-emerald-300",
+        border:   "border-emerald-300",
+        header:   "bg-emerald-50",
+        badge:    "bg-emerald-500",
+    },
+};
+
+// ── Priority Banner ───────────────────────────────────────────────────────────
+
+const PriorityBanner = ({ stage, extra }: { stage: number; extra?: React.ReactNode }) => {
+    const p = STAGE_PRIORITY[stage];
+    if (!p) return null;
+    const Icon = p.icon;
+    return (
+        <div className={`flex items-start justify-between gap-3 px-5 py-3.5 rounded-xl border ${p.pill} mb-1`}>
+            <div className="flex items-start gap-2.5">
+                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${p.badge}`} />
+                <div>
+                    <p className="text-sm font-bold flex items-center gap-1.5">
+                        <Icon size={14} />
+                        {p.label}
+                    </p>
+                    <p className="text-xs opacity-75 mt-0.5">{p.sublabel}</p>
+                </div>
+            </div>
+            {extra && <div className="shrink-0">{extra}</div>}
+        </div>
+    );
+};
 
 // ── 5-Step Stepper ────────────────────────────────────────────────────────────
 
@@ -54,6 +124,7 @@ const STEPS = [
 
 const WorkflowStepper = ({ status }: { status: string }) => {
     const current = getStageIndex(status);
+    const priority = STAGE_PRIORITY[current];
     return (
         <div className="w-full overflow-x-auto">
             <div className="flex items-start min-w-max gap-0 py-2">
@@ -62,7 +133,10 @@ const WorkflowStepper = ({ status }: { status: string }) => {
                     const active = i === current;
                     return (
                         <div key={step.label} className="flex items-center">
-                            <div className="flex flex-col items-center min-w-[80px]">
+                            <div className="flex flex-col items-center min-w-[80px] relative">
+                                {active && priority && (
+                                    <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${priority.badge} animate-pulse`} />
+                                )}
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
                                     ${done   ? "bg-emerald-500 text-white shadow-sm"
                                     : active ? "bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-md"
@@ -73,6 +147,11 @@ const WorkflowStepper = ({ status }: { status: string }) => {
                                     ${active ? "text-emerald-600" : done ? "text-slate-500" : "text-slate-400"}`}>
                                     {step.label}
                                 </p>
+                                {active && priority && (
+                                    <span className={`mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${priority.pill}`}>
+                                        {priority.label}
+                                    </span>
+                                )}
                             </div>
                             {i < STEPS.length - 1 && (
                                 <div className={`h-0.5 w-12 mx-1 mb-5 flex-shrink-0 ${i < current ? "bg-emerald-400" : "bg-slate-200"}`} />
@@ -88,22 +167,11 @@ const WorkflowStepper = ({ status }: { status: string }) => {
 // ── Status Badge ──────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-    CREATED:                  { label: "Created",             className: "bg-slate-100 text-slate-600 border border-slate-200" },
-    PUBLISHED:                { label: "Published",           className: "bg-blue-100 text-blue-700 border border-blue-200" },
-    AWAITING_SYLLABUS:        { label: "Awaiting Syllabus",   className: "bg-amber-100 text-amber-700 border border-amber-200" },
-    AWAITING_EXAM_DATE:       { label: "Awaiting Date",       className: "bg-amber-100 text-amber-700 border border-amber-200" },
-    AWAITING_DATE_SCHEDULING: { label: "Awaiting Date",       className: "bg-amber-100 text-amber-700 border border-amber-200" },
-    SYLLABUS_CONFIRMED:       { label: "Syllabus Confirmed",  className: "bg-amber-100 text-amber-700 border border-amber-200" },
-    DATE_CONFIRMED:           { label: "Date Confirmed",      className: "bg-blue-100 text-blue-700 border border-blue-200" },
-    PAPER_SET:                { label: "Paper Set",           className: "bg-violet-100 text-violet-700 border border-violet-200" },
-    ADMIT_CARD_PUBLISHED:     { label: "Admit Cards Out",     className: "bg-teal-100 text-teal-700 border border-teal-200" },
-    EXAM_SCHEDULED:           { label: "Exam Scheduled",      className: "bg-teal-100 text-teal-700 border border-teal-200" },
-    READY_TO_CONDUCT:         { label: "Ready to Conduct",    className: "bg-orange-100 text-orange-700 border border-orange-200" },
-    CONDUCTED:                { label: "Conducted",           className: "bg-purple-100 text-purple-700 border border-purple-200" },
-    EXAM_CONDUCTED:           { label: "Conducted",           className: "bg-purple-100 text-purple-700 border border-purple-200" },
-    AWAITING_RESULT:          { label: "Grading in Progress", className: "bg-indigo-100 text-indigo-700 border border-indigo-200" },
-    PAPER_EVALUATED:          { label: "Paper Evaluated",     className: "bg-indigo-100 text-indigo-700 border border-indigo-200" },
-    RESULT_PUBLISHED:         { label: "Results Published",   className: "bg-emerald-100 text-emerald-700 border border-emerald-200" },
+    CREATED:          { label: "Created",           className: "bg-slate-100 text-slate-600 border border-slate-200" },
+    PUBLISHED:        { label: "Published",         className: "bg-blue-100 text-blue-700 border border-blue-200" },
+    READY_TO_CONDUCT: { label: "Ready to Conduct",  className: "bg-orange-100 text-orange-700 border border-orange-200" },
+    CONDUCTED:        { label: "Conducted",         className: "bg-purple-100 text-purple-700 border border-purple-200" },
+    RESULT_PUBLISHED: { label: "Results Published", className: "bg-emerald-100 text-emerald-700 border border-emerald-200" },
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -432,7 +500,8 @@ const ExamDetails = () => {
             {/* Stage 0 — CREATED                                              */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             {stage === 0 && isPrincipalOrAdmin && (
-                <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 space-y-5">
+                <div className="bg-white rounded-2xl border-2 border-amber-300 p-6 space-y-5">
+                    <PriorityBanner stage={0} />
                     <div>
                         <h2 className="font-semibold text-slate-800 text-base mb-1">Setup Checklist</h2>
                         <p className="text-sm text-slate-500">Complete both requirements below, then publish the exam to teachers.</p>
@@ -489,7 +558,8 @@ const ExamDetails = () => {
             {/* Stage 1 — PUBLISHED                                            */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             {stage === 1 && isPrincipalOrAdmin && (
-                <div className="bg-white rounded-2xl border-2 border-blue-200 p-6 space-y-5">
+                <div className="bg-white rounded-2xl border-2 border-blue-300 p-6 space-y-5">
+                    <PriorityBanner stage={1} />
                     <div>
                         <h2 className="font-semibold text-slate-800 text-base mb-1">Exam Published</h2>
                         <p className="text-sm text-slate-500">Teachers can now view all exam details. Upload a question paper if needed, then mark the exam as ready to conduct.</p>
@@ -561,7 +631,24 @@ const ExamDetails = () => {
             {/* Stage 2 — READY_TO_CONDUCT                                     */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             {stage === 2 && isPrincipalOrAdmin && (
-                <div className="bg-white rounded-2xl border-2 border-teal-200 p-6 space-y-5">
+                <div className="bg-white rounded-2xl border-2 border-orange-300 p-6 space-y-5">
+                    {(() => {
+                        const pendingCount = enrolledStudents.filter((s: any) => !s.attendanceStatus).length;
+                        return (
+                            <PriorityBanner
+                                stage={2}
+                                extra={!enrolledLoading && pendingCount > 0 ? (
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500 text-white">
+                                        {pendingCount} pending
+                                    </span>
+                                ) : !enrolledLoading && enrolledStudents.length > 0 ? (
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white flex items-center gap-1">
+                                        <CheckCircle2 size={11} /> All marked
+                                    </span>
+                                ) : undefined}
+                            />
+                        );
+                    })()}
                     <div>
                         <h2 className="font-semibold text-slate-800 text-base mb-1">Ready to Conduct</h2>
                         <p className="text-sm text-slate-500">Admit cards are published to enrolled students. The assigned teacher will mark attendance. Once done, mark the exam as conducted below.</p>
@@ -686,7 +773,15 @@ const ExamDetails = () => {
             {/* Stage 3 — CONDUCTED                                            */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             {stage === 3 && (
-                <div className="bg-white rounded-2xl border-2 border-purple-200 p-6 space-y-5">
+                <div className="bg-white rounded-2xl border-2 border-purple-300 p-6 space-y-5">
+                    <PriorityBanner
+                        stage={3}
+                        extra={!resultsLoading && present.length > 0 ? (
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-500 text-white">
+                                {marksEntered.length}/{present.length} marks
+                            </span>
+                        ) : undefined}
+                    />
                     <div>
                         <h2 className="font-semibold text-slate-800 text-base mb-1">Marks Entry in Progress</h2>
                         <p className="text-sm text-slate-500">Section teachers are entering marks for present students. Publish results once all marks are entered.</p>
@@ -800,7 +895,8 @@ const ExamDetails = () => {
             {/* Stage 4 — RESULT_PUBLISHED                                     */}
             {/* ═══════════════════════════════════════════════════════════════ */}
             {stage === 4 && (
-                <div className="bg-white rounded-2xl border-2 border-emerald-200 p-6 space-y-5">
+                <div className="bg-white rounded-2xl border-2 border-emerald-300 p-6 space-y-5">
+                    <PriorityBanner stage={4} />
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                             <Award size={18} className="text-emerald-600" />
