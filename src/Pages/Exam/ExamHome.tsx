@@ -342,13 +342,13 @@ const ExamHome = () => {
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers have been created for this session yet" />
                         ) : (
                             <>
-                                {/* Action Required -- pinned to top */}
+                                {/* Action Required — Syllabus Required */}
                                 {(stats.byStatus["AWAITING_SYLLABUS"] ?? 0) > 0 && (
                                     <div className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl shadow-md shadow-amber-100 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <h2 className="text-sm font-bold text-white flex items-center gap-2">
                                                 <AlertCircle size={17} className="animate-pulse" />
-                                                Action Required
+                                                Action Required — Syllabus Required
                                                 <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
                                                     {stats.byStatus["AWAITING_SYLLABUS"]}
                                                 </span>
@@ -385,13 +385,13 @@ const ExamHome = () => {
                                     </div>
                                 )}
 
-                                {/* Ready to Schedule alert */}
+                                {/* Date Required */}
                                 {(stats.byStatus["AWAITING_EXAM_DATE"] ?? 0) > 0 && (
                                     <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-md shadow-blue-100 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                                                <Calendar size={17} />
-                                                Date Not Set
+                                                <Calendar size={17} className="animate-pulse" />
+                                                Date Required
                                                 <span className="ml-1 bg-white/30 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
                                                     {stats.byStatus["AWAITING_EXAM_DATE"]}
                                                 </span>
@@ -402,9 +402,29 @@ const ExamHome = () => {
                                                 View All <ArrowUpRight size={12} />
                                             </button>
                                         </div>
-                                        <p className="text-xs text-blue-50">
+                                        <p className="text-xs text-blue-50 mb-3">
                                             {stats.byStatus["AWAITING_EXAM_DATE"]} exam{stats.byStatus["AWAITING_EXAM_DATE"] !== 1 ? "s have" : " has"} syllabus submitted but no exam date set yet. Set dates so admit cards can be published.
                                         </p>
+                                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                            {filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").slice(0, 6).map(e => (
+                                                <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
+                                                    className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
+                                                    <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
+                                                        <Calendar size={14} className="text-white" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-white truncate">{e.examName}</p>
+                                                        <p className="text-[11px] text-blue-100 truncate">{e.subjectName} · {e.teacherName ?? "No teacher assigned"}</p>
+                                                    </div>
+                                                    <ArrowUpRight size={13} className="text-white/50 group-hover:text-white transition-colors shrink-0" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").length > 6 && (
+                                            <p className="text-[11px] text-blue-100 mt-2 text-center">
+                                                +{filteredExams.filter(e => e.status === "AWAITING_EXAM_DATE").length - 6} more — click "View All" to see them
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 
