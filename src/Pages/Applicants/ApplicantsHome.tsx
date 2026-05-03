@@ -70,7 +70,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ type, applicant, onConfirm,
             className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50">
             Cancel
           </button>
-          <button onClick={onConfirm} disabled={loading}
+          <button data-testid={isAccept ? "applicant-confirm-accept-btn" : "applicant-confirm-reject-btn"}
+            onClick={onConfirm} disabled={loading}
             className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2 ${
               isAccept ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
             }`}>
@@ -516,6 +517,8 @@ const ApplicantsHome: React.FC = () => {
                             {isPending && (
                               <>
                                 <button
+                                  data-testid={`applicant-accept-btn-${applicant.id}`}
+                                  data-applicant-phone={applicant.phone}
                                   onClick={e => { e.stopPropagation(); setConfirm({ type: 'accept', applicant }); }}
                                   className="flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 bg-emerald-600 text-white text-[11px] sm:text-[10px] font-semibold rounded hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm min-h-[28px] sm:min-h-0">
                                   <UserCheck size={11} className="sm:hidden" />
@@ -523,6 +526,8 @@ const ApplicantsHome: React.FC = () => {
                                   <span className="hidden xs:inline sm:hidden md:inline">Accept</span>
                                 </button>
                                 <button
+                                  data-testid={`applicant-reject-btn-${applicant.id}`}
+                                  data-applicant-phone={applicant.phone}
                                   onClick={e => { e.stopPropagation(); setConfirm({ type: 'reject', applicant }); }}
                                   className="flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 bg-white border border-red-200 text-red-600 text-[11px] sm:text-[10px] font-semibold rounded hover:bg-red-50 active:bg-red-100 transition-colors min-h-[28px] sm:min-h-0">
                                   <UserX size={11} className="sm:hidden" />

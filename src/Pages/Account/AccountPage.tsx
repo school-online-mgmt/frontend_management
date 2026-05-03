@@ -40,11 +40,13 @@ const lbl = "block text-[11px] font-semibold text-slate-500 uppercase tracking-w
 
 // ── Toggle component ──────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) {
+function Toggle({ checked, onChange, disabled, testId }: { checked: boolean; onChange?: (v: boolean) => void; disabled?: boolean; testId?: string }) {
   return (
     <button
       type="button"
       disabled={disabled}
+      data-testid={testId}
+      data-checked={checked ? "true" : "false"}
       onClick={() => onChange?.(!checked)}
       className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-400/40
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -210,18 +212,18 @@ function SchoolProfileTab({ user }: { user: any }) {
             </span>
           )}
           {isAdmin && !editing && (
-            <button onClick={() => setEditing(true)}
+            <button data-testid="account-edit-btn" onClick={() => setEditing(true)}
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-xl transition-colors">
               <Edit2 size={13} /> Edit Profile
             </button>
           )}
           {editing && (
             <div className="flex items-center gap-2">
-              <button onClick={handleCancel}
+              <button data-testid="account-cancel-btn" onClick={handleCancel}
                 className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-xl transition-colors">
                 <X size={13} /> Cancel
               </button>
-              <button onClick={handleSave} disabled={saving}
+              <button data-testid="account-save-btn" onClick={handleSave} disabled={saving}
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-60">
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
                 {saving ? 'Saving…' : 'Save Changes'}
@@ -285,7 +287,7 @@ function SchoolProfileTab({ user }: { user: any }) {
                 </div>
                 {editing && isAdmin && (
                   <div className="shrink-0 mt-0.5">
-                    <Toggle checked={form[key] as boolean} onChange={v => set(key, v)} />
+                    <Toggle checked={form[key] as boolean} onChange={v => set(key, v)} testId={`settings-toggle-${key}`} />
                   </div>
                 )}
                 {!editing && (

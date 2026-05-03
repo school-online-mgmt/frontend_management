@@ -583,6 +583,8 @@ const StudentsHome: React.FC = () => {
                               </span>
                             ) : (selectedSession?.status !== "ENDED") ? (
                               <button
+                                data-testid={`student-admit-btn-${student.id}`}
+                                data-student-phone={student.phone}
                                 onClick={e => { e.stopPropagation(); setSelectedStudent(student); setShowAdmitModal(true); }}
                                 className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm"
                               >

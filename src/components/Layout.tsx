@@ -350,6 +350,8 @@ const Layout = () => {
                       const active = isActive(item.path);
                       return (
                         <Link key={item.path} to={item.path}
+                          data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                          data-nav-label={item.label}
                           title={!showFull ? item.label : undefined}
                           className={`group flex items-center gap-2.5 rounded-lg transition-all duration-200 relative
                             ${showFull ? "px-2.5 py-2" : "justify-center px-2 py-2"}
@@ -378,6 +380,8 @@ const Layout = () => {
                       const active = isActive(item.path);
                       return (
                         <Link key={item.path} to={item.path} title={item.label}
+                          data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                          data-nav-label={item.label}
                           className={`group flex justify-center px-2 py-2 rounded-lg transition-all duration-200 relative
                             ${active ? "bg-emerald-500/15 text-emerald-400" : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
                         >
@@ -395,6 +399,8 @@ const Layout = () => {
               return (
                 <div key={section.label} className="mt-1.5">
                   <button onClick={() => toggleSection(section.label)}
+                    data-testid={`nav-section-${section.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    data-section-label={section.label}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg transition-all duration-200 group
                       ${sectionActive
                         ? "text-emerald-400"
@@ -419,6 +425,8 @@ const Layout = () => {
                         const active = isActive(item.path);
                         return (
                           <Link key={item.path} to={item.path}
+                            data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                            data-nav-label={item.label}
                             className={`group flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg transition-all duration-200 relative
                               ${active
                                 ? "bg-emerald-500/15 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.1)]"
