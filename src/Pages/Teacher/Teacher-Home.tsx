@@ -66,6 +66,7 @@ const TeacherCard = ({ teacher, onClick }: { teacher: Teacher; onClick: () => vo
   const initials = getInitials(teacher.name);
   return (
     <div
+      data-testid={`teacher-card-${teacher.phone}`}
       onClick={onClick}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group flex flex-col"
     >
@@ -580,7 +581,7 @@ const TeacherHome = () => {
               </div>
 
             ) : viewMode === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div data-testid="teacher-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((teacher) => (
                   <TeacherCard
                     key={teacher.id}
@@ -612,6 +613,7 @@ const TeacherHome = () => {
                         return (
                           <tr
                             key={teacher.id}
+                            data-testid={`teacher-row-${teacher.phone}`}
                             onClick={() => navigate(`/teacher/${teacher.id}`)}
                             className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                           >

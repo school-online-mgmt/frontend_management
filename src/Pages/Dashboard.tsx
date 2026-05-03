@@ -5,8 +5,9 @@ import {
   CreditCard, AlertTriangle, CheckCircle2, UserPlus, Layers,
   ClipboardCheck, Library, Bell, Loader2, RefreshCw,
   ChevronRight, Sparkles, BookMarked, Wallet, CalendarDays,
-  School, UserCog, CalendarRange,
+  School, UserCog, CalendarRange, Bus, BarChart3, TrendingUp,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../api/api";
 import useAuth from "../hooks/useAuth";
 
@@ -100,6 +101,11 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const { data: schoolStats } = useQuery({
+    queryKey: ["management-school-stats"],
+    queryFn: () => api.getSchoolStats(),
+  });
 
   const firstName = user?.firstName ?? "Admin";
   const hour = new Date().getHours();
@@ -303,10 +309,10 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* â”€â”€ Main Content Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â"€â"€ Main Content Grid â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* â”€â”€ Today's Attendance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* â"€â"€ Today's Attendance â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
@@ -492,15 +498,15 @@ const Dashboard = () => {
               <Activity size={13} className="text-indigo-500" /> School Summary
             </h3>
           </div>
-          <div className="p-4 space-y-2.5">
+          <div data-testid="dashboard-school-summary" className="p-4 space-y-2.5">
             {[{
-              label: "Total Enrollments", value: students.length, icon: Users, color: "text-blue-600" },
-              { label: "Active Teachers", value: activeTeachers, icon: GraduationCap, color: "text-purple-600" },
-              { label: "Classes Running", value: classes.length, icon: Layers, color: "text-teal-600" },
-              { label: "Subjects Offered", value: subjects.length, icon: BookOpen, color: "text-emerald-600" },
-              { label: "Pending Leave Requests", value: pendingLeaves.length, icon: CalendarDays, color: pendingLeaves.length > 0 ? "text-amber-600" : "text-slate-400" },
+              label: "Total Enrollments", value: students.length, icon: Users, color: "text-blue-600", testId: "dashboard-kpi-students" },
+              { label: "Active Teachers", value: activeTeachers, icon: GraduationCap, color: "text-purple-600", testId: "dashboard-kpi-teachers" },
+              { label: "Classes Running", value: classes.length, icon: Layers, color: "text-teal-600", testId: "dashboard-kpi-classes" },
+              { label: "Subjects Offered", value: subjects.length, icon: BookOpen, color: "text-emerald-600", testId: "dashboard-kpi-subjects" },
+              { label: "Pending Leave Requests", value: pendingLeaves.length, icon: CalendarDays, color: pendingLeaves.length > 0 ? "text-amber-600" : "text-slate-400", testId: "dashboard-kpi-pending-leaves" },
             ].map((row) => (
-              <div key={row.label} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+              <div key={row.label} data-testid={row.testId} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
                 <div className="flex items-center gap-2">
                   <row.icon size={13} className={`${row.color} opacity-70`} />
                   <span className="text-xs text-slate-600">{row.label}</span>
@@ -512,7 +518,178 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* â”€â”€ Quick Access Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── School Demographics & Insights ──────────────────────────────────── */}
+      {schoolStats && (
+        <div className="space-y-4">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <BarChart3 size={13} className="text-emerald-500" /> School Demographics &amp; Insights
+          </h2>
+
+          {/* Top row: gender + teacher stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Student Gender */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <Users size={13} className="text-blue-500" /> Student Gender Split
+              </h3>
+              <div className="space-y-2">
+                {schoolStats.students.byGender.map(g => {
+                  const pct = schoolStats.students.total > 0 ? Math.round((g.count / schoolStats.students.total) * 100) : 0;
+                  const color = g.gender === "MALE" ? "bg-blue-500" : g.gender === "FEMALE" ? "bg-pink-500" : "bg-slate-400";
+                  const textColor = g.gender === "MALE" ? "text-blue-700" : g.gender === "FEMALE" ? "text-pink-700" : "text-slate-600";
+                  return (
+                    <div key={g.gender}>
+                      <div className="flex justify-between mb-1">
+                        <span className={`text-[10px] font-semibold capitalize ${textColor}`}>{g.gender.toLowerCase()}</span>
+                        <span className="text-[10px] text-slate-500">{g.count} ({pct}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-1 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">Total Students</span>
+                  <span className="text-xs font-bold text-slate-700">{schoolStats.students.total}</span>
+                </div>
+                {schoolStats.students.withDisability > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400">With Disability</span>
+                    <span className="text-xs font-bold text-amber-600">{schoolStats.students.withDisability}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Teacher Stats */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <GraduationCap size={13} className="text-purple-500" /> Teacher Gender Split
+              </h3>
+              <div className="space-y-2">
+                {schoolStats.teachers.byGender.map(g => {
+                  const pct = schoolStats.teachers.total > 0 ? Math.round((g.count / schoolStats.teachers.total) * 100) : 0;
+                  const color = g.gender === "MALE" ? "bg-blue-500" : g.gender === "FEMALE" ? "bg-pink-500" : "bg-slate-400";
+                  const textColor = g.gender === "MALE" ? "text-blue-700" : g.gender === "FEMALE" ? "text-pink-700" : "text-slate-600";
+                  return (
+                    <div key={g.gender}>
+                      <div className="flex justify-between mb-1">
+                        <span className={`text-[10px] font-semibold capitalize ${textColor}`}>{g.gender.toLowerCase()}</span>
+                        <span className="text-[10px] text-slate-500">{g.count} ({pct}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-1 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">Total Teachers</span>
+                  <span className="text-xs font-bold text-slate-700">{schoolStats.teachers.total}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">Active</span>
+                  <span className="text-xs font-bold text-emerald-600">{schoolStats.teachers.active}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ratios */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <TrendingUp size={13} className="text-emerald-500" /> Key Ratios
+              </h3>
+              <div className="space-y-3">
+                <div className="bg-emerald-50 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-emerald-600 font-medium">Students per Teacher</p>
+                  <p className="text-2xl font-extrabold text-emerald-700 mt-0.5">{schoolStats.ratios.studentsPerTeacher}</p>
+                </div>
+                <div className="bg-blue-50 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-blue-600 font-medium">Active Students</p>
+                  <p className="text-xl font-extrabold text-blue-700 mt-0.5">{schoolStats.students.active}</p>
+                  <p className="text-[9px] text-blue-500 mt-0.5">of {schoolStats.students.total} enrolled</p>
+                </div>
+                {schoolStats.currentSession && (
+                  <div className="bg-indigo-50 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] text-indigo-600 font-medium">Current Session</p>
+                    <p className="text-xs font-bold text-indigo-700 mt-0.5">{schoolStats.currentSession.name}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom row: transport + class enrollment */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Transport */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <Bus size={13} className="text-teal-500" /> Transport Opt-in
+              </h3>
+              <div className="flex items-center gap-4 mb-3">
+                <div className="flex-1">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[10px] text-slate-500">Opted</span>
+                    <span className="text-[10px] font-bold text-teal-700">{schoolStats.transport.opted} ({schoolStats.transport.optedPercent}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div className="h-full rounded-full bg-teal-500 transition-all duration-700" style={{ width: `${schoolStats.transport.optedPercent}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[9px] text-slate-400">Not opted: {schoolStats.transport.notOpted}</span>
+                    <span className="text-[9px] text-slate-400">Total: {schoolStats.students.total}</span>
+                  </div>
+                </div>
+              </div>
+              {schoolStats.transport.byZone.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Zone Distribution</p>
+                  {schoolStats.transport.byZone.map(z => (
+                    <div key={z.zoneName} className="flex items-center justify-between bg-teal-50 rounded-lg px-3 py-1.5">
+                      <span className="text-[10px] font-medium text-teal-700">{z.zoneName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500">₹{z.zonePrice.toLocaleString("en-IN")}/mo</span>
+                        <span className="text-[10px] font-bold text-teal-800">{z.count} students</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Enrollment by Class */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                <Layers size={13} className="text-indigo-500" /> Enrollment by Class
+              </h3>
+              {schoolStats.byClass.length > 0 ? (
+                <div className="space-y-2 max-h-52 overflow-y-auto">
+                  {schoolStats.byClass.map(c => {
+                    const max = Math.max(...schoolStats.byClass.map(x => x.count), 1);
+                    const pct = Math.round((c.count / max) * 100);
+                    return (
+                      <div key={c.className}>
+                        <div className="flex justify-between mb-0.5">
+                          <span className="text-[10px] font-medium text-slate-600">{c.className}</span>
+                          <span className="text-[10px] text-slate-400">{c.count} students</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="h-full rounded-full bg-indigo-400 transition-all duration-700" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-4">No enrollment data available</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick Access Grid ──────────────────────────────────────────────────── */}
       <div>
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Access</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">

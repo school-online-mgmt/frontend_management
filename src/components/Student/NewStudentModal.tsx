@@ -1,212 +1,590 @@
-import React, { useState } from "react";
-import { X, AlertCircle, User, Phone, MapPin, Users, Lock } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+    X, AlertCircle, User, Phone, Users, Lock, GraduationCap,
+    HeartPulse, ChevronLeft, ChevronRight, Check, Loader2, Eye, EyeOff,
+} from "lucide-react";
 import api from "../../api/api";
 
+// ── Types ────────────────────────────────────────────────────────────────────
+// Mirrors the student-side admission form so the UX is identical for both
+// applicants and management-created admissions.
+interface FormState {
+    // Personal
+    firstName: string; middleName: string; lastName: string;
+    dateOfBirth: string; placeOfBirth: string;
+    gender: "" | "Male" | "Female" | "Other";
+    nationality: string; religion: string; bloodGroup: string;
+
+    // Contact
+    email: string; phone: string; address: string;
+    emergencyContactName: string; emergencyContactPhone: string; emergencyContactRelationship: string;
+
+    // Family
+    fatherName: string; fatherOccupation: string; fatherPhone: string;
+    motherName: string; motherOccupation: string; motherPhone: string;
+    guardianName: string; guardianPhone: string; guardianRelationship: string;
+
+    // Academic
+    previousSchoolName: string; previousSchoolAddress: string;
+    previousGrade: string; previousYear: string; academicAchievements: string;
+
+    // Medical
+    disability: boolean; disabilityDescription: string;
+    allergies: string; medicalHistory: string;
+
+    // Account / additional
+    extracurricularInterests: string;
+    transportOpted: boolean;
+    comments: string;
+    password: string;
+}
+
+type Errors = Partial<Record<keyof FormState, string>>;
+
+const BLANK: FormState = {
+    firstName: "", middleName: "", lastName: "",
+    dateOfBirth: "", placeOfBirth: "",
+    gender: "", nationality: "", religion: "", bloodGroup: "",
+    email: "", phone: "", address: "",
+    emergencyContactName: "", emergencyContactPhone: "", emergencyContactRelationship: "",
+    fatherName: "", fatherOccupation: "", fatherPhone: "",
+    motherName: "", motherOccupation: "", motherPhone: "",
+    guardianName: "", guardianPhone: "", guardianRelationship: "",
+    previousSchoolName: "", previousSchoolAddress: "",
+    previousGrade: "", previousYear: "", academicAchievements: "",
+    disability: false, disabilityDescription: "",
+    allergies: "", medicalHistory: "",
+    extracurricularInterests: "",
+    transportOpted: false,
+    comments: "",
+    password: "",
+};
+
+// ── Validation (per step + final) ───────────────────────────────────────────
+const PHONE_RE = /^\d{10}$/;
+const validatePhone = (val: string, label = "Phone number"): string | null => {
+    if (!val.trim()) return `${label} is required`;
+    if (!/^\d+$/.test(val)) return `${label} must contain digits only`;
+    if (!PHONE_RE.test(val)) return `${label} must be exactly 10 digits`;
+    return null;
+};
+
+function runStepValidation(step: number, f: FormState): Errors {
+    const e: Errors = {};
+    if (step === 1) {
+        if (!f.firstName.trim()) e.firstName = "First name is required";
+        if (!f.lastName.trim()) e.lastName = "Last name is required";
+        if (!f.dateOfBirth.trim()) e.dateOfBirth = "Date of birth is required";
+        if (!f.placeOfBirth.trim()) e.placeOfBirth = "Place of birth is required";
+        if (!f.gender) e.gender = "Please select a gender";
+        if (!f.nationality.trim()) e.nationality = "Nationality is required";
+    }
+    if (step === 2) {
+        if (!f.email.trim()) e.email = "Email is required";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = "Enter a valid email address";
+
+        const pe = validatePhone(f.phone);
+        if (pe) e.phone = pe;
+        if (!f.address.trim()) e.address = "Residential address is required";
+
+        if (!f.emergencyContactName.trim()) e.emergencyContactName = "Emergency contact name is required";
+        const epe = validatePhone(f.emergencyContactPhone, "Emergency contact phone");
+        if (epe) e.emergencyContactPhone = epe;
+        else if (f.phone && f.emergencyContactPhone === f.phone)
+            e.emergencyContactPhone = "Emergency contact phone cannot match the student's phone";
+        if (!f.emergencyContactRelationship.trim()) e.emergencyContactRelationship = "Relationship is required";
+    }
+    if (step === 3) {
+        if (!f.fatherName.trim()) e.fatherName = "Father's name is required";
+        if (!f.motherName.trim()) e.motherName = "Mother's name is required";
+    }
+    if (step === 4) {
+        if (!f.previousSchoolName.trim()) e.previousSchoolName = "Previous school is required";
+        if (!f.previousGrade.trim()) e.previousGrade = "Previous grade is required";
+    }
+    if (step === 6) {
+        if (!f.password.trim()) e.password = "Password is required";
+        else if (f.password.length < 8) e.password = "Password must be at least 8 characters";
+    }
+    return e;
+}
+
+const REQUIRED_KEYS: (keyof FormState)[] = [
+    "firstName", "lastName", "dateOfBirth", "placeOfBirth", "gender", "nationality",
+    "email", "phone", "address",
+    "emergencyContactName", "emergencyContactPhone", "emergencyContactRelationship",
+    "fatherName", "motherName", "previousSchoolName", "previousGrade",
+    "password",
+];
+function getProgress(f: FormState): number {
+    const filled = REQUIRED_KEYS.filter(k => {
+        const v = f[k];
+        if (typeof v === "boolean") return v;
+        if (typeof v === "string") return v.trim() !== "";
+        return v !== null && v !== undefined;
+    });
+    return Math.round((filled.length / REQUIRED_KEYS.length) * 100);
+}
+
+// ── Step config ──────────────────────────────────────────────────────────────
+const STEPS = [
+    { id: 1, title: "Personal",  desc: "Student's basic details",       icon: User },
+    { id: 2, title: "Contact",   desc: "How to reach the student",      icon: Phone },
+    { id: 3, title: "Family",    desc: "Parents and guardian info",     icon: Users },
+    { id: 4, title: "Academic",  desc: "Previous school history",       icon: GraduationCap },
+    { id: 5, title: "Medical",   desc: "Health and accessibility",      icon: HeartPulse },
+    { id: 6, title: "Account",   desc: "Login & additional info",       icon: Lock },
+] as const;
+
+// ── Field wrapper ───────────────────────────────────────────────────────────
+const Field = ({ label, required, optional, error, children }: {
+    label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode;
+}) => (
+    <div>
+        <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 mb-1">
+            {label}
+            {required && <span className="text-red-500">*</span>}
+            {optional && <span className="text-slate-400 font-normal">(optional)</span>}
+        </label>
+        {children}
+        {error && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> {error}</p>}
+    </div>
+);
+
+const inputCls = (hasError?: boolean) =>
+    `w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white ${
+        hasError ? "border-red-400 bg-red-50/30" : "border-slate-200"
+    }`;
+
+// ── Props ────────────────────────────────────────────────────────────────────
 type Props = {
     onClose: () => void;
     onCreated: () => void;
 };
 
-const EMPTY = {
-    firstName: "", middleName: "", lastName: "",
-    fatherName: "", motherName: "",
-    gender: "" as "" | "Male" | "Female" | "Other",
-    phone: "", address: "", email: "",
-    password: "", disability: false, disabilityDescription: "", comments: "",
-};
-
-const NewStudentModal = ({ onClose, onCreated }: Props) => {
-    const [form, setForm] = useState(EMPTY);
+const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
+    const [form, setForm] = useState<FormState>(BLANK);
+    const [errors, setErrors] = useState<Errors>({});
+    const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [serverError, setServerError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
-    const set = (field: keyof typeof EMPTY) =>
+    const set = useCallback(<K extends keyof FormState>(field: K) =>
         (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-            const val = e.target.type === "checkbox"
-                ? (e.target as HTMLInputElement).checked
-                : e.target.value;
-            setForm(prev => ({ ...prev, [field]: val }));
-        };
+            const target = e.target as HTMLInputElement;
+            const val = target.type === "checkbox" ? target.checked : target.value;
+            setForm(prev => ({ ...prev, [field]: val } as FormState));
+            setErrors(prev => {
+                if (!prev[field]) return prev;
+                const next = { ...prev };
+                delete next[field];
+                return next;
+            });
+        }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
+    const setPhone = useCallback(<K extends keyof FormState>(field: K) =>
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+            setForm(prev => ({ ...prev, [field]: digits } as FormState));
+            setErrors(prev => {
+                if (!prev[field]) return prev;
+                const next = { ...prev };
+                delete next[field];
+                return next;
+            });
+        }, []);
+
+    const progress = useMemo(() => getProgress(form), [form]);
+
+    const goNext = () => {
+        const stepErrs = runStepValidation(step, form);
+        if (Object.keys(stepErrs).length > 0) {
+            setErrors(prev => ({ ...prev, ...stepErrs }));
+            return;
+        }
+        if (step < STEPS.length) setStep(step + 1);
+    };
+    const goPrev = () => { if (step > 1) setStep(step - 1); };
+
+    const handleSubmit = async () => {
+        // Final validation across every step
+        const allErrs: Errors = {};
+        for (let s = 1; s <= STEPS.length; s++) Object.assign(allErrs, runStepValidation(s, form));
+        if (Object.keys(allErrs).length > 0) {
+            setErrors(allErrs);
+            // Jump to the earliest step with errors
+            for (let s = 1; s <= STEPS.length; s++) {
+                if (Object.keys(runStepValidation(s, form)).length > 0) {
+                    setStep(s);
+                    break;
+                }
+            }
+            return;
+        }
+
         setLoading(true);
+        setServerError(null);
         try {
+            // Backend currently accepts a subset of the collected fields.
+            // The richer fields are captured for parity with the public student
+            // application form but are intentionally not transmitted yet.
             await api.createStudent({
-                ...form,
+                firstName: form.firstName,
                 middleName: form.middleName || undefined,
+                lastName: form.lastName,
+                fatherName: form.fatherName,
+                motherName: form.motherName,
+                gender: form.gender,
+                phone: form.phone,
+                address: form.address,
+                password: form.password,
+                disability: form.disability,
                 disabilityDescription: form.disabilityDescription || undefined,
+                email: form.email,
                 comments: form.comments || undefined,
             });
             onCreated();
             onClose();
-        } catch (err: any) {
-            setError(err?.response?.data?.message ?? "Failed to create student. Please try again.");
+        } catch (err) {
+            const e = err as { response?: { status?: number; data?: { message?: string } } };
+            const status = e.response?.status;
+            const msg = e.response?.data?.message ?? "";
+            setServerError(
+                status === 409
+                    ? "A student with this phone or email already exists."
+                    : status === 400
+                        ? msg || "Some fields have invalid data. Please review and try again."
+                        : msg || "Failed to create student. Please try again.",
+            );
         } finally {
             setLoading(false);
         }
     };
 
-    const inputCls = "w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white";
-    const labelCls = "block text-sm font-medium text-slate-700 mb-1.5";
+    const isLastStep = step === STEPS.length;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <div
-                className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
+                className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[94vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-4 flex items-center justify-between rounded-t-2xl shrink-0">
                     <div>
-                        <h2 className="text-base font-bold">New Student</h2>
-                        <p className="text-indigo-100 text-xs mt-0.5">Create a student profile directly</p>
+                        <h2 className="text-base font-bold">New Student Admission</h2>
+                        <p className="text-indigo-100 text-[11px] mt-0.5">Multi-step admission form — same as the student application process</p>
                     </div>
                     <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition">
                         <X size={18} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {error && (
-                        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-                            <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                            {error}
+                {/* Step indicator + progress */}
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/60 shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                            {STEPS.map(s => {
+                                const Icon = s.icon;
+                                const done = s.id < step;
+                                const active = s.id === step;
+                                return (
+                                    <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={() => { if (done) setStep(s.id); }}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+                                            active
+                                                ? "bg-indigo-600 text-white"
+                                                : done
+                                                    ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer"
+                                                    : "bg-white text-slate-500 border border-slate-200"
+                                        }`}
+                                    >
+                                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                                            active ? "bg-white text-indigo-600" : done ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+                                        }`}>
+                                            {done ? <Check size={8} strokeWidth={3} /> : s.id}
+                                        </span>
+                                        <Icon size={12} />
+                                        <span className="hidden sm:inline">{s.title}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <span className="text-[11px] font-semibold text-slate-500 shrink-0 ml-3">{progress}%</span>
+                    </div>
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                    {serverError && (
+                        <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-xs text-red-700">
+                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                            {serverError}
                         </div>
                     )}
 
-                    {/* Personal Info */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <User size={13} className="text-slate-400" />
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Personal Information</p>
+                    {/* ── STEP 1 — PERSONAL ───────────────────────────────────── */}
+                    {step === 1 && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <Field label="First Name" required error={errors.firstName}>
+                                    <input className={inputCls(!!errors.firstName)} value={form.firstName} onChange={set("firstName")} placeholder="e.g. Rahul" />
+                                </Field>
+                                <Field label="Middle Name" optional>
+                                    <input className={inputCls()} value={form.middleName} onChange={set("middleName")} placeholder="Optional" />
+                                </Field>
+                                <Field label="Last Name" required error={errors.lastName}>
+                                    <input className={inputCls(!!errors.lastName)} value={form.lastName} onChange={set("lastName")} placeholder="e.g. Sharma" />
+                                </Field>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Date of Birth" required error={errors.dateOfBirth}>
+                                    <input type="date" className={inputCls(!!errors.dateOfBirth)} value={form.dateOfBirth} onChange={set("dateOfBirth")} max={new Date().toISOString().split("T")[0]} />
+                                </Field>
+                                <Field label="Place of Birth" required error={errors.placeOfBirth}>
+                                    <input className={inputCls(!!errors.placeOfBirth)} value={form.placeOfBirth} onChange={set("placeOfBirth")} placeholder="City of birth" />
+                                </Field>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Gender" required error={errors.gender}>
+                                    <select className={inputCls(!!errors.gender)} value={form.gender} onChange={set("gender")}>
+                                        <option value="">Select gender</option>
+                                        <option>Male</option>
+                                        <option>Female</option>
+                                        <option>Other</option>
+                                    </select>
+                                </Field>
+                                <Field label="Nationality" required error={errors.nationality}>
+                                    <input className={inputCls(!!errors.nationality)} value={form.nationality} onChange={set("nationality")} placeholder="e.g. Indian" />
+                                </Field>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Religion" optional>
+                                    <input className={inputCls()} value={form.religion} onChange={set("religion")} placeholder="Optional" />
+                                </Field>
+                                <Field label="Blood Group" optional>
+                                    <select className={inputCls()} value={form.bloodGroup} onChange={set("bloodGroup")}>
+                                        <option value="">Select blood group</option>
+                                        {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => <option key={bg}>{bg}</option>)}
+                                    </select>
+                                </Field>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label className={labelCls}>First Name <span className="text-red-500">*</span></label>
-                                <input className={inputCls} value={form.firstName} onChange={set("firstName")} required placeholder="e.g. Rahul" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Middle Name</label>
-                                <input className={inputCls} value={form.middleName} onChange={set("middleName")} placeholder="Optional" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Last Name <span className="text-red-500">*</span></label>
-                                <input className={inputCls} value={form.lastName} onChange={set("lastName")} required placeholder="e.g. Sharma" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                            <div>
-                                <label className={labelCls}>Gender <span className="text-red-500">*</span></label>
-                                <select className={inputCls} value={form.gender} onChange={set("gender")} required>
-                                    <option value="">Select gender</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                        </div>
-                    </section>
+                    )}
 
-                    {/* Family */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Users size={13} className="text-slate-400" />
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Family Details</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label className={labelCls}>Father's Name <span className="text-red-500">*</span></label>
-                                <input className={inputCls} value={form.fatherName} onChange={set("fatherName")} required placeholder="Father's full name" />
+                    {/* ── STEP 2 — CONTACT ────────────────────────────────────── */}
+                    {step === 2 && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Email Address" required error={errors.email}>
+                                    <input type="email" className={inputCls(!!errors.email)} value={form.email} onChange={set("email")} placeholder="student@example.com" />
+                                </Field>
+                                <Field label="Phone Number" required error={errors.phone}>
+                                    <input className={inputCls(!!errors.phone)} value={form.phone} onChange={setPhone("phone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                </Field>
                             </div>
-                            <div>
-                                <label className={labelCls}>Mother's Name <span className="text-red-500">*</span></label>
-                                <input className={inputCls} value={form.motherName} onChange={set("motherName")} required placeholder="Mother's full name" />
-                            </div>
-                        </div>
-                    </section>
+                            <Field label="Residential Address" required error={errors.address}>
+                                <textarea rows={2} className={`${inputCls(!!errors.address)} resize-none`} value={form.address} onChange={set("address")} placeholder="House no, street, city, pin code" />
+                            </Field>
 
-                    {/* Contact */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Phone size={13} className="text-slate-400" />
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Contact</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label className={labelCls}>Phone <span className="text-red-500">*</span></label>
-                                <input className={inputCls} value={form.phone} onChange={set("phone")} required
-                                    placeholder="10-digit number" maxLength={10} pattern="\d{10}" inputMode="numeric" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Email <span className="text-red-500">*</span></label>
-                                <input className={inputCls} type="email" value={form.email} onChange={set("email")} required placeholder="student@example.com" />
+                            <div className="border-t border-slate-100 pt-3">
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 mb-2">Emergency Contact</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <Field label="Name" required error={errors.emergencyContactName}>
+                                        <input className={inputCls(!!errors.emergencyContactName)} value={form.emergencyContactName} onChange={set("emergencyContactName")} placeholder="Full name" />
+                                    </Field>
+                                    <Field label="Phone" required error={errors.emergencyContactPhone}>
+                                        <input className={inputCls(!!errors.emergencyContactPhone)} value={form.emergencyContactPhone} onChange={setPhone("emergencyContactPhone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                    </Field>
+                                    <Field label="Relationship" required error={errors.emergencyContactRelationship}>
+                                        <input className={inputCls(!!errors.emergencyContactRelationship)} value={form.emergencyContactRelationship} onChange={set("emergencyContactRelationship")} placeholder="e.g. Uncle" />
+                                    </Field>
+                                </div>
                             </div>
                         </div>
-                        <div className="mt-3">
-                            <label className={labelCls}><MapPin size={12} className="inline mr-1 text-slate-400" />Address <span className="text-red-500">*</span></label>
-                            <textarea className={`${inputCls} resize-none`} rows={2} value={form.address} onChange={set("address")} required placeholder="Full residential address" />
-                        </div>
-                    </section>
+                    )}
 
-                    {/* Account */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Lock size={13} className="text-slate-400" />
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Account Password</p>
+                    {/* ── STEP 3 — FAMILY ─────────────────────────────────────── */}
+                    {step === 3 && (
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 mb-2">Father</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <Field label="Name" required error={errors.fatherName}>
+                                        <input className={inputCls(!!errors.fatherName)} value={form.fatherName} onChange={set("fatherName")} />
+                                    </Field>
+                                    <Field label="Occupation" optional>
+                                        <input className={inputCls()} value={form.fatherOccupation} onChange={set("fatherOccupation")} />
+                                    </Field>
+                                    <Field label="Phone" optional>
+                                        <input className={inputCls()} value={form.fatherPhone} onChange={setPhone("fatherPhone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                    </Field>
+                                </div>
+                            </div>
+                            <div className="border-t border-slate-100 pt-3">
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 mb-2">Mother</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <Field label="Name" required error={errors.motherName}>
+                                        <input className={inputCls(!!errors.motherName)} value={form.motherName} onChange={set("motherName")} />
+                                    </Field>
+                                    <Field label="Occupation" optional>
+                                        <input className={inputCls()} value={form.motherOccupation} onChange={set("motherOccupation")} />
+                                    </Field>
+                                    <Field label="Phone" optional>
+                                        <input className={inputCls()} value={form.motherPhone} onChange={setPhone("motherPhone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                    </Field>
+                                </div>
+                            </div>
+                            <div className="border-t border-slate-100 pt-3">
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 mb-2">Guardian (if different from parents)</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <Field label="Name" optional>
+                                        <input className={inputCls()} value={form.guardianName} onChange={set("guardianName")} />
+                                    </Field>
+                                    <Field label="Phone" optional>
+                                        <input className={inputCls()} value={form.guardianPhone} onChange={setPhone("guardianPhone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                    </Field>
+                                    <Field label="Relationship" optional>
+                                        <input className={inputCls()} value={form.guardianRelationship} onChange={set("guardianRelationship")} placeholder="e.g. Grandparent" />
+                                    </Field>
+                                </div>
+                            </div>
                         </div>
-                        <div className="max-w-sm">
-                            <label className={labelCls}>Password <span className="text-red-500">*</span></label>
-                            <input className={inputCls} type="password" value={form.password} onChange={set("password")}
-                                required minLength={8} placeholder="Min 8 characters" />
-                            <p className="text-xs text-slate-400 mt-1">Student will use this to log in to their portal.</p>
-                        </div>
-                    </section>
+                    )}
 
-                    {/* Medical & Notes */}
-                    <section>
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Additional Info</p>
-                        <div className="space-y-3">
-                            <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition select-none">
-                                <input type="checkbox" checked={form.disability} onChange={set("disability")}
-                                    className="w-4 h-4 rounded accent-indigo-600 mt-0.5" />
+                    {/* ── STEP 4 — ACADEMIC ───────────────────────────────────── */}
+                    {step === 4 && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Previous School Name" required error={errors.previousSchoolName}>
+                                    <input className={inputCls(!!errors.previousSchoolName)} value={form.previousSchoolName} onChange={set("previousSchoolName")} />
+                                </Field>
+                                <Field label="Previous Grade / Class" required error={errors.previousGrade}>
+                                    <input className={inputCls(!!errors.previousGrade)} value={form.previousGrade} onChange={set("previousGrade")} placeholder="e.g. Class 5" />
+                                </Field>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Previous School Address" optional>
+                                    <input className={inputCls()} value={form.previousSchoolAddress} onChange={set("previousSchoolAddress")} />
+                                </Field>
+                                <Field label="Year of Completion" optional>
+                                    <input className={inputCls()} value={form.previousYear} onChange={set("previousYear")} placeholder="e.g. 2024" inputMode="numeric" maxLength={4} />
+                                </Field>
+                            </div>
+                            <Field label="Academic Achievements" optional>
+                                <textarea rows={3} className={`${inputCls()} resize-none`} value={form.academicAchievements} onChange={set("academicAchievements")} placeholder="Awards, certificates, scholarships, ranks, etc." />
+                            </Field>
+                        </div>
+                    )}
+
+                    {/* ── STEP 5 — MEDICAL ────────────────────────────────────── */}
+                    {step === 5 && (
+                        <div className="space-y-4">
+                            <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+                                <input type="checkbox" checked={form.disability} onChange={set("disability")} className="w-4 h-4 rounded accent-indigo-600 mt-0.5" />
                                 <div>
-                                    <p className="text-sm font-medium text-slate-700">Has Disability</p>
-                                    <p className="text-xs text-slate-400">Check if the student has a disability</p>
+                                    <p className="text-sm font-semibold text-slate-700">Has a disability</p>
+                                    <p className="text-[11px] text-slate-500">Tick if the student has any disability the school should accommodate.</p>
                                 </div>
                             </label>
                             {form.disability && (
-                                <div>
-                                    <label className={labelCls}>Disability Description</label>
-                                    <input className={inputCls} value={form.disabilityDescription} onChange={set("disabilityDescription")}
-                                        placeholder="Describe the disability" />
-                                </div>
+                                <Field label="Disability Description" optional>
+                                    <textarea rows={2} className={`${inputCls()} resize-none`} value={form.disabilityDescription} onChange={set("disabilityDescription")} placeholder="Describe the disability and accommodations needed" />
+                                </Field>
                             )}
-                            <div>
-                                <label className={labelCls}>Comments / Notes</label>
-                                <textarea className={`${inputCls} resize-none`} rows={2} value={form.comments} onChange={set("comments")}
-                                    placeholder="Any additional notes about the student" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Field label="Allergies" optional>
+                                    <textarea rows={2} className={`${inputCls()} resize-none`} value={form.allergies} onChange={set("allergies")} placeholder="Food, medicine, environmental, etc." />
+                                </Field>
+                                <Field label="Medical History" optional>
+                                    <textarea rows={2} className={`${inputCls()} resize-none`} value={form.medicalHistory} onChange={set("medicalHistory")} placeholder="Any chronic conditions or relevant history" />
+                                </Field>
                             </div>
                         </div>
-                    </section>
+                    )}
 
-                    {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
-                        <button type="button" onClick={onClose}
-                            className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-                            Cancel
+                    {/* ── STEP 6 — ACCOUNT & EXTRA ────────────────────────────── */}
+                    {step === 6 && (
+                        <div className="space-y-4">
+                            <Field label="Account Password" required error={errors.password}>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        className={`${inputCls(!!errors.password)} pr-10`}
+                                        value={form.password}
+                                        onChange={set("password")}
+                                        placeholder="Min 8 characters"
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}>
+                                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">Student will use this to log in to their portal.</p>
+                            </Field>
+
+                            <Field label="Extracurricular Interests" optional>
+                                <textarea rows={2} className={`${inputCls()} resize-none`} value={form.extracurricularInterests} onChange={set("extracurricularInterests")} placeholder="Sports, music, arts, debate, etc." />
+                            </Field>
+
+                            <label className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+                                <input type="checkbox" checked={form.transportOpted} onChange={set("transportOpted")} className="w-4 h-4 rounded accent-indigo-600 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-700">Opt in for school transport</p>
+                                    <p className="text-[11px] text-slate-500">A transport zone can be assigned during the admission step.</p>
+                                </div>
+                            </label>
+
+                            <Field label="Comments / Notes" optional>
+                                <textarea rows={2} className={`${inputCls()} resize-none`} value={form.comments} onChange={set("comments")} placeholder="Anything else the school should know about the student" />
+                            </Field>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer / step controls */}
+                <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between rounded-b-2xl shrink-0">
+                    <button
+                        type="button"
+                        onClick={step === 1 ? onClose : goPrev}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white transition disabled:opacity-50"
+                    >
+                        <ChevronLeft size={13} /> {step === 1 ? "Cancel" : "Back"}
+                    </button>
+                    <p className="text-[11px] text-slate-500 hidden sm:block">
+                        Step <span className="font-bold text-slate-700">{step}</span> of {STEPS.length} — {STEPS[step - 1]!.desc}
+                    </p>
+                    {isLastStep ? (
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 transition shadow-sm"
+                        >
+                            {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                            {loading ? "Creating…" : "Create Admission"}
                         </button>
-                        <button type="submit" disabled={loading}
-                            className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
-                            {loading ? "Creating…" : "Create Student"}
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={goNext}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition shadow-sm"
+                        >
+                            Next <ChevronRight size={13} />
                         </button>
-                    </div>
-                </form>
+                    )}
+                </div>
             </div>
         </div>
     );
 };
 
 export default NewStudentModal;
-

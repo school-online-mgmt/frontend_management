@@ -196,6 +196,8 @@ const OnboardingPage: React.FC = () => {
                             return (
                                 <div
                                     key={step.key}
+                                    data-testid={`onboarding-step-${step.key}`}
+                                    data-complete={done ? "true" : "false"}
                                     className={`relative flex items-start gap-4 p-5 rounded-2xl border transition-all
                                         ${done
                                             ? 'bg-emerald-50 border-emerald-200'
@@ -246,6 +248,7 @@ const OnboardingPage: React.FC = () => {
                 {isComplete && (
                     <div className="mt-8 flex justify-center">
                         <button
+                            data-testid="enter-dashboard-btn"
                             onClick={() => navigate('/dashboard')}
                             className="flex items-center gap-2.5 px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-2xl transition-colors shadow-lg shadow-emerald-200"
                         >
