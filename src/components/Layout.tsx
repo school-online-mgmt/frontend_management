@@ -7,7 +7,7 @@ import {
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff,
+  KeyRound, Eye, EyeOff, Send,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -95,8 +95,9 @@ const NAV_SECTIONS = [
     collapsible: true,
     module: "COMMUNICATION" as const,
     items: [
-      { path: "/notices", label: "Notice Board", icon: Megaphone },
-      { path: "/calendar", label: "Calendar", icon: Calendar },
+      { path: "/notices",       label: "Notice Board",  icon: Megaphone },
+      { path: "/communication", label: "Email Blast",   icon: Send },
+      { path: "/calendar",      label: "Calendar",      icon: Calendar },
     ],
   },
   {
@@ -115,8 +116,9 @@ const NAV_SECTIONS = [
     collapsible: true,
     module: null,
     items: [
-      { path: "/account", label: "My Account", icon: School },
-      { path: "/support", label: "Support Center", icon: MessageSquare },
+      { path: "/account",         label: "My Account",     icon: School },
+      { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
+      { path: "/support",         label: "Support Center", icon: MessageSquare },
     ],
   },
 ];

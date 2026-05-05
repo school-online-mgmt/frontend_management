@@ -1466,5 +1466,275 @@ createStudent = async (data: {
             } | null;
         };
     };
+
+    // ── Settings: Razorpay payments (per-tenant credentials) ────────────────
+    getPaymentSettings = async () => {
+        const res = await apiClient.get("/management/settings/payments");
+        return res.data as {
+            payments: {
+                enabled: boolean;
+                isFullyConfigured: boolean;
+                keyId: string | null;
+                keyIdEnvironment: "live" | "test" | null;
+                hasKeySecret: boolean;
+                hasWebhookSecret: boolean;
+                keySecretMask: string | null;
+                webhookSecretMask: string | null;
+                configuredAt: string | null;
+                configuredBy: string | null;
+                configuredByName: string | null;
+                webhookUrl: string;
+            };
+        };
+    };
+
+    updatePaymentSettings = async (payload: {
+        enabled?: boolean;
+        keyId?: string;
+        keySecret?: string;
+        webhookSecret?: string;
+        clearWebhookSecret?: boolean;
+    }) => {
+        const res = await apiClient.patch("/management/settings/payments", payload);
+        return res.data as {
+            message: string;
+            payments: { enabled: boolean; keyId: string | null; configuredAt: string | null };
+        };
+    };
+
+    // ── Settings: Email service (Zepto BYO or platform-shared) ─────────────
+    getEmailSettings = async () => {
+        const res = await apiClient.get("/management/settings/email");
+        return res.data as {
+            email: {
+                enabled: boolean;
+                useOwnCredentials: boolean;
+                isFullyConfigured: boolean;
+                byoComplete: boolean;
+                platformAvailable: boolean;
+                schoolEmailSlug: string | null;
+                emailDomain: string | null;
+                emailFromAddress: string | null;
+                emailFromName: string | null;
+                hasAuthKey: boolean;
+                authKeyMask: string | null;
+                pricingMessage: string;
+                pricing: { usingShared: boolean; pricePerBlock: number; emailsPerBlock: number };
+                configuredAt: string | null;
+                configuredByName: string | null;
+                moduleAddresses: Record<string, string>;
+                modulePreview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+                note: string;
+            };
+        };
+    };
+
+    /**
+     * Self-service email setup. Management can:
+     *   - Toggle service on/off (`enabled`)
+     *   - Pick mode (`useOwnCredentials`: true=BYO, false=shared)
+     *   - For BYO: provide `emailAuthKey` + `emailDomain`
+     *   - Set the display `emailFromName`
+     * In shared mode, the backend auto-fills `school_email_slug` from
+     * `tenants.slug` when management first enables — no superadmin needed.
+     */
+    updateEmailSettings = async (payload: {
+        enabled?: boolean;
+        useOwnCredentials?: boolean;
+        emailAuthKey?: string;
+        emailDomain?: string;
+        emailFromName?: string;
+        clearAuthKey?: boolean;
+    }) => {
+        const res = await apiClient.patch("/management/settings/email", payload);
+        return res.data as {
+            message: string;
+            email: {
+                enabled: boolean;
+                useOwnCredentials: boolean;
+                schoolEmailSlug?: string | null;
+                configuredAt: string | null;
+            };
+        };
+    };
+
+    getEmailModuleAddresses = async () => {
+        const res = await apiClient.get("/management/settings/email/module-addresses");
+        return res.data as {
+            serviceEnabled: boolean;
+            modules: Record<string, { localPart: string; isOverride: boolean }>;
+            preview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+            defaults: Record<string, string>;
+        };
+    };
+
+    updateEmailModuleAddresses = async (addresses: Record<string, string>) => {
+        const res = await apiClient.patch("/management/settings/email/module-addresses", { addresses });
+        return res.data as {
+            message: string;
+            modules: Record<string, { localPart: string; isOverride: boolean }>;
+            preview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+        };
+    };
+
+    getEmailUsage = async () => {
+        const res = await apiClient.get("/management/settings/email/usage");
+        return res.data as {
+            usage: {
+                serviceEnabled: boolean;
+                usingShared: boolean;
+                pricingMessage: string;
+                thisMonth: { totalSent: number; billableSent: number; failed: number; bounced: number; estimatedAmount: number };
+                lastMonth: { totalSent: number; billableSent: number; failed: number; bounced: number; estimatedAmount: number };
+                pricing: { pricePerBlock: number; emailsPerBlock: number };
+            };
+            bills: Array<{
+                id: string; invoiceNumber: string;
+                periodStart: string; periodEnd: string;
+                emailCount: number; billableEmailCount: number;
+                amount: number; status: string;
+                generatedAt: string;
+            }>;
+        };
+    };
+
+    sendTestEmail = async (payload: { to: { email: string; name?: string }; subject?: string; body?: string }) => {
+        const res = await apiClient.post("/management/settings/email/test", payload);
+        return res.data as {
+            message: string;
+            result: { logId: string | null; providerMessageId: string | null; status: "SENT" | "FAILED"; usedSharedCredentials: boolean; billable: boolean };
+        };
+    };
+
+    // ── Settings: Email module toggles ──────────────────────────────────────
+    getEmailModules = async () => {
+        const res = await apiClient.get("/management/settings/email-modules");
+        return res.data as {
+            serviceEnabled: boolean;
+            modules: Record<string, boolean>;
+            availableModules: string[];
+        };
+    };
+
+    updateEmailModules = async (settings: Record<string, boolean | null>) => {
+        const res = await apiClient.patch("/management/settings/email-modules", { settings });
+        return res.data as {
+            message: string;
+            serviceEnabled: boolean;
+            modules: Record<string, boolean>;
+        };
+    };
+
+    // ── Platform bills (management → platform) ──────────────────────────────
+    getPlatformBills = async (status?: string) => {
+        const res = await apiClient.get("/management/platform-bills", {
+            params: status ? { status } : {},
+        });
+        return res.data as {
+            summary: { total: number; pendingAmount: number; paidAmount: number };
+            bills: Array<{
+                id: string;
+                source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE";
+                label: string;
+                amount: number;
+                status: string;
+                paidAt: string | null;
+                createdAt: string;
+                extra?: Record<string, unknown>;
+            }>;
+        };
+    };
+
+    createPlatformBillBulkOrder = async (items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>) => {
+        const res = await apiClient.post("/management/platform-bills/pay-multiple/create-order", { items });
+        return res.data as {
+            orderId: string;
+            amount: number;
+            currency: string;
+            keyId: string | null;
+            billsCount: number;
+            totalAmount: number;
+            items: Array<{ source: string; id: string; amount: number; label: string }>;
+        };
+    };
+
+    verifyPlatformBillBulkOrder = async (payload: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+        items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>;
+    }) => {
+        const res = await apiClient.post("/management/platform-bills/pay-multiple/verify", payload);
+        return res.data as {
+            message: string;
+            count: number;
+            items: Array<{ source: string; id: string; amount: number; label: string }>;
+        };
+    };
+
+    // ── Bulk fee invoice payment (school-side, tenant Razorpay) ─────────────
+    createBulkFeeInvoiceOrder = async (invoiceIds: string[]) => {
+        const res = await apiClient.post("/management/fees/invoices/bulk-pay/create-order", { invoiceIds });
+        return res.data as {
+            orderId: string;
+            amount: number;
+            currency: string;
+            keyId: string;
+            invoiceCount: number;
+            totalAmount: number;
+            items: Array<{ id: string; invoiceNo: string; balance: number; studentId: string }>;
+        };
+    };
+
+    verifyBulkFeeInvoiceOrder = async (payload: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+        invoiceIds: string[];
+    }) => {
+        const res = await apiClient.post("/management/fees/invoices/bulk-pay/verify", payload);
+        return res.data as {
+            message: string;
+            count: number;
+            totalAmount: number;
+            invoiceIds: string[];
+        };
+    };
+
+    // ── Communication broadcast ─────────────────────────────────────────────
+    previewEmailBroadcast = async (audience: {
+        type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+        recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
+        ids?: string[];
+    }) => {
+        const res = await apiClient.post("/management/communication/email-broadcast/preview", audience);
+        return res.data as {
+            audience: typeof audience;
+            recipientCount: number;
+            sample: Array<{ name: string; email: string; role: string }>;
+        };
+    };
+
+    sendEmailBroadcast = async (payload: {
+        subject: string;
+        body: string;
+        audience: {
+            type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+            recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
+            ids?: string[];
+        };
+        dryRun?: boolean;
+    }) => {
+        const res = await apiClient.post("/management/communication/email-broadcast", payload);
+        return res.data as {
+            message: string;
+            skipped: boolean;
+            attempted: number;
+            sent: number;
+            failed: number;
+            recipientCount: number;
+            reasons?: string[];
+        };
+    };
 }
 export default new API();
