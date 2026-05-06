@@ -1,13 +1,16 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
     Bell, Plus, Globe, BookOpen, Users,
     CheckCircle2, Clock, AlertTriangle, ChevronRight,
-    Loader2, RefreshCcw, Search
+    Loader2, Search
 } from "lucide-react";
 import api from "../../api/api";
 import useAuth from "../../hooks/useAuth";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSessionId } from "../../context/SessionContext";
 
 // ─── Visibility badge ─────────────────────────────────────────────────────────
 const VIS_CONFIG: Record<string, { label: string; icon: any; className: string }> = {
@@ -28,10 +31,10 @@ const VisBadge = ({ v }: { v: string }) => {
 
 // ─── Create Board Modal ───────────────────────────────────────────────────────
 const CreateBoardModal = ({
-    open, onClose, onCreate, classes, teachers
+    open, onClose, onCreate, classes, teachers, sessionId
 }: {
     open: boolean; onClose: () => void; onCreate: () => void;
-    classes: any[]; teachers: any[];
+    classes: any[]; teachers: any[]; sessionId: string;
 }) => {
     const [form, setForm] = useState({
         name: "", description: "", visibility: "PUBLIC",
@@ -65,6 +68,7 @@ const CreateBoardModal = ({
         setSaving(true); setError("");
         try {
             await api.createNoticeBoard({
+                sessionId,
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
                 visibility: form.visibility,
@@ -174,39 +178,57 @@ const NoticeBoardHome = () => {
     const { hasModuleAdmin } = useAuth();
     const isPrincipal = hasModuleAdmin('COMMUNICATION');
 
-    const [boards, setBoards] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [visFilter, setVisFilter] = useState("ALL");
     const [showCreate, setShowCreate] = useState(false);
-    const [classes, setClasses] = useState<any[]>([]);
-    const [teachers, setTeachers] = useState<any[]>([]);
-    const [pendingNotices, setPendingNotices] = useState<any[]>([]);
+    // Notice boards are session-scoped — the chosen session id comes from
+    // the global SessionContext (rendered in the layout topbar).
+    const selectedSessionId = useSessionId();
 
-    const load = useCallback(async () => {
-        setLoading(true); setError("");
-        try {
-            const [boardsData, pendingData] = await Promise.all([
-                api.getNoticeBoards(),
-                isPrincipal ? api.getPendingNotices() : Promise.resolve({ notices: [] }),
-            ]);
-            setBoards(boardsData.boards ?? []);
-            setPendingNotices(pendingData.notices ?? []);
-        } catch (err: any) {
-            setError(err?.response?.data?.message ?? "Failed to load notice boards");
-        } finally {
-            setLoading(false);
-        }
-    }, [isPrincipal]);
+    const boardsQuery = useQuery({
+        queryKey: ["notices", "boards", selectedSessionId],
+        queryFn: () => api.getNoticeBoards(selectedSessionId),
+        enabled: !!selectedSessionId,
+        select: (d: any) => d?.boards ?? [],
+    });
+    const pendingQuery = useQuery({
+        queryKey: ["notices", "pending"],
+        queryFn: () => api.getPendingNotices(),
+        enabled: !!selectedSessionId && isPrincipal,
+        select: (d: any) => d?.notices ?? [],
+    });
+    // Class + teacher options for the principal's "create board" form.
+    // Only fetched when needed so non-principal users don't pay the cost.
+    const classesQuery = useQuery({
+        queryKey: ["classes", "list", selectedSessionId],
+        queryFn: () => api.getClasses(selectedSessionId),
+        enabled: !!selectedSessionId && isPrincipal,
+    });
+    const approversQuery = useQuery({
+        queryKey: ["notices", "approver-options"],
+        queryFn: () => api.getNoticeApproverOptions(),
+        enabled: isPrincipal,
+        select: (d: any) => d?.teachers ?? [],
+    });
 
-    useEffect(() => { load(); }, [load]);
+    const boards: any[] = boardsQuery.data ?? [];
+    const pendingNotices: any[] = pendingQuery.data ?? [];
+    const classes: any[] = (classesQuery.data as any) ?? [];
+    const teachers: any[] = approversQuery.data ?? [];
+    const loading = boardsQuery.isFetching || pendingQuery.isFetching;
 
     useEffect(() => {
-        if (!isPrincipal) return;
-        api.getClasses().then(setClasses).catch(() => {});
-        api.getNoticeApproverOptions().then(d => setTeachers(d.teachers ?? [])).catch(() => {});
-    }, [isPrincipal]);
+        const e = boardsQuery.error as any;
+        if (e) setError(e?.response?.data?.message ?? "Failed to load notice boards");
+        else setError("");
+    }, [boardsQuery.error]);
+
+    const load = () => {
+        queryClient.invalidateQueries({ queryKey: ["notices", "boards", selectedSessionId] });
+        queryClient.invalidateQueries({ queryKey: ["notices", "pending"] });
+    };
 
     const filtered = boards.filter(b => {
         const matchSearch = b.name.toLowerCase().includes(search.toLowerCase());
@@ -224,22 +246,23 @@ const NoticeBoardHome = () => {
                 icon={Bell}
                 title="Notice Boards"
                 subtitle="Manage and publish announcements across the school"
-                actions={
-                    <div className="flex items-center gap-2">
-                        <button onClick={load}
-                            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-                            <RefreshCcw size={18} />
+                gradient={MODULE_THEMES.communication}
+                onRefresh={load}
+                refreshing={loading}
+                primaryActions={
+                    isPrincipal ? (
+                        <button onClick={() => setShowCreate(true)} disabled={!selectedSessionId}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+                            <Plus size={15} /> New Board
                         </button>
-                        {isPrincipal && (
-                            <button onClick={() => setShowCreate(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl hover:bg-white/25 transition-all text-sm font-medium backdrop-blur-sm">
-                                <Plus size={16} /> New Board
-                            </button>
-                        )}
-                    </div>
+                    ) : undefined
                 }
             />
-            <div className="p-6 max-w-7xl mx-auto">
+            <div className="p-6 max-w-7xl mx-auto space-y-6">
+
+            {!selectedSessionId ? (
+                <EmptySessionState entityPlural="notice boards" />
+            ) : (<>
 
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -379,9 +402,12 @@ const NoticeBoardHome = () => {
                 </div>
             )}
 
+            </>)}
+
             <CreateBoardModal
                 open={showCreate} onClose={() => setShowCreate(false)}
                 onCreate={load} classes={classes} teachers={teachers}
+                sessionId={selectedSessionId}
             />
             </div>
         </div>

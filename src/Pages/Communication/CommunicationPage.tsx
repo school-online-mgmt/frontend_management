@@ -4,6 +4,7 @@ import {
   AlertCircle, CheckCircle2, Sparkles, Filter,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useToast } from "../../context/ToastContext";
 
 type AudienceType = "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
@@ -149,15 +150,15 @@ export default function CommunicationPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 inline-flex items-center gap-2">
-          <Megaphone className="text-violet-500" size={20} /> Communication
-        </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Send a custom email to a filtered group of students and/or teachers.
-        </p>
-      </div>
+    <div className="min-h-full bg-slate-50 flex flex-col">
+      <PageHeader
+        icon={Megaphone}
+        title="Email Blast"
+        subtitle="Send a custom email to a filtered group of students and/or teachers"
+        gradient={MODULE_THEMES.communication}
+      />
+
+      <div className="p-4 lg:p-6 max-w-5xl mx-auto w-full space-y-4 flex-1">
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
         {/* Compose */}
@@ -347,6 +348,7 @@ export default function CommunicationPage() {
             <p>Recipients without an email on file are skipped. Each person receives one copy regardless of overlap.</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,9 +1,12 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Plus, RefreshCcw, School, Users, Layers, User, ChevronRight, BookOpen, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/api";
 import CreateClassModal from "../../components/Classes/CreateClassModal";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSessionId } from "../../context/SessionContext";
 
 const StatBadge = ({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) => (
     <div className="flex items-center gap-2">
@@ -17,8 +20,8 @@ const StatBadge = ({ icon, value, label }: { icon: React.ReactNode; value: numbe
 
 const ClassHome = () => {
     const navigate = useNavigate();
-    const [classes, setClasses] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const selectedSessionId = useSessionId();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -28,19 +31,17 @@ const ClassHome = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
-    const fetchClasses = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getClasses();
-            setClasses(data || []);
-        } catch {
-            setClasses([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => { fetchClasses(); }, [fetchClasses]);
+    // Cached per session id — switching sessions rehydrates from cache
+    // when we've fetched it before, so the page feels instant on revisit.
+    const classesQuery = useQuery({
+        queryKey: ["classes", "list", selectedSessionId],
+        queryFn: () => api.getClasses(selectedSessionId),
+        enabled: !!selectedSessionId,
+    });
+    const classes: any[] = Array.isArray(classesQuery.data) ? classesQuery.data : [];
+    const isLoading = classesQuery.isFetching;
+    const fetchClasses = () =>
+        queryClient.invalidateQueries({ queryKey: ["classes", "list", selectedSessionId] });
 
     const filtered = classes.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -58,8 +59,9 @@ const ClassHome = () => {
                 </div>
             )}
 
-            {showCreateModal && (
+            {showCreateModal && selectedSessionId && (
                 <CreateClassModal
+                    sessionId={selectedSessionId}
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={(msg: any) => {
                         showToast(msg?.text ?? "Class created", "success");
@@ -72,18 +74,22 @@ const ClassHome = () => {
                 icon={School}
                 title="Class Management"
                 subtitle="Manage classes, sections, and class teachers"
-                actions={
-                    <div className="flex gap-2">
-                        <button onClick={fetchClasses} className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex items-center gap-2 text-sm text-white hover:bg-white/20 transition backdrop-blur-sm">
-                            <RefreshCcw size={15} className={isLoading ? "animate-spin" : ""} /> Refresh
-                        </button>
-                        <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm" data-testid="create-class-btn">
-                            <Plus size={16} /> Create Class
-                        </button>
-                    </div>
+                gradient={MODULE_THEMES.classes}
+                onRefresh={fetchClasses}
+                refreshing={isLoading}
+                primaryActions={
+                    <button onClick={() => setShowCreateModal(true)} disabled={!selectedSessionId}
+                        data-testid="create-class-btn"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+                        <Plus size={15} /> Create Class
+                    </button>
                 }
             />
             <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+
+            {!selectedSessionId ? (
+                <EmptySessionState entityPlural="classes" />
+            ) : (<>
 
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4">
@@ -188,6 +194,7 @@ const ClassHome = () => {
             {filtered.length > 0 && (
                 <p className="text-xs text-slate-400 text-center">Showing {filtered.length} of {classes.length} classes</p>
             )}
+            </>)}
             </div>
         </div>
     );

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   MessageSquare, Plus, ChevronRight, CheckCircle2,
-  Send, X, Lightbulb, ArrowLeft,
+  Send, X, Lightbulb, ArrowLeft, LifeBuoy,
 } from "lucide-react";
 import api from "../../api/api";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Ticket {
@@ -510,56 +512,89 @@ export default function SupportCenter() {
   const [activeTab, setActiveTab] = useState<"tickets" | "feature-requests">("tickets");
   const [view, setView] = useState<"list" | "create" | "detail">("list");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  // Bumped to force-refetch the active list when the user clicks the
+  // header refresh button. We pass the key into TicketList /
+  // FeatureRequestsView via React's standard `key` prop so the
+  // component remounts and re-fires its initial fetch.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Support Center</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Get help from the EduPilots team or share your ideas</p>
-      </div>
-
-      {/* Info banner */}
-      <div className="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
-        <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center shrink-0">
-          <MessageSquare size={15} className="text-white" />
-        </div>
-        <div>
-          <p className="text-sm font-bold text-violet-900">How our support works</p>
-          <p className="text-xs text-violet-700 mt-0.5 leading-relaxed">
-            Create a ticket and our team will respond within 4 business hours. For urgent issues, mark the priority as <strong>Critical</strong>.
-            You can also email us directly at <a href="mailto:hello@edupilots.in" className="underline">hello@edupilots.in</a>.
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs (only show in list view) */}
-      {view === "list" && (
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit mb-6">
-          {[
-            { key: "tickets", label: "Support Tickets", icon: MessageSquare },
-            { key: "feature-requests", label: "Feature Requests", icon: Lightbulb },
-          ].map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => setActiveTab(key as any)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors
-                ${activeTab === key ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:text-slate-700'}`}>
-              <Icon size={15} /> {label}
+    <div className="min-h-full bg-slate-50">
+      <PageHeader
+        icon={LifeBuoy}
+        title="Support Center"
+        subtitle="Get help from the EduPilots team or share your ideas"
+        gradient={MODULE_THEMES.communication}
+        onRefresh={() => setRefreshKey((k) => k + 1)}
+        primaryActions={
+          view === "list" ? (
+            <button
+              onClick={() => activeTab === "tickets" ? setView("create") : setActiveTab("feature-requests")}
+              data-testid="support-quick-action"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0"
+            >
+              <Plus size={14} /> {activeTab === "tickets" ? "New Ticket" : "Feature Requests"}
             </button>
-          ))}
+          ) : undefined
+        }
+      />
+
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-4">
+        {/* Info banner — positioned right below the header so the user
+            sees the SLA promise before scrolling further. */}
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
+          <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+            <MessageSquare size={15} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-amber-900">How our support works</p>
+            <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+              Create a ticket and our team will respond within 4 business hours. For urgent issues, mark the priority as <strong>Critical</strong>.
+              You can also email us directly at <a href="mailto:hello@edupilots.in" className="underline font-semibold">hello@edupilots.in</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabbed section — only used when in list view; the create /
+          detail flows take over the full page so the user focuses on
+          the form. */}
+      {view === "list" ? (
+        <TabbedSection
+          idPrefix="support"
+          ariaLabel="Support sections"
+          theme="amber"
+          flushPanel
+          value={activeTab}
+          onChange={(k) => setActiveTab(k as typeof activeTab)}
+          tabs={[
+            { key: "tickets",          label: "Support Tickets",  icon: MessageSquare },
+            { key: "feature-requests", label: "Feature Requests", icon: Lightbulb },
+          ]}
+        >
+          <TabPanel tabKey="tickets">
+            <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+              <TicketList key={`tickets-${refreshKey}`}
+                onSelect={t => { setSelectedTicket(t); setView("detail"); }}
+                onCreate={() => setView("create")} />
+            </div>
+          </TabPanel>
+          <TabPanel tabKey="feature-requests">
+            <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+              <FeatureRequestsView key={`features-${refreshKey}`} />
+            </div>
+          </TabPanel>
+        </TabbedSection>
+      ) : (
+        <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+          {view === "create" && (
+            <CreateTicketForm onBack={() => setView("list")} onCreated={() => setView("list")} />
+          )}
+          {view === "detail" && selectedTicket && (
+            <TicketDetail ticket={selectedTicket} onBack={() => { setView("list"); setSelectedTicket(null); }} />
+          )}
         </div>
       )}
-
-      {/* Views */}
-      {activeTab === "tickets" && view === "list" && (
-        <TicketList onSelect={t => { setSelectedTicket(t); setView("detail"); }} onCreate={() => setView("create")} />
-      )}
-      {activeTab === "tickets" && view === "create" && (
-        <CreateTicketForm onBack={() => setView("list")} onCreated={() => setView("list")} />
-      )}
-      {activeTab === "tickets" && view === "detail" && selectedTicket && (
-        <TicketDetail ticket={selectedTicket} onBack={() => { setView("list"); setSelectedTicket(null); }} />
-      )}
-      {activeTab === "feature-requests" && <FeatureRequestsView />}
     </div>
   );
 }

@@ -179,9 +179,10 @@ class API {
 
   // ----------Classes APIs----------
 
-  // Get All Classes
-  getClasses = async () => {
-    const response = await apiClient.get("/management/class");
+  // Get All Classes (optionally scoped to a session).
+  getClasses = async (sessionId?: string) => {
+    const params = sessionId ? { sessionId } : undefined;
+    const response = await apiClient.get("/management/class", { params });
     return response.data.classes;
   };
 
@@ -248,9 +249,30 @@ getSessions= async () => {
     return response.data.sessions;
 };
 
+// Bulk insights for the sessions list page — one round trip returns
+// counts of students / classes / sections / courses / subjects / exams
+// plus calendar stats (elapsed days, weekends, holidays, attendance
+// days), keyed by sessionId.
+getSessionInsights = async (): Promise<{
+    sessionId: string;
+    students: number; activeStudents: number;
+    classes: number; sections: number;
+    courses: number; subjects: number;
+    exams: number;
+    attendanceDays: number;
+    elapsedDays: number;
+    weekendDays: number;
+    holidayDays: number;
+    workingDays: number;
+}[]> => {
+    const response = await apiClient.get("/management/session/insights");
+    return response.data.insights ?? [];
+};
+
 // Create Session
 createSession = async (body: {
-    slug: string; name: string; startDate: string; endDate: string; description?: string;
+    slug: string; name: string; startDate: string; endDate: string;
+    description?: string; acceptAdmission?: boolean;
 }) => {
     const response = await apiClient.post("/management/session/create", body);
     return response.data;
@@ -259,6 +281,7 @@ createSession = async (body: {
 // Update Session
 updateSession = async (id: string, body: {
     slug?: string; name?: string; startDate?: string; endDate?: string;
+    acceptAdmission?: boolean;
 }) => {
     const response = await apiClient.put(`/management/session/${id}`, body);
     return response.data;
@@ -364,12 +387,22 @@ updateSubject = async (id: string, data: { name?: string, slug?: string, bookNam
 
     // ── Notice Board APIs ─────────────────────────────────────────────────────
 
-    getNoticeBoards = async (params?: { visibility?: string; classId?: string }) => {
+    /**
+     * Pass a sessionId (positional shorthand) OR a params object. Most callers
+     * use the shorthand to scope to the session selected on the page.
+     */
+    getNoticeBoards = async (
+        sessionIdOrParams?: string | { sessionId?: string; visibility?: string; classId?: string },
+    ) => {
+        const params = typeof sessionIdOrParams === "string"
+            ? { sessionId: sessionIdOrParams }
+            : sessionIdOrParams;
         const res = await apiClient.get("/management/notice/boards", { params });
         return res.data;
     };
 
     createNoticeBoard = async (data: {
+        sessionId: string;
         name: string; description?: string; visibility: string;
         classId?: string; sectionId?: string; approverId?: string;
     }) => {
@@ -443,8 +476,14 @@ updateSubject = async (id: string, data: { name?: string, slug?: string, bookNam
     // ── END Notice Board APIs ─────────────────────────────────────────────────
 
     // --- Student APIs ---
-getAppliedStudents = async () => {
-    const response = await apiClient.get('/management/student/applied');
+/**
+ * Pass `sessionId` to filter applicants to a specific session, or "none" for
+ * applicants with no session set (legacy rows pre-dating per-session admissions).
+ * Omit to get all applicants for the tenant.
+ */
+getAppliedStudents = async (sessionId?: string) => {
+    const params = sessionId ? { sessionId } : undefined;
+    const response = await apiClient.get('/management/student/applied', { params });
     return response.data;
 };
 
@@ -703,9 +742,11 @@ createStudent = async (data: {
 
     // ── Student Management APIs ───────────────────────────────────────────────
 
-    // Get all applicants
-    getApplicants = async () => {
-        const res = await apiClient.get("/management/student/applied");
+    // Get all applicants. Pass `sessionId` to filter by session, "none" for
+    // legacy applicants without a session set.
+    getApplicants = async (sessionId?: string) => {
+        const params = sessionId ? { sessionId } : undefined;
+        const res = await apiClient.get("/management/student/applied", { params });
         return res.data;
     };
 
@@ -1064,8 +1105,9 @@ createStudent = async (data: {
     };
 
     // ── Attendance Module ─────────────────────────────────────────────────────
-    getAttendanceSections = async () => {
-        const res = await apiClient.get("/management/attendance/sections");
+    getAttendanceSections = async (sessionId?: string) => {
+        const params = sessionId ? { sessionId } : undefined;
+        const res = await apiClient.get("/management/attendance/sections", { params });
         return res.data;
     };
 
@@ -1116,7 +1158,7 @@ createStudent = async (data: {
         return res.data;
     };
 
-    getTeacherAttendanceView = async (params?: { teacherId?: string; date?: string; from?: string; to?: string }) => {
+    getTeacherAttendanceView = async (params?: { teacherId?: string; date?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/teacher-attendance/view", { params });
         return res.data;
     };
@@ -1139,7 +1181,7 @@ createStudent = async (data: {
     };
 
     // ── Leave Management ────────────────────────────────────────────────────
-    getStudentLeaves = async (params?: { status?: string; classId?: string; sectionId?: string; from?: string; to?: string }) => {
+    getStudentLeaves = async (params?: { status?: string; classId?: string; sectionId?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/leave/student-leaves", { params });
         return res.data;
     };
@@ -1149,7 +1191,7 @@ createStudent = async (data: {
         return res.data;
     };
 
-    getTeacherLeaves = async (params?: { status?: string; teacherId?: string; from?: string; to?: string }) => {
+    getTeacherLeaves = async (params?: { status?: string; teacherId?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/leave/teacher-leaves", { params });
         return res.data;
     };

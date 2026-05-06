@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
     BookOpen, Plus, RefreshCcw, Search, ToggleLeft, ToggleRight,
     BookMarked, AlertTriangle, ClipboardList, RotateCcw, X, CheckCircle, XCircle,
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useConfirm } from "../../hooks/useConfirm";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 type Tab = "catalog" | "issues" | "requests" | "renewals";
 
@@ -15,14 +17,9 @@ type RenewalModal = { renewalId: string; action: "APPROVED" | "REJECTED"; remark
 
 const LibraryHome = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { confirm, dialog: confirmDialog } = useConfirm();
     const [tab, setTab] = useState<Tab>("catalog");
-    const [stats, setStats] = useState<any>(null);
-    const [books, setBooks] = useState<any[]>([]);
-    const [issues, setIssues] = useState<any[]>([]);
-    const [requests, setRequests] = useState<any[]>([]);
-    const [renewals, setRenewals] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState<any>(null);
@@ -39,53 +36,57 @@ const LibraryHome = () => {
         setTimeout(() => setMessage(null), 4000);
     };
 
-    const fetchStats = useCallback(async () => {
-        try {
-            const data = await api.getLibraryStats();
-            setStats(data.stats);
-        } catch { /* ignore */ }
-    }, []);
+    // Library stats — kept warm across all tabs. Stale time: 30s so a
+    // tab change inside 30s reads from cache without a round trip.
+    const statsQuery = useQuery({
+        queryKey: ["library", "stats"],
+        queryFn: () => api.getLibraryStats(),
+        staleTime: 30_000,
+        select: (d: any) => d?.stats,
+    });
+    const stats = statsQuery.data ?? null;
+    const fetchStats = () => queryClient.invalidateQueries({ queryKey: ["library", "stats"] });
 
-    const fetchBooks = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryBooks({ search: search || undefined });
-            setBooks(data.books || []);
-        } catch { setBooks([]); } finally { setIsLoading(false); }
-    }, [search]);
+    // Each tab is its own query — only the active tab fetches. Switching
+    // tabs reads cached data instantly when previously fetched.
+    const booksQuery = useQuery({
+        queryKey: ["library", "books", search],
+        queryFn: () => api.getLibraryBooks({ search: search || undefined }),
+        enabled: tab === "catalog",
+        select: (d: any) => d?.books ?? [],
+    });
+    const issuesQuery = useQuery({
+        queryKey: ["library", "issues", issueFilter],
+        queryFn: () => api.getLibraryIssues({ status: issueFilter }),
+        enabled: tab === "issues",
+        select: (d: any) => d?.issues ?? [],
+    });
+    const requestsQuery = useQuery({
+        queryKey: ["library", "requests", requestFilter],
+        queryFn: () => api.getLibraryRequests({ status: requestFilter }),
+        enabled: tab === "requests",
+        select: (d: any) => d?.requests ?? [],
+    });
+    const renewalsQuery = useQuery({
+        queryKey: ["library", "renewals", renewalFilter],
+        queryFn: () => api.getLibraryRenewals({ status: renewalFilter }),
+        enabled: tab === "renewals",
+        select: (d: any) => d?.renewals ?? [],
+    });
 
-    const fetchIssues = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryIssues({ status: issueFilter });
-            setIssues(data.issues || []);
-        } catch { setIssues([]); } finally { setIsLoading(false); }
-    }, [issueFilter]);
+    const books:    any[] = booksQuery.data    ?? [];
+    const issues:   any[] = issuesQuery.data   ?? [];
+    const requests: any[] = requestsQuery.data ?? [];
+    const renewals: any[] = renewalsQuery.data ?? [];
+    const isLoading = (tab === "catalog"   && booksQuery.isFetching)
+                  || (tab === "issues"    && issuesQuery.isFetching)
+                  || (tab === "requests"  && requestsQuery.isFetching)
+                  || (tab === "renewals"  && renewalsQuery.isFetching);
 
-    const fetchRequests = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryRequests({ status: requestFilter });
-            setRequests(data.requests || []);
-        } catch { setRequests([]); } finally { setIsLoading(false); }
-    }, [requestFilter]);
-
-    const fetchRenewals = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryRenewals({ status: renewalFilter });
-            setRenewals(data.renewals || []);
-        } catch { setRenewals([]); } finally { setIsLoading(false); }
-    }, [renewalFilter]);
-
-    useEffect(() => { fetchStats(); }, [fetchStats]);
-
-    useEffect(() => {
-        if (tab === "catalog") fetchBooks();
-        else if (tab === "issues") fetchIssues();
-        else if (tab === "requests") fetchRequests();
-        else if (tab === "renewals") fetchRenewals();
-    }, [tab, fetchBooks, fetchIssues, fetchRequests, fetchRenewals]);
+    const fetchBooks    = () => queryClient.invalidateQueries({ queryKey: ["library", "books"] });
+    const fetchIssues   = () => queryClient.invalidateQueries({ queryKey: ["library", "issues"] });
+    const fetchRequests = () => queryClient.invalidateQueries({ queryKey: ["library", "requests"] });
+    const fetchRenewals = () => queryClient.invalidateQueries({ queryKey: ["library", "renewals"] });
 
     const handleToggleBook = async (bookId: string) => {
         try {
@@ -252,63 +253,64 @@ const LibraryHome = () => {
                 icon={BookOpen}
                 title="Library Management"
                 subtitle="Manage books, issues, requests & renewals"
-                actions={
+                gradient={MODULE_THEMES.library}
+                onRefresh={() => {
+                    fetchStats();
+                    if (tab === "catalog") fetchBooks();
+                    else if (tab === "issues") fetchIssues();
+                    else if (tab === "requests") fetchRequests();
+                    else if (tab === "renewals") fetchRenewals();
+                }}
+                refreshing={isLoading}
+                primaryActions={
                     <button onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 hover:bg-white/25 transition-all backdrop-blur-sm">
-                        <Plus size={18} /> Add Book
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
+                        <Plus size={15} /> Add Book
                     </button>
                 }
             />
+
             <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+                {message && (
+                    <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                        {message.text}
+                    </div>
+                )}
 
-            {message && (
-                <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                    {message.text}
-                </div>
-            )}
-
-            {/* Stats */}
-            {stats && (
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    {[
-                        { label: "Total Books", value: stats.totalBooks, icon: BookOpen, color: "text-indigo-600 bg-indigo-50" },
-                        { label: "Active Issues", value: stats.activeIssues, icon: BookMarked, color: "text-blue-600 bg-blue-50" },
-                        { label: "Overdue", value: stats.overdueIssues, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
-                        { label: "Pending Requests", value: stats.pendingRequests, icon: ClipboardList, color: "text-amber-600 bg-amber-50" },
-                        { label: "Pending Renewals", value: stats.pendingRenewals, icon: RotateCcw, color: "text-emerald-600 bg-emerald-50" },
-                    ].map((s) => (
-                        <div key={s.label} className="bg-white rounded-2xl border p-4 flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
-                                <s.icon size={20} />
+                {/* Stats */}
+                {stats && (
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                        {[
+                            { label: "Total Books", value: stats.totalBooks, icon: BookOpen, color: "text-indigo-600 bg-indigo-50" },
+                            { label: "Active Issues", value: stats.activeIssues, icon: BookMarked, color: "text-blue-600 bg-blue-50" },
+                            { label: "Overdue", value: stats.overdueIssues, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
+                            { label: "Pending Requests", value: stats.pendingRequests, icon: ClipboardList, color: "text-amber-600 bg-amber-50" },
+                            { label: "Pending Renewals", value: stats.pendingRenewals, icon: RotateCcw, color: "text-emerald-600 bg-emerald-50" },
+                        ].map((s) => (
+                            <div key={s.label} className="bg-white rounded-2xl border p-4 flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
+                                    <s.icon size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold">{s.value}</p>
+                                    <p className="text-xs text-slate-500">{s.label}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-2xl font-bold">{s.value}</p>
-                                <p className="text-xs text-slate-500">{s.label}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-                {TABS.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${tab === t.key ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
-                    >
-                        <t.icon size={15} />
-                        {t.label}
-                        {t.badge && t.badge > 0 ? (
-                            <span className="bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{t.badge}</span>
-                        ) : null}
-                    </button>
-                ))}
+                        ))}
+                    </div>
+                )}
             </div>
 
+            <TabbedSection
+                idPrefix="library"
+                value={tab}
+                onChange={(k) => setTab(k as Tab)}
+                theme="amber"
+                flushPanel
+                tabs={TABS.map((t) => ({ key: t.key, label: t.label, icon: t.icon, badge: t.badge }))}
+            >
             {/* ── CATALOG ─────────────────────────────────────────────────── */}
-            {tab === "catalog" && (
+            <TabPanel tabKey="catalog">{tab === "catalog" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="relative">
@@ -387,10 +389,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── ISSUES ───────────────────────────────────────────────────── */}
-            {tab === "issues" && (
+            <TabPanel tabKey="issues">{tab === "issues" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b gap-3">
                         <div className="flex gap-2">
@@ -474,10 +476,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── REQUESTS ─────────────────────────────────────────────────── */}
-            {tab === "requests" && (
+            <TabPanel tabKey="requests">{tab === "requests" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="flex gap-2">
@@ -570,10 +572,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── RENEWALS ─────────────────────────────────────────────────── */}
-            {tab === "renewals" && (
+            <TabPanel tabKey="renewals">{tab === "renewals" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="flex gap-2">
@@ -649,7 +651,8 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
+            </TabbedSection>
 
             {/* Add Book Modal */}
             {showAddModal && (
@@ -676,7 +679,6 @@ const LibraryHome = () => {
                     onSuccess={(msg: string) => { showMsg("success", msg); setShowIssueModal(null); fetchRequests(); fetchStats(); fetchIssues(); }}
                 />
             )}
-            </div>
         </div>
     );
 };

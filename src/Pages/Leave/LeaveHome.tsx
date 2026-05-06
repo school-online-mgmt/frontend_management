@@ -1,11 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     CalendarDays, Clock, CheckCircle2, XCircle, Loader2, X,
     Users, Inbox, RefreshCw, Ban, MessageSquare, ChevronRight,
     UserCog,
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import useTabState from "../../hooks/useTabState";
+import { useSessionId } from "../../context/SessionContext";
+
+const useLeaveSession = () => useSessionId();
 
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 type LeaveType = "SICK" | "PERSONAL" | "FAMILY" | "OTHER";
@@ -30,31 +37,38 @@ function fmtRelative(d: string) {
 }
 
 export default function LeaveHome() {
-    const [tab, setTab] = useState<TabKey>("student");
+    const [tab, setTab] = useTabState<TabKey>("tab", "student");
+    const selectedSessionId = useSessionId();
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setRefreshing(false), 600);
+    };
+    const TABS = [
+        { key: "student" as TabKey, label: "Student Leaves", icon: Users },
+        { key: "teacher" as TabKey, label: "Teacher Leaves", icon: UserCog },
+    ];
     return (
         <div className="h-full flex flex-col bg-slate-50">
             <PageHeader
                 icon={CalendarDays}
                 title="Leave Management"
                 subtitle="Manage student & teacher leave requests"
-                actions={
-                    <nav className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
-                        {([
-                            { key: "student" as TabKey, label: "Student Leaves", icon: Users },
-                            { key: "teacher" as TabKey, label: "Teacher Leaves", icon: UserCog },
-                        ]).map(t => (
-                            <button key={t.key} onClick={() => setTab(t.key)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab === t.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
-                                }`}>
-                                <t.icon size={13} />{t.label}
-                            </button>
-                        ))}
-                    </nav>
-                }
+                gradient={MODULE_THEMES.leave}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
             <div className="flex-1 overflow-y-auto">
-                {tab === "student" ? <StudentLeavesTab /> : <TeacherLeavesTab />}
+                {!selectedSessionId ? (
+                    <div className="p-4 sm:p-6 max-w-7xl mx-auto"><EmptySessionState entityPlural="leave requests" /></div>
+                ) : (
+                    <TabbedSection tabs={TABS} value={tab} onChange={setTab} idPrefix="leave" theme="cyan" flushPanel>
+                        <TabPanel tabKey="student" key={`student-${refreshKey}`}><StudentLeavesTab /></TabPanel>
+                        <TabPanel tabKey="teacher" key={`teacher-${refreshKey}`}><TeacherLeavesTab /></TabPanel>
+                    </TabbedSection>
+                )}
             </div>
         </div>
     );
@@ -63,21 +77,26 @@ export default function LeaveHome() {
 // â”€â”€ Student Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StudentLeavesTab() {
-    const [leaves, setLeaves] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const sessionId = useLeaveSession();
+    const queryClient = useQueryClient();
     const [filter, setFilter] = useState("");
     const [respondingId, setRespondingId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ type: string; msg: string } | null>(null);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const r = await api.getStudentLeaves(filter ? { status: filter } : undefined);
-            setLeaves(r.leaves ?? []);
-        } catch { setToast({ type: "error", msg: "Failed to load student leaves" }); }
-        finally { setLoading(false); }
-    }, [filter]);
-    useEffect(() => { load(); }, [load]);
+    const leavesQuery = useQuery({
+        queryKey: ["leaves", "student", sessionId, filter],
+        queryFn: () => api.getStudentLeaves({
+            ...(filter ? { status: filter } : {}),
+            ...(sessionId ? { sessionId } : {}),
+        }),
+        select: (r: any) => r?.leaves ?? [],
+    });
+    useEffect(() => {
+        if (leavesQuery.error) setToast({ type: "error", msg: "Failed to load student leaves" });
+    }, [leavesQuery.error]);
+    const leaves: any[] = leavesQuery.data ?? [];
+    const loading = leavesQuery.isFetching;
+    const load = () => queryClient.invalidateQueries({ queryKey: ["leaves", "student"] });
 
     const respond = async (approvalId: string, action: string) => {
         setRespondingId(approvalId);
@@ -166,21 +185,26 @@ function StudentLeavesTab() {
 // â”€â”€ Teacher Leaves Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TeacherLeavesTab() {
-    const [leaves, setLeaves] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const sessionId = useLeaveSession();
+    const queryClient = useQueryClient();
     const [filter, setFilter] = useState("");
     const [respondingId, setRespondingId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ type: string; msg: string } | null>(null);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const r = await api.getTeacherLeaves(filter ? { status: filter } : undefined);
-            setLeaves(r.leaves ?? []);
-        } catch { setToast({ type: "error", msg: "Failed to load teacher leaves" }); }
-        finally { setLoading(false); }
-    }, [filter]);
-    useEffect(() => { load(); }, [load]);
+    const leavesQuery = useQuery({
+        queryKey: ["leaves", "teacher", sessionId, filter],
+        queryFn: () => api.getTeacherLeaves({
+            ...(filter ? { status: filter } : {}),
+            ...(sessionId ? { sessionId } : {}),
+        }),
+        select: (r: any) => r?.leaves ?? [],
+    });
+    useEffect(() => {
+        if (leavesQuery.error) setToast({ type: "error", msg: "Failed to load teacher leaves" });
+    }, [leavesQuery.error]);
+    const leaves: any[] = leavesQuery.data ?? [];
+    const loading = leavesQuery.isFetching;
+    const load = () => queryClient.invalidateQueries({ queryKey: ["leaves", "teacher"] });
 
     const respond = async (leaveId: string, action: string) => {
         setRespondingId(leaveId);

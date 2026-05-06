@@ -5,13 +5,26 @@ import {
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
     Users, UserCheck, Receipt, Tag, Globe, Layers,
     GraduationCap, X, Check, ToggleLeft, ToggleRight, School,
+    Filter, Loader2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import api from '../../api/api';
 import type { FeeStructureItem } from '../../api/types';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
+import { EmptySessionState } from '../../components/common/SessionGate';
+import TabbedSection, { TabPanel } from '../../components/common/TabbedSection';
+import useTabState from '../../hooks/useTabState';
+import { useSessionId } from '../../context/SessionContext';
+
+/**
+ * The fees page has 5 tabs (Summary, Fee Structure, Extra Charges, Invoices,
+ * Payments) and every tab is session-scoped. The chosen session is read
+ * from the global SessionContext so the picker in the layout topbar drives
+ * every tab.
+ */
+const useFeesSession = () => useSessionId();
 
 type ApiError = { response?: { data?: { message?: string } } };
 const apiMsg = (e: unknown, fallback: string) =>
@@ -49,45 +62,55 @@ interface Summary { totalInvoices: number; totalDemand: number; totalCollected: 
 interface Course { id: string; name: string; slug: string; }
 interface Student { id: string; firstName: string; lastName: string; phone: string; }
 interface Academic { id: string; studentId: string; courseId?: string; }
-interface Session { id: string; name: string; slug: string; startDate?: string; endDate?: string; }
 interface ClassInfo { id: string; name: string; }
 interface SectionInfo { id: string; name: string; classId: string; }
 interface BulkPreviewStudent { academicId: string; studentId: string; firstName: string; lastName: string; phone: string; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeesHub() {
-    const [tab, setTab] = useState<'summary' | 'fee-structure' | 'extra' | 'invoices' | 'payments'>('summary');
+    const [tab, setTab] = useTabState<'summary' | 'fee-structure' | 'extra' | 'invoices' | 'payments'>('tab', 'summary');
+    const selectedSessionId = useSessionId();
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setRefreshing(false), 600);
+    };
     return (
         <div className="min-h-full bg-slate-50">
             <PageHeader
                 icon={CreditCard}
                 title="Fee Management"
                 subtitle="Manage tuition fees, extra charges and invoices"
+                gradient={MODULE_THEMES.finance}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
-            <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-
-            {/* Tab Bar */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap" data-testid="fees-tabs">
-                {[
-                    { key: 'summary', label: 'Summary', icon: TrendingUp },
-                    { key: 'fee-structure', label: 'Fee Structure', icon: Receipt },
-                    { key: 'extra', label: 'Extra Charges', icon: AlertCircle },
-                    { key: 'invoices', label: 'Invoices', icon: CreditCard },
-                    { key: 'payments', label: 'Payments', icon: Wallet },
-                ].map(({ key, label, icon: Icon }) => (
-                    <button key={key} data-testid={`fees-tab-${key}`} onClick={() => setTab(key as typeof tab)}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
-                        <Icon size={16} />{label}
-                    </button>
-                ))}
-            </div>
-
-            {tab === 'summary' && <SummaryTab />}
-            {tab === 'fee-structure' && <FeeStructureTab />}
-            {tab === 'extra' && <ExtraChargesTab />}
-            {tab === 'invoices' && <InvoicesTab />}
-            {tab === 'payments' && <PaymentsTab />}
-            </div>
+            {!selectedSessionId ? (
+                <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"><EmptySessionState entityPlural="fees" /></div>
+            ) : (
+                <TabbedSection
+                    idPrefix="fees"
+                    value={tab}
+                    onChange={(k) => setTab(k as typeof tab)}
+                    theme="emerald"
+                    flushPanel
+                    tabs={[
+                        { key: 'summary',       label: 'Summary',       icon: TrendingUp },
+                        { key: 'fee-structure', label: 'Fee Structure', icon: Receipt },
+                        { key: 'extra',         label: 'Extra Charges', icon: AlertCircle },
+                        { key: 'invoices',      label: 'Invoices',      icon: CreditCard },
+                        { key: 'payments',      label: 'Payments',      icon: Wallet },
+                    ]}
+                >
+                    <TabPanel tabKey="summary"       key={`summary-${refreshKey}`}><SummaryTab /></TabPanel>
+                    <TabPanel tabKey="fee-structure" key={`fs-${refreshKey}`}><FeeStructureTab /></TabPanel>
+                    <TabPanel tabKey="extra"         key={`extra-${refreshKey}`}><ExtraChargesTab /></TabPanel>
+                    <TabPanel tabKey="invoices"      key={`inv-${refreshKey}`}><InvoicesTab /></TabPanel>
+                    <TabPanel tabKey="payments"      key={`pay-${refreshKey}`}><PaymentsTab /></TabPanel>
+                </TabbedSection>
+            )}
         </div>
     );
 }
@@ -101,7 +124,6 @@ function SummaryTab() {
     const [month, setMonth] = useState('');
     const [year, setYear] = useState(String(currentYear));
     const [loading, setLoading] = useState(false);
-    const [tick, setTick] = useState(0);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -113,7 +135,7 @@ function SummaryTab() {
             .then(data => setSummary(data.summary))
             .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load fee summary'), 'error'))
             .finally(() => setLoading(false));
-    }, [month, year, tick, addToast]);
+    }, [month, year, addToast]);
 
     const statCards = summary ? [
         { label: 'Total Demand', value: fmt(summary.totalDemand), icon: Wallet, color: 'bg-blue-50 text-blue-700' },
@@ -124,26 +146,62 @@ function SummaryTab() {
         { label: 'Paid', value: summary.paid, icon: CheckCircle, color: 'bg-emerald-50 text-emerald-700' },
     ] : [];
 
+    const activeFilters = (month ? 1 : 0) + (year !== String(currentYear) ? 1 : 0);
+    const clearFilters = () => { setMonth(''); setYear(String(currentYear)); };
+
     return (
-        <div className="space-y-6">
-            {/* Filters */}
-            <div className="flex gap-3 items-end flex-wrap">
-                <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
-                    <select value={month} onChange={e => setMonth(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                        <option value="">All Months</option>
+        <div className="p-4 sm:p-5 md:p-6 space-y-6">
+            {/* Filters — production-grade pill UI matching the rest of the app.
+                Replaces the old bare row of selects + duplicated refresh
+                (header already has refresh). */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter size={14} className="text-slate-400" />
+                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Filters</span>
+                    {activeFilters > 0 && (
+                        <span className="ml-1 inline-flex items-center justify-center w-5 h-5 bg-emerald-600 text-white rounded-full text-[10px] font-bold">{activeFilters}</span>
+                    )}
+                    {loading && <Loader2 size={12} className="text-slate-400 animate-spin ml-1" />}
+                    {activeFilters > 0 && (
+                        <button onClick={clearFilters} className="ml-auto text-xs text-slate-400 hover:text-red-500 font-semibold">Clear</button>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Quick presets */}
+                    <button
+                        onClick={() => { setMonth(''); setYear(String(currentYear)); }}
+                        className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
+                            !month && year === String(currentYear)
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                        }`}>
+                        Year to date
+                    </button>
+                    <button
+                        onClick={() => { setMonth(String(new Date().getMonth() + 1)); setYear(String(currentYear)); }}
+                        className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
+                            month === String(new Date().getMonth() + 1) && year === String(currentYear)
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                        }`}>
+                        This month
+                    </button>
+
+                    <div className="h-6 w-px bg-slate-200 mx-1" />
+
+                    <select value={month} onChange={e => setMonth(e.target.value)}
+                        aria-label="Month"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors">
+                        <option value="">All months</option>
                         {MONTHS.map((m, i) => <option key={i+1} value={String(i+1)}>{m}</option>)}
                     </select>
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Year</label>
-                    <select value={year} onChange={e => setYear(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <select value={year} onChange={e => setYear(e.target.value)}
+                        aria-label="Year"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors">
                         {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
                     </select>
                 </div>
-                <button onClick={() => setTick(t => t + 1)} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700">
-                    <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
-                </button>
             </div>
 
             {summary && (
@@ -207,9 +265,9 @@ const blankItem = () => ({ name: '', feeType: 'TUITION' as string, scope: 'GLOBA
 function FeeStructureTab() {
     const { addToast } = useToast();
     const { confirm, dialog: confirmDialog } = useConfirm();
+    // Session is published by FeesHub via context; this tab reads it.
+    const sessionId = useFeesSession();
 
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [sessionId, setSessionId] = useState('');
     const [structures, setStructures] = useState<StructureMeta[]>([]);
     const [structureId, setStructureId] = useState('');
     const [items, setItems] = useState<FeeStructureItem[]>([]);
@@ -226,15 +284,10 @@ function FeeStructureTab() {
     const [creatingStructure, setCreatingStructure] = useState(false);
 
     useEffect(() => {
-        api.getSessions().then((s: Session[]) => {
-            setSessions(Array.isArray(s) ? s : []);
-            const now = Date.now();
-            const active = Array.isArray(s) ? s.find((x: Session) => new Date(x.startDate ?? '').getTime() <= now && new Date(x.endDate ?? '').getTime() >= now) ?? s[0] : null;
-            if (active) setSessionId(active.id);
-        }).catch(() => {});
         api.getCourses().then((c: Course[]) => setCourses(Array.isArray(c) ? c : [])).catch(() => {});
-        api.getClasses().then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setClasses(Array.isArray(d) ? d : d.classes ?? [])).catch(() => {});
-    }, []);
+        if (!sessionId) { setClasses([]); return; }
+        api.getClasses(sessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setClasses(Array.isArray(d) ? d : d.classes ?? [])).catch(() => {});
+    }, [sessionId]);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -409,16 +462,9 @@ function FeeStructureTab() {
         <div className="space-y-5">
             {confirmDialog}
 
-            {/* Session & structure selectors */}
+            {/* Session is selected at the FeesHub level (above the tabs) and
+                shared via context. Only structure-level selectors live here. */}
             <div className="flex flex-wrap items-end gap-3">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Academic Session</label>
-                    <select value={sessionId} onChange={e => setSessionId(e.target.value)}
-                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white shadow-sm min-w-[220px] focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none">
-                        <option value="">Select session…</option>
-                        {sessions.map((s: Session) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                </div>
                 {structures.length > 1 && (
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fee Structure</label>
@@ -934,7 +980,7 @@ function ExtraChargesTab() {
     const [saving, setSaving] = useState(false);
 
     // ── Bulk mode state ────────────────────────────────────────────────────────
-    const [bulkSessions, setBulkSessions] = useState<Session[]>([]);
+    const pageSessionId = useFeesSession();
     const [bulkClasses, setBulkClasses] = useState<ClassInfo[]>([]);
     const [bulkSections, setBulkSections] = useState<SectionInfo[]>([]);
     const [bulkCourses, setBulkCourses] = useState<Course[]>([]);
@@ -943,7 +989,12 @@ function ExtraChargesTab() {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [bulkApplying, setBulkApplying] = useState(false);
     const [showBulkForm, setShowBulkForm] = useState(false);
-    const [bulkFilters, setBulkFilters] = useState({ sessionId:'', classId:'', sectionId:'', courseId:'' });
+    const [bulkFilters, setBulkFilters] = useState({ sessionId: pageSessionId, classId:'', sectionId:'', courseId:'' });
+    // Keep bulk session in lockstep with the page-level one — the operator
+    // shouldn't be able to pick a different session here than at the top.
+    useEffect(() => {
+        setBulkFilters(f => ({ ...f, sessionId: pageSessionId, classId: '', sectionId: '', courseId: '' }));
+    }, [pageSessionId]);
     const [bulkCharge, setBulkCharge] = useState({ type:'FINE', description:'', amount:'', month:String(new Date().getMonth()+1), year:String(currentYear) });
 
     const [chargeTick, setChargeTick] = useState(0);
@@ -976,14 +1027,13 @@ function ExtraChargesTab() {
         }).catch(() => setStudentAcademics([]));
     }, [singleForm.studentId]);
 
-    // Load sessions/classes/courses for bulk mode
+    // Load classes/courses for bulk mode (sessions come from context).
     useEffect(() => {
         if (mode === 'bulk' && showBulkForm) {
-            if (bulkSessions.length === 0) api.getSessions().then(d => setBulkSessions(Array.isArray(d) ? d : d.sessions || [])).catch(() => {});
-            if (bulkClasses.length === 0) api.getClasses().then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setBulkClasses(Array.isArray(d) ? d : d.classes || [])).catch(() => {});
+            if (bulkClasses.length === 0 && pageSessionId) api.getClasses(pageSessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setBulkClasses(Array.isArray(d) ? d : d.classes || [])).catch(() => {});
             if (bulkCourses.length === 0) api.getCourses().then((c: Course[]) => setBulkCourses(Array.isArray(c) ? c : [])).catch(() => {});
         }
-    }, [mode, showBulkForm, bulkSessions.length, bulkClasses.length, bulkCourses.length]);
+    }, [mode, showBulkForm, bulkClasses.length, bulkCourses.length, pageSessionId]);
 
     // Load sections when class changes
     useEffect(() => {
@@ -1168,17 +1218,12 @@ function ExtraChargesTab() {
                         </div>
                     </div>
 
-                    {/* Scope filters */}
+                    {/* Scope filters — session is locked to the page-level
+                        selection (above the tabs), so only refinement filters
+                        live here. */}
                     <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-3">
                         <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Step 1 — Select Scope</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 mb-1">Session <span className="text-red-500">*</span></label>
-                                <select value={bulkFilters.sessionId} onChange={e => setBulkFilters(f=>({...f, sessionId:e.target.value}))} className={selCls}>
-                                    <option value="">Select session…</option>
-                                    {bulkSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Class (optional)</label>
                                 <select value={bulkFilters.classId} onChange={e => setBulkFilters(f=>({...f, classId:e.target.value, sectionId:''}))} className={selCls}>
@@ -1319,12 +1364,17 @@ function InvoicesTab() {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { confirm, dialog: confirmDialog } = useConfirm();
+    const pageSessionId = useFeesSession();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [showGenerate, setShowGenerate] = useState(false);
-    const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: '', dueDate: '' });
+    // Bulk-generate inherits the page-level session — operator can only
+    // generate invoices for the session they're currently viewing.
+    const [gen, setGen] = useState({ month: String(new Date().getMonth()+1), year: String(currentYear), sessionId: pageSessionId, dueDate: '' });
+    useEffect(() => {
+        setGen(g => ({ ...g, sessionId: pageSessionId }));
+    }, [pageSessionId]);
     const [generating, setGenerating] = useState(false);
     const [genResult, setGenResult] = useState<{ generated: number; skipped: number; total: number; lateFeesApplied: number; errors: number } | null>(null);
     const [genProgress, setGenProgress] = useState<{ processed: number; total: number; percentage: number; generated: number; skipped: number; errors: number } | null>(null);
@@ -1350,7 +1400,7 @@ function InvoicesTab() {
             .finally(() => setLoading(false));
     }, [filterMonth, filterYear, filterStatus, invTick]);
 
-    useEffect(() => { api.getSessions().then(d => setSessions(Array.isArray(d) ? d : d.sessions || [])).catch(() => {}); }, []);
+    // Sessions come from FeesSessionContext now; nothing to fetch here.
 
     const generate = async () => {
         if (!gen.sessionId || !gen.dueDate) {
@@ -1490,9 +1540,8 @@ function InvoicesTab() {
                     )}
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => reload()} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm hover:bg-slate-50">
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> Refresh
-                    </button>
+                    {/* Refresh lives on the page header (parent FeesHub) —
+                        no need for a duplicate here. */}
                     <button onClick={markOverdue} className="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50">
                         <AlertTriangle size={15}/> Mark Overdue
                     </button>
@@ -1524,7 +1573,8 @@ function InvoicesTab() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
                     <h3 className="font-semibold text-slate-800">Generate Monthly Invoices</h3>
                     <p className="text-xs text-slate-500">Generates one invoice per student in the session for the selected month. Already-generated invoices are skipped.</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {/* Session is fixed to the page-level selection. */}
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Month</label>
                             <select value={gen.month} onChange={e => setGen(g=>({...g,month:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 {MONTHS.map((m,i) => <option key={i+1} value={String(i+1)}>{m}</option>)}
@@ -1532,11 +1582,6 @@ function InvoicesTab() {
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Year</label>
                             <select value={gen.year} onChange={e => setGen(g=>({...g,year:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                 {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
-                            </select></div>
-                        <div><label className="block text-xs font-medium text-slate-600 mb-1">Session</label>
-                            <select value={gen.sessionId} onChange={e => setGen(g=>({...g,sessionId:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                                <option value="">Select session…</option>
-                                {sessions.map((s: Session) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select></div>
                         <div><label className="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
                             <input type="date" value={gen.dueDate} onChange={e => setGen(g=>({...g,dueDate:e.target.value}))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>

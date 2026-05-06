@@ -201,6 +201,8 @@ export interface ExamResult {
 }
 
 export interface CreateClassData {
+  /** The session this class belongs to. Required since classes are session-scoped. */
+  sessionId: string;
   name: string;
   slug: string;
   description?: string;

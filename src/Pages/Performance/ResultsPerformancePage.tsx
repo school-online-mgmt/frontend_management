@@ -597,7 +597,9 @@ const ResultsPerformancePage: React.FC = () => {
     const [sectionId, setSectionId] = useState("");
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [tab, setTab] = useState<"overview" | "attention" | "by-term" | "class" | "subject" | "students" | "report-card">("overview");
+    // The former "attention" tab has been merged into "students" — top
+    // performers and at-risk students now share one screen.
+    const [tab, setTab] = useState<"overview" | "by-term" | "class" | "subject" | "students" | "report-card">("overview");
 
     // Report card state
     const [publishedExams, setPublishedExams] = useState<any[]>([]);
@@ -692,11 +694,11 @@ const ResultsPerformancePage: React.FC = () => {
 
     const TABS = [
         { key: "overview",     label: "Overview",            icon: BarChart3     },
-        { key: "attention",    label: "Needs Attention",     icon: UserCheck     },
         { key: "by-term",      label: "By Term",             icon: ClipboardList },
         { key: "class",        label: "Classes & Sections",  icon: School        },
         { key: "subject",      label: "By Subject",          icon: BookOpen      },
-        { key: "students",     label: "Top Students",        icon: Trophy        },
+        // Merged — used to be "Top Students" + "Needs Attention" tabs.
+        { key: "students",     label: "Students",            icon: Trophy        },
         { key: "report-card",  label: "Exam Reports",        icon: FileText      },
     ] as const;
 
@@ -808,7 +810,7 @@ const ResultsPerformancePage: React.FC = () => {
                                 {/* Quick Needs Attention callout */}
                                 {attention.length > 0 && (
                                     <button
-                                        onClick={() => setTab("attention")}
+                                        onClick={() => setTab("students")}
                                         className="w-full text-left bg-gradient-to-r from-rose-50 to-amber-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-4 hover:from-rose-100 hover:to-amber-100 transition group"
                                     >
                                         <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0 group-hover:bg-rose-200 transition">
@@ -937,78 +939,8 @@ const ResultsPerformancePage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* ── NEEDS ATTENTION TAB ─────────────────────────────────── */}
-                        {tab === "attention" && (
-                            <div className="space-y-5">
-                                <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                                    <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                                <UserCheck size={15} className="text-rose-500" /> Students Needing Attention
-                                            </h3>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">
-                                                School-wide list of students flagged as failing, declining, well below their section average, or missing exams.
-                                            </p>
-                                        </div>
-                                        <span className="text-xs font-bold text-slate-700">
-                                            {filteredAttention.length} student{filteredAttention.length !== 1 ? "s" : ""}
-                                            {filteredAttention.length !== attention.length ? ` of ${attention.length}` : ""}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 items-center">
-                                        <button onClick={() => setAttentionFilter("")}
-                                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${
-                                                attentionFilter === "" ? "bg-slate-800 border-slate-800 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                                            }`}>
-                                            All ({attention.length})
-                                        </button>
-                                        {(Object.keys(REASON_META) as AttentionCode[]).map(code => {
-                                            const meta = REASON_META[code];
-                                            const count = reasonCounts[code] ?? 0;
-                                            if (count === 0) return null;
-                                            const Icon = meta.icon;
-                                            const active = attentionFilter === code;
-                                            return (
-                                                <button key={code}
-                                                    onClick={() => setAttentionFilter(active ? "" : code)}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${
-                                                        active ? "bg-slate-800 border-slate-800 text-white" : `${reasonClasses(meta.tone)} hover:opacity-90`
-                                                    }`}>
-                                                    <Icon size={11} /> {meta.label} ({count})
-                                                </button>
-                                            );
-                                        })}
-                                        {attentionSections.length > 1 && (
-                                            <select value={attentionSection} onChange={e => setAttentionSection(e.target.value)}
-                                                className="ml-auto text-[11px] border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                                                <option value="">All Sections</option>
-                                                {attentionSections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                                            </select>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {filteredAttention.length === 0 ? (
-                                    attention.length === 0 ? (
-                                        <div className="bg-white rounded-2xl border border-emerald-100 p-12 flex flex-col items-center gap-3 text-center">
-                                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                                                <UserCheck size={22} className="text-emerald-600" />
-                                            </div>
-                                            <p className="text-sm font-bold text-slate-700">No students currently need extra attention</p>
-                                            <p className="text-xs text-slate-400 max-w-md">
-                                                None of the students in scope are failing, declining, missing multiple exams, or sitting well below their section average.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center text-sm text-slate-400">No students match the current filters.</div>
-                                    )
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                                        {filteredAttention.map(s => <AttentionCard key={s.studentId} s={s} />)}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        {/* "Needs Attention" used to be a standalone tab; merged
+                            into the "Students" tab below. */}
 
                         {/* ── CLASSES & SECTIONS TAB (merged + expandable) ──────────── */}
                         {tab === "class" && (
@@ -1108,6 +1040,77 @@ const ResultsPerformancePage: React.FC = () => {
                         {/* â”€â”€ TOP STUDENTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {tab === "students" && (
                             <div className="space-y-6">
+                                {/* Needs Attention block — used to be its own tab */}
+                                <div className="space-y-4">
+                                    <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                    <UserCheck size={15} className="text-rose-500" /> Students Needing Attention
+                                                </h3>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    School-wide list of students flagged as failing, declining, well below their section average, or missing exams.
+                                                </p>
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-700">
+                                                {filteredAttention.length} student{filteredAttention.length !== 1 ? "s" : ""}
+                                                {filteredAttention.length !== attention.length ? ` of ${attention.length}` : ""}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 items-center">
+                                            <button onClick={() => setAttentionFilter("")}
+                                                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${
+                                                    attentionFilter === "" ? "bg-slate-800 border-slate-800 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                                                }`}>
+                                                All ({attention.length})
+                                            </button>
+                                            {(Object.keys(REASON_META) as AttentionCode[]).map(code => {
+                                                const meta = REASON_META[code];
+                                                const count = reasonCounts[code] ?? 0;
+                                                if (count === 0) return null;
+                                                const Icon = meta.icon;
+                                                const active = attentionFilter === code;
+                                                return (
+                                                    <button key={code}
+                                                        onClick={() => setAttentionFilter(active ? "" : code)}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${
+                                                            active ? "bg-slate-800 border-slate-800 text-white" : `${reasonClasses(meta.tone)} hover:opacity-90`
+                                                        }`}>
+                                                        <Icon size={11} /> {meta.label} ({count})
+                                                    </button>
+                                                );
+                                            })}
+                                            {attentionSections.length > 1 && (
+                                                <select value={attentionSection} onChange={e => setAttentionSection(e.target.value)}
+                                                    className="ml-auto text-[11px] border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                                    <option value="">All Sections</option>
+                                                    {attentionSections.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                                </select>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {filteredAttention.length === 0 ? (
+                                        attention.length === 0 ? (
+                                            <div className="bg-white rounded-2xl border border-emerald-100 p-8 flex flex-col items-center gap-2 text-center">
+                                                <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                                                    <UserCheck size={18} className="text-emerald-600" />
+                                                </div>
+                                                <p className="text-sm font-bold text-slate-700">No students currently need extra attention</p>
+                                                <p className="text-xs text-slate-400 max-w-md">
+                                                    None of the students in scope are failing, declining, missing multiple exams, or sitting well below their section average.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center text-sm text-slate-400">No students match the current filters.</div>
+                                        )
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                            {filteredAttention.map(s => <AttentionCard key={s.studentId} s={s} />)}
+                                        </div>
+                                    )}
+                                </div>
+
                                 {topPerformers.length > 0 && (
                                     <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white">
                                         <div className="flex items-center gap-3 mb-1">

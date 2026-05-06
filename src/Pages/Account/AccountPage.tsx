@@ -3,13 +3,14 @@ import {
   Building2, Globe, Hash, Calendar,
   AlertTriangle,
   Shield, Phone, Mail, ExternalLink, RefreshCw,
-  Edit2, X, Check, MapPin, GraduationCap, CreditCard, UserCircle,
-  AlertCircle, FileText, Settings2,
+  Edit2, X, Check, MapPin, CreditCard,
+  AlertCircle, FileText, Settings2, UserCircle,
 } from "lucide-react";
 import api from "../../api/api";
 import PaymentSettingsTab from "./PaymentSettingsTab";
 import EmailServiceTab from "./EmailServiceTab";
-import Switch from "../../components/common/Switch";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -107,8 +108,6 @@ function SchoolProfileTab({ user }: { user: any }) {
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof ConfigForm, string>>>({});
-  /** Per-flag in-flight tracker so each operational toggle gets its own spinner. */
-  const [togglingFlag, setTogglingFlag] = useState<keyof ConfigForm | null>(null);
 
   const isAdmin = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'].includes(user?.role ?? '');
 
@@ -172,58 +171,6 @@ function SchoolProfileTab({ user }: { user: any }) {
 
   const handleCancel = () => { setForm(configToForm(cfg)); setEditing(false); setError(null); setValidationErrors({}); };
 
-  /**
-   * Inline-save a single boolean operational flag. Optimistically updates the
-   * local cfg + form state, calls the backend, and reverts on failure. No
-   * "Edit mode" required — the toggle is the action.
-   */
-  const toggleFlag = async (flag: 'acceptingApplications' | 'acceptingOnlineFees', next: boolean) => {
-    if (!isAdmin || togglingFlag) return;
-    setTogglingFlag(flag);
-    setError(null);
-    const prev = cfg?.[flag] ?? false;
-    // Optimistic update
-    setCfg((c: any) => ({ ...(c ?? {}), [flag]: next }));
-    setForm(p => ({ ...p, [flag]: next }));
-    try {
-      const baseline = cfg ?? configToForm(form);
-      const res = await api.updateTenantConfig({
-        // Send the full config so the upsert validator passes; only `flag` actually changes.
-        schoolName:   (baseline.schoolName ?? form.schoolName ?? '').trim() || 'School',
-        tagline:      baseline.tagline ?? null,
-        bio:          baseline.bio ?? null,
-        address:      baseline.address ?? null,
-        city:         baseline.city ?? null,
-        state:        baseline.state ?? null,
-        country:      baseline.country ?? 'India',
-        pincode:      baseline.pincode ?? null,
-        phone:        baseline.phone ?? null,
-        email:        baseline.email ?? null,
-        website:      baseline.website ?? null,
-        logoUrl:      baseline.logoUrl ?? null,
-        footerText:   baseline.footerText ?? null,
-        acceptingApplications: flag === 'acceptingApplications' ? next : (cfg?.acceptingApplications ?? false),
-        acceptingOnlineFees:   flag === 'acceptingOnlineFees'   ? next : (cfg?.acceptingOnlineFees   ?? false),
-        establishedYear:  baseline.establishedYear ?? null,
-        boardAffiliation: baseline.boardAffiliation ?? null,
-        schoolType:       baseline.schoolType ?? null,
-        principalName:    baseline.principalName ?? null,
-        emergencyContact: baseline.emergencyContact ?? null,
-      });
-      setCfg(res.config);
-      setForm(configToForm(res.config));
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2500);
-    } catch {
-      // Revert
-      setCfg((c: any) => ({ ...(c ?? {}), [flag]: prev }));
-      setForm(p => ({ ...p, [flag]: prev }));
-      setError("Failed to save toggle. Please try again.");
-    } finally {
-      setTogglingFlag(null);
-    }
-  };
-
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
       <RefreshCw size={18} className="animate-spin" />
@@ -273,77 +220,14 @@ function SchoolProfileTab({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Operational settings — always visible, ADMIN editable */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 bg-slate-50 border-b border-slate-100">
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Operational Settings</p>
-          {!isAdmin && <p className="text-[11px] text-slate-400 mt-0.5">Only Admin, Principal, or Director can change these settings.</p>}
-        </div>
-        <div className="p-5 space-y-3">
-          {[
-            {
-              key: 'acceptingApplications' as const,
-              icon: GraduationCap,
-              title: 'Accepting Student Applications',
-              desc: 'When enabled, prospective students can submit admission applications from the student portal.',
-              activeText: 'Applications Open',
-              inactiveText: 'Applications Closed',
-              activeColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-              inactiveColor: 'text-slate-600 bg-slate-100 border-slate-200',
-            },
-            {
-              key: 'acceptingOnlineFees' as const,
-              icon: CreditCard,
-              title: 'Online Fee Payments',
-              desc: 'Enable Razorpay payment gateway for students to pay fees directly from the student portal.',
-              activeText: 'Payments Enabled',
-              inactiveText: 'Payments Disabled',
-              activeColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-              inactiveColor: 'text-slate-600 bg-slate-100 border-slate-200',
-            },
-          ].map(({ key, icon: Icon, title, desc, activeText, inactiveText, activeColor, inactiveColor }) => {
-            // ALWAYS reflect the persisted state — toggling is now inline-save,
-            // so we don't need to read `form[key]` while editing.
-            const on = cfg?.[key] ?? false;
-            const busy = togglingFlag === key;
-            return (
-              <div key={key} className={`flex items-start gap-4 p-4 rounded-xl border transition-all
-                ${on ? 'bg-emerald-50/50 border-emerald-200' : 'bg-white border-slate-200'}`}>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5
-                  ${on ? 'bg-emerald-100' : 'bg-slate-100'}`}>
-                  <Icon size={16} className={on ? 'text-emerald-600' : 'text-slate-400'} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p id={`flag-${key}-label`} className="text-sm font-bold text-slate-800">{title}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${on ? activeColor : inactiveColor}`}>
-                      {on ? activeText : inactiveText}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{desc}</p>
-                  {!isAdmin && (
-                    <p className="text-[10px] text-slate-400 mt-1.5 italic">
-                      Only admin / principal / director can change this.
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0 self-center">
-                  <Switch
-                    size="md"
-                    tone="emerald"
-                    checked={on}
-                    loading={busy}
-                    disabled={!isAdmin}
-                    onChange={v => toggleFlag(key, v)}
-                    ariaLabelledBy={`flag-${key}-label`}
-                    testId={`settings-toggle-${key}`}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/*
+        Operational toggles section was removed:
+          - "Accepting Student Applications" → moved to per-session control on
+            the Sessions page (each session has its own acceptAdmission flag).
+          - "Online Fee Payments" → moved to the Payments tab where it lives
+            next to the Razorpay credentials it depends on, and is gated on
+            those credentials being configured.
+      */}
 
       {/* Main config - view or edit */}
       {!cfg && !editing ? (
@@ -610,143 +494,139 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: bool
 
 export default function AccountPage() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
-  useEffect(() => {
+  const load = useCallback((opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
+    else setRefreshing(true);
     api.getAccount()
       .then(setData)
       .catch(() => setError("Failed to load account details."))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setRefreshing(false); });
   }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center gap-3 text-slate-400">
-        <RefreshCw size={20} className="animate-spin" />
-        <p className="text-sm">Loading account…</p>
-      </div>
-    </div>
-  );
+  useEffect(() => { load(); }, [load]);
 
-  if (error || !data) return (
-    <div className="p-8 text-center text-red-500 text-sm">{error ?? "Failed to load."}</div>
-  );
-
-  const { tenant, subscription: sub, user, trialDaysRemaining } = data;
+  // Always render the PageHeader so the page chrome stays consistent
+  // with the rest of the app even while loading or in an error state.
+  const tenant = data?.tenant;
+  const sub = data?.subscription;
+  const user = data?.user;
+  const trialDaysRemaining = data?.trialDaysRemaining;
   const urgentAlert = sub?.status === 'trial' && (trialDaysRemaining ?? Infinity) <= 5;
   const isAdmin = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'].includes(user?.role ?? '');
+  const subBadge = sub ? (SUB_STATUS[sub.status] ?? SUB_STATUS.cancelled) : null;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="min-h-full bg-slate-50">
+      <PageHeader
+        icon={Settings2}
+        title="Account & Settings"
+        subtitle="Manage your school profile, platform fees and integrations"
+        gradient={MODULE_THEMES.admin}
+        onRefresh={() => load({ silent: true })}
+        refreshing={refreshing || loading}
+        primaryActions={
+          subBadge ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 border border-white/25 rounded-lg text-white text-xs font-bold shrink-0 backdrop-blur-sm">
+              <span className={`w-1.5 h-1.5 rounded-full ${subBadge.dot}`} />
+              {subBadge.label}
+            </span>
+          ) : undefined
+        }
+      />
 
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Account & Settings</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Manage your school profile and platform fees</p>
-        </div>
-        {/* Profile chip */}
-        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm">
-          <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-violet-700 font-bold text-sm">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-900 leading-tight">{user?.firstName} {user?.lastName}</p>
-            <p className="text-[11px] text-violet-600 font-semibold capitalize">{user?.role?.replace('_', ' ')} · {tenant.name}</p>
-          </div>
-          {isAdmin && (
-            <span className="ml-1 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-              <Shield size={9} /> Admin
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Urgent alert */}
-      {urgentAlert && (
-        <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
-          <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800">
-            <strong>Trial ends in {trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''}.</strong>{" "}
-            Contact <a href="mailto:hello@edupilots.in" className="underline font-semibold">hello@edupilots.in</a> to upgrade before access is restricted.
-          </p>
-        </div>
-      )}
-
-      {/* School identity quick view */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-        <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-md">
-          <span className="text-white font-black text-lg">{tenant.name?.[0]}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-slate-900">{tenant.name}</p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-            <span className="flex items-center gap-1 text-xs text-slate-500">
-              <Hash size={11} /> <span className="font-mono">{tenant.slug}</span>
-            </span>
-            <a href={tenant.origin} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700">
-              <Globe size={11} /> {tenant.origin} <ExternalLink size={9} />
-            </a>
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <Calendar size={11} /> Since {new Date(tenant.createdAt).toLocaleDateString("en-IN", { month: 'short', year: 'numeric' })}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <Mail size={11} /> {user?.email}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <Phone size={11} /> {user?.phone}
-            </span>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3 text-slate-400">
+            <RefreshCw size={20} className="animate-spin" />
+            <p className="text-sm">Loading account…</p>
           </div>
         </div>
-        {sub && (() => {
-          const s = SUB_STATUS[sub.status] ?? SUB_STATUS.cancelled;
-          return (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${s.bg} ${s.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} /> {s.label}
-            </span>
-          );
-        })()}
-      </div>
-
-      {/* Tabs — accessible, responsive */}
-      <div
-        role="tablist"
-        aria-label="Account settings sections"
-        className="flex gap-1 bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm overflow-x-auto sm:overflow-visible sm:w-fit"
-      >
-        {TABS.filter(t => !t.adminOnly || isAdmin).map(({ key, label, icon: Icon }) => {
-          const isActive = activeTab === key;
-          return (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={`tabpanel-${key}`}
-              id={`tab-${key}`}
-              onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60
-                ${isActive
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
-            >
-              <Icon size={14} />
-              {label}
+      ) : error || !data ? (
+        <div className="p-8 max-w-5xl mx-auto">
+          <div className="bg-white border border-red-200 rounded-2xl p-6 text-center">
+            <AlertCircle size={24} className="text-red-500 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-red-700">{error ?? "Failed to load."}</p>
+            <button onClick={() => load()} className="mt-4 px-4 py-2 text-xs font-semibold bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors">
+              Retry
             </button>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Body wrapper — centred max-width for readability. Tabbed
+              section below escapes the wrapper to span page-width. */}
+          <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-4">
+            {/* Urgent alert */}
+            {urgentAlert && (
+              <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+                <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">
+                  <strong>Trial ends in {trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''}.</strong>{" "}
+                  Contact <a href="mailto:hello@edupilots.in" className="underline font-semibold">hello@edupilots.in</a> to upgrade before access is restricted.
+                </p>
+              </div>
+            )}
 
-      {/* Tab content panels */}
-      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+            {/* School identity quick view */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm">
+              <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-md">
+                <span className="text-white font-black text-xl">{tenant.name?.[0]}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-slate-900">{tenant.name}</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <Hash size={11} /> <span className="font-mono">{tenant.slug}</span>
+                  </span>
+                  <a href={tenant.origin} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700">
+                    <Globe size={11} /> {tenant.origin} <ExternalLink size={9} />
+                  </a>
+                  <span className="flex items-center gap-1 text-xs text-slate-400">
+                    <Calendar size={11} /> Since {new Date(tenant.createdAt).toLocaleDateString("en-IN", { month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+              {/* Logged-in user chip */}
+              <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 shrink-0">
+                <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-violet-700 font-bold text-sm">{user?.firstName?.[0]}{user?.lastName?.[0]}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 leading-tight">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-[10px] text-violet-600 font-semibold capitalize">{user?.role?.replace('_', ' ')}</p>
+                </div>
+                {isAdmin && (
+                  <span className="ml-1 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                    <Shield size={9} /> Admin
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
-      {/* Tab content */}
-      {activeTab === 'profile'  && <SchoolProfileTab user={user} />}
-      {activeTab === 'payments' && isAdmin && <PaymentSettingsTab />}
-      {activeTab === 'email'    && isAdmin && <EmailServiceTab />}
-      </div>
+          <TabbedSection
+            idPrefix="account"
+            ariaLabel="Account settings sections"
+            theme="violet"
+            flushPanel
+            value={activeTab}
+            onChange={(k) => setActiveTab(k as Tab)}
+            tabs={TABS.filter(t => !t.adminOnly || isAdmin).map(t => ({
+                key: t.key, label: t.label, icon: t.icon as React.ComponentType<{ size?: number; className?: string }>,
+            }))}
+          >
+            <TabPanel tabKey="profile"><SchoolProfileTab user={user} /></TabPanel>
+            {isAdmin && <TabPanel tabKey="payments"><PaymentSettingsTab /></TabPanel>}
+            {isAdmin && <TabPanel tabKey="email"><EmailServiceTab /></TabPanel>}
+          </TabbedSection>
+        </>
+      )}
     </div>
   );
 }

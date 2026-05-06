@@ -4,8 +4,10 @@ import {
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
     ChevronRight, ArrowRight, Check, X, Sparkles, Receipt, Landmark, Settings,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../api/api';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { SESSIONS_QUERY_KEY } from '../../context/SessionContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1097,6 +1099,7 @@ const ReviewStep: React.FC<{
 
 const OnboardingWizard: React.FC = () => {
     const { refetch, forceComplete } = useOnboarding();
+    const queryClient = useQueryClient();
 
     const [step, setStep]             = useState(1);
     const [showErrors, setShowErrors] = useState(false);
@@ -1298,7 +1301,7 @@ const OnboardingWizard: React.FC = () => {
             for (let classIdx = 0; classIdx < classes.length; classIdx++) {
                 const cls = classes[classIdx];
                 idx = addLog(`Creating ${cls.name}…`);
-                const classRes = await api.createClass({ name: cls.name.trim(), slug: slugify(cls.name.trim()) });
+                const classRes = await api.createClass({ sessionId, name: cls.name.trim(), slug: slugify(cls.name.trim()) });
                 const classId: string = classRes.newClass?.id;
                 if (!classId) throw new Error(`Class "${cls.name}" creation did not return an ID.`);
                 updateLog(idx, 'done');
@@ -1413,11 +1416,22 @@ const OnboardingWizard: React.FC = () => {
             // 6 ── Notice board
             if (boardName.trim()) {
                 idx = addLog('Creating school notice board…');
-                await api.createNoticeBoard({ name: boardName.trim(), description: boardDesc.trim() || undefined, visibility: 'PUBLIC' });
+                await api.createNoticeBoard({ sessionId, name: boardName.trim(), description: boardDesc.trim() || undefined, visibility: 'PUBLIC' });
                 updateLog(idx, 'done');
             }
 
             setDone(true);
+            // The wizard just bulk-created sessions / classes / teachers /
+            // fees / etc. None of that data is in any React Query cache
+            // yet (the queries were created before the wizard ran). Wipe
+            // the cache so the dashboard, topbar session selector, and
+            // every list page see the fresh school data immediately.
+            await queryClient.invalidateQueries();
+            // Also explicitly refresh the global session cache so the
+            // topbar session selector (which depends on SESSIONS_QUERY_KEY
+            // and gates pages on a session being chosen) picks up the
+            // new session before SessionContext's auto-pick effect runs.
+            await queryClient.refetchQueries({ queryKey: SESSIONS_QUERY_KEY });
             await refetch();
             forceComplete();
 

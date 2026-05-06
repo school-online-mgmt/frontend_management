@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-  Plus, RefreshCcw, Users, Search, ChevronRight, Phone,
+  Plus, Users, Search, ChevronRight, Phone,
   GraduationCap, Filter, X, CheckCircle2, XCircle,
   Loader2, UserPlus, BarChart3, UserCheck, UserX,
   Briefcase, AlignJustify, Mail, MapPin, FileText,
@@ -9,7 +10,8 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import CreateTeacher from "../../components/CreateTeacher";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import type { Teacher, TeacherApplication } from "../../api/types";
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -268,9 +270,9 @@ const TeacherHome = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'teachers' | 'applications'>('teachers');
 
+  const queryClient = useQueryClient();
+
   /* ── Teachers state ── */
-  const [teachers, setTeachers]         = useState<Teacher[]>([]);
-  const [isLoading, setIsLoading]       = useState(true);
   const [isModalOpen, setIsModalOpen]   = useState(false);
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -279,43 +281,46 @@ const TeacherHome = () => {
   const [viewMode, setViewMode]         = useState<"grid" | "table">("grid");
 
   /* ── Applications state ── */
-  const [applications, setApplications]     = useState<TeacherApplication[]>([]);
-  const [appsLoading, setAppsLoading]       = useState(false);
   const [appStatusFilter, setAppStatusFilter] = useState<string>('');
 
-  const fetchTeachers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await api.getTeachers();
-      const list = Array.isArray(data) ? data : data?.teachers ?? [];
-      setTeachers(list);
-    } catch {
-      setTeachers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Teachers list — cached, shared with Dashboard via the same query key
+  // shape (`["teachers", "list"]`). Once loaded, the list is reused on
+  // navigation back to this page.
+  const teachersQuery = useQuery({
+    queryKey: ["teachers", "list"],
+    queryFn: () => api.getTeachers(),
+    select: (res: any) => Array.isArray(res) ? res : (res?.teachers ?? []),
+  });
+  const teachers: Teacher[] = teachersQuery.data ?? [];
+  const isLoading = teachersQuery.isFetching;
+  const fetchTeachers = () => queryClient.invalidateQueries({ queryKey: ["teachers", "list"] });
 
-  const fetchApplications = useCallback(async () => {
-    setAppsLoading(true);
-    try {
-      const data = await api.getTeacherApplications(appStatusFilter || undefined);
-      setApplications(data.applications ?? []);
-    } catch {
-      setApplications([]);
-    } finally {
-      setAppsLoading(false);
-    }
-  }, [appStatusFilter]);
-
-  useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
-  useEffect(() => {
-    if (activeTab === 'applications') fetchApplications();
-  }, [activeTab, fetchApplications]);
+  // Applications — only fetched when the Applications tab is active.
+  // Re-keyed by status filter so each filter has its own cache slot.
+  const applicationsQuery = useQuery({
+    queryKey: ["teacher-applications", appStatusFilter],
+    queryFn: () => api.getTeacherApplications(appStatusFilter || undefined),
+    enabled: activeTab === "applications",
+    select: (res: any) => res?.applications ?? [],
+  });
+  const applications: TeacherApplication[] = applicationsQuery.data ?? [];
+  const appsLoading = applicationsQuery.isFetching;
+  const fetchApplications = () =>
+    queryClient.invalidateQueries({ queryKey: ["teacher-applications", appStatusFilter] });
 
   const handleUpdateApplication = async (id: string, status: AppStatus, comments?: string) => {
     await api.updateTeacherApplicationStatus(id, { status, comments });
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status, comments: comments ?? a.comments } : a));
+    // Optimistically patch the cached list so the UI updates without a
+    // round trip; React Query will reconcile if a refetch arrives.
+    queryClient.setQueryData(["teacher-applications", appStatusFilter], (prev: any) => {
+      if (!prev?.applications) return prev;
+      return {
+        ...prev,
+        applications: prev.applications.map((a: TeacherApplication) =>
+          a.id === id ? { ...a, status, comments: comments ?? a.comments } : a
+        ),
+      };
+    });
   };
 
   const stats = useMemo(() => ({
@@ -369,62 +374,34 @@ const TeacherHome = () => {
       <PageHeader
         icon={Users}
         title="Teachers"
-        gradient="from-violet-600 via-purple-600 to-indigo-600"
+        gradient={MODULE_THEMES.people}
         subtitle="Manage faculty, track assignments and review job applications"
-        actions={
-          <div className="flex items-center gap-2">
-            <button onClick={activeTab === 'teachers' ? fetchTeachers : fetchApplications}
-              disabled={isLoading || appsLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
-              <RefreshCcw size={14} className={(isLoading || appsLoading) ? "animate-spin" : ""} /> Refresh
+        onRefresh={activeTab === 'teachers' ? fetchTeachers : fetchApplications}
+        refreshing={isLoading || appsLoading}
+        primaryActions={
+          activeTab === 'teachers' ? (
+            <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
+              <UserPlus size={14} /> Add Teacher
             </button>
-            {activeTab === 'teachers' && (
-              <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
-                <UserPlus size={14} /> Add Teacher
-              </button>
-            )}
-          </div>
+          ) : undefined
         }
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
-
-        {/* ── Tab switcher ─────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm w-fit">
-          <button
-            onClick={() => setActiveTab('teachers')}
-            className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl transition-all ${
-              activeTab === 'teachers'
-                ? 'bg-violet-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Users size={15} /> Teachers
-            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'teachers' ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>
-              {stats.total}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('applications')}
-            className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl transition-all ${
-              activeTab === 'applications'
-                ? 'bg-violet-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <FileText size={15} /> Applications
-            {appCounts.applied > 0 && (
-              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'applications' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>
-                {appCounts.applied}
-              </span>
-            )}
-          </button>
-        </div>
-
+      <TabbedSection
+        idPrefix="teacher"
+        theme="violet"
+        flushPanel
+        value={activeTab}
+        onChange={(k) => setActiveTab(k as typeof activeTab)}
+        tabs={[
+          { key: 'teachers',     label: 'Teachers',     icon: Users,    badge: stats.total || undefined },
+          { key: 'applications', label: 'Applications', icon: FileText, badge: appCounts.applied || undefined },
+        ]}
+      >
         {/* ─────────────── TEACHERS TAB ─────────────────────────────────── */}
-        {activeTab === 'teachers' && (
-          <>
+        <TabPanel tabKey="teachers">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard icon={Users}     label="Total Teachers" value={stats.total}    bg="bg-indigo-50"  iconColor="text-indigo-600" />
               <StatCard icon={UserCheck} label="Active"         value={stats.active}   bg="bg-emerald-50" iconColor="text-emerald-600"
@@ -669,12 +646,12 @@ const TeacherHome = () => {
                 </div>
               </div>
             )}
-          </>
-        )}
+          </div>
+        </TabPanel>
 
         {/* ─────────────── APPLICATIONS TAB ─────────────────────────────── */}
-        {activeTab === 'applications' && (
-          <>
+        <TabPanel tabKey="applications">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
             {/* App stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard icon={FileText}    label="Total"       value={appCounts.total}       bg="bg-slate-100"   iconColor="text-slate-500" />
@@ -725,9 +702,9 @@ const TeacherHome = () => {
                 ))}
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </TabPanel>
+      </TabbedSection>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import { useToast } from "../../context/ToastContext";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 
 declare global {
   interface Window { Razorpay: any; }
@@ -156,26 +157,37 @@ export default function PlatformBillsPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+  return (
+    <div className="min-h-full bg-slate-50">
+      <PageHeader
+        icon={Receipt}
+        title="Platform Bills"
+        subtitle="Admission charges, email service usage and SaaS subscription — pay one or many at once via Razorpay"
+        gradient={MODULE_THEMES.finance}
+        onRefresh={load}
+        refreshing={loading}
+        primaryActions={
+          selected.size > 0 ? (
+            <button
+              type="button"
+              disabled={paying}
+              onClick={onPaySelected}
+              data-testid="pay-selected-btn"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-emerald-700 text-sm font-bold rounded-lg hover:bg-emerald-50 transition-colors disabled:opacity-60 disabled:cursor-wait shadow-sm shrink-0"
+            >
+              <Wallet size={14} />
+              {paying ? "Processing…" : `Pay ${selected.size} bill${selected.size > 1 ? "s" : ""} · ${fmt(selectedTotal)}`}
+            </button>
+          ) : undefined
+        }
+      />
+
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-4">
+      {loading && bills.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-slate-400">
           <RefreshCw size={20} className="animate-spin mr-2" /> Loading platform bills…
         </div>
-      </div>
-    );
-
-  return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Platform bills</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Bills from EduPilots — admission charges, email service usage, and your SaaS subscription.
-          Pay one or many at once via Razorpay.
-        </p>
-      </div>
-
+      ) : (<>
       {/* Summary cards */}
       <div className="grid sm:grid-cols-3 gap-4">
         <SummaryCard
@@ -199,37 +211,28 @@ export default function PlatformBillsPage() {
         />
       </div>
 
-      {/* Filters + bulk pay */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3 justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Filters */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
           <Filter size={14} className="text-slate-400" />
+          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Filters</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => setStatusFilter(f.key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
                 statusFilter === f.key
-                  ? "bg-violet-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-emerald-300"
               }`}
             >
               {f.label}
             </button>
           ))}
         </div>
-
-        {selected.size > 0 && (
-          <button
-            type="button"
-            disabled={paying}
-            onClick={onPaySelected}
-            className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-60 disabled:cursor-wait inline-flex items-center gap-2"
-          >
-            <Wallet size={14} />
-            {paying ? "Processing…" : `Pay ${selected.size} bill${selected.size > 1 ? "s" : ""} • ${fmt(selectedTotal)}`}
-          </button>
-        )}
       </div>
 
       {/* Bills list */}
@@ -321,6 +324,8 @@ export default function PlatformBillsPage() {
       <p className="text-[11px] text-slate-400 inline-flex items-center gap-1">
         <ExternalLink size={11} /> Payments are processed under EduPilots' Razorpay account, not your school's.
       </p>
+      </>)}
+      </div>
     </div>
   );
 }

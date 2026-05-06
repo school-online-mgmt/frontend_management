@@ -7,7 +7,18 @@ import {
     AlertTriangle, Building2, Edit3, Loader2, CalendarDays, X, Calendar
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import useTabState from "../../hooks/useTabState";
+import { useSessionId } from "../../context/SessionContext";
+
+/**
+ * The four attendance tabs (Mark, Calendar, Reports, Today's Summary) all
+ * load their own section list. The chosen session is now published by
+ * the global SessionContext, so each tab reads it via `useSessionId()`.
+ */
+const useAttendanceSession = () => useSessionId();
 
 // --- Types --------------------------------------------------------------------
 interface ClassItem { id: string; name: string; sections: { id: string; name: string; teacher?: { name: string } | null }[] }
@@ -56,7 +67,17 @@ function Toast({ t, clear }: { t:{type:string;msg:string}|null; clear:()=>void }
 //  ROOT COMPONENT
 // =============================================================================
 export default function AttendanceHome() {
-    const [tab, setTab] = useState<"mark"|"calendar"|"view"|"summary">("mark");
+    const [tab, setTab] = useTabState<"mark"|"calendar"|"view"|"summary">("tab", "mark");
+    const selectedSessionId = useSessionId();
+    // Bumped by the header refresh button — used as a `key` suffix on each
+    // tab so the active tab unmounts/remounts and refetches its data.
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setRefreshing(false), 600);
+    };
     const TABS = [
         { key:"mark"     as const, label:"Mark Attendance", icon:Edit3 },
         { key:"calendar" as const, label:"Calendar View",   icon:CalendarDays },
@@ -69,26 +90,21 @@ export default function AttendanceHome() {
                 icon={ClipboardCheck}
                 title="Attendance Management"
                 subtitle="Mark, review and manage school attendance"
-                actions={
-                    <div className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
-                        {TABS.map(tb => (
-                            <button key={tb.key} onClick={() => setTab(tb.key)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
-                                }`}>
-                                <tb.icon size={13}/>{tb.label}
-                            </button>
-                        ))}
-                    </div>
-                }
+                gradient={MODULE_THEMES.attendance}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
-            <div className="flex-1 overflow-hidden">
-                <AnimatePresence mode="wait">
-                    {tab==="mark"     && <motion.div key="mark"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><MarkTab/></motion.div>}
-                    {tab==="calendar" && <motion.div key="calendar" className="h-full flex overflow-hidden" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><CalendarTab/></motion.div>}
-                    {tab==="view"     && <motion.div key="view"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><ViewTab/></motion.div>}
-                    {tab==="summary"  && <motion.div key="summary"  className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><TodaySummaryTab/></motion.div>}
-                </AnimatePresence>
+            <div className="flex-1 overflow-y-auto">
+                {!selectedSessionId ? (
+                    <div className="p-4 sm:p-6 max-w-7xl mx-auto"><EmptySessionState entityPlural="attendance records" /></div>
+                ) : (
+                    <TabbedSection tabs={TABS} value={tab} onChange={setTab} idPrefix="attendance" theme="rose" flushPanel>
+                        <TabPanel tabKey="mark"     key={`mark-${refreshKey}`}><MarkTab/></TabPanel>
+                        <TabPanel tabKey="calendar" key={`calendar-${refreshKey}`}><CalendarTab/></TabPanel>
+                        <TabPanel tabKey="view"     key={`view-${refreshKey}`}><ViewTab/></TabPanel>
+                        <TabPanel tabKey="summary"  key={`summary-${refreshKey}`}><TodaySummaryTab/></TabPanel>
+                    </TabbedSection>
+                )}
             </div>
         </div>
     );
@@ -111,12 +127,14 @@ function MarkTab() {
     const [marked,      setMarked]      = useState(false);
     const [toast,       setToast]       = useState<{type:string;msg:string}|null>(null);
     const [search,      setSearch]      = useState("");
+    const sessionId = useAttendanceSession();
 
     useEffect(() => {
-        api.getAttendanceSections().then(r => {
+        if (!sessionId) return;
+        api.getAttendanceSections(sessionId).then(r => {
             setAllClasses(r.classes || []);
         });
-    }, []);
+    }, [sessionId]);
 
     const sectionOptions = useMemo(() => {
         const opts: { id:string; label:string }[] = [];
@@ -311,10 +329,12 @@ function CalendarTab() {
     const [holidays,    setHolidays]    = useState<string[]>([]);
     const [loading,     setLoading]     = useState(false);
     const [selDay,      setSelDay]      = useState<string|null>(TODAY);
+    const sessionId = useAttendanceSession();
 
     useEffect(() => {
-        api.getAttendanceSections().then(r => setAllClasses(r.classes || []));
-    }, []);
+        if (!sessionId) return;
+        api.getAttendanceSections(sessionId).then(r => setAllClasses(r.classes || []));
+    }, [sessionId]);
 
     const sectionOptions = useMemo(() => {
         const opts: { id:string; label:string }[] = [];
@@ -535,8 +555,12 @@ function ViewTab() {
     const [summary,    setSummary]    = useState<any>({});
     const [loading,    setLoading]    = useState(false);
     const [search,     setSearch]     = useState("");
+    const sessionId = useAttendanceSession();
 
-    useEffect(() => { api.getAttendanceSections().then(r => setClasses(r.classes||[])); }, []);
+    useEffect(() => {
+        if (!sessionId) return;
+        api.getAttendanceSections(sessionId).then(r => setClasses(r.classes||[]));
+    }, [sessionId]);
     const sections = useMemo(() => classes.find(c=>c.id===selClass)?.sections||[], [classes,selClass]);
 
     const load = useCallback(async () => {

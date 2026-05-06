@@ -3,7 +3,7 @@ import React from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, LogOut, School, Users,
-  UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
+  UserPlus, UserCog, Layers, ClipboardList, Calendar, CreditCard,
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
@@ -11,8 +11,12 @@ import {
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
+import { SessionProvider } from "../context/SessionContext";
+import TopbarSessionSelector from "./common/TopbarSessionSelector";
+import TopbarClock from "./common/TopbarClock";
 import api from "../api/api";
 import DesktopOnlyGate from "./DesktopOnlyGate";
+import PageFooter from "./PageFooter";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
 // module: matches AppModule enum. null = always visible (no permission needed)
@@ -254,6 +258,19 @@ const Layout = () => {
   };
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+  // Publish the school name to a global so PageFooter can render it without
+  // wiring a context. Resolved once on mount; cheap if we already have it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.__schoolName) return;
+    api.getTenantConfig()
+      .then((res: any) => {
+        const name = res?.config?.schoolName?.trim();
+        if (name) window.__schoolName = name;
+      })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
@@ -262,21 +279,36 @@ const Layout = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Auto-expand section containing the active route
+  // Auto-expand section containing the active route. Uses the same
+  // exact-or-`/<base>/:id` rule as `isActive` so we never expand the
+  // wrong section.
   useEffect(() => {
+    const matches = (path: string) => {
+      const p = location.pathname;
+      if (p === path) return true;
+      if (path === "/dashboard" && p === "/") return true;
+      const dash = path.indexOf("-");
+      if (dash > 0) {
+        const base = path.slice(0, dash);
+        const suffix = path.slice(dash + 1).toLowerCase();
+        if (suffix === "home" && base.length > 1) {
+          if (p === base || p.startsWith(base + "/")) return true;
+        }
+      }
+      return false;
+    };
     NAV_SECTIONS.forEach(s => {
       if (!s.collapsible || s.items.length <= 1) return;
-      const hasActive = s.items.some(i =>
-        location.pathname === i.path ||
-        (i.path !== "/dashboard" && location.pathname.startsWith(i.path.split("-")[0]) && i.path.split("-")[0].length > 1)
-      );
-      if (hasActive) {
+      if (s.items.some(i => matches(i.path))) {
         setExpandedSections(prev => prev[s.label] ? prev : { ...prev, [s.label]: true });
       }
     });
   }, [location.pathname]);
 
-  // Persist nav scroll position across refreshes
+  // Persist nav scroll position across hard refreshes. Across in-app
+  // navigation we don't need this at all because SidebarContent is now
+  // invoked as a function (not a JSX component), so React diffs the nav
+  // subtree in place — the scroll offset survives route changes for free.
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -287,12 +319,51 @@ const Layout = () => {
     return () => nav.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Make sure the active nav item is in view whenever the route changes.
+  // Uses `block: "nearest"` so we never scroll if the active link is
+  // already visible — the user's manual scroll position wins. Only when
+  // the active item would be off-screen do we nudge it into view.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    // Defer to the next frame so the DOM has settled after the click +
+    // any expand/collapse re-render kicked off by `setExpandedSections`.
+    const id = requestAnimationFrame(() => {
+      const active = nav.querySelector<HTMLAnchorElement>('[data-active="true"]');
+      if (!active) return;
+      const navRect = nav.getBoundingClientRect();
+      const elRect = active.getBoundingClientRect();
+      const offscreen = elRect.top < navRect.top || elRect.bottom > navRect.bottom;
+      if (offscreen) active.scrollIntoView({ block: "nearest", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [location.pathname]);
+
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
-  const isActive = (path: string) =>
-    location.pathname === path ||
-    (path === "/dashboard" && location.pathname === "/") ||
-    (path !== "/dashboard" && location.pathname.startsWith(path.split("-")[0]) && path.split("-")[0].length > 1);
+  // A nav item is active when the current pathname is its `path` exactly,
+  // OR — for the convention `/<entity>-home` list pages — when we're on
+  // a detail route `/<entity>/:id`. Crucially, we do NOT treat other
+  // dashed routes (like `/teacher-attendance`) as variants of `/teacher`,
+  // which the old prefix-on-first-dash heuristic did and caused two nav
+  // items to highlight when on `/teacher-home`.
+  const isActive = (path: string) => {
+    const p = location.pathname;
+    if (p === path) return true;
+    if (path === "/dashboard" && p === "/") return true;
+    const dash = path.indexOf("-");
+    if (dash > 0) {
+      const base   = path.slice(0, dash);            // "/teacher" from "/teacher-home"
+      const suffix = path.slice(dash + 1).toLowerCase(); // "home"
+      // Only the *-home / *-Home list page claims its `/<base>/:id`
+      // detail route. Sibling dashed routes (teacher-attendance, etc.)
+      // are exact-match only.
+      if (suffix === "home" && base.length > 1) {
+        if (p === base || p.startsWith(base + "/")) return true;
+      }
+    }
+    return false;
+  };
 
   const isSectionActive = (section: typeof NAV_SECTIONS[0]) =>
     section.items.some(i => isActive(i.path));
@@ -354,6 +425,7 @@ const Layout = () => {
                         <Link key={item.path} to={item.path}
                           data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
                           data-nav-label={item.label}
+                          data-active={active ? "true" : undefined}
                           title={!showFull ? item.label : undefined}
                           className={`group flex items-center gap-2.5 rounded-lg transition-all duration-200 relative
                             ${showFull ? "px-2.5 py-2" : "justify-center px-2 py-2"}
@@ -384,6 +456,7 @@ const Layout = () => {
                         <Link key={item.path} to={item.path} title={item.label}
                           data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
                           data-nav-label={item.label}
+                          data-active={active ? "true" : undefined}
                           className={`group flex justify-center px-2 py-2 rounded-lg transition-all duration-200 relative
                             ${active ? "bg-emerald-500/15 text-emerald-400" : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
                         >
@@ -486,13 +559,19 @@ const Layout = () => {
   };
 
   return (
+    <SessionProvider>
     <div className="flex h-screen bg-slate-100 overflow-hidden">
       {/* Mobile devices see a desktop-required gate instead of the cramped layout */}
       <DesktopOnlyGate />
       {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
-        <SidebarContent />
+        {/* Invoke SidebarContent as a plain function call (not as a JSX
+            component) so React diffs the returned JSX in place across
+            route changes. Rendering it as `<SidebarContent />` would
+            create a new component type on every Layout render — that
+            unmounts the <nav> and resets scroll position to 0. */}
+        {SidebarContent({})}
         {/* Collapse extender tab — matches the h-14 (56px) brand header */}
         <button
           onClick={() => setCollapsed((c) => !c)}
@@ -510,7 +589,7 @@ const Layout = () => {
 
       {/* Mobile Sidebar — capped width so it never covers the whole screen on tiny devices */}
       <aside className={`fixed left-0 top-0 bottom-0 z-50 w-[min(280px,85vw)] shadow-2xl transform transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <SidebarContent isMobile />
+        {SidebarContent({ isMobile: true })}
       </aside>
 
       {/* Main area */}
@@ -527,13 +606,15 @@ const Layout = () => {
           </button>
           <div className="flex-1 min-w-0" />
 
-          <div className="flex items-center gap-1">
-            <button
-              aria-label="Notifications"
-              className="relative w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-slate-900" />
-            </button>
+          <div className="flex items-center gap-1.5">
+            {/* Live IST clock — shows current date + time so management
+                always knows the timezone of every action they take. */}
+            <TopbarClock />
+
+            {/* Global session selector — applies to every page that scopes
+                data per academic session. Lives here instead of per-page
+                so changing sessions updates everything at once. */}
+            <TopbarSessionSelector />
             <div ref={profileRef} className="relative">
               <button onClick={() => setProfileOpen((o) => !o)}
                 aria-label="Open account menu"
@@ -574,14 +655,21 @@ const Layout = () => {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* Page content. Outlet renders the page; the shared footer hangs
+            below it inside the same scroll container. flex-col + min-h-full
+            on the inner wrapper makes the footer stick to the bottom of
+            short pages instead of floating mid-screen. */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-100">
-          <div className="min-h-full">
-            <Outlet />
+          <div className="min-h-full flex flex-col">
+            <div className="flex-1 flex flex-col">
+              <Outlet />
+            </div>
+            <PageFooter />
           </div>
         </main>
       </div>
     </div>
+    </SessionProvider>
   );
 };
 

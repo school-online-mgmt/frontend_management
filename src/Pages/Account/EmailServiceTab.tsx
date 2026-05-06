@@ -245,7 +245,7 @@ export default function EmailServiceTab() {
     : "partial";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* ── HERO: master power switch + status diagnostic ────────────────── */}
       <HeroPanel
         state={heroState}
@@ -548,22 +548,22 @@ function HeroPanel({
     <div
       className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${palette.bg} border border-slate-200 ring-4 ${palette.ring} ring-opacity-30 shadow-sm`}
     >
-      <div className="p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-6">
+      <div className="p-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
           {/* Status icon + label */}
           <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className={`w-14 h-14 rounded-2xl grid place-items-center shrink-0 ${palette.iconBg}`}>
+            <div className={`w-8 h-8 rounded-2xl grid place-items-center shrink-0 ${palette.iconBg}`}>
               <Power size={26} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`w-2.5 h-2.5 rounded-full ${palette.dot} ${state !== "off" ? "animate-pulse" : ""}`} />
-                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <span className={`w-2 h-2 rounded-full ${palette.dot} ${state !== "off" ? "animate-pulse" : ""}`} />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                   Master switch — {masterOn ? "ON" : "OFF"}
                 </p>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 leading-tight">{palette.label}</h2>
-              <p className="text-sm text-slate-600 mt-1">{subtitle}</p>
+              <h2 className="text-m font-bold text-slate-900 leading-tight">{palette.label}</h2>
+              <p className="text-xs text-slate-600 mt-1">{subtitle}</p>
             </div>
           </div>
 
@@ -572,7 +572,7 @@ function HeroPanel({
             type="button"
             disabled={savingEnable || !canEnable}
             onClick={onToggle}
-            className={`shrink-0 w-full lg:w-auto px-6 py-3.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2.5 transition-all shadow-sm ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2.5 transition-all shadow-sm ${
               masterOn
                 ? "bg-white border-2 border-slate-300 text-slate-700 hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50"
                 : "bg-violet-600 text-white border-2 border-violet-600 hover:bg-violet-700 hover:border-violet-700 disabled:bg-slate-300 disabled:border-slate-300 disabled:text-slate-500"
@@ -589,7 +589,7 @@ function HeroPanel({
         </div>
 
         {/* Diagnostic strip — shows the three gates at-a-glance */}
-        <div className="mt-5 pt-5 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="mt-2 pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <DiagnosticPill
             label="Master switch"
             ok={masterOn}
@@ -646,7 +646,7 @@ function DiagnosticPill({
   label: string; ok: boolean; okText: string; badText: string;
 }) {
   return (
-    <div className={`rounded-xl px-3.5 py-2.5 border text-xs ${
+    <div className={`rounded-xl p-1.5 border text-xs ${
       ok ? "bg-emerald-50/60 border-emerald-200" : "bg-rose-50/60 border-rose-200"
     }`}>
       <div className="flex items-center gap-2 mb-0.5">

@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
     BarChart3, TrendingUp, Users, Award, Trophy, Target,
-    BookOpen, RefreshCw, ChevronRight, Filter,
+    BookOpen, ChevronRight, Filter,
     Loader2, ArrowUp, Medal, School, Search, X,
     UserCheck, GraduationCap,
     Layers, Star,
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { useSession } from "../../context/SessionContext";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
@@ -124,11 +126,12 @@ const FilterBadge = ({ label, onClear }: { label: string; onClear: () => void })
 
 // â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PerformancePage: React.FC = () => {
-    const [sessions, setSessions] = useState<any[]>([]);
+    // Session is supplied by the global SessionContext (rendered in the
+    // layout topbar). Pages just consume it.
+    const { selectedSessionId: sessionId } = useSession();
     const [classes, setClasses] = useState<any[]>([]);
     const [sections, setSections] = useState<any[]>([]);
     const [students, setStudents] = useState<any[]>([]);
-    const [sessionId, setSessionId] = useState("");
     const [classId, setClassId] = useState("");
     const [sectionId, setSectionId] = useState("");
     const [term, setTerm] = useState("");
@@ -139,11 +142,11 @@ const PerformancePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState<"overview" | "class" | "section" | "subject" | "students" | "student-detail">("overview");
 
-    // Load sessions & classes
+    // Load classes scoped to the chosen session.
     useEffect(() => {
-        api.getSessions().then(s => { setSessions(s); if (s.length && !sessionId) setSessionId(s[0].id); });
-        api.getClasses().then(setClasses);
-    }, []);
+        if (!sessionId) { setClasses([]); return; }
+        api.getClasses(sessionId).then(setClasses);
+    }, [sessionId]);
 
     // Load sections when class changes
     useEffect(() => {
@@ -232,18 +235,26 @@ const PerformancePage: React.FC = () => {
             <PageHeader
                 icon={BarChart3}
                 title="Performance Analytics"
-                gradient="from-purple-600 via-violet-600 to-indigo-600"
+                gradient={MODULE_THEMES.performance}
                 subtitle="School-wide academic performance tracking & insights"
-                actions={
-                    <button onClick={() => { if (sessionId) { setLoading(true); api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined, term: term || undefined, studentId: studentId || undefined }).then(setData).finally(() => setLoading(false)); } }}
-                        disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-xs font-semibold text-white hover:bg-white/20 transition-all backdrop-blur-sm">
-                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
-                    </button>
-                }
+                onRefresh={() => {
+                    if (sessionId) {
+                        setLoading(true);
+                        api.getPerformanceDashboard({
+                            sessionId,
+                            classId: classId || undefined,
+                            sectionId: sectionId || undefined,
+                            term: term || undefined,
+                            studentId: studentId || undefined,
+                        }).then(setData).finally(() => setLoading(false));
+                    }
+                }}
+                refreshing={loading}
             />
             <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
 
-            {/* Filters */}
+            {/* Refinement filters (term / class / section / student) — session
+                lives in the header. */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                     <Filter size={14} className="text-slate-400" />
@@ -256,19 +267,13 @@ const PerformancePage: React.FC = () => {
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <select value={sessionId} onChange={e => setSessionId(e.target.value)}
-                        className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors font-medium">
-                        <option value="">Select Session</option>
-                        {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    {/* Term + (optional) Section + student search. The class
+                        filter was removed per request — drill-down by class
+                        happens via the Class breakdown tab; section filtering
+                        is more useful as a refinement and is kept. */}
                     <select value={term} onChange={e => setTerm(e.target.value)}
                         className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors font-medium">
                         {TERMS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
-                    <select value={classId} onChange={e => setClassId(e.target.value)}
-                        className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors font-medium">
-                        <option value="">All Classes</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     {sections.length > 0 && (
                         <select value={sectionId} onChange={e => setSectionId(e.target.value)}
@@ -324,34 +329,35 @@ const PerformancePage: React.FC = () => {
                 )}
             </div>
 
-            {/* Tabs */}
-            <div className="bg-white border border-slate-200 p-1 rounded-2xl flex gap-0.5 overflow-x-auto shadow-sm">
-                {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key as any)}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                            tab === t.key ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                        }`}>
-                        <t.icon size={13} /> {t.label}
-                    </button>
-                ))}
-            </div>
-
-            {loading ? (
-                <div className="bg-white rounded-2xl border p-20 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance data…</p></div>
-                </div>
-            ) : !summary ? (
-                <div className="bg-white rounded-2xl border p-20 flex flex-col items-center gap-4 text-center">
-                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center"><BarChart3 size={28} className="text-slate-300" /></div>
-                    <div>
-                        <p className="font-bold text-slate-600 text-sm">No Published Results Found</p>
-                        <p className="text-xs text-slate-400 mt-1 max-w-xs">Performance data will appear here once exam results are published for the selected session.</p>
-                    </div>
-                </div>
-            ) : (
-                <>
+            {/* Tabbed views — strip + active panel inside one bordered card */}
+            <TabbedSection
+                idPrefix="performance"
+                value={tab}
+                onChange={(k) => setTab(k as typeof tab)}
+                theme="indigo"
+                flushPanel
+                tabs={TABS as any}
+            >
+                {(() => {
+                    const panelLoading = (
+                        <div className="p-12 sm:p-16 flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-3"><Loader2 size={28} className="animate-spin text-indigo-600" /><p className="text-sm text-slate-500 font-medium">Loading performance data…</p></div>
+                        </div>
+                    );
+                    const panelEmpty = (
+                        <div className="p-12 sm:p-16 flex flex-col items-center gap-4 text-center">
+                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center"><BarChart3 size={28} className="text-slate-300" /></div>
+                            <div>
+                                <p className="font-bold text-slate-600 text-sm">No Published Results Found</p>
+                                <p className="text-xs text-slate-400 mt-1 max-w-xs">Performance data will appear here once exam results are published for the selected session.</p>
+                            </div>
+                        </div>
+                    );
+                    const panelGate = (content: React.ReactNode): React.ReactNode =>
+                        loading ? panelLoading : !summary ? panelEmpty : <div className="p-4 sm:p-5 md:p-6">{content}</div>;
+                    return (<>
                     {/* â”€â”€ OVERVIEW TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "overview" && (
+                    <TabPanel tabKey="overview">{panelGate(tab === "overview" && summary && (
                         <div className="space-y-5">
                             {/* Stats */}
                             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -450,10 +456,10 @@ const PerformancePage: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    )}
+                    ))}</TabPanel>
 
                     {/* â”€â”€ CLASS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "class" && (
+                    <TabPanel tabKey="class">{panelGate(tab === "class" && summary && (
                         <div className="space-y-5">
                             {radarClasses.length >= 3 && (
                                 <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -494,10 +500,10 @@ const PerformancePage: React.FC = () => {
                                 {classBreakdown.length === 0 && <div className="p-12 text-center text-sm text-slate-400">No class data available</div>}
                             </div>
                         </div>
-                    )}
+                    ))}</TabPanel>
 
                     {/* â”€â”€ SECTION TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "section" && (
+                    <TabPanel tabKey="section">{panelGate(tab === "section" && summary && (
                         <div className="space-y-5">
                             {radarSections.length >= 3 && (
                                 <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -538,10 +544,10 @@ const PerformancePage: React.FC = () => {
                                 {sectionBreakdown.length === 0 && <div className="p-12 text-center text-sm text-slate-400">No section data available</div>}
                             </div>
                         </div>
-                    )}
+                    ))}</TabPanel>
 
                     {/* â”€â”€ SUBJECT TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "subject" && (
+                    <TabPanel tabKey="subject">{panelGate(tab === "subject" && summary && (
                         <div className="space-y-5">
                             {radarSubjects.length >= 3 && (
                                 <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -579,10 +585,10 @@ const PerformancePage: React.FC = () => {
                                 <div className="bg-white rounded-2xl border p-12 text-center text-sm text-slate-400">No subject data available</div>
                             )}
                         </div>
-                    )}
+                    ))}</TabPanel>
 
                     {/* â”€â”€ TOP STUDENTS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "students" && (
+                    <TabPanel tabKey="students">{panelGate(tab === "students" && summary && (
                         <div className="space-y-5">
                             {topPerformers.length > 0 && (
                                 <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
@@ -646,10 +652,10 @@ const PerformancePage: React.FC = () => {
                                 {topPerformers.length === 0 && <div className="p-12 text-center text-sm text-slate-400">No student data available</div>}
                             </div>
                         </div>
-                    )}
+                    ))}</TabPanel>
 
                     {/* â”€â”€ STUDENT DETAIL TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-                    {tab === "student-detail" && studentId && (
+                    <TabPanel tabKey="student-detail">{panelGate(tab === "student-detail" && studentId && summary && (
                         <div className="space-y-5">
                             {/* Student performance = same as school summary but for one student */}
                             <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
@@ -727,9 +733,10 @@ const PerformancePage: React.FC = () => {
                                 })}
                             </div>
                         </div>
-                    )}
-                </>
-            )}
+                    ))}</TabPanel>
+                    </>);
+                })()}
+            </TabbedSection>
             </div>
         </div>
     );

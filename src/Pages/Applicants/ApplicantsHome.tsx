@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCcw, Search, X, Filter, Users, UserCheck,
   UserX, Clock, ChevronRight, Phone, Mail, Calendar,
   AlertCircle, CheckCircle2, XCircle, ClipboardList, Loader2,
-  TrendingUp, Accessibility, Hourglass,
+  TrendingUp, Accessibility, Hourglass, CheckCircle,
 } from 'lucide-react';
 import api from '../../api/api';
 import type { Applicant } from '../../api/types';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
+import { EmptySessionState } from '../../components/common/SessionGate';
+import { useSession } from '../../context/SessionContext';
+import ActionBar from '../../components/common/ActionBar';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
@@ -84,14 +88,17 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ type, applicant, onConfirm,
   );
 };
 
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const ApplicantsHome: React.FC = () => {
-  const [applicants, setApplicants]     = useState<Applicant[]>([]);
-  const [loading, setLoading]           = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [genderFilter, setGenderFilter] = useState('');
+  // Applicants are session-scoped — the chosen session id comes from the
+  // global SessionContext rendered in the layout topbar.
+  const { selectedSessionId, loading: sessionsLoading } = useSession();
+  const queryClient = useQueryClient();
   const [showFilters, setShowFilters]   = useState(false);
   const [confirm, setConfirm]           = useState<{ type: 'accept' | 'reject'; applicant: Applicant } | null>(null);
   const [toast, setToast]               = useState<{ msg: string; ok: boolean } | null>(null);
@@ -102,19 +109,23 @@ const ApplicantsHome: React.FC = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const fetchApplicants = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.getApplicants();
-      setApplicants(Array.isArray(data) ? data : []);
-    } catch {
-      showToast('Failed to load applicants.', false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchApplicants(); }, [fetchApplicants]);
+  // Applicants list — cached per session id. Switching sessions reads
+  // the cached array when available; revisit feels instant.
+  const applicantsQuery = useQuery({
+    queryKey: ['applicants', 'list', selectedSessionId],
+    queryFn: () => api.getApplicants(selectedSessionId),
+    enabled: !!selectedSessionId,
+  });
+  useEffect(() => {
+    if (applicantsQuery.error) showToast('Failed to load applicants.', false);
+  }, [applicantsQuery.error]);
+  const applicants: Applicant[] = useMemo(
+    () => Array.isArray(applicantsQuery.data) ? applicantsQuery.data : [],
+    [applicantsQuery.data]
+  );
+  const loading = applicantsQuery.isFetching;
+  const fetchApplicants = () =>
+    queryClient.invalidateQueries({ queryKey: ['applicants', 'list', selectedSessionId] });
 
   const handleAccept = async (applicant: Applicant) => {
     setActionLoading(true);
@@ -238,15 +249,35 @@ const ApplicantsHome: React.FC = () => {
         icon={ClipboardList}
         title="Applicant Management"
         subtitle="Review, accept or reject student applications"
-        actions={
-          <button onClick={fetchApplicants} disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-bold rounded-xl hover:bg-white/20 active:scale-95 disabled:opacity-50 transition-all backdrop-blur-sm">
-            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
-        }
+        gradient={MODULE_THEMES.people}
+        onRefresh={fetchApplicants}
+        refreshing={loading}
       />
 
-      <div className="max-w-7xl mx-auto px-3 lg:px-5 py-3 space-y-2.5">
+      <div className="max-w-7xl mx-auto p-2 space-y-1.5">
+
+        {/* Page-level summary stats. */}
+        {selectedSessionId && applicants.length > 0 && (
+          <ActionBar
+            leading={
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
+                  <CheckCircle size={11} /> {applicants.filter(a => a.status === 'ACCEPTED').length} accepted
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 font-bold">
+                  <Clock size={11} /> {applicants.filter(a => a.status === 'APPLIED').length} pending
+                </span>
+              </div>
+            }
+          />
+        )}
+
+        {/* Empty state when no session is selected */}
+        {!selectedSessionId && !sessionsLoading && (
+          <EmptySessionState entityPlural="applicants" />
+        )}
+
+        {selectedSessionId && (<>
 
         {/* ── Primary stat strip (compact) ─────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -377,6 +408,8 @@ const ApplicantsHome: React.FC = () => {
 
           {showFilters && (
             <div className="mt-2 pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Session is selected as a primary gate above; status + gender
+                  remain as the in-list refinement filters here. */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
                 <div className="flex flex-wrap gap-1.5">
@@ -547,6 +580,7 @@ const ApplicantsHome: React.FC = () => {
             </div>
           )}
         </div>
+        </>)}
       </div>
     </div>
   );
