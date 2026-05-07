@@ -20,6 +20,12 @@ interface Applicant {
   disability: boolean;
   status: string;
   createdAt: string;
+  // ── Preferences captured at application time (used by the pre-fill effect
+  // below). The applicant only flags whether they want transport; the
+  // school assigns the actual zone here at admit time.
+  sessionId?: string;
+  desiredClassId?: string | null;
+  transportOpted?: boolean;
 }
 
 interface AdmissionRequest {
