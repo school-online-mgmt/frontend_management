@@ -648,9 +648,11 @@ const AssignmentsPage = () => {
                 return (
                   <div key={cls.id}>
                     {/* Class row */}
-                    <div data-testid={`class-row`} data-class-name={cls.name} className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors group ${(!cls.teacher || cls.sections.some(s => !s.teacher)) ? "border-l-2 border-amber-400" : ""}`}>
+                    <div data-testid={`class-row`} data-class-name={cls.name} data-expanded={isExpanded ? "true" : "false"} className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors group ${(!cls.teacher || cls.sections.some(s => !s.teacher)) ? "border-l-2 border-amber-400" : ""}`}>
                       {/* Expand toggle */}
                       <button onClick={() => toggleClass(cls.id)}
+                        data-testid="expand-class-toggle"
+                        data-class-name={cls.name}
                         className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors shrink-0">
                         <ChevronDown size={15} className={`transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
                       </button>
