@@ -1,17 +1,18 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
-  Plus, BookOpen, RefreshCcw, Filter, Search, X,
+  Plus, BookOpen, Filter, Search, X,
   ChevronRight, Loader2, CheckCircle2, XCircle,
   BarChart3, AlignJustify, BookMarked, FlaskConical,
   Languages, Calculator, Palette, UserCheck, AlertTriangle,
-  CalendarDays,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateSubject from "../../components/CreateSubject.tsx";
 import type { Subject, Session } from "../../api/types";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSession } from "../../context/SessionContext";
 
 /* ── Subject type config ─────────────────────────────────────────────────── */
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof BookOpen; bg: string; text: string; border: string }> = {
@@ -130,13 +131,15 @@ const SubjectCard = ({
 const SubjectPage = () => {
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedSession, setSelectedSession]     = useState("");
+  // Session id comes from the layout-level SessionContext.
+  const { selectedSessionId: selectedSession, sessions: ctxSessions, loading: sessionsLoading } = useSession();
+  const sessions = ctxSessions as unknown as Session[];
+  const sessionPicked = !!selectedSession;
   const [selectedType, setSelectedType]           = useState("");
   const [statusFilter, setStatusFilter]           = useState<"all" | "active" | "inactive">("all");
   const [search, setSearch]                       = useState("");
   const [showFilters, setShowFilters]             = useState(false);
   const [viewMode, setViewMode]                   = useState<"grid" | "table">("grid");
-  const [sessionPicked, setSessionPicked]         = useState(false);
 
   const {
     data: subjects = [], isLoading: subjectsLoading, refetch: refetchSubjects,
@@ -146,27 +149,6 @@ const SubjectPage = () => {
     staleTime: 5 * 60 * 1000,
     enabled: sessionPicked,
   });
-
-  const {
-    data: sessions = [], isLoading: sessionsLoading,
-  } = useQuery<Session[]>({
-    queryKey: ["sessions"],
-    queryFn: async () => {
-      const data = await api.getSessions();
-      return Array.isArray(data) ? data : data?.sessions ?? [];
-    },
-    staleTime: 10 * 60 * 1000,
-  });
-
-  // Auto-pick the ACTIVE session once sessions load.
-  useEffect(() => {
-    if (selectedSession || sessions.length === 0) return;
-    const active = (sessions as any[]).find(s => s.status === "ACTIVE") ?? sessions[0];
-    if (active) {
-      setSelectedSession(active.id);
-      setSessionPicked(true);
-    }
-  }, [sessions, selectedSession]);
 
   const {
     data: teachers = [],
@@ -259,68 +241,24 @@ const SubjectPage = () => {
       <PageHeader
         icon={BookOpen}
         title="Subjects"
-        gradient="from-amber-600 via-orange-600 to-red-500"
+        gradient={MODULE_THEMES.academics}
         subtitle="Manage curriculum subjects, track teacher assignments and course coverage"
-        actions={
-          <div className="flex items-center gap-2">
-            <button onClick={() => refetchSubjects()} disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
-              <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
-            </button>
-            <button data-testid="create-subject-btn" onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
-              <Plus size={14} /> Create Subject
-            </button>
-          </div>
+        onRefresh={() => refetchSubjects()}
+        refreshing={isLoading}
+        primaryActions={
+          <button data-testid="create-subject-btn" onClick={() => setIsCreateModalOpen(true)}
+            disabled={!selectedSession}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+            <Plus size={14} /> Create Subject
+          </button>
         }
       />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 
-        {/* ── Session selector (required) ──────────────────────────────────── */}
-        <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-xl p-3 sm:p-4 text-white shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
-                <CalendarDays size={17} />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-white/70">Academic Session</p>
-                <p className="text-[11px] text-white/80">Pick a session to view its subjects</p>
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <select
-                data-testid="subjects-session-select"
-                value={selectedSession}
-                onChange={e => { setSelectedSession(e.target.value); setSessionPicked(!!e.target.value); }}
-                disabled={sessionsLoading}
-                className="w-full px-3 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-              >
-                {sessionsLoading && <option>Loading sessions…</option>}
-                {!sessionsLoading && sessions.length === 0 && <option value="">No sessions found</option>}
-                {!sessionsLoading && sessions.length > 0 && <option value="">— Select a session —</option>}
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}{(s as any).status && (s as any).status !== "ACTIVE" ? ` (${(s as any).status.toLowerCase()})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Empty gate */}
         {!selectedSession && !sessionsLoading && (
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-100">
-              <CalendarDays size={26} className="text-amber-400" />
-            </div>
-            <p className="text-sm font-bold text-slate-700 mb-1">Pick a session to begin</p>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Subjects are scoped to a single academic session. Choose one above.
-            </p>
-          </div>
+          <EmptySessionState entityPlural="subjects" />
         )}
 
         {selectedSession && (<>

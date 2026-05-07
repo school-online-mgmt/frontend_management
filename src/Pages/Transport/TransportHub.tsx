@@ -6,8 +6,11 @@ import {
     Shield, Loader2, CheckCircle, AlertCircle, Info,
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import useTabState from "../../hooks/useTabState";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useSessionId } from "../../context/SessionContext";
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 const fmt = (n: number) => `₹${(n ?? 0).toLocaleString("en-IN")}`;
@@ -18,9 +21,12 @@ type TabId = "dashboard" | "students" | "buses" | "zones";
 /* ══════════════════════════════════════════════════════════════════════════════
    DASHBOARD TAB
 ══════════════════════════════════════════════════════════════════════════════ */
-function DashboardTab({ sessions }: { sessions: any[] }) {
-    const [sessionId, setSessionId] = useState("");
-    const { data, isLoading, refetch, isFetching } = useQuery({
+function DashboardTab() {
+    // Session id is provided by the global SessionContext (rendered in
+    // the layout topbar). When no session is chosen, the dashboard shows
+    // school-wide totals.
+    const sessionId = useSessionId();
+    const { data, isLoading } = useQuery({
         queryKey: ["transport-dashboard", sessionId],
         queryFn: () => api.getTransportDashboard(sessionId ? { sessionId } : undefined),
         staleTime: 60_000,
@@ -29,20 +35,7 @@ function DashboardTab({ sessions }: { sessions: any[] }) {
     const overallPct = pct(d?.totalCollected ?? 0, d?.totalMonthlyDemand ?? 0);
 
     return (
-        <div className="space-y-6">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <select value={sessionId} onChange={e => setSessionId(e.target.value)}
-                    className="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:border-indigo-400">
-                    <option value="">All Sessions</option>
-                    {sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <button onClick={() => refetch()} disabled={isFetching}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-500 hover:text-slate-700 bg-white disabled:opacity-50">
-                    <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />Refresh
-                </button>
-            </div>
-
+        <div className="p-4 sm:p-5 md:p-6 space-y-6">
             {isLoading ? (
                 <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-500" size={28} /></div>
             ) : (
@@ -810,9 +803,9 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
    MAIN HUB
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function TransportHub() {
-    const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+    const [activeTab, setActiveTab] = useTabState<TabId>("tab", "dashboard");
 
-    const { data: zonesData, isLoading: zonesLoading, refetch: refetchZones } = useQuery({
+    const { data: zonesData, isLoading: zonesLoading, refetch: refetchZones, isFetching: zonesFetching } = useQuery({
         queryKey: ["transport-zones"],
         queryFn: () => api.getTransportZones(),
         staleTime: 60_000,
@@ -826,39 +819,37 @@ export default function TransportHub() {
     const zones: any[] = zonesData?.zones ?? [];
     const sessions: any[] = sessionsData ?? [];
 
-    const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-        { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-        { id: "students", label: "Students", icon: Users },
-        { id: "buses", label: "Bus Fleet", icon: Bus },
-        { id: "zones", label: "Zones", icon: MapPin },
+    const TABS = [
+        { key: "dashboard" as const, label: "Dashboard", icon: BarChart3 },
+        { key: "students"  as const, label: "Students",  icon: Users },
+        { key: "buses"     as const, label: "Bus Fleet", icon: Bus },
+        { key: "zones"     as const, label: "Zones",     icon: MapPin },
     ];
 
     return (
-        <div className="min-h-full bg-slate-50">
+        <div className="min-h-full bg-slate-50 flex flex-col">
             <PageHeader
                 icon={Bus}
                 title="Transport Management"
                 subtitle="Manage school buses, routes, zones and student transport assignments"
-                gradient="from-indigo-600 via-violet-600 to-purple-700"
+                gradient={MODULE_THEMES.transport}
+                onRefresh={() => refetchZones()}
+                refreshing={zonesFetching}
             />
 
-            <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-                {/* Tab Bar — matches FeesHub pattern */}
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
-                    {TABS.map(tab => (
-                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all
-                                ${activeTab === tab.id ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>
-                            <tab.icon size={16} />{tab.label}
-                        </button>
-                    ))}
-                </div>
-
-                {activeTab === "dashboard" && <DashboardTab sessions={sessions} />}
-                {activeTab === "students" && <StudentsTab sessions={sessions} zones={zones} />}
-                {activeTab === "buses" && <BusFleetTab zones={zones} />}
-                {activeTab === "zones" && <ZonesTab zones={zones} zonesLoading={zonesLoading} refetchZones={refetchZones} />}
-            </div>
+            <TabbedSection
+                idPrefix="transport"
+                value={activeTab}
+                onChange={setActiveTab}
+                tabs={TABS}
+                theme="cyan"
+                flushPanel
+            >
+                <TabPanel tabKey="dashboard"><DashboardTab /></TabPanel>
+                <TabPanel tabKey="students"><StudentsTab sessions={sessions} zones={zones} /></TabPanel>
+                <TabPanel tabKey="buses"><BusFleetTab zones={zones} /></TabPanel>
+                <TabPanel tabKey="zones"><ZonesTab zones={zones} zonesLoading={zonesLoading} refetchZones={refetchZones} /></TabPanel>
+            </TabbedSection>
         </div>
     );
 }

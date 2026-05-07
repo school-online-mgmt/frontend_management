@@ -16,6 +16,15 @@ export interface Applicant {
   createdAt: string;
   updatedAt: string;
   tenantId: string;
+  // ── Applicant preferences captured at submission time ────────────────────
+  // The applicant only flags whether they want transport; the school assigns
+  // the actual zone at admit time on the `academics` row.
+  dateOfBirth?: string | null;
+  sessionId?: string;
+  sessionName?: string | null;
+  desiredClassId?: string | null;
+  desiredClassName?: string | null;
+  transportOpted?: boolean;
 }
 
 export interface Student {
@@ -201,6 +210,8 @@ export interface ExamResult {
 }
 
 export interface CreateClassData {
+  /** The session this class belongs to. Required since classes are session-scoped. */
+  sessionId: string;
   name: string;
   slug: string;
   description?: string;

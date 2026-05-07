@@ -7,7 +7,13 @@ import {
     AlertTriangle, Edit3, Loader2, CalendarDays, X, Calendar, UserCheck
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import useTabState from "../../hooks/useTabState";
+import { useSessionId } from "../../context/SessionContext";
+
+const useTeacherAttendanceSession = () => useSessionId();
 
 interface Teacher {
     id: string; name: string; phone: string | null;
@@ -48,7 +54,15 @@ function Toast({ t, clear }: { t:{type:string;msg:string}|null; clear:()=>void }
 }
 
 export default function TeacherAttendanceHome() {
-    const [tab, setTab] = useState<"mark"|"calendar"|"view"|"summary">("mark");
+    const [tab, setTab] = useTabState<"mark"|"calendar"|"view"|"summary">("tab", "mark");
+    const selectedSessionId = useSessionId();
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setRefreshing(false), 600);
+    };
     const TABS = [
         { key:"mark"     as const, label:"Mark Attendance", icon:Edit3 },
         { key:"calendar" as const, label:"Calendar View",   icon:CalendarDays },
@@ -61,26 +75,21 @@ export default function TeacherAttendanceHome() {
                 icon={UserCheck}
                 title="Teacher Attendance"
                 subtitle="Mark, review and manage teacher daily attendance"
-                actions={
-                    <div className="flex bg-white/15 rounded-xl p-1 gap-0.5 backdrop-blur-sm">
-                        {TABS.map(tb => (
-                            <button key={tb.key} onClick={() => setTab(tb.key)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-all ${
-                                    tab===tb.key ? "bg-white text-emerald-700 shadow-sm" : "text-white/80 hover:text-white hover:bg-white/10"
-                                }`}>
-                                <tb.icon size={13}/>{tb.label}
-                            </button>
-                        ))}
-                    </div>
-                }
+                gradient={MODULE_THEMES.attendance}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
-            <div className="flex-1 overflow-hidden">
-                <AnimatePresence mode="wait">
-                    {tab==="mark"     && <motion.div key="mark"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><MarkTab/></motion.div>}
-                    {tab==="calendar" && <motion.div key="calendar" className="h-full flex overflow-hidden" initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><CalendarTab/></motion.div>}
-                    {tab==="view"     && <motion.div key="view"     className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><ViewTab/></motion.div>}
-                    {tab==="summary"  && <motion.div key="summary"  className="h-full overflow-y-auto"      initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}><TodaySummaryTab/></motion.div>}
-                </AnimatePresence>
+            <div className="flex-1 overflow-y-auto">
+                {!selectedSessionId ? (
+                    <div className="p-4 sm:p-6 max-w-7xl mx-auto"><EmptySessionState entityPlural="teacher attendance records" /></div>
+                ) : (
+                    <TabbedSection tabs={TABS} value={tab} onChange={setTab} idPrefix="teacherAtt" theme="rose" flushPanel>
+                        <TabPanel tabKey="mark"     key={`mark-${refreshKey}`}><MarkTab/></TabPanel>
+                        <TabPanel tabKey="calendar" key={`calendar-${refreshKey}`}><CalendarTab/></TabPanel>
+                        <TabPanel tabKey="view"     key={`view-${refreshKey}`}><ViewTab/></TabPanel>
+                        <TabPanel tabKey="summary"  key={`summary-${refreshKey}`}><TodaySummaryTab/></TabPanel>
+                    </TabbedSection>
+                )}
             </div>
         </div>
     );
@@ -264,21 +273,23 @@ function CalendarTab() {
     const [holidays, setHolidays] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [selDay, setSelDay] = useState<string|null>(TODAY);
+    const sessionId = useTeacherAttendanceSession();
 
     const load = useCallback(async () => {
+        if (!sessionId) return;
         setLoading(true);
         const mm = String(month).padStart(2,"0");
         const ld = new Date(year,month,0).getDate();
         const from = `${year}-${mm}-01`, to = `${year}-${mm}-${ld}`;
         try {
             const [a, h] = await Promise.all([
-                api.getTeacherAttendanceView({ from, to }),
+                api.getTeacherAttendanceView({ from, to, sessionId }),
                 api.getTeacherAttendanceHolidays(year, month),
             ]);
             setAllRecs(a.records || []);
             setHolidays(h.holidays || []);
         } finally { setLoading(false); }
-    }, [year, month]);
+    }, [year, month, sessionId]);
     useEffect(() => { load(); }, [load]);
 
     const dayMap = useMemo(() => {
@@ -455,14 +466,16 @@ function ViewTab() {
     const [summary, setSummary] = useState<any>({});
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
+    const sessionId = useTeacherAttendanceSession();
 
     const load = useCallback(async () => {
+        if (!sessionId) return;
         setLoading(true);
         try {
-            const r = await api.getTeacherAttendanceView({ date });
+            const r = await api.getTeacherAttendanceView({ date, sessionId });
             setRecords(r.records||[]); setSummary(r.summary||{});
         } finally { setLoading(false); }
-    }, [date]);
+    }, [date, sessionId]);
     useEffect(()=>{ load(); },[load]);
 
     const filtered = useMemo(()=>{

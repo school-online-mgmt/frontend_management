@@ -1,64 +1,35 @@
-import { useState, useEffect, useMemo } from "react";
-import { Plus, BookOpen, RefreshCcw, CalendarDays } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, BookOpen, RefreshCcw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/api";
 import CreateCourse from "../../components/Courses/CreateCourse.tsx";
 import { useNavigate } from "react-router-dom";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSession } from "../../context/SessionContext";
 
 interface SessionOpt { id: string; name: string; status?: "ACTIVE" | "ENDING" | "ENDED" }
 
 const CourseHome = () => {
-    const [sessions, setSessions]               = useState<SessionOpt[]>([]);
-    const [sessionsLoading, setSessionsLoading] = useState(true);
-    const [selectedSessionId, setSelectedSessionId] = useState<string>("");
-    const [courses, setCourses]                 = useState<any[]>([]);
-    const [isLoading, setIsLoading]             = useState(false);
+    // Sessions + active selection are global — sourced from the layout topbar.
+    const { sessions: ctxSessions, selectedSessionId, loading: sessionsLoading } = useSession();
+    const sessions = ctxSessions as unknown as SessionOpt[];
+    const queryClient = useQueryClient();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [message, setMessage]                 = useState<string | null>(null);
     const [messageType, setMessageType]         = useState<"success" | "error" | null>(null);
 
     const navigate = useNavigate();
 
-    // Load sessions; preselect the ACTIVE one.
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setSessionsLoading(true);
-            try {
-                const data = await api.getSessions();
-                if (cancelled) return;
-                const list: SessionOpt[] = Array.isArray(data) ? data : [];
-                setSessions(list);
-                const active = list.find(s => s.status === "ACTIVE") ?? list[0];
-                if (active) setSelectedSessionId(active.id);
-            } catch {
-                if (!cancelled) {
-                    setMessage("Failed to load sessions.");
-                    setMessageType("error");
-                }
-            } finally {
-                if (!cancelled) setSessionsLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, []);
-
-    const fetchCourses = async () => {
-        if (!selectedSessionId) { setCourses([]); return; }
-        setIsLoading(true);
-        try {
-            const data = await api.getCourses({ sessionId: selectedSessionId });
-            setCourses(Array.isArray(data) ? data : []);
-        } catch {
-            setMessage("Failed to load courses. Please refresh.");
-            setMessageType("error");
-            setCourses([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => { fetchCourses(); }, [selectedSessionId]);
+    const coursesQuery = useQuery({
+        queryKey: ["courses", "list", selectedSessionId],
+        queryFn: () => api.getCourses({ sessionId: selectedSessionId }),
+        enabled: !!selectedSessionId,
+    });
+    const courses: any[] = Array.isArray(coursesQuery.data) ? coursesQuery.data : [];
+    const isLoading = coursesQuery.isFetching;
+    const fetchCourses = () =>
+        queryClient.invalidateQueries({ queryKey: ["courses", "list", selectedSessionId] });
 
     const selectedSession = useMemo(
         () => sessions.find(s => s.id === selectedSessionId) ?? null,
@@ -90,71 +61,22 @@ const CourseHome = () => {
                 icon={BookOpen}
                 title="Course Management"
                 subtitle="Create, view and manage courses per academic session"
-                actions={
-                    <div className="flex gap-2">
-                        <button onClick={fetchCourses} disabled={isLoading || !selectedSessionId}
-                            className="px-3 py-2 bg-white/10 border border-white/20 text-white rounded-xl flex items-center gap-2 text-sm hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
-                            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
-                        </button>
-                        <button data-testid="create-course-btn" onClick={() => setIsCreateModalOpen(true)} disabled={!selectedSessionId}
-                            className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 disabled:opacity-50 disabled:cursor-not-allowed transition backdrop-blur-sm">
-                            <Plus size={18} /> Create Course
-                        </button>
-                    </div>
+                gradient={MODULE_THEMES.academics}
+                onRefresh={fetchCourses}
+                refreshing={isLoading}
+                primaryActions={
+                    <button data-testid="create-course-btn" onClick={() => setIsCreateModalOpen(true)} disabled={!selectedSessionId}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white rounded-lg text-sm font-semibold hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+                        <Plus size={15} /> Create Course
+                    </button>
                 }
             />
 
             <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
 
-                {/* Session selector */}
-                <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl p-3 sm:p-4 text-white shadow-md">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="flex items-center gap-2.5 shrink-0">
-                            <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
-                                <CalendarDays size={17} />
-                            </div>
-                            <div className="leading-tight">
-                                <p className="text-[10px] uppercase tracking-wider font-bold text-white/70">Academic Session</p>
-                                <p className="text-[11px] text-white/80">Pick a session to view its courses</p>
-                            </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <select
-                                data-testid="courses-session-select"
-                                value={selectedSessionId}
-                                onChange={e => setSelectedSessionId(e.target.value)}
-                                disabled={sessionsLoading}
-                                className="w-full px-3 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-                            >
-                                {sessionsLoading && <option>Loading sessions…</option>}
-                                {!sessionsLoading && sessions.length === 0 && <option value="">No sessions found</option>}
-                                {!sessionsLoading && sessions.length > 0 && <option value="">— Select a session —</option>}
-                                {sessions.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.name}{s.status && s.status !== "ACTIVE" ? ` (${s.status.toLowerCase()})` : ""}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        {selectedSession && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/15 border border-white/20 font-bold text-[11px]">
-                                {courses.length} courses
-                            </span>
-                        )}
-                    </div>
-                </div>
-
                 {/* Empty gate */}
                 {!selectedSessionId && !sessionsLoading && (
-                    <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-                        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-100">
-                            <CalendarDays size={26} className="text-emerald-400" />
-                        </div>
-                        <p className="text-sm font-bold text-slate-700 mb-1">Pick a session to begin</p>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                            Courses are scoped to a single academic session. Choose one above to view or create courses.
-                        </p>
-                    </div>
+                    <EmptySessionState entityPlural="courses" />
                 )}
 
                 {selectedSessionId && (

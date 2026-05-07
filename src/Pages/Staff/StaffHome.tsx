@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    Users, Loader2, RefreshCcw, KeyRound, Eye, EyeOff, X, Phone, Mail,
+    Users, Loader2, KeyRound, Eye, EyeOff, X, Phone, Mail,
     Shield, Search, GraduationCap, UserPlus, Trash2, Pencil, ShieldCheck,
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
     TrendingUp, Activity,
 } from 'lucide-react';
 import api from '../../api/api';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { useToast } from '../../context/ToastContext';
 import { useAuthContext, ALL_MODULES, type AppModule } from '../../context/AuthContext';
 
@@ -668,9 +669,7 @@ const StaffHome: React.FC = () => {
     const canManageStaff = currentRole === 'ADMIN' || currentRole === 'PRINCIPAL';
     const { addToast } = useToast();
 
-    const [staffList, setStaffList] = useState<StaffMember[]>([]);
-    const [teachers,  setTeachers]  = useState<Teacher[]>([]);
-    const [loading,   setLoading]   = useState(true);
+    const queryClient = useQueryClient();
     const [search,    setSearch]    = useState('');
     const [tab,       setTab]       = useState<TabKey>('staff');
 
@@ -681,22 +680,33 @@ const StaffHome: React.FC = () => {
     const [resetTarget,   setResetTarget]   = useState<{ id: string; name: string; type: 'staff' | 'teacher' } | null>(null);
     const [deleteTarget,  setDeleteTarget]  = useState<{ id: string; name: string } | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [staffData, teacherData] = await Promise.all([
-                api.getStaff(),
-                api.getTeachers(),
-            ]);
-            setStaffList(staffData?.staff ?? []);
-            const tList = Array.isArray(teacherData) ? teacherData : (teacherData?.teachers ?? []);
-            setTeachers(tList);
-        } catch {
-            addToast('Failed to load staff data.', 'error');
-        } finally { setLoading(false); }
-    }, [addToast]);
+    // Staff + teachers as separate queries; teachers query key is shared
+    // with TeacherHome / Dashboard so revisits hydrate from cache.
+    const staffQuery = useQuery({
+        queryKey: ["staff", "list"],
+        queryFn: () => api.getStaff(),
+        select: (d: any) => d?.staff ?? [],
+    });
+    const teachersQuery = useQuery({
+        queryKey: ["teachers", "list"],
+        queryFn: () => api.getTeachers(),
+        select: (d: any) => Array.isArray(d) ? d : (d?.teachers ?? []),
+    });
 
-    useEffect(() => { fetchAll(); }, [fetchAll]);
+    const staffList: StaffMember[] = staffQuery.data ?? [];
+    const teachers:  Teacher[]     = teachersQuery.data ?? [];
+    const loading = staffQuery.isLoading || teachersQuery.isLoading;
+
+    useEffect(() => {
+        if (staffQuery.error || teachersQuery.error) {
+            addToast('Failed to load staff data.', 'error');
+        }
+    }, [staffQuery.error, teachersQuery.error, addToast]);
+
+    const fetchAll = () => {
+        queryClient.invalidateQueries({ queryKey: ["staff", "list"] });
+        queryClient.invalidateQueries({ queryKey: ["teachers", "list"] });
+    };
 
     // ── CRUD handlers ──────────────────────────────────────────────────────
 
@@ -857,7 +867,9 @@ const StaffHome: React.FC = () => {
                 icon={Shield}
                 title="Staff Accounts"
                 subtitle="Manage management staff, roles, and per-module permissions"
-                gradient="from-indigo-600 via-violet-600 to-purple-700"
+                gradient={MODULE_THEMES.admin}
+                onRefresh={fetchAll}
+                refreshing={loading}
             />
 
             <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 mt-3 space-y-2.5">
@@ -1018,11 +1030,7 @@ const StaffHome: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5 ml-auto">
-                        <button onClick={fetchAll} disabled={loading}
-                            title="Refresh"
-                            className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all disabled:opacity-50 shadow-sm shadow-slate-100">
-                            <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} />
-                        </button>
+                        {/* Refresh moved to the page header for consistency. */}
                         {canManageStaff && tab === 'staff' && (
                             <button onClick={() => setShowCreate(true)}
                                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-300">

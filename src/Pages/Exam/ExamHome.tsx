@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-    Plus, RefreshCcw, BookOpen, BarChart3, ClipboardList,
+    Plus, BookOpen, BarChart3, ClipboardList,
     CheckCircle, Clock, Calendar, Users,
     ChevronDown, ChevronRight, AlertCircle, Search,
     ArrowUpRight, X, Target
@@ -9,7 +9,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateExamModal from "../../components/Exam/CreateExamModal";
 import useAuth from "../../hooks/useAuth";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import { useSession } from "../../context/SessionContext";
 
 // --- Status config ------------------------------------------------------------
 const STATUS_CONFIG: Record<string, { label: string; bg: string; dot: string; text: string; icon: typeof Clock }> = {
@@ -94,8 +96,10 @@ const ExamHome = () => {
 
     const [tab, setTab] = useState<"dashboard" | "exams">("dashboard");
 
-    const [sessions, setSessions] = useState<any[]>([]);
-    const [selectedSession, setSelectedSession] = useState("");
+    // Session id comes from the global SessionContext (rendered in the
+    // layout topbar). We alias it to `selectedSession` for compatibility
+    // with the rest of this page's existing variable names.
+    const { selectedSessionId: selectedSession } = useSession();
 
     const [filterClass, setFilterClass] = useState("");
     const [filterCourse, setFilterCourse] = useState("");
@@ -116,14 +120,6 @@ const ExamHome = () => {
     const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({ TERM1: true, TERM2: true, TERM3: true });
 
     const canCreate = hasModuleAdmin('ACADEMICS');
-
-    useEffect(() => {
-        api.getSessions().then((s: any) => {
-            const arr = Array.isArray(s) ? s : [];
-            setSessions(arr);
-            if (arr.length > 0) setSelectedSession(arr[0].id);
-        });
-    }, []);
 
     const fetchOverview = async () => {
         if (!selectedSession) return;
@@ -207,52 +203,40 @@ const ExamHome = () => {
             <PageHeader
                 icon={BookOpen}
                 title="Exam Management"
-                gradient="from-sky-600 via-blue-600 to-indigo-600"
+                gradient={MODULE_THEMES.exam}
                 subtitle="Monitor, manage and analyse all exam activity across the school"
-                actions={
-                    <div className="flex gap-2">
-                        <button onClick={fetchOverview} disabled={!selectedSession || isLoading}
-                            className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex gap-2 items-center text-sm hover:bg-white/20 disabled:opacity-40 transition-all backdrop-blur-sm">
-                            <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+                onRefresh={() => fetchOverview()}
+                refreshing={isLoading}
+                primaryActions={
+                    canCreate ? (
+                        <button onClick={() => setIsCreateOpen(true)}
+                            data-testid="create-exam-btn"
+                            disabled={!selectedSession}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+                            <Plus size={15} /> Create Exam
                         </button>
-                        {canCreate && (
-                            <button onClick={() => setIsCreateOpen(true)}
-                                data-testid="create-exam-btn"
-                                className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition-all backdrop-blur-sm">
-                                <Plus size={16} /> Create Exam
-                            </button>
-                        )}
-                    </div>
+                    ) : undefined
                 }
             />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+            {/* Top section (modal, message, filters) keeps a max-width
+                container so the controls stay readable; the TabbedSection
+                below escapes that wrapper to span the full page width. */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-4 space-y-4">
                 {isCreateOpen && (
                     <CreateExamModal onClose={() => setIsCreateOpen(false)} onRefresh={fetchOverview}
                         setMessage={setMessage} setMessageType={setMessageType} />
                 )}
 
                 {message && (
-                    <div className={`p-4 rounded-xl border text-sm mb-4 ${messageType === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+                    <div className={`p-4 rounded-xl border text-sm ${messageType === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
                         {message}
                     </div>
                 )}
 
-                {/* Session + Filters */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+                {/* Refinement filters (only visible after a session is chosen). */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
                     <div className="flex flex-wrap items-end gap-3">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Session</label>
-                            <select value={selectedSession}
-                                onChange={e => setSelectedSession(e.target.value)}
-                                className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[160px] font-medium">
-                                <option value="">Select Session</option>
-                                {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="w-px h-8 bg-slate-200 hidden sm:block" />
-
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class</label>
                             <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setFilterCourse(""); }}
@@ -316,27 +300,23 @@ const ExamHome = () => {
                         )}
                     </div>
                 </div>
+            </div>
 
-                {/* Tab Bar */}
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-6">
-                    {([
-                        { key: "dashboard",   label: "Dashboard",    icon: BarChart3     },
-                        { key: "exams",       label: "All Exams",    icon: ClipboardList },
-                    ] as const).map(({ key, label, icon: Icon }) => (
-                        <button key={key} onClick={() => setTab(key)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all
-                                ${tab === key ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>
-                            <Icon size={15} />{label}
-                            {key === "exams" && filteredExams.length > 0 && (
-                                <span className="ml-1 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{filteredExams.length}</span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
+            {/* Unified tabbed view — full-width, edge-to-edge */}
+            <TabbedSection
+                    idPrefix="exam"
+                    value={tab}
+                    onChange={setTab}
+                    theme="indigo"
+                    flushPanel
+                    tabs={[
+                        { key: "dashboard", label: "Dashboard", icon: BarChart3 },
+                        { key: "exams",     label: "All Exams", icon: ClipboardList, badge: filteredExams.length || undefined },
+                    ]}
+                >
                 {/* Dashboard TAB */}
-                {tab === "dashboard" && (
-                    <div className="space-y-6">
+                <TabPanel tabKey="dashboard">
+                    <div className="p-4 sm:p-5 md:p-6 space-y-6">
                         {!selectedSession ? (
                             <EmptyState icon={BarChart3} title="Select a session" sub="Choose a session above to view the school-wide exam dashboard" />
                         ) : isLoading ? (
@@ -585,11 +565,11 @@ const ExamHome = () => {
                             </>
                         )}
                     </div>
-                )}
+                </TabPanel>
 
                 {/* Exams TAB */}
-                {tab === "exams" && (
-                    <div className="space-y-6">
+                <TabPanel tabKey="exams">
+                    <div className="p-4 sm:p-5 md:p-6 space-y-6">
                         {!selectedSession ? (
                             <EmptyState icon={ClipboardList} title="Select a session" sub="Choose a session above to view exam papers" />
                         ) : isLoading ? (
@@ -695,8 +675,8 @@ const ExamHome = () => {
                             </>
                         )}
                     </div>
-                )}
-            </div>
+                </TabPanel>
+            </TabbedSection>
         </div>
     );
 };

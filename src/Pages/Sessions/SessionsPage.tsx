@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   CalendarDays, Plus, Edit2, Trash2, X, CheckCircle2,
-  AlertTriangle, Loader2, ChevronRight, Clock, RefreshCw,
+  AlertTriangle, Loader2, ChevronRight, Clock,
   BookOpen, Info, GraduationCap, Hourglass, RotateCcw, Lock, Users,
-  ArrowLeft, Save, Hash, ShieldCheck,
+  ArrowLeft, Save, Hash, ShieldCheck, Layers, Settings2,
+  Sun, Sparkles, ClipboardCheck,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import Switch from "../../components/common/Switch";
+import { SESSIONS_QUERY_KEY } from "../../context/SessionContext";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type LifecycleStatus = "ACTIVE" | "ENDING" | "ENDED";
@@ -19,6 +23,7 @@ interface AcademicSession {
   endDate: string;
   tenantId: string;
   status: LifecycleStatus;
+  acceptAdmission: boolean;
   endInitiatedAt: string | null;
   endedAt: string | null;
   createdAt?: string;
@@ -97,9 +102,10 @@ interface FormState {
   slug: string;
   startDate: string;
   endDate: string;
+  acceptAdmission: boolean;
 }
 
-const EMPTY_FORM: FormState = { name: "", slug: "", startDate: "", endDate: "" };
+const EMPTY_FORM: FormState = { name: "", slug: "", startDate: "", endDate: "", acceptAdmission: false };
 
 const SessionFormModal: React.FC<{
   mode: "create" | "edit";
@@ -111,7 +117,7 @@ const SessionFormModal: React.FC<{
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const set = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
 
   const handleNameChange = (v: string) => {
     set("name", v);
@@ -264,6 +270,27 @@ const SessionFormModal: React.FC<{
               </p>
             </div>
           )}
+
+          {/* Accept Admissions */}
+          <div className="flex items-start justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3">
+            <div className="min-w-0">
+              <p id="session-accept-admission-label" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Accept new admissions
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                When ON, this session appears in the public application form and parents can submit
+                applications for it. Turn it OFF to close intake without affecting current students.
+              </p>
+            </div>
+            <Switch
+              size="md"
+              tone="emerald"
+              checked={form.acceptAdmission}
+              onChange={(v) => set("acceptAdmission", v)}
+              ariaLabelledBy="session-accept-admission-label"
+              testId="session-accept-admission-toggle"
+            />
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-1">
@@ -790,126 +817,451 @@ const EndSessionModal: React.FC<{
 };
 
 /* ── Session Card ────────────────────────────────────────────────────────── */
+interface SessionInsight {
+  students: number;
+  activeStudents: number;
+  classes: number;
+  sections: number;
+  courses: number;
+  subjects: number;
+  exams: number;
+  attendanceDays: number;
+  elapsedDays: number;
+  weekendDays: number;
+  holidayDays: number;
+  workingDays: number;
+}
+
 const SessionCard: React.FC<{
   session: AcademicSession;
+  insight?: SessionInsight;
   onEdit: () => void;
   onDelete: () => void;
   onEnd: () => void;
-}> = ({ session, onEdit, onDelete, onEnd }) => {
+}> = ({ session, insight, onEdit, onDelete, onEnd }) => {
   const status = getStatus(session);
   const cfg = STATUS_CONFIG[status];
   const now = new Date();
   const isLocked = session.status === "ENDED";
   const isEnding = session.status === "ENDING";
+  const [flipped, setFlipped] = useState(false);
 
   // Progress through session
-  const start = new Date(session.startDate).getTime();
-  const end = new Date(session.endDate).getTime();
+  const startMs = new Date(session.startDate).getTime();
+  const endMs   = new Date(session.endDate).getTime();
+  const totalDays = Math.max(1, Math.round((endMs - startMs) / 86400000));
+  const elapsedDays = Math.max(0, Math.min(totalDays, Math.round((now.getTime() - startMs) / 86400000)));
+  const remainingDays = Math.max(0, Math.round((endMs - now.getTime()) / 86400000));
+  const daysToStart = Math.max(0, Math.round((startMs - now.getTime()) / 86400000));
   const progress = status === "active"
-    ? Math.round(((now.getTime() - start) / (end - start)) * 100)
-    : status === "expired" ? 100 : 0;
+    ? Math.round((elapsedDays / totalDays) * 100)
+    : status === "expired" || status === "ended" ? 100 : 0;
 
-  return (
-    <div data-testid={`session-card-${session.slug}`} className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all overflow-hidden group
-      ${status === "active" ? "border-emerald-200 ring-1 ring-emerald-100" : "border-slate-200"}`}>
-      {/* Top stripe */}
-      <div className={`h-1 ${status === "active" ? "bg-gradient-to-r from-emerald-400 to-teal-400" : status === "upcoming" ? "bg-gradient-to-r from-blue-400 to-indigo-400" : "bg-slate-200"}`} />
+  // Card accent — picks the same hue family as the status pill so the whole
+  // card feels cohesive instead of a generic white box with a colored dot.
+  const accentBg =
+    status === "active" ? "from-emerald-500/[0.08] to-teal-500/[0.04]"
+    : status === "ending" ? "from-amber-500/[0.08] to-orange-500/[0.04]"
+    : status === "upcoming" ? "from-blue-500/[0.08] to-indigo-500/[0.04]"
+    : status === "expired" ? "from-slate-500/[0.05] to-slate-500/[0.02]"
+    : "from-slate-200/[0.4] to-slate-200/[0.2]";
 
-      <div className="p-5">
+  const railClass =
+    status === "active"   ? "bg-gradient-to-b from-emerald-400 to-teal-500"
+    : status === "ending" ? "bg-gradient-to-b from-amber-400 to-orange-500"
+    : status === "upcoming" ? "bg-gradient-to-b from-blue-400 to-indigo-500"
+    : "bg-slate-200";
+
+  const iconClass =
+    status === "active"   ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
+    : status === "upcoming" ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
+    : status === "ending" ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white"
+    : "bg-slate-100 text-slate-400";
+
+  // Insight chips — six small tiles. We render even when `insight` is
+  // undefined (still loading) using subtle skeleton dashes.
+  const insightTiles: { label: string; value: number | undefined; icon: typeof Users; tone: string }[] = [
+    { label: "Students", value: insight?.activeStudents, icon: Users,         tone: "text-indigo-600 bg-indigo-50" },
+    { label: "Classes",  value: insight?.classes,        icon: Layers,        tone: "text-violet-600 bg-violet-50" },
+    { label: "Sections", value: insight?.sections,       icon: Hash,          tone: "text-cyan-600  bg-cyan-50" },
+    { label: "Courses",  value: insight?.courses,        icon: BookOpen,      tone: "text-teal-600  bg-teal-50" },
+    { label: "Subjects", value: insight?.subjects,       icon: GraduationCap, tone: "text-fuchsia-600 bg-fuchsia-50" },
+    { label: "Exams",    value: insight?.exams,          icon: ShieldCheck,   tone: "text-rose-600  bg-rose-50" },
+  ];
+
+  // Front face — informational, the 95%-of-the-time view.
+  const front = (
+    <div className={`flip-card-face flip-card-front bg-white border shadow-sm ring-1 overflow-hidden
+      ${status === "active"
+        ? "border-emerald-200/80 ring-emerald-100"
+        : status === "ending"
+        ? "border-amber-200/80 ring-amber-100"
+        : "border-slate-200 ring-slate-100"}`}
+      style={{ borderRadius: "1rem" }}
+    >
+      {/* Soft accent wash */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${accentBg} pointer-events-none`} />
+      {/* Left accent rail */}
+      <div className={`absolute top-0 bottom-0 left-0 w-1 ${railClass}`} />
+
+      <div className="relative p-3 h-full flex flex-col">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
-              ${status === "active" ? "bg-emerald-50" : status === "upcoming" ? "bg-blue-50" : "bg-slate-50"}`}>
-              <CalendarDays size={18} className={status === "active" ? "text-emerald-500" : status === "upcoming" ? "text-blue-500" : "text-slate-400"} />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${iconClass}`}>
+              <CalendarDays size={19} />
             </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm leading-tight">{session.name}</h3>
-              <p className="text-[10px] text-slate-400 font-mono mt-0.5">#{session.slug}</p>
+            <div className="min-w-0">
+              <h3 className="font-bold text-slate-900 text-base leading-tight truncate">{session.name}</h3>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">#{session.slug}</p>
             </div>
           </div>
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${cfg.bg} ${cfg.text} shrink-0`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-            {cfg.label}
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${cfg.bg} ${cfg.text} shadow-sm`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+              {cfg.label}
+            </span>
+            <span
+              title={session.acceptAdmission ? "Open for new applications" : "Not accepting applications"}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                session.acceptAdmission
+                  ? "bg-violet-100 text-violet-700 border border-violet-200"
+                  : "bg-slate-100 text-slate-500 border border-slate-200"
+              }`}
+            >
+              <GraduationCap size={9} /> Admissions {session.acceptAdmission ? "open" : "closed"}
+            </span>
+          </div>
         </div>
 
-        {/* Date range */}
-        <div className="flex items-center gap-2 mb-3 text-xs text-slate-600">
-          <span className="font-medium">{fmtDate(session.startDate)}</span>
-          <ChevronRight size={12} className="text-slate-400" />
-          <span className="font-medium">{fmtDate(session.endDate)}</span>
-          <span className="ml-auto text-[10px] text-slate-400 font-medium">
+        {/* Date range pill */}
+        <div className="flex items-center justify-between gap-2 mb-3 px-3 py-2 bg-white/70 backdrop-blur-sm rounded-lg border border-slate-200/60">
+          <div className="flex items-center gap-1.5 text-xs text-slate-700">
+            <span className="font-semibold">{fmtDate(session.startDate)}</span>
+            <ChevronRight size={11} className="text-slate-400 shrink-0" />
+            <span className="font-semibold">{fmtDate(session.endDate)}</span>
+          </div>
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider shrink-0">
             {durationLabel(session.startDate, session.endDate)}
           </span>
         </div>
 
-        {/* Progress bar (only for active/expired) */}
-        {status !== "upcoming" && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-slate-400">Year progress</span>
-              <span className="text-[10px] font-bold text-slate-600">{progress}%</span>
+        {/* Progress + countdown band */}
+        {status === "upcoming" ? (
+          <div className="mb-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center gap-2">
+            <Clock size={12} className="text-blue-500 shrink-0" />
+            <p className="text-[11px] text-blue-700">
+              Starts in <strong>{daysToStart} day{daysToStart !== 1 ? "s" : ""}</strong>
+            </p>
+          </div>
+        ) : (
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                {status === "active" ? `Day ${elapsedDays} of ${totalDays}` : status === "ending" ? "Ending in progress" : status === "ended" ? "Completed" : "Past end-date"}
+              </span>
+              <span className={`text-[11px] font-bold tabular-nums ${
+                status === "active" ? "text-emerald-700"
+                : status === "ending" ? "text-amber-700"
+                : "text-slate-600"
+              }`}>{progress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ${status === "active" ? "bg-emerald-500" : "bg-slate-300"}`}
+                className={`h-full rounded-full transition-all duration-700 ease-out ${
+                  status === "active"
+                    ? "bg-gradient-to-r from-emerald-400 to-teal-500"
+                    : status === "ending"
+                    ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                    : "bg-slate-300"
+                }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
+            {status === "active" && (
+              <p className="text-[10px] text-slate-400 mt-1">{remainingDays} day{remainingDays !== 1 ? "s" : ""} remaining</p>
+            )}
           </div>
         )}
 
-        {/* Upcoming countdown */}
-        {status === "upcoming" && (
-          <div className="mb-4 bg-blue-50 rounded-xl px-3 py-2 flex items-center gap-2">
-            <Clock size={12} className="text-blue-500 shrink-0" />
-            <p className="text-[10px] text-blue-700">
-              Starts in <strong>{Math.ceil((new Date(session.startDate).getTime() - now.getTime()) / 86400000)} days</strong>
-            </p>
+        {/* Insight tiles — six compact stat chips */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {insightTiles.map(t => {
+            const Icon = t.icon;
+            return (
+              <div key={t.label}
+                className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-lg px-2.5 py-2 flex items-center gap-2 shadow-sm">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${t.tone}`}>
+                  <Icon size={13} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-base font-black text-slate-800 leading-none tabular-nums">
+                    {t.value === undefined
+                      ? <span className="text-slate-300">—</span>
+                      : t.value.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5 truncate">{t.label}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Calendar insights — only meaningful for sessions that have
+            actually started. Reads as "out of N elapsed days, M had
+            attendance taken, W were weekends, H holidays". */}
+        {(insight && insight.elapsedDays > 0) && (
+          <div className="mb-3 rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50/60 to-white p-2.5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <CalendarDays size={11} className="text-emerald-500" /> Calendar
+              </p>
+              <p className="text-[10px] text-slate-400">
+                <span className="font-bold text-slate-700 tabular-nums">{insight.elapsedDays}</span> day{insight.elapsedDays !== 1 ? "s" : ""} elapsed
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              <CalendarTile icon={ClipboardCheck} value={insight.attendanceDays} label="School in progress" tone="emerald"
+                tooltip="Distinct days attendance has been marked across this session" />
+              <CalendarTile icon={Sparkles}        value={insight.workingDays}    label="Working" tone="indigo"
+                tooltip="Total elapsed days minus weekends and holidays" />
+              <CalendarTile icon={Sun}             value={insight.weekendDays}    label="Weekends" tone="amber"
+                tooltip="Saturdays + Sundays in this session so far" />
+              <CalendarTile icon={CalendarDays}    value={insight.holidayDays}    label="Holidays" tone="rose"
+                tooltip="Holidays + vacation days from the calendar (excluding weekends)" />
+            </div>
+            {/* Attendance vs working-days bar — green if attendance was
+                marked on every working day, amber if there are gaps. */}
+            {insight.workingDays > 0 && (
+              <div className="mt-2.5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Attendance coverage</span>
+                  <span className={`text-[10px] font-bold tabular-nums ${
+                    insight.attendanceDays >= insight.workingDays ? "text-emerald-700" : "text-amber-700"
+                  }`}>
+                    {insight.attendanceDays}/{insight.workingDays}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      insight.attendanceDays >= insight.workingDays
+                        ? "bg-gradient-to-r from-emerald-400 to-teal-500"
+                        : "bg-gradient-to-r from-amber-400 to-orange-500"
+                    }`}
+                    style={{ width: `${Math.min(100, Math.round((insight.attendanceDays / insight.workingDays) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Footer — single subtle "Manage" affordance flips the card to
+            reveal the dangerous actions. */}
+        <div className="mt-auto border-t border-slate-200/60 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-slate-400 truncate">
+            {status === "ended"
+              ? `Ended ${session.endedAt ? fmtDate(session.endedAt) : "—"}`
+              : status === "ending"
+                ? `Initiated ${session.endInitiatedAt ? fmtDate(session.endInitiatedAt) : "—"}`
+                : session.createdAt
+                  ? `Created ${fmtDate(session.createdAt)}`
+                  : ""}
+          </p>
           <button
-            data-testid={`session-edit-btn-${session.id}`}
-            onClick={onEdit}
-            disabled={isLocked}
-            className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid={`session-flip-btn-${session.id}`}
+            onClick={() => setFlipped(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+            title="Show advanced actions (rare)"
           >
-            <Edit2 size={12} /> Edit
-          </button>
-          {!isLocked && (
-            <button
-              data-testid={`session-end-btn-${session.id}`}
-              onClick={onEnd}
-              className={`flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all
-                ${isEnding
-                  ? "bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100"
-                  : "bg-amber-600 text-white hover:bg-amber-700"}`}
-            >
-              {isEnding ? <Hourglass size={12} /> : <GraduationCap size={12} />}
-              {isEnding ? "End Session" : "Initiate End Session"}
-            </button>
-          )}
-          {isLocked && (
-            <button onClick={onEnd}
-              className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 text-slate-500 text-xs font-semibold">
-              <Lock size={12} /> View End Status
-            </button>
-          )}
-          <button
-            data-testid={`session-delete-btn-${session.id}`}
-            onClick={onDelete}
-            disabled={isLocked || isEnding}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-100 text-red-500 text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            title={isLocked ? "Ended sessions cannot be deleted" : isEnding ? "Cancel end first" : ""}
-          >
-            <Trash2 size={12} />
+            <Settings2 size={12} /> Manage
           </button>
         </div>
       </div>
+    </div>
+  );
+
+  // Back face — danger zone. Three actions stacked vertically, each
+  // explaining what it does before the user pulls the trigger.
+  const back = (
+    <div className="flip-card-face flip-card-back bg-white border border-rose-200/80 shadow-sm ring-1 ring-rose-100 overflow-hidden"
+      style={{ borderRadius: "1rem" }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-rose-50/40 to-white pointer-events-none" />
+      <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-rose-400 to-red-500" />
+
+      <div className="relative p-5 h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
+              <AlertTriangle size={17} className="text-rose-500" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-slate-900 text-sm leading-tight truncate">Advanced actions</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate">Rare. Some are irreversible.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setFlipped(false)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+            title="Back to insights"
+            aria-label="Back to insights"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Session name banner */}
+        <div className="mb-3 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200/60 flex items-center gap-2">
+          <CalendarDays size={11} className="text-slate-400 shrink-0" />
+          <p className="text-[11px] font-semibold text-slate-700 truncate">{session.name}</p>
+          <span className={`ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${cfg.bg} ${cfg.text} shrink-0`}>
+            <span className={`w-1 h-1 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+          </span>
+        </div>
+
+        {/* Action rows — each row gives context BEFORE the action button */}
+        <div className="space-y-2 flex-1 overflow-y-auto">
+          {/* EDIT */}
+          <ActionRow
+            icon={Edit2}
+            tone="slate"
+            title="Edit session"
+            description="Rename, change date range or toggle admissions."
+            disabled={isLocked}
+            disabledHint={isLocked ? "Ended sessions are read-only" : undefined}
+            buttonLabel="Edit"
+            buttonClass="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+            onClick={() => { setFlipped(false); onEdit(); }}
+            testId={`session-edit-btn-${session.id}`}
+          />
+
+          {/* END SESSION */}
+          {!isLocked && (
+            <ActionRow
+              icon={isEnding ? Hourglass : GraduationCap}
+              tone={isEnding ? "amber" : "amber"}
+              title={isEnding ? "End session" : "Initiate end of session"}
+              description={isEnding
+                ? "All teacher decisions are recorded — finalize and lock the session."
+                : "Begin the year-end promotion workflow. Teachers will decide promote / hold-back per student."}
+              buttonLabel={isEnding ? "End session" : "Initiate end"}
+              buttonClass={isEnding
+                ? "bg-white border border-amber-300 text-amber-700 hover:bg-amber-50"
+                : "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-sm"}
+              onClick={() => { setFlipped(false); onEnd(); }}
+              testId={`session-end-btn-${session.id}`}
+            />
+          )}
+          {isLocked && (
+            <ActionRow
+              icon={Lock}
+              tone="slate"
+              title="Session ended"
+              description={`Ended on ${session.endedAt ? fmtDate(session.endedAt) : "—"}. View the end-of-session report.`}
+              buttonLabel="View report"
+              buttonClass="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={() => { setFlipped(false); onEnd(); }}
+            />
+          )}
+
+          {/* DELETE */}
+          <ActionRow
+            icon={Trash2}
+            tone="rose"
+            title="Delete session"
+            description="Permanently removes the session. Linked courses, exams and attendance may be affected."
+            disabled={isLocked || isEnding}
+            disabledHint={
+              isLocked  ? "Ended sessions cannot be deleted"
+              : isEnding ? "Cancel the end-session workflow first"
+              : undefined
+            }
+            buttonLabel="Delete"
+            buttonClass="bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+            onClick={() => { setFlipped(false); onDelete(); }}
+            testId={`session-delete-btn-${session.id}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      data-testid={`session-card-${session.slug}`}
+      className={`flip-card group ${flipped ? "is-flipped" : ""}`}
+      style={{ minHeight: "540px" }}
+    >
+      <div className="flip-card-inner">
+        {front}
+        {back}
+      </div>
+    </div>
+  );
+};
+
+/* ── Compact calendar stat tile used on the front face. ──────────────── */
+const CalendarTile: React.FC<{
+  icon: typeof CalendarDays;
+  value: number;
+  label: string;
+  tone: "emerald" | "indigo" | "amber" | "rose";
+  tooltip?: string;
+}> = ({ icon: Icon, value, label, tone, tooltip }) => {
+  const cfg = {
+    emerald: { bg: "bg-emerald-50", text: "text-emerald-700", icon: "text-emerald-500" },
+    indigo:  { bg: "bg-indigo-50",  text: "text-indigo-700",  icon: "text-indigo-500" },
+    amber:   { bg: "bg-amber-50",   text: "text-amber-700",   icon: "text-amber-500" },
+    rose:    { bg: "bg-rose-50",    text: "text-rose-700",    icon: "text-rose-500" },
+  }[tone];
+  return (
+    <div title={tooltip}
+      className={`${cfg.bg} rounded-lg px-2 py-1.5 flex flex-col items-center gap-0.5 border border-white/40`}>
+      <Icon size={11} className={cfg.icon} />
+      <p className={`text-[13px] font-black tabular-nums leading-none ${cfg.text}`}>{value}</p>
+      <p className={`text-[8px] font-semibold uppercase tracking-wider ${cfg.text} opacity-70 truncate w-full text-center`}>{label}</p>
+    </div>
+  );
+};
+
+/* ── Back-face action row — used inside the flipped Manage view. ──────── */
+const ActionRow: React.FC<{
+  icon: typeof Edit2;
+  tone: "slate" | "amber" | "rose";
+  title: string;
+  description: string;
+  buttonLabel: string;
+  buttonClass: string;
+  onClick: () => void;
+  disabled?: boolean;
+  disabledHint?: string;
+  testId?: string;
+}> = ({ icon: Icon, tone, title, description, buttonLabel, buttonClass, onClick, disabled, disabledHint, testId }) => {
+  const toneClass =
+    tone === "amber" ? "bg-amber-50 text-amber-600 border-amber-100"
+    : tone === "rose" ? "bg-rose-50 text-rose-500 border-rose-100"
+    : "bg-slate-50 text-slate-500 border-slate-100";
+  return (
+    <div className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${disabled ? "border-slate-100 bg-slate-50/40 opacity-60" : "border-slate-200/70 bg-white/60 hover:bg-white"} transition-colors`}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${toneClass}`}>
+        <Icon size={13} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-bold text-slate-800 leading-tight">{title}</p>
+        <p className="text-[10.5px] text-slate-500 mt-0.5">{disabled && disabledHint ? disabledHint : description}</p>
+      </div>
+      <button
+        data-testid={testId}
+        onClick={onClick}
+        disabled={disabled}
+        className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white ${buttonClass}`}
+      >
+        {buttonLabel}
+      </button>
     </div>
   );
 };
@@ -917,6 +1269,7 @@ const SessionCard: React.FC<{
 /* ── Main Page ───────────────────────────────────────────────────────────── */
 const SessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
+  const [insights, setInsights] = useState<Record<string, SessionInsight>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<AcademicSession | null>(null);
@@ -924,23 +1277,61 @@ const SessionsPage: React.FC = () => {
   const [endTarget, setEndTarget] = useState<AcademicSession | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const queryClient = useQueryClient();
 
   const showToast = (msg: string, type: "success" | "error") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Whenever the sessions list mutates (create / update / delete /
+  // initiate-end / cancel-end / end), invalidate the global cache so the
+  // topbar selector updates instantly across the app.
+  const invalidateSessionsCache = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+  }, [queryClient]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getSessions();
-      setSessions(Array.isArray(data) ? data : []);
-    } catch {
-      showToast("Failed to load sessions.", "error");
+      // Sessions and insights are independent — fan them out in parallel.
+      // Insights failure must not block the page; the cards render with
+      // dashes for any session whose counts didn't load.
+      const [sessionData, insightData] = await Promise.allSettled([
+        api.getSessions(),
+        api.getSessionInsights(),
+      ]);
+      if (sessionData.status === "fulfilled") {
+        setSessions(Array.isArray(sessionData.value) ? sessionData.value : []);
+        // Refresh the global cache too — the data we just fetched is fresher.
+        invalidateSessionsCache();
+      } else {
+        showToast("Failed to load sessions.", "error");
+      }
+      if (insightData.status === "fulfilled") {
+        const map: Record<string, SessionInsight> = {};
+        for (const row of insightData.value) {
+          map[row.sessionId] = {
+            students:       row.students,
+            activeStudents: row.activeStudents,
+            classes:        row.classes,
+            sections:       row.sections,
+            courses:        row.courses,
+            subjects:       row.subjects,
+            exams:          row.exams,
+            attendanceDays: row.attendanceDays,
+            elapsedDays:    row.elapsedDays,
+            weekendDays:    row.weekendDays,
+            holidayDays:    row.holidayDays,
+            workingDays:    row.workingDays,
+          };
+        }
+        setInsights(map);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [invalidateSessionsCache]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -950,6 +1341,7 @@ const SessionsPage: React.FC = () => {
       slug: form.slug,
       startDate: new Date(form.startDate).toISOString(),
       endDate: new Date(form.endDate).toISOString(),
+      acceptAdmission: form.acceptAdmission,
     });
     showToast(`Session "${form.name}" created successfully.`, "success");
     setShowForm(false);
@@ -963,6 +1355,7 @@ const SessionsPage: React.FC = () => {
       slug: form.slug,
       startDate: new Date(form.startDate).toISOString(),
       endDate: new Date(form.endDate).toISOString(),
+      acceptAdmission: form.acceptAdmission,
     });
     showToast(`Session "${form.name}" updated.`, "success");
     setEditTarget(null);
@@ -1023,6 +1416,7 @@ const SessionsPage: React.FC = () => {
             slug: editTarget.slug,
             startDate: toInputDate(editTarget.startDate),
             endDate: toInputDate(editTarget.endDate),
+            acceptAdmission: editTarget.acceptAdmission,
           }}
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
@@ -1049,40 +1443,36 @@ const SessionsPage: React.FC = () => {
         icon={CalendarDays}
         title="Academic Sessions"
         subtitle="Define and manage academic year date ranges — all courses, exams, and attendance are linked to a session"
-        gradient="from-indigo-600 via-violet-600 to-purple-600"
-        actions={
-          <div className="flex items-center gap-2">
-            <button onClick={load} disabled={loading}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 transition backdrop-blur-sm">
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </button>
-            <button
-              data-testid="create-session-btn"
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-50 transition shadow-sm"
-            >
-              <Plus size={15} /> New Session
-            </button>
-          </div>
+        gradient={MODULE_THEMES.classes}
+        onRefresh={load}
+        refreshing={loading}
+        primaryActions={
+          <button
+            data-testid="create-session-btn"
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0"
+          >
+            <Plus size={15} /> New Session
+          </button>
         }
       />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
 
-        {/* Summary stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        {/* Summary stats — tight, scannable, clickable would be future-work */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {[
-            { label: "Active",   count: activeCount,   bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-700", dot: "bg-emerald-500" },
-            { label: "Ending",   count: endingCount,   bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-700",   dot: "bg-amber-500"   },
-            { label: "Ended",    count: endedCount,    bg: "bg-rose-50",    border: "border-rose-100",    text: "text-rose-700",    dot: "bg-rose-500"    },
-            { label: "Upcoming", count: upcomingCount, bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-700",    dot: "bg-blue-500"    },
-            { label: "Expired",  count: expiredCount,  bg: "bg-slate-50",   border: "border-slate-200",   text: "text-slate-500",   dot: "bg-slate-400"   },
+            { label: "Active",   count: activeCount,   bg: "bg-white", border: "border-emerald-200/80", text: "text-emerald-700", dot: "bg-emerald-500", ring: "ring-emerald-100" },
+            { label: "Ending",   count: endingCount,   bg: "bg-white", border: "border-amber-200/80",   text: "text-amber-700",   dot: "bg-amber-500",   ring: "ring-amber-100" },
+            { label: "Ended",    count: endedCount,    bg: "bg-white", border: "border-rose-200/80",    text: "text-rose-700",    dot: "bg-rose-500",    ring: "ring-rose-100" },
+            { label: "Upcoming", count: upcomingCount, bg: "bg-white", border: "border-blue-200/80",    text: "text-blue-700",    dot: "bg-blue-500",    ring: "ring-blue-100" },
+            { label: "Expired",  count: expiredCount,  bg: "bg-white", border: "border-slate-200",      text: "text-slate-600",   dot: "bg-slate-400",   ring: "ring-slate-100" },
           ].map(s => (
-            <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-4 flex items-center gap-3`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${s.dot} shrink-0`} />
-              <div>
-                <p className={`text-2xl font-black ${s.text}`}>{s.count}</p>
-                <p className="text-xs text-slate-500 font-medium">{s.label}</p>
+            <div key={s.label} className={`${s.bg} border ${s.border} ${s.count > 0 ? `ring-1 ${s.ring}` : ""} rounded-xl p-3 flex items-center gap-2.5 shadow-sm hover:shadow-md transition-shadow`}>
+              <span className={`w-2 h-2 rounded-full ${s.dot} shrink-0`} />
+              <div className="min-w-0">
+                <p className={`text-xl font-black ${s.text} leading-none`}>{s.count}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">{s.label}</p>
               </div>
             </div>
           ))}
@@ -1117,11 +1507,12 @@ const SessionsPage: React.FC = () => {
 
         {/* Session grid */}
         {!loading && sessions.length > 0 && (
-          <div data-testid="session-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div data-testid="session-list" className="grid grid-cols-2 gap-4">
             {sorted.map(session => (
               <SessionCard
                 key={session.id}
                 session={session}
+                insight={insights[session.id]}
                 onEdit={() => setEditTarget(session)}
                 onDelete={() => setDeleteTarget(session)}
                 onEnd={() => setEndTarget(session)}

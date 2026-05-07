@@ -38,6 +38,8 @@ import StaffHome from "./Pages/Staff/StaffHome.tsx";
 import TransportHub from "./Pages/Transport/TransportHub.tsx";
 import SessionsPage from "./Pages/Sessions/SessionsPage.tsx";
 import AccountPage from "./Pages/Account/AccountPage.tsx";
+import PlatformBillsPage from "./Pages/Account/PlatformBillsPage.tsx";
+import CommunicationPage from "./Pages/Communication/CommunicationPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
@@ -91,6 +93,8 @@ function App() {
             <Route path="/transport" element={<TransportHub />} />
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/platform-bills" element={<PlatformBillsPage />} />
+            <Route path="/communication" element={<CommunicationPage />} />
             <Route path="/support" element={<SupportCenter />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>

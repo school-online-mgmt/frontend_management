@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCcw, UserPlus, Search, Filter, X,
@@ -10,8 +11,10 @@ import {
 import api from '../../api/api';
 import type { Student } from '../../api/types';
 import AdmitStudentModal from '../../components/Student/AdmitStudentModal';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import NewStudentModal from '../../components/Student/NewStudentModal';
+import { useSession } from '../../context/SessionContext';
+import ActionBar from '../../components/common/ActionBar';
 import { useToast } from '../../context/ToastContext';
 
 interface SessionOption {
@@ -52,10 +55,10 @@ function avatarColor(name: string) {
 
 const StudentsHome: React.FC = () => {
   const { addToast } = useToast();
-  const [sessions, setSessions]           = useState<SessionOption[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
-  const [students, setStudents]           = useState<Student[]>([]);
-  const [loading, setLoading]             = useState(false);
+  // Sessions + selection are global — sourced from the layout topbar.
+  const { sessions: ctxSessions, selectedSessionId, loading: sessionsCtxLoading } = useSession();
+  const sessions = ctxSessions as unknown as SessionOption[];
+  const queryClient = useQueryClient();
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showAdmitModal, setShowAdmitModal]   = useState(false);
@@ -70,56 +73,30 @@ const StudentsHome: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // Load sessions once; auto-pick the current ACTIVE session as default.
+  // Students list, cached per session id. Switching sessions reads from
+  // cache when we've fetched it before; revisit feels instant.
+  const studentsQuery = useQuery({
+    queryKey: ['students', 'list', selectedSessionId],
+    queryFn: () => api.getStudents(undefined, undefined, selectedSessionId),
+    enabled: !!selectedSessionId,
+  });
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setSessionsLoading(true);
-      try {
-        const data = await api.getSessions();
-        if (cancelled) return;
-        const list: SessionOption[] = Array.isArray(data) ? data : [];
-        setSessions(list);
-        const active = list.find(s => s.status === "ACTIVE") ?? list[0];
-        if (active) setSelectedSessionId(active.id);
-      } catch (err: any) {
-        if (!cancelled) addToast(err?.response?.data?.message || 'Failed to load sessions.', 'error');
-      } finally { if (!cancelled) setSessionsLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, [addToast]);
-
-  // Refetch student list when the chosen session changes.
-  useEffect(() => {
-    if (!selectedSessionId) { setStudents([]); return; }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const response = await api.getStudents(undefined, undefined, selectedSessionId);
-        if (!cancelled) setStudents(Array.isArray(response) ? response : []);
-      } catch (err: any) {
-        if (!cancelled) {
-          addToast(err?.response?.data?.message || 'Failed to load students. Please refresh.', 'error');
-          setStudents([]);
-        }
-      } finally { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedSessionId, addToast]);
-
-  const fetchStudents = async () => {
-    if (!selectedSessionId) return;
-    setLoading(true);
-    try {
-      const response = await api.getStudents(undefined, undefined, selectedSessionId);
-      setStudents(Array.isArray(response) ? response : []);
-    } catch (err: any) {
+    if (studentsQuery.error) {
+      const err = studentsQuery.error as any;
       addToast(err?.response?.data?.message || 'Failed to load students. Please refresh.', 'error');
-      setStudents([]);
     }
-    finally { setLoading(false); }
-  };
+  }, [studentsQuery.error, addToast]);
+  const students: Student[] = useMemo(
+    () => Array.isArray(studentsQuery.data) ? studentsQuery.data : [],
+    [studentsQuery.data]
+  );
+  const loading = studentsQuery.isFetching;
+  const fetchStudents = () =>
+    queryClient.invalidateQueries({ queryKey: ['students', 'list', selectedSessionId] });
+
+  // Mirror the SessionContext loading state into the local flag so existing
+  // conditionals (`!sessionsLoading`) keep working without a wider refactor.
+  useEffect(() => { setSessionsLoading(sessionsCtxLoading); }, [sessionsCtxLoading]);
 
   const handleAdmit = async (formData: any) => {
     if (!selectedStudent) return;
@@ -191,76 +168,46 @@ const StudentsHome: React.FC = () => {
       <PageHeader
         icon={Users}
         title="Student Management"
-        gradient="from-blue-600 via-indigo-600 to-violet-600"
+        gradient={MODULE_THEMES.people}
         subtitle="View, search and manage enrolled students"
-        actions={
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowNewStudentModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-bold rounded-xl hover:bg-white/25 active:scale-95 transition-all backdrop-blur-sm">
-              <UserPlus size={16} /> New Student
-            </button>
-            <button onClick={fetchStudents} disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-bold rounded-xl hover:bg-white/20 active:scale-95 disabled:opacity-50 transition-all backdrop-blur-sm">
-              <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
-            </button>
-          </div>
+        onRefresh={fetchStudents}
+        refreshing={loading}
+        primaryActions={
+          <button onClick={() => setShowNewStudentModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
+            <UserPlus size={15} /> New Student
+          </button>
         }
       />
 
       <div className="max-w-7xl mx-auto px-3 lg:px-5 py-3 space-y-2.5">
 
-        {/* ── Session selector (required gate) ─────────────────────────────── */}
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl p-3 sm:p-4 text-white shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
-                <CalendarDays size={17} />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-white/70">Academic Session</p>
-                <p className="text-[11px] text-white/80">Pick a session to view its students</p>
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <select
-                data-testid="students-session-select"
-                value={selectedSessionId}
-                onChange={e => setSelectedSessionId(e.target.value)}
-                disabled={sessionsLoading}
-                className="w-full px-3 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-              >
-                {sessionsLoading && <option>Loading sessions…</option>}
-                {!sessionsLoading && sessions.length === 0 && <option value="">No sessions found</option>}
-                {!sessionsLoading && sessions.length > 0 && <option value="">— Select a session —</option>}
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}{s.status && s.status !== "ACTIVE" ? ` (${s.status.toLowerCase()})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {selectedSessionId && (
-              <div className="flex flex-wrap gap-2 text-[11px] shrink-0">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-300/30 font-bold">
+        {selectedSessionId && (
+          <ActionBar
+            leading={
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
                   <CheckCircle size={11} /> {enrollmentStats.enrolled} enrolled
                 </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-300/30 font-bold">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-bold">
                   <UserPlus size={11} /> {enrollmentStats.notEnrolled} not enrolled
                 </span>
               </div>
-            )}
+            }
+          />
+        )}
+
+        {/* Contextual session-status notices (ENDING / ENDED). */}
+        {selectedSession?.status === "ENDING" && (
+          <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <strong>This session is ending.</strong> Teachers are recording promotion decisions. New admissions are still allowed.
           </div>
-          {selectedSession?.status === "ENDING" && (
-            <p className="mt-2.5 text-[11px] text-amber-100 bg-amber-600/30 border border-amber-300/30 rounded-lg px-2.5 py-1.5 inline-block">
-              <strong>This session is ending.</strong> Teachers are recording promotion decisions. New admissions are still allowed.
-            </p>
-          )}
-          {selectedSession?.status === "ENDED" && (
-            <p className="mt-2.5 text-[11px] text-slate-100 bg-slate-700/40 border border-slate-300/30 rounded-lg px-2.5 py-1.5 inline-block">
-              <strong>This session has ended.</strong> Use a current session for new admissions.
-            </p>
-          )}
-        </div>
+        )}
+        {selectedSession?.status === "ENDED" && (
+          <div className="text-xs text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2">
+            <strong>This session has ended.</strong> Use a current session for new admissions.
+          </div>
+        )}
 
         {/* Empty state when no session is selected */}
         {!selectedSessionId && !sessionsLoading && (
@@ -583,6 +530,8 @@ const StudentsHome: React.FC = () => {
                               </span>
                             ) : (selectedSession?.status !== "ENDED") ? (
                               <button
+                                data-testid={`student-admit-btn-${student.id}`}
+                                data-student-phone={student.phone}
                                 onClick={e => { e.stopPropagation(); setSelectedStudent(student); setShowAdmitModal(true); }}
                                 className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-semibold rounded hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm"
                               >

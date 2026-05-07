@@ -4,8 +4,10 @@ import {
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
     ChevronRight, ArrowRight, Check, X, Sparkles, Receipt, Landmark, Settings,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../api/api';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { SESSIONS_QUERY_KEY } from '../../context/SessionContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,7 +148,7 @@ const SettingsStep: React.FC<{
             <p className={lbl + ' mb-0'}>School Identity</p>
             <div>
                 <label className={lbl}>School Name <span className="text-red-400">*</span></label>
-                <input value={data.schoolName} onChange={e => onChange('schoolName', e.target.value)}
+                <input data-testid="wizard-school-name" value={data.schoolName} onChange={e => onChange('schoolName', e.target.value)}
                     placeholder="e.g. Sunrise Public School"
                     className={errCls(showErrors && !data.schoolName.trim())} />
                 {showErrors && !data.schoolName.trim() && <p className="text-xs text-red-500 mt-1">School name is required.</p>}
@@ -270,7 +272,7 @@ const SessionStep: React.FC<{
         <div className="space-y-5 max-w-xl">
             <div>
                 <label className={lbl}>Session Name <span className="text-red-400">*</span></label>
-                <input value={data.name} onChange={e => onChange('name', e.target.value)}
+                <input data-testid="wizard-session-name" value={data.name} onChange={e => onChange('name', e.target.value)}
                     placeholder={`e.g. ${defaultSessionName}`}
                     className={errCls(showErrors && !data.name.trim())} />
                 {showErrors && !data.name.trim() && <p className="text-xs text-red-500 mt-1">Session name is required.</p>}
@@ -279,13 +281,13 @@ const SessionStep: React.FC<{
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={lbl}>Start Date <span className="text-red-400">*</span></label>
-                    <input type="date" value={data.startDate} onChange={e => onChange('startDate', e.target.value)}
+                    <input data-testid="wizard-session-start-date" type="date" value={data.startDate} onChange={e => onChange('startDate', e.target.value)}
                         className={errCls(showErrors && !data.startDate)} />
                     {showErrors && !data.startDate && <p className="text-xs text-red-500 mt-1">Start date is required.</p>}
                 </div>
                 <div>
                     <label className={lbl}>End Date <span className="text-red-400">*</span></label>
-                    <input type="date" value={data.endDate} min={data.startDate || undefined}
+                    <input data-testid="wizard-session-end-date" type="date" value={data.endDate} min={data.startDate || undefined}
                         onChange={e => onChange('endDate', e.target.value)}
                         className={errCls((showErrors && !data.endDate) || endInvalid)} />
                     {showErrors && !data.endDate && <p className="text-xs text-red-500 mt-1">End date is required.</p>}
@@ -327,7 +329,7 @@ const ClassesStep: React.FC<{
                     <div className="flex items-start gap-3 mb-4">
                         <div className="flex-1">
                             <label className={lbl}>Class Name <span className="text-red-400">*</span></label>
-                            <input value={cls.name}
+                            <input data-testid={`wizard-class-name-${ci}`} value={cls.name}
                                 onChange={e => updateClass(ci, { ...cls, name: e.target.value })}
                                 placeholder="e.g. Class 10"
                                 className={errCls(showErrors && !cls.name.trim())} />
@@ -346,7 +348,7 @@ const ClassesStep: React.FC<{
                             {cls.sections.map((sec, si) => (
                                 <div key={si}
                                     className={`flex items-center gap-1.5 bg-white border rounded-xl px-3 py-1.5 shadow-sm transition-colors ${showErrors && !sec.trim() ? 'border-red-400' : 'border-slate-200'}`}>
-                                    <input value={sec} onChange={e => setSection(ci, si, e.target.value)}
+                                    <input data-testid={`wizard-class-${ci}-section-${si}`} value={sec} onChange={e => setSection(ci, si, e.target.value)}
                                         placeholder="A" maxLength={12}
                                         className="w-14 text-sm font-bold text-slate-700 bg-transparent border-none outline-none text-center" />
                                     {cls.sections.length > 1 && (
@@ -357,7 +359,7 @@ const ClassesStep: React.FC<{
                                     )}
                                 </div>
                             ))}
-                            <button onClick={() => addSection(ci)}
+                            <button data-testid={`wizard-add-section-${ci}`} onClick={() => addSection(ci)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-dashed border-emerald-300 rounded-xl hover:bg-emerald-50 transition-colors">
                                 <Plus size={12} /> Section
                             </button>
@@ -368,7 +370,7 @@ const ClassesStep: React.FC<{
                     </div>
                 </div>
             ))}
-            <button onClick={addClass}
+            <button data-testid="wizard-add-class" onClick={addClass}
                 className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 hover:border-emerald-300 transition-colors flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Another Class
             </button>
@@ -424,9 +426,9 @@ const CoursesStep: React.FC<{
     return (
         <div className="space-y-6 max-w-3xl">
             {classes.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1" data-testid="wizard-class-tabs">
                     {classes.map((c, i) => (
-                        <button key={i} onClick={() => setActiveTab(i)}
+                        <button key={i} data-testid={`wizard-class-tab-${i}`} onClick={() => setActiveTab(i)}
                             className={`px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                                 i === ci ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-300'
                             }`}>
@@ -442,7 +444,7 @@ const CoursesStep: React.FC<{
                     <p className={lbl + ' mb-0'}>
                         Subjects for {cls.name || `Class ${ci + 1}`} <span className="text-red-400">*</span>
                     </p>
-                    <button onClick={addSubject}
+                    <button data-testid="wizard-add-subject" onClick={addSubject}
                         className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
                         <Plus size={12} /> Add Subject
                     </button>
@@ -450,22 +452,23 @@ const CoursesStep: React.FC<{
                 <div className="space-y-2">
                     {cls.subjects.map((subj, si) => (
                         <div key={si} className="grid gap-2 items-start bg-slate-50 border border-slate-200 rounded-xl p-3"
+                            data-testid={`wizard-subject-row-${si}`}
                             style={{ gridTemplateColumns: '1fr 1fr 120px auto' }}>
                             <div>
-                                <input value={subj.name}
+                                <input data-testid={`wizard-subject-name-${si}`} value={subj.name}
                                     onChange={e => patchSubject(si, { ...subj, name: e.target.value })}
                                     placeholder="Subject name *"
                                     className={errClsXs(showErrors && !subj.name.trim())} />
                                 {showErrors && !subj.name.trim() && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                             </div>
                             <div>
-                                <input value={subj.bookName}
+                                <input data-testid={`wizard-subject-book-${si}`} value={subj.bookName}
                                     onChange={e => patchSubject(si, { ...subj, bookName: e.target.value })}
                                     placeholder="Book / textbook *"
                                     className={errClsXs(showErrors && !subj.bookName.trim())} />
                                 {showErrors && !subj.bookName.trim() && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                             </div>
-                            <select value={subj.type}
+                            <select data-testid={`wizard-subject-type-${si}`} value={subj.type}
                                 onChange={e => patchSubject(si, { ...subj, type: e.target.value as 'core' | 'elective' })}
                                 className={inpXs}>
                                 <option value="core">Core</option>
@@ -492,7 +495,7 @@ const CoursesStep: React.FC<{
                             <div className="flex-1 space-y-3">
                                 <div>
                                     <label className={lbl}>Course Name <span className="text-red-400">*</span></label>
-                                    <input value={course.name}
+                                    <input data-testid={`wizard-course-name-${cIdx}`} value={course.name}
                                         onChange={e => patchCourse(cIdx, { ...course, name: e.target.value })}
                                         placeholder="e.g. Science"
                                         className={errCls(showErrors && !course.name.trim())} />
@@ -500,7 +503,7 @@ const CoursesStep: React.FC<{
                                 </div>
                                 <div>
                                     <label className={lbl}>Description <span className="text-red-400">*</span></label>
-                                    <textarea value={course.description}
+                                    <textarea data-testid={`wizard-course-desc-${cIdx}`} value={course.description}
                                         onChange={e => patchCourse(cIdx, { ...course, description: e.target.value })}
                                         rows={2} placeholder="e.g. Covers Physics, Chemistry and Biology for Class 10 students"
                                         className={errCls(showErrors && !course.description.trim()) + ' resize-none'} />
@@ -530,7 +533,11 @@ const CoursesStep: React.FC<{
                                         {cls.subjects.map((subj, si) => {
                                             const selected = course.subjectIndices.includes(si);
                                             return (
-                                                <button key={si} type="button" onClick={() => toggleSubject(cIdx, si)}
+                                                <button key={si} type="button"
+                                                    data-testid={`wizard-toggle-subject-${cIdx}-${si}`}
+                                                    data-subject-name={subj.name || ''}
+                                                    data-selected={selected ? "true" : "false"}
+                                                    onClick={() => toggleSubject(cIdx, si)}
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                                                         selected
                                                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
@@ -550,7 +557,7 @@ const CoursesStep: React.FC<{
                         </div>
                     </div>
                 ))}
-                <button onClick={addCourse}
+                <button data-testid="wizard-add-course" onClick={addCourse}
                     className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
                     <Plus size={15} /> Add Another Course to {cls.name || `Class ${ci + 1}`}
                 </button>
@@ -920,12 +927,12 @@ const NoticeBoardStep: React.FC<{
         </div>
         <div>
             <label className={lbl}>Board Name</label>
-            <input value={name} onChange={e => onName(e.target.value)}
+            <input data-testid="wizard-board-name" value={name} onChange={e => onName(e.target.value)}
                 placeholder="School Notice Board" className={inp} />
         </div>
         <div>
             <label className={lbl}>Description <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-            <textarea value={desc} onChange={e => onDesc(e.target.value)} rows={3}
+            <textarea data-testid="wizard-board-desc" value={desc} onChange={e => onDesc(e.target.value)} rows={3}
                 placeholder="Main board for school-wide announcements and circulars"
                 className={inp + ' resize-none'} />
         </div>
@@ -1080,7 +1087,7 @@ const ReviewStep: React.FC<{
                 </div>
             </div>
 
-            <button onClick={onSubmit}
+            <button data-testid="wizard-launch-btn" onClick={onSubmit}
                 className="flex items-center gap-2.5 px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-2xl transition-colors shadow-lg shadow-emerald-200 mt-2">
                 Launch School Setup <ArrowRight size={16} />
             </button>
@@ -1092,6 +1099,7 @@ const ReviewStep: React.FC<{
 
 const OnboardingWizard: React.FC = () => {
     const { refetch, forceComplete } = useOnboarding();
+    const queryClient = useQueryClient();
 
     const [step, setStep]             = useState(1);
     const [showErrors, setShowErrors] = useState(false);
@@ -1293,7 +1301,7 @@ const OnboardingWizard: React.FC = () => {
             for (let classIdx = 0; classIdx < classes.length; classIdx++) {
                 const cls = classes[classIdx];
                 idx = addLog(`Creating ${cls.name}…`);
-                const classRes = await api.createClass({ name: cls.name.trim(), slug: slugify(cls.name.trim()) });
+                const classRes = await api.createClass({ sessionId, name: cls.name.trim(), slug: slugify(cls.name.trim()) });
                 const classId: string = classRes.newClass?.id;
                 if (!classId) throw new Error(`Class "${cls.name}" creation did not return an ID.`);
                 updateLog(idx, 'done');
@@ -1408,11 +1416,22 @@ const OnboardingWizard: React.FC = () => {
             // 6 ── Notice board
             if (boardName.trim()) {
                 idx = addLog('Creating school notice board…');
-                await api.createNoticeBoard({ name: boardName.trim(), description: boardDesc.trim() || undefined, visibility: 'PUBLIC' });
+                await api.createNoticeBoard({ sessionId, name: boardName.trim(), description: boardDesc.trim() || undefined, visibility: 'PUBLIC' });
                 updateLog(idx, 'done');
             }
 
             setDone(true);
+            // The wizard just bulk-created sessions / classes / teachers /
+            // fees / etc. None of that data is in any React Query cache
+            // yet (the queries were created before the wizard ran). Wipe
+            // the cache so the dashboard, topbar session selector, and
+            // every list page see the fresh school data immediately.
+            await queryClient.invalidateQueries();
+            // Also explicitly refresh the global session cache so the
+            // topbar session selector (which depends on SESSIONS_QUERY_KEY
+            // and gates pages on a session being chosen) picks up the
+            // new session before SessionContext's auto-pick effect runs.
+            await queryClient.refetchQueries({ queryKey: SESSIONS_QUERY_KEY });
             await refetch();
             forceComplete();
 
@@ -1447,7 +1466,7 @@ const OnboardingWizard: React.FC = () => {
     );
 
     return (
-        <div className="fixed inset-0 bg-white flex overflow-hidden">
+        <div className="fixed inset-0 bg-white flex overflow-hidden" data-testid="onboarding-wizard" data-current-step={step}>
 
             {/* ── Left sidebar (desktop) ── */}
             <aside className="hidden lg:flex w-[268px] bg-slate-900 flex-col shrink-0">
@@ -1595,6 +1614,7 @@ const OnboardingWizard: React.FC = () => {
                 {!done && (
                     <div className="px-8 py-4 border-t border-slate-100 bg-white shrink-0 flex items-center justify-between gap-4">
                         <button
+                            data-testid="wizard-back-btn"
                             disabled={step === 1 || submitting}
                             onClick={() => { setShowErrors(false); setStep(s => s - 1); }}
                             className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -1608,7 +1628,7 @@ const OnboardingWizard: React.FC = () => {
                                 </p>
                             )}
                             {step < 10 && (
-                                <button onClick={goNext}
+                                <button data-testid="wizard-next-btn" data-skip={optionalEmpty ? "true" : "false"} onClick={goNext}
                                     className={`flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-colors shadow-sm
                                         ${optionalEmpty
                                             ? 'bg-slate-400 hover:bg-slate-500 shadow-slate-200'

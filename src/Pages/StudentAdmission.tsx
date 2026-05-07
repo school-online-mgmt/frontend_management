@@ -20,6 +20,12 @@ interface Applicant {
   disability: boolean;
   status: string;
   createdAt: string;
+  // ── Preferences captured at application time (used by the pre-fill effect
+  // below). The applicant only flags whether they want transport; the
+  // school assigns the actual zone here at admit time.
+  sessionId?: string;
+  desiredClassId?: string | null;
+  transportOpted?: boolean;
 }
 
 interface AdmissionRequest {
@@ -80,6 +86,23 @@ const StudentAdmission = () => {
       }).catch(() => {});
     }
   }, [admissionData.sectionId]);
+
+  // When a specific applicant is selected for admission, pre-fill the
+  // admit form with the preferences captured on the public application
+  // form. Session, preferred class and the transport-opt-in boolean carry
+  // through. The transport ZONE is NOT pre-filled — the applicant doesn't
+  // pick a zone on the public form; management assigns one here based on
+  // the student's home address.
+  useEffect(() => {
+    if (!selectedApplicant) return;
+    setAdmissionData(prev => ({
+      ...prev,
+      sessionId: selectedApplicant.sessionId ?? prev.sessionId,
+      classId:   selectedApplicant.desiredClassId ?? prev.classId,
+      transportOpted: selectedApplicant.transportOpted ?? prev.transportOpted,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedApplicant?.id]);
 
   useEffect(() => {
     filterApplicants();
