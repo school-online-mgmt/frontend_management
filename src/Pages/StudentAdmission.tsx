@@ -81,6 +81,23 @@ const StudentAdmission = () => {
     }
   }, [admissionData.sectionId]);
 
+  // When a specific applicant is selected for admission, pre-fill the
+  // admit form with the preferences captured on the public application
+  // form. Session, preferred class and the transport-opt-in boolean carry
+  // through. The transport ZONE is NOT pre-filled — the applicant doesn't
+  // pick a zone on the public form; management assigns one here based on
+  // the student's home address.
+  useEffect(() => {
+    if (!selectedApplicant) return;
+    setAdmissionData(prev => ({
+      ...prev,
+      sessionId: selectedApplicant.sessionId ?? prev.sessionId,
+      classId:   selectedApplicant.desiredClassId ?? prev.classId,
+      transportOpted: selectedApplicant.transportOpted ?? prev.transportOpted,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedApplicant?.id]);
+
   useEffect(() => {
     filterApplicants();
   }, [searchQuery, statusFilter, applicants]);

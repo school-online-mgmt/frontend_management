@@ -4,6 +4,8 @@ import {
   ArrowLeft, Loader2, AlertTriangle, User, Phone, Mail,
   MapPin, Users, Calendar, CheckCircle2, XCircle, RefreshCcw,
   AlertCircle, ClipboardList, MessageSquare, Shield,
+  Bus, GraduationCap, BookOpen,
+  // MapPin is also imported above — keep at the consolidated import block
 } from 'lucide-react';
 import api from '../../api/api';
 import type { Applicant } from '../../api/types';
@@ -333,9 +335,42 @@ const ApplicantDetails: React.FC = () => {
                 {cfg.label}
               </span>
             } />
+            {applicant.dateOfBirth && (
+              <InfoRow icon={Calendar} label="Date of Birth" value={formatDate(applicant.dateOfBirth)} />
+            )}
             {applicant.comments && (
               <InfoRow icon={MessageSquare} label="Comments" value={applicant.comments} />
             )}
+          </div>
+
+          {/* Admission preferences — what the applicant asked for on the
+              public form. The admit page pre-fills from these values, so
+              management can see at a glance what choice will carry through. */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 lg:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                <GraduationCap size={15} className="text-violet-600" />
+              </div>
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Admission preferences</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              <div>
+                <InfoRow icon={Calendar}   label="Applying for session"
+                  value={applicant.sessionName ?? <span className="text-slate-300 italic">Not specified</span>} />
+                <InfoRow icon={BookOpen}   label="Preferred class"
+                  value={applicant.desiredClassName ?? <span className="text-slate-300 italic">No preference</span>} />
+              </div>
+              <div>
+                <InfoRow icon={Bus}        label="School transport opted"
+                  value={
+                    applicant.transportOpted
+                      ? <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
+                          <CheckCircle2 size={13} className="text-emerald-500" /> Yes — please assign a zone at admit time
+                        </span>
+                      : <span className="text-slate-400">No</span>
+                  } />
+              </div>
+            </div>
           </div>
         </div>
 
