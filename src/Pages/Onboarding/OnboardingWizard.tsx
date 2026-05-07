@@ -606,9 +606,9 @@ const CourseFeeStep: React.FC<{
             </div>
 
             {classes.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1" data-testid="wizard-course-fee-tabs">
                     {classes.map((c, i) => (
-                        <button key={i} onClick={() => setActiveTab(i)}
+                        <button key={i} data-testid={`wizard-course-fee-tab-${i}`} onClick={() => setActiveTab(i)}
                             className={`px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                                 i === ci ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-300'
                             }`}>
@@ -647,26 +647,32 @@ const CourseFeeStep: React.FC<{
                                     const amtErr  = showErrors && (fi.amount === '' || Number(fi.amount) < 0);
                                     return (
                                         <div key={fIdx} className="grid gap-2 items-start"
+                                            data-testid={`wizard-course-fee-${cIdx}-${fIdx}`}
+                                            data-fee-type={fi.feeType}
                                             style={{ gridTemplateColumns: '2fr 1fr 1fr 110px 32px' }}>
                                             <div>
-                                                <input value={fi.name}
+                                                <input data-testid={`wizard-course-fee-${cIdx}-${fIdx}-name`}
+                                                    value={fi.name}
                                                     onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, name: e.target.value })}
                                                     placeholder="e.g. Lab Charges"
                                                     className={errClsXs(nameErr)} />
                                                 {nameErr && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                                             </div>
-                                            <select value={fi.feeType}
+                                            <select data-testid={`wizard-course-fee-${cIdx}-${fIdx}-type`}
+                                                value={fi.feeType}
                                                 onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, feeType: e.target.value as FeeItemType })}
                                                 className={inpXs}>
                                                 {FEE_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
                                             </select>
-                                            <select value={fi.frequency}
+                                            <select data-testid={`wizard-course-fee-${cIdx}-${fIdx}-frequency`}
+                                                value={fi.frequency}
                                                 onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, frequency: e.target.value as FeeFrequency })}
                                                 className={inpXs}>
                                                 {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                                             </select>
                                             <div>
-                                                <input type="number" value={fi.amount} min={0}
+                                                <input data-testid={`wizard-course-fee-${cIdx}-${fIdx}-amount`}
+                                                    type="number" value={fi.amount} min={0}
                                                     onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, amount: e.target.value })}
                                                     placeholder="0"
                                                     className={errClsXs(amtErr)} />
@@ -713,7 +719,7 @@ const GlobalFeeStep: React.FC<{
                     <Landmark size={24} className="mx-auto text-slate-300 mb-3" />
                     <p className="text-sm font-bold text-slate-500 mb-1">No global fees yet</p>
                     <p className="text-xs text-slate-400 mb-4">Skip this step — you can configure school-wide fees later from the Fees hub.</p>
-                    <button onClick={add}
+                    <button data-testid="wizard-add-global-fee" onClick={add}
                         className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors mx-auto">
                         <Plus size={14} /> Add Global Fee Item
                     </button>
@@ -743,26 +749,31 @@ const GlobalFeeStep: React.FC<{
                         const amtErr  = showErrors && (gi.amount === '' || Number(gi.amount) < 0);
                         return (
                             <div key={i} className="grid gap-2 items-start"
+                                data-testid={`wizard-global-fee-${i}`}
                                 style={{ gridTemplateColumns: '2fr 1fr 1fr 110px 32px' }}>
                                 <div>
-                                    <input value={gi.name}
+                                    <input data-testid={`wizard-global-fee-${i}-name`}
+                                        value={gi.name}
                                         onChange={e => patch(i, { ...gi, name: e.target.value })}
                                         placeholder="e.g. Development Fee"
                                         className={errClsXs(nameErr)} />
                                     {nameErr && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                                 </div>
-                                <select value={gi.feeType}
+                                <select data-testid={`wizard-global-fee-${i}-type`}
+                                    value={gi.feeType}
                                     onChange={e => patch(i, { ...gi, feeType: e.target.value as FeeItemType })}
                                     className={inpXs}>
                                     {FEE_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
                                 </select>
-                                <select value={gi.frequency}
+                                <select data-testid={`wizard-global-fee-${i}-frequency`}
+                                    value={gi.frequency}
                                     onChange={e => patch(i, { ...gi, frequency: e.target.value as FeeFrequency })}
                                     className={inpXs}>
                                     {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{FEE_FREQ_LABELS[f.value]}</option>)}
                                 </select>
                                 <div>
-                                    <input type="number" value={gi.amount} min={0}
+                                    <input data-testid={`wizard-global-fee-${i}-amount`}
+                                        type="number" value={gi.amount} min={0}
                                         onChange={e => patch(i, { ...gi, amount: e.target.value })}
                                         placeholder="0"
                                         className={errClsXs(amtErr)} />
@@ -777,7 +788,7 @@ const GlobalFeeStep: React.FC<{
                     })}
                 </div>
             </div>
-            <button onClick={add}
+            <button data-testid="wizard-add-global-fee" onClick={add}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-600 border border-dashed border-emerald-300 rounded-xl hover:bg-emerald-50 transition-colors">
                 <Plus size={14} /> Add Another Global Fee
             </button>
@@ -803,7 +814,7 @@ const TransportStep: React.FC<{
                 </div>
                 <p className="text-sm font-bold text-slate-700 mb-1">No transport zones yet</p>
                 <p className="text-xs text-slate-400 mb-5">Set up transport zones for school bus fee collection. Can be configured later.</p>
-                <button onClick={add}
+                <button data-testid="wizard-add-zone" onClick={add}
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">
                     <Plus size={14} /> Add Transport Zone
                 </button>
@@ -815,15 +826,18 @@ const TransportStep: React.FC<{
         <div className="space-y-3 max-w-2xl">
             {zones.map((z, i) => (
                 <div key={i} className="grid gap-3 items-end bg-slate-50 border border-slate-200 rounded-2xl p-4"
+                    data-testid={`wizard-zone-${i}`}
                     style={{ gridTemplateColumns: '1fr 1fr auto' }}>
                     <div>
                         <label className={lbl}>Zone Name <span className="text-red-400">*</span></label>
-                        <input value={z.name} onChange={e => set(i, { ...z, name: e.target.value })}
+                        <input data-testid={`wizard-zone-${i}-name`}
+                            value={z.name} onChange={e => set(i, { ...z, name: e.target.value })}
                             placeholder="e.g. North Zone" className={inp} />
                     </div>
                     <div>
                         <label className={lbl}>Monthly Fee (₹) <span className="text-red-400">*</span></label>
-                        <input type="number" value={z.price} min={0}
+                        <input data-testid={`wizard-zone-${i}-price`}
+                            type="number" value={z.price} min={0}
                             onChange={e => set(i, { ...z, price: e.target.value })}
                             placeholder="500" className={inp} />
                     </div>
@@ -833,7 +847,7 @@ const TransportStep: React.FC<{
                     </button>
                 </div>
             ))}
-            <button onClick={add}
+            <button data-testid="wizard-add-zone" onClick={add}
                 className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Another Zone
             </button>
@@ -859,7 +873,7 @@ const LibraryStep: React.FC<{
                 </div>
                 <p className="text-sm font-bold text-slate-700 mb-1">No library books yet</p>
                 <p className="text-xs text-slate-400 mb-5">Seed the library with books for students to browse and borrow. Can be added later.</p>
-                <button onClick={add}
+                <button data-testid="wizard-add-book" onClick={add}
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">
                     <Plus size={14} /> Add Book
                 </button>
@@ -870,7 +884,8 @@ const LibraryStep: React.FC<{
     return (
         <div className="space-y-4 max-w-2xl">
             {books.map((b, i) => (
-                <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-4"
+                    data-testid={`wizard-book-${i}`}>
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Book {i + 1}</p>
                         <button onClick={() => remove(i)}
@@ -881,29 +896,33 @@ const LibraryStep: React.FC<{
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className={lbl}>Title <span className="text-red-400">*</span></label>
-                            <input value={b.title} onChange={e => set(i, { ...b, title: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-title`}
+                                value={b.title} onChange={e => set(i, { ...b, title: e.target.value })}
                                 placeholder="Book title" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Author <span className="text-red-400">*</span></label>
-                            <input value={b.author} onChange={e => set(i, { ...b, author: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-author`}
+                                value={b.author} onChange={e => set(i, { ...b, author: e.target.value })}
                                 placeholder="Author name" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Genre</label>
-                            <input value={b.genre} onChange={e => set(i, { ...b, genre: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-genre`}
+                                value={b.genre} onChange={e => set(i, { ...b, genre: e.target.value })}
                                 placeholder="Fiction, Science…" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Total Copies</label>
-                            <input type="number" value={b.totalCopies} min={1}
+                            <input data-testid={`wizard-book-${i}-copies`}
+                                type="number" value={b.totalCopies} min={1}
                                 onChange={e => set(i, { ...b, totalCopies: e.target.value })}
                                 placeholder="5" className={inp} />
                         </div>
                     </div>
                 </div>
             ))}
-            <button onClick={add}
+            <button data-testid="wizard-add-book" onClick={add}
                 className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Another Book
             </button>

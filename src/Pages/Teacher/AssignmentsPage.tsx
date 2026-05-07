@@ -683,6 +683,9 @@ const AssignmentsPage = () => {
                       <div className="bg-slate-50/60 border-t border-slate-100">
                         {cls.sections.map((sec, idx) => (
                           <div key={sec.id}
+                            data-testid="section-row"
+                            data-class-name={cls.name}
+                            data-section-name={sec.name}
                             className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-slate-100/60 transition-colors group ${idx < cls.sections.length - 1 ? "border-b border-slate-100" : ""} ${!sec.teacher ? "bg-amber-50/40" : ""}`}>
                             <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0">
                               <Layers size={13} className="text-violet-500" />
@@ -753,6 +756,8 @@ const AssignmentsPage = () => {
                   : null;
                 return (
                   <div key={subject.id}
+                    data-testid="subject-incharge-row"
+                    data-subject-name={subject.name}
                     className={`flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group ${!inchargeTeacher ? "border-l-2 border-amber-400 bg-amber-50/20" : ""}`}>
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${inchargeTeacher ? "bg-teal-50" : "bg-amber-50"}`}>
                       <BookOpen size={15} className={inchargeTeacher ? "text-teal-500" : "text-amber-500"} />
@@ -839,6 +844,8 @@ const AssignmentsPage = () => {
                   <div key={subject.id}>
                     {/* Subject header — click to expand */}
                     <div onClick={() => toggleSubject(subject.id)}
+                      data-testid="section-teaching-subject-header"
+                      data-subject-name={subject.name}
                       className={`flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group cursor-pointer ${!allMapped ? "border-l-2 border-amber-400" : ""}`}>
                       <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${allMapped ? "bg-teal-50" : "bg-amber-50"}`}>
@@ -878,6 +885,10 @@ const AssignmentsPage = () => {
                       <div className="bg-slate-50/60 border-t border-slate-100">
                         {sectionData.assigned.map((p, idx) => (
                           <div key={`a_${p.sectionId}_${idx}`}
+                            data-testid="section-teaching-row"
+                            data-subject-name={subject.name}
+                            data-section-name={p.sectionName}
+                            data-class-name={p.className}
                             className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-slate-100/60 transition-colors group ${(idx < sectionData.assigned.length - 1 || sectionData.unassigned.length > 0) ? "border-b border-slate-100" : ""}`}>
                             <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
                               <Layers size={13} className="text-teal-500" />
@@ -904,6 +915,10 @@ const AssignmentsPage = () => {
                         ))}
                         {sectionData.unassigned.map((g, idx) => (
                           <div key={`u_${g.sectionId}_${idx}`}
+                            data-testid="section-teaching-row"
+                            data-subject-name={subject.name}
+                            data-section-name={g.sectionName}
+                            data-class-name={g.className}
                             className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-amber-50/60 transition-colors group bg-amber-50/30 ${idx < sectionData.unassigned.length - 1 ? "border-b border-slate-100" : ""}`}>
                             <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
                               <Layers size={13} className="text-rose-400" />
