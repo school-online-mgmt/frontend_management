@@ -1,36 +1,40 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Plus, BookOpen, RefreshCcw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/api";
 import CreateCourse from "../../components/Courses/CreateCourse.tsx";
 import { useNavigate } from "react-router-dom";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSession } from "../../context/SessionContext";
+
+interface SessionOpt { id: string; name: string; status?: "ACTIVE" | "ENDING" | "ENDED" }
 
 const CourseHome = () => {
-
-    const [courses, setCourses] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Sessions + active selection are global — sourced from the layout topbar.
+    const { sessions: ctxSessions, selectedSessionId, loading: sessionsLoading } = useSession();
+    const sessions = ctxSessions as unknown as SessionOpt[];
+    const queryClient = useQueryClient();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
-    const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+    const [message, setMessage]                 = useState<string | null>(null);
+    const [messageType, setMessageType]         = useState<"success" | "error" | null>(null);
 
     const navigate = useNavigate();
 
-    const fetchCourses = async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getCourses();
-            setCourses(Array.isArray(data) ? data : []);
-        } catch (error) {
+    const coursesQuery = useQuery({
+        queryKey: ["courses", "list", selectedSessionId],
+        queryFn: () => api.getCourses({ sessionId: selectedSessionId }),
+        enabled: !!selectedSessionId,
+    });
+    const courses: any[] = Array.isArray(coursesQuery.data) ? coursesQuery.data : [];
+    const isLoading = coursesQuery.isFetching;
+    const fetchCourses = () =>
+        queryClient.invalidateQueries({ queryKey: ["courses", "list", selectedSessionId] });
 
-            setCourses([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCourses();
-    }, []);
+    const selectedSession = useMemo(
+        () => sessions.find(s => s.id === selectedSessionId) ?? null,
+        [sessions, selectedSessionId]
+    );
 
     return (
         <div className="min-h-full bg-slate-50">
@@ -56,85 +60,81 @@ const CourseHome = () => {
             <PageHeader
                 icon={BookOpen}
                 title="Course Management"
-                subtitle="Create, view and manage courses"
-                actions={
-                    <div className="flex gap-2">
-                        <button onClick={fetchCourses} disabled={isLoading}
-                            className="px-3 py-2 bg-white/10 border border-white/20 text-white rounded-xl flex items-center gap-2 text-sm hover:bg-white/20 transition backdrop-blur-sm">
-                            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
-                        </button>
-                        <button data-testid="create-course-btn" onClick={() => setIsCreateModalOpen(true)}
-                            className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-white/25 transition backdrop-blur-sm">
-                            <Plus size={18} /> Create Course
-                        </button>
-                    </div>
+                subtitle="Create, view and manage courses per academic session"
+                gradient={MODULE_THEMES.academics}
+                onRefresh={fetchCourses}
+                refreshing={isLoading}
+                primaryActions={
+                    <button data-testid="create-course-btn" onClick={() => setIsCreateModalOpen(true)} disabled={!selectedSessionId}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white rounded-lg text-sm font-semibold hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+                        <Plus size={15} /> Create Course
+                    </button>
                 }
             />
-            <div className="p-8 lg:p-12 max-w-7xl mx-auto space-y-8">
 
-            <main>
-                <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                        <h2 className="text-lg font-bold text-slate-700">
-                            All Courses
-                        </h2>
-                    </div>
+            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-left">
-                            <thead>
-                            <tr className="border-b border-slate-100">
-                                <th className="p-4 text-sm font-semibold uppercase">
-                                    Slug
-                                </th>
-                                <th className="p-4 text-sm font-semibold uppercase">
-                                    Course Name
-                                </th>
-                            </tr>
-                            </thead>
+                {/* Empty gate */}
+                {!selectedSessionId && !sessionsLoading && (
+                    <EmptySessionState entityPlural="courses" />
+                )}
 
-                            <tbody className="divide-y divide-slate-100">
+                {selectedSessionId && (
+                    <main>
+                        <div className="bg-white p-4 rounded-2xl shadow border border-slate-100">
+                            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                                <h2 className="text-lg font-bold text-slate-700">
+                                    Courses in {selectedSession?.name ?? "—"}
+                                </h2>
+                            </div>
 
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={2} className="text-center p-16 text-slate-500">
-                                        <RefreshCcw size={18} className="animate-spin inline mr-2" />
-                                        Loading courses...
-                                    </td>
-                                </tr>
-                            ) : courses.length > 0 ? (
-
-                                courses.map((course: any) => (
-                                    <tr
-                                        key={course.id}
-                                        data-testid={`course-row-${course.slug}`}
-                                        onClick={() => navigate(`/course/${course.id}`)}
-                                        className="hover:bg-slate-50 cursor-pointer transition"
-                                    >
-                                        <td className="p-4 font-mono text-slate-500">
-                                            #{course.slug}
-                                        </td>
-                                        <td className="p-4 font-semibold text-slate-800 flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                                <BookOpen size={20} />
-                                            </div>
-
-                                            {course.name}
-                                        </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse text-left">
+                                    <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="p-4 text-sm font-semibold uppercase">Slug</th>
+                                        <th className="p-4 text-sm font-semibold uppercase">Course Name</th>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={2} className="text-center p-16 text-slate-500">
-                                        No courses found
-                                    </td>
-                                </tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </main>
+                                    </thead>
+
+                                    <tbody className="divide-y divide-slate-100">
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={2} className="text-center p-16 text-slate-500">
+                                                <RefreshCcw size={18} className="animate-spin inline mr-2" />
+                                                Loading courses...
+                                            </td>
+                                        </tr>
+                                    ) : courses.length > 0 ? (
+                                        courses.map((course: any) => (
+                                            <tr
+                                                key={course.id}
+                                                data-testid={`course-row-${course.slug}`}
+                                                onClick={() => navigate(`/course/${course.id}`)}
+                                                className="hover:bg-slate-50 cursor-pointer transition"
+                                            >
+                                                <td className="p-4 font-mono text-slate-500">#{course.slug}</td>
+                                                <td className="p-4 font-semibold text-slate-800 flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                        <BookOpen size={20} />
+                                                    </div>
+                                                    {course.name}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={2} className="text-center p-16 text-slate-500">
+                                                No courses found in this session
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                )}
             </div>
         </div>
     );

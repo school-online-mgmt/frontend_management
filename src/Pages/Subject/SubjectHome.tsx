@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-  Plus, BookOpen, RefreshCcw, Filter, Search, X,
+  Plus, BookOpen, Filter, Search, X,
   ChevronRight, Loader2, CheckCircle2, XCircle,
   BarChart3, AlignJustify, BookMarked, FlaskConical,
   Languages, Calculator, Palette, UserCheck, AlertTriangle,
@@ -10,7 +10,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import CreateSubject from "../../components/CreateSubject.tsx";
 import type { Subject, Session } from "../../api/types";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { EmptySessionState } from "../../components/common/SessionGate";
+import { useSession } from "../../context/SessionContext";
 
 /* ── Subject type config ─────────────────────────────────────────────────── */
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof BookOpen; bg: string; text: string; border: string }> = {
@@ -58,6 +60,7 @@ const SubjectCard = ({
   const TypeIcon = cfg.icon;
   return (
     <div
+      data-testid={`subject-card-${subject.slug}`}
       onClick={onClick}
       className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer group flex flex-col"
     >
@@ -128,7 +131,10 @@ const SubjectCard = ({
 const SubjectPage = () => {
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedSession, setSelectedSession]     = useState("");
+  // Session id comes from the layout-level SessionContext.
+  const { selectedSessionId: selectedSession, sessions: ctxSessions, loading: sessionsLoading } = useSession();
+  const sessions = ctxSessions as unknown as Session[];
+  const sessionPicked = !!selectedSession;
   const [selectedType, setSelectedType]           = useState("");
   const [statusFilter, setStatusFilter]           = useState<"all" | "active" | "inactive">("all");
   const [search, setSearch]                       = useState("");
@@ -141,17 +147,7 @@ const SubjectPage = () => {
     queryKey: ["subjects"],
     queryFn: () => api.getSubjects(),
     staleTime: 5 * 60 * 1000,
-  });
-
-  const {
-    data: sessions = [], isLoading: sessionsLoading,
-  } = useQuery<Session[]>({
-    queryKey: ["sessions"],
-    queryFn: async () => {
-      const data = await api.getSessions();
-      return Array.isArray(data) ? data : data?.sessions ?? [];
-    },
-    staleTime: 10 * 60 * 1000,
+    enabled: sessionPicked,
   });
 
   const {
@@ -214,11 +210,11 @@ const SubjectPage = () => {
   }, [subjects, selectedSession, selectedType, statusFilter, search]);
 
   const activeFilterCount = [
-    selectedSession, selectedType, statusFilter !== "all" ? statusFilter : "",
+    selectedType, statusFilter !== "all" ? statusFilter : "",
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setSelectedSession(""); setSelectedType(""); setStatusFilter("all"); setSearch("");
+    setSelectedType(""); setStatusFilter("all"); setSearch("");
   };
 
   /* ── Full-page loading ───────────────────────────────────────────────── */
@@ -245,24 +241,27 @@ const SubjectPage = () => {
       <PageHeader
         icon={BookOpen}
         title="Subjects"
-        gradient="from-amber-600 via-orange-600 to-red-500"
+        gradient={MODULE_THEMES.academics}
         subtitle="Manage curriculum subjects, track teacher assignments and course coverage"
-        actions={
-          <div className="flex items-center gap-2">
-            <button onClick={() => refetchSubjects()} disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white text-sm font-medium rounded-xl hover:bg-white/20 disabled:opacity-50 transition backdrop-blur-sm">
-              <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
-            </button>
-            <button data-testid="create-subject-btn" onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
-              <Plus size={14} /> Create Subject
-            </button>
-          </div>
+        onRefresh={() => refetchSubjects()}
+        refreshing={isLoading}
+        primaryActions={
+          <button data-testid="create-subject-btn" onClick={() => setIsCreateModalOpen(true)}
+            disabled={!selectedSession}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
+            <Plus size={14} /> Create Subject
+          </button>
         }
       />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
 
+        {/* Empty gate */}
+        {!selectedSession && !sessionsLoading && (
+          <EmptySessionState entityPlural="subjects" />
+        )}
+
+        {selectedSession && (<>
         {/* ── Stat Cards ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={BookOpen}   label="Total Subjects"  value={stats.total}    bg="bg-indigo-50"  iconColor="text-indigo-600" />
@@ -343,29 +342,7 @@ const SubjectPage = () => {
 
           {/* Expanded filter panel */}
           {showFilters && (
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Session */}
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Session</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setSelectedSession("")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${!selectedSession ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
-                  >
-                    All
-                  </button>
-                  {sessions.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedSession(selectedSession === s.id ? "" : s.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${selectedSession === s.id ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
-                    >
-                      {s.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Type */}
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Subject Type</p>
@@ -461,7 +438,7 @@ const SubjectPage = () => {
 
         ) : viewMode === "grid" ? (
           /* ── Grid View ───────────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div data-testid="subject-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((subject) => (
               <SubjectCard
                 key={subject.id}
@@ -496,6 +473,7 @@ const SubjectPage = () => {
                     return (
                       <tr
                         key={subject.id}
+                        data-testid={`subject-row-${subject.slug}`}
                         onClick={() => navigate(`/subject/${subject.slug}`)}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                       >
@@ -555,6 +533,7 @@ const SubjectPage = () => {
             </div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   );

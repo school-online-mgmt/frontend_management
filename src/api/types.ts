@@ -16,6 +16,15 @@ export interface Applicant {
   createdAt: string;
   updatedAt: string;
   tenantId: string;
+  // ── Applicant preferences captured at submission time ────────────────────
+  // The applicant only flags whether they want transport; the school assigns
+  // the actual zone at admit time on the `academics` row.
+  dateOfBirth?: string | null;
+  sessionId?: string;
+  sessionName?: string | null;
+  desiredClassId?: string | null;
+  desiredClassName?: string | null;
+  transportOpted?: boolean;
 }
 
 export interface Student {
@@ -36,6 +45,19 @@ export interface Student {
   createdAt: string;
   updatedAt: string;
   tenantId: string;
+  // Set by GET /management/student?bySession=<id>: enrollment for the chosen session, or null.
+  sessionEnrollment?: {
+    academicId: string;
+    classId: string | null;
+    sectionId: string | null;
+    courseId: string | null;
+    rollNo: string | null;
+    admissionId: string | null;
+    className: string | null;
+    sectionName: string | null;
+    courseName: string | null;
+    promotionStatus: "PENDING" | "PROMOTE" | "HOLD_BACK" | null;
+  } | null;
 }
 
 export interface Academics {
@@ -188,6 +210,8 @@ export interface ExamResult {
 }
 
 export interface CreateClassData {
+  /** The session this class belongs to. Required since classes are session-scoped. */
+  sessionId: string;
   name: string;
   slug: string;
   description?: string;
@@ -236,4 +260,84 @@ export interface UpdateLibraryBookData {
   isEnabled?: boolean;
   requiresApproval?: boolean;
   restrictedToClassIds?: string[];
+}
+
+// ── Admit Cards ──────────────────────────────────────────────────────────────
+
+export type ExamTerm = "TERM1" | "TERM2" | "TERM3";
+
+export interface AdmitCardRelease {
+  id: string;
+  tenantId: string;
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName: string | null;
+  notes: string | null;
+  publishedBy: string | null;
+  publishedAt: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublishAdmitCardPayload {
+  sessionId: string;
+  examTerm: ExamTerm;
+  examName?: string;
+  notes?: string;
+}
+
+// ── Invoice Generation Result (extended) ─────────────────────────────────────
+
+export interface GenerateInvoicesResult {
+  generated: number;
+  skipped: number;
+  total: number;
+  lateFeesApplied: number;
+  errors: number;
+}
+
+// ── Fee Structure ─────────────────────────────────────────────────────────────
+
+export type FeeItemType = 'TUITION' | 'TRANSPORT' | 'LIBRARY' | 'LAB' | 'SPORTS' | 'COMPUTER' | 'DEVELOPMENT' | 'EXAM' | 'ADMISSION' | 'BOOKS' | 'UNIFORM' | 'ID_CARD' | 'MISC';
+export type FeeScope     = 'GLOBAL' | 'CLASS' | 'COURSE';
+export type FeeFrequency = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'ONE_TIME';
+
+export interface FeeStructureItem {
+  id: string;
+  name: string;
+  feeType: FeeItemType;
+  scope: FeeScope;
+  classId: string | null;
+  className: string | null;
+  courseId: string | null;
+  courseName: string | null;
+  amount: number;
+  frequency: FeeFrequency;
+  isOptional: boolean;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+// ── Teacher Application ───────────────────────────────────────────────────────
+
+export interface TeacherApplication {
+  id: string;
+  name: string;
+  gender: string;
+  age: number | null;
+  qualification: string;
+  experienceYears: number | null;
+  phone: string;
+  email: string | null;
+  address: string | null;
+  subjectsInterested: string | null;
+  message: string | null;
+  status: 'APPLIED' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
+  comments: string | null;
+  tenantId: string;
+  createdAt: string;
+  updatedAt: string;
 }

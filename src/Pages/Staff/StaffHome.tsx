@@ -1,422 +1,1264 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Loader2, AlertTriangle, CheckCircle2, RefreshCcw,
-  KeyRound, Eye, EyeOff, X, Phone, Mail, UserCog, Shield,
-  Clock, Search, GraduationCap, BookOpen,
+    Users, Loader2, KeyRound, Eye, EyeOff, X, Phone, Mail,
+    Shield, Search, GraduationCap, UserPlus, Trash2, Pencil, ShieldCheck,
+    Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
+    Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
+    TrendingUp, Activity,
 } from 'lucide-react';
 import api from '../../api/api';
-import PageHeader from '../../components/PageHeader';
+import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
+import { useToast } from '../../context/ToastContext';
+import { useAuthContext, ALL_MODULES, type AppModule } from '../../context/AuthContext';
 
-interface ManagementUser {
-  id: string;
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  role: string | null;
-  createdAt: string;
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Level = 'NONE' | 'READ' | 'ADMIN';
+interface Permission { module: string; level: 'READ' | 'ADMIN' }
+interface StaffMember {
+    id: string; firstName: string; middleName?: string; lastName: string;
+    phone: string; email: string; role: string | null; createdAt: string;
+    permissions: Permission[] | null;
 }
-
 interface Teacher {
-  id: string;
-  name: string;
-  gender: string;
-  age: number;
-  qualification: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  isActive: boolean;
-  createdAt: string;
+    id: string; name: string; gender: string; age: number;
+    qualification: string; phone: string; email?: string; isActive: boolean; createdAt: string;
 }
 
-/* ── Reset Password Dialog ──────────────────────────────────────────────── */
-const ResetPasswordDialog: React.FC<{
-  isOpen: boolean; userName: string;
-  onConfirm: (password: string) => Promise<void>; onCancel: () => void;
-}> = ({ isOpen, userName, onConfirm, onCancel }) => {
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    setIsSubmitting(true); setError(null);
-    try { await onConfirm(password); setPassword(''); }
-    catch (err: any) { setError(err?.response?.data?.message || 'Failed to reset password.'); }
-    finally { setIsSubmitting(false); }
-  };
+const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'];
+function isFullAccess(role: string | null | undefined) {
+    return FULL_ACCESS_ROLES.includes(role ?? '');
+}
 
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-              <KeyRound size={20} className="text-amber-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Reset Password</h3>
-              <p className="text-xs text-slate-500 font-medium">For {userName}</p>
-            </div>
-          </div>
-          <button onClick={onCancel} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={18} /></button>
+const MODULE_META: Record<AppModule, { label: string; icon: React.ElementType; color: string; bg: string }> = {
+    PEOPLE:        { label: 'People',        icon: Users,          color: 'text-blue-600',   bg: 'bg-blue-50'   },
+    TEACHERS:      { label: 'Teachers',      icon: UserCog,        color: 'text-violet-600', bg: 'bg-violet-50' },
+    ACADEMICS:     { label: 'Academics',     icon: GraduationCap,  color: 'text-emerald-600',bg: 'bg-emerald-50'},
+    STUDIES:       { label: 'Studies',       icon: BookMarked,     color: 'text-amber-600',  bg: 'bg-amber-50'  },
+    ATTENDANCE:    { label: 'Attendance',    icon: ClipboardCheck, color: 'text-cyan-600',   bg: 'bg-cyan-50'   },
+    LIBRARY:       { label: 'Library',       icon: Library,        color: 'text-pink-600',   bg: 'bg-pink-50'   },
+    COMMUNICATION: { label: 'Communication', icon: MessageSquare,  color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    FINANCE:       { label: 'Finance',       icon: Wallet,         color: 'text-orange-600', bg: 'bg-orange-50' },
+};
+
+const ROLE_CARDS = [
+    { value: 'MANAGEMENT_STAFF', label: 'Staff',     desc: 'Custom module access', icon: Settings,      accent: 'violet' },
+    { value: 'PRINCIPAL',        label: 'Principal', desc: 'Full access',          icon: GraduationCap, accent: 'blue'   },
+    { value: 'DIRECTOR',         label: 'Director',  desc: 'Read-only access',     icon: Crown,         accent: 'amber'  },
+] as const;
+
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+    ADMIN:            { label: 'Admin',     cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    PRINCIPAL:        { label: 'Principal', cls: 'bg-blue-100 text-blue-700 border-blue-200'         },
+    DIRECTOR:         { label: 'Director',  cls: 'bg-amber-100 text-amber-700 border-amber-200'      },
+    MANAGEMENT_STAFF: { label: 'Staff',     cls: 'bg-violet-100 text-violet-700 border-violet-200'   },
+};
+
+const ACCENT: Record<string, string> = {
+    violet:  'border-violet-400 bg-violet-50',
+    blue:    'border-blue-400 bg-blue-50',
+    amber:   'border-amber-400 bg-amber-50',
+    emerald: 'border-emerald-400 bg-emerald-50',
+};
+const ACCENT_ICON: Record<string, string> = {
+    violet:  'text-violet-600',
+    blue:    'text-blue-600',
+    amber:   'text-amber-600',
+    emerald: 'text-emerald-600',
+};
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+const SkeletonRow: React.FC = () => (
+    <div className="flex items-center gap-4 px-5 py-4 animate-pulse">
+        <div className="w-10 h-10 rounded-xl bg-slate-200 shrink-0" />
+        <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-40 bg-slate-200 rounded-full" />
+            <div className="h-3 w-56 bg-slate-100 rounded-full" />
         </div>
-        {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">New Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
-                className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
-                required
-              />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 mt-1.5">User will use this password on next login.</p>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={isSubmitting || password.length < 8} className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition disabled:opacity-50 flex items-center justify-center gap-2">
-              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-              {isSubmitting ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="hidden md:flex gap-1.5">
+            {[60, 52, 68].map(w => <div key={w} className={`h-5 w-${w === 60 ? '16' : w === 52 ? '14' : '18'} bg-slate-100 rounded-full`} />)}
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-slate-100" />
+            <div className="w-8 h-8 rounded-lg bg-slate-100" />
+        </div>
     </div>
-  );
+);
+
+// ── Level Picker (segmented button) ──────────────────────────────────────────
+
+const LEVEL_CONFIG = {
+    NONE:  { label: 'None',  active: 'bg-slate-100 text-slate-600 ring-1 ring-slate-300/50',      idle: 'text-slate-300 hover:text-slate-500 hover:bg-slate-50' },
+    READ:  { label: 'Read',  active: 'bg-sky-100 text-sky-700 ring-1 ring-sky-300/50',            idle: 'text-slate-300 hover:text-sky-500 hover:bg-sky-50'    },
+    ADMIN: { label: 'Admin', active: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/50', idle: 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'},
 };
 
-/* ── Role Badge ─────────────────────────────────────────────────────────── */
+const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOnly?: boolean }> = ({ level, onChange, readOnly }) => (
+    <div className="flex rounded-lg overflow-hidden border border-slate-200 shrink-0">
+        {(['NONE', 'READ', 'ADMIN'] as Level[]).map(l => {
+            const cfg = LEVEL_CONFIG[l];
+            return (
+                <button
+                    key={l}
+                    type="button"
+                    disabled={readOnly}
+                    onClick={() => onChange(l)}
+                    className={`px-3 py-1.5 text-[11px] font-bold transition-all min-w-[46px] ${level === l ? cfg.active : cfg.idle} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                    {cfg.label}
+                </button>
+            );
+        })}
+    </div>
+);
+
+// ── Permission Grid ───────────────────────────────────────────────────────────
+
+const PermissionGrid: React.FC<{
+    permissions: Permission[];
+    onChange: (p: Permission[]) => void;
+    readOnly?: boolean;
+}> = ({ permissions, onChange, readOnly }) => {
+    const getLevel = (mod: AppModule): Level => {
+        const p = permissions.find(p => p.module === mod);
+        return p ? p.level : 'NONE';
+    };
+    const setLevel = (mod: AppModule, level: Level) => {
+        const filtered = permissions.filter(p => p.module !== mod);
+        onChange(level === 'NONE' ? filtered : [...filtered, { module: mod, level: level as 'READ' | 'ADMIN' }]);
+    };
+
+    const granted = permissions.length;
+    const adminCount = permissions.filter(p => p.level === 'ADMIN').length;
+
+    return (
+        <div className="space-y-2">
+            {/* Quick-set bar */}
+            {!readOnly && (
+                <div className="flex items-center gap-2 justify-end">
+                    <span className="text-[11px] text-slate-400 mr-auto">
+                        {granted === 0 ? 'No access' : `${granted} module${granted !== 1 ? 's' : ''} granted`}
+                        {adminCount > 0 && ` · ${adminCount} admin`}
+                    </span>
+                    <button type="button" onClick={() => onChange(ALL_MODULES.map(m => ({ module: m, level: 'READ' as const })))}
+                        className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 px-2.5 py-1 rounded-lg hover:bg-sky-50 transition-colors">
+                        Read All
+                    </button>
+                    <button type="button" onClick={() => onChange(ALL_MODULES.map(m => ({ module: m, level: 'ADMIN' as const })))}
+                        className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-colors">
+                        Admin All
+                    </button>
+                    <button type="button" onClick={() => onChange([])}
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                        Clear
+                    </button>
+                </div>
+            )}
+
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+                {/* Column headers */}
+                <div className="grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-slate-50 border-b border-slate-200 gap-4">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Module</span>
+                    <div className="flex gap-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span className="min-w-[46px] text-center">None</span>
+                        <span className="min-w-[46px] text-center">Read</span>
+                        <span className="min-w-[46px] text-center">Admin</span>
+                    </div>
+                </div>
+
+                {ALL_MODULES.map((mod, idx) => {
+                    const meta = MODULE_META[mod];
+                    const Icon = meta.icon;
+                    const level = getLevel(mod);
+                    return (
+                        <div key={mod}
+                            className={`grid grid-cols-[1fr_auto] items-center px-4 py-3 gap-4 transition-colors
+                                ${level !== 'NONE' ? 'bg-white' : 'bg-white hover:bg-slate-50/60'}
+                                ${idx < ALL_MODULES.length - 1 ? 'border-b border-slate-100' : ''}`}
+                        >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
+                                    <Icon size={13} className={meta.color} />
+                                </div>
+                                <span className={`text-sm font-semibold ${level !== 'NONE' ? 'text-slate-800' : 'text-slate-500'}`}>
+                                    {meta.label}
+                                </span>
+                                {level === 'ADMIN' && (
+                                    <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                                        <ShieldCheck size={9} /> Admin
+                                    </span>
+                                )}
+                                {level === 'READ' && (
+                                    <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full">
+                                        <BarChart3 size={9} /> Read
+                                    </span>
+                                )}
+                            </div>
+                            <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} />
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ── Role Card Picker ──────────────────────────────────────────────────────────
+
+const RolePicker: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {ROLE_CARDS.map(r => {
+            const Icon = r.icon;
+            const active = value === r.value;
+            return (
+                <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => onChange(r.value)}
+                    className={`relative flex flex-col items-center gap-2 p-3.5 rounded-xl border-2 transition-all text-left
+                        ${active ? `${ACCENT[r.accent]} border-opacity-100` : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'}`}
+                >
+                    {active && (
+                        <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-current flex items-center justify-center opacity-80">
+                            <CheckCircle2 size={10} className="text-white" />
+                        </div>
+                    )}
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${active ? `${r.accent === 'violet' ? 'bg-violet-100' : r.accent === 'blue' ? 'bg-blue-100' : r.accent === 'amber' ? 'bg-amber-100' : 'bg-emerald-100'}` : 'bg-slate-100'}`}>
+                        <Icon size={16} className={active ? ACCENT_ICON[r.accent] : 'text-slate-400'} />
+                    </div>
+                    <div className="text-center">
+                        <p className={`text-xs font-bold ${active ? ACCENT_ICON[r.accent] : 'text-slate-700'}`}>{r.label}</p>
+                        <p className={`text-[10px] mt-0.5 ${active ? 'text-slate-500' : 'text-slate-400'}`}>{r.desc}</p>
+                    </div>
+                </button>
+            );
+        })}
+    </div>
+);
+
+// ── Role Badge ────────────────────────────────────────────────────────────────
+
 const RoleBadge: React.FC<{ role: string | null }> = ({ role }) => {
-  const config: Record<string, { label: string; color: string }> = {
-    PRINCIPAL: { label: 'Principal', color: 'bg-purple-100 text-purple-700' },
-    DIRECTOR: { label: 'Director', color: 'bg-indigo-100 text-indigo-700' },
-    ADMIN: { label: 'Admin', color: 'bg-blue-100 text-blue-700' },
-    TEACHER: { label: 'Teacher', color: 'bg-emerald-100 text-emerald-700' },
-    ACCOUNTANT: { label: 'Accountant', color: 'bg-amber-100 text-amber-700' },
-    MANAGEMENT_STAFF: { label: 'Management Staff', color: 'bg-cyan-100 text-cyan-700' },
-  };
-  const r = role ? config[role.toUpperCase()] : null;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${r?.color ?? 'bg-slate-100 text-slate-600'}`}>
-      <Shield size={10} />
-      {r?.label ?? role ?? 'Staff'}
-    </span>
-  );
+    const r = role ? ROLE_BADGE[role.toUpperCase()] : null;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${r?.cls ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+            <Shield size={8} /> {r?.label ?? role ?? 'Staff'}
+        </span>
+    );
 };
 
-/* ── Main Component ─────────────────────────────────────────────────────── */
-type TabKey = 'admin' | 'teachers';
+// ── Permission Summary Chips ──────────────────────────────────────────────────
+
+const PermSummary: React.FC<{ permissions: Permission[] | null; role: string | null }> = ({ permissions, role }) => {
+    if (role === 'DIRECTOR') {
+        return (
+            <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                <BarChart3 size={10} /> Read Only · All Modules
+            </span>
+        );
+    }
+    if (isFullAccess(role)) {
+        return (
+            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                <ShieldCheck size={10} /> Full Access
+            </span>
+        );
+    }
+    if (!permissions || permissions.length === 0) {
+        return <span className="text-[11px] text-slate-400 italic">No module access</span>;
+    }
+    const shown = permissions.slice(0, 3);
+    const rest  = permissions.length - 3;
+    return (
+        <div className="flex flex-wrap items-center gap-1">
+            {shown.map(p => {
+                const meta = MODULE_META[p.module as AppModule];
+                if (!meta) return null;
+                const Icon = meta.icon;
+                return (
+                    <span key={p.module}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border
+                            ${p.level === 'ADMIN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+                        <Icon size={9} />
+                        {meta.label}
+                        <span className={`opacity-60`}>{p.level === 'ADMIN' ? '·A' : '·R'}</span>
+                    </span>
+                );
+            })}
+            {rest > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                    +{rest} more
+                </span>
+            )}
+        </div>
+    );
+};
+
+// ── Staff Drawer (create / edit) ──────────────────────────────────────────────
+
+interface DrawerProps {
+    initial?: StaffMember | null;
+    currentUserId?: string;
+    onSave: (data: any) => Promise<void>;
+    onClose: () => void;
+}
+
+const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
+    const isEdit = !!initial;
+    const [firstName, setFirstName] = useState(initial?.firstName ?? '');
+    const [lastName,  setLastName]  = useState(initial?.lastName  ?? '');
+    const [phone,     setPhone]     = useState(initial?.phone     ?? '');
+    const [email,     setEmail]     = useState(initial?.email     ?? '');
+    const [role,      setRole]      = useState(initial?.role      ?? 'MANAGEMENT_STAFF');
+    const [password,  setPassword]  = useState('');
+    const [showPass,  setShowPass]  = useState(false);
+    const [perms, setPerms] = useState<Permission[]>(() =>
+        initial?.permissions ?? []
+    );
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErr(null); setSaving(true);
+        try {
+            await onSave({
+                firstName, lastName, phone, email, role,
+                ...(password ? { password } : {}),
+                permissions: isFullAccess(role) ? [] : perms,
+            });
+        } catch (e: any) {
+            setErr(e?.response?.data?.message ?? 'Failed to save. Please try again.');
+            setSaving(false);
+        }
+    };
+
+    const inputCls = "w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white transition-colors placeholder:text-slate-300";
+    const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5";
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-lg flex flex-col shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600">
+                    <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+                        {isEdit ? <Pencil size={16} className="text-white" /> : <UserPlus size={16} className="text-white" />}
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-sm font-bold text-white">{isEdit ? 'Edit Staff Member' : 'New Staff Member'}</h2>
+                        <p className="text-xs text-white/60 mt-0.5">{isEdit ? `${initial!.firstName} ${initial!.lastName}` : 'Create account and configure access'}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+                    <div className="px-6 py-6 space-y-6">
+                        {err && (
+                            <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
+                                <AlertTriangle size={15} className="shrink-0" /> {err}
+                            </div>
+                        )}
+
+                        {/* Name */}
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Personal Info</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelCls}>First Name <span className="text-red-400">*</span></label>
+                                    <input value={firstName} onChange={e => setFirstName(e.target.value)} required className={inputCls} placeholder="Rahul" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Last Name <span className="text-red-400">*</span></label>
+                                    <input value={lastName} onChange={e => setLastName(e.target.value)} required className={inputCls} placeholder="Sharma" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Contact */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className={labelCls}>Phone <span className="text-red-400">*</span></label>
+                                <div className="relative">
+                                    <Phone size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                        required pattern="[0-9]{10}" className={inputCls + " pl-9"} placeholder="9876543210" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelCls}>Email <span className="text-red-400">*</span></label>
+                                <div className="relative">
+                                    <Mail size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                                        className={inputCls + " pl-9"} placeholder="rahul@school.edu" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                            <label className={labelCls}>
+                                {isEdit ? 'New Password' : 'Password'} {!isEdit && <span className="text-red-400">*</span>}
+                                {isEdit && <span className="ml-1 normal-case font-normal text-slate-400">(leave blank to keep current)</span>}
+                            </label>
+                            <div className="relative">
+                                <Lock size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                                <input type={showPass ? 'text' : 'password'} value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    required={!isEdit} minLength={8}
+                                    placeholder={isEdit ? 'Leave blank to keep current password' : 'Minimum 8 characters'}
+                                    className={inputCls + " pl-9 pr-10"} />
+                                <button type="button" onClick={() => setShowPass(v => !v)}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                                    {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
+                            {!isEdit && <p className="text-[11px] text-slate-400 mt-1.5">Staff member will use this to log in to the portal.</p>}
+                        </div>
+
+                        {/* Role */}
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Role</p>
+                            <RolePicker value={role} onChange={setRole} />
+                        </div>
+
+                        {/* Module Access */}
+                        {!isFullAccess(role) && role !== 'DIRECTOR' ? (
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Module Access</p>
+                                    <span className="text-[10px] text-slate-400">— controls which sections this staff can access</span>
+                                </div>
+                                <PermissionGrid permissions={perms} onChange={setPerms} />
+                            </div>
+                        ) : role === 'DIRECTOR' ? (
+                            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                <Crown size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-bold text-amber-800">Director has read-only access</p>
+                                    <p className="text-xs text-amber-700 mt-0.5">This role can view all modules but cannot make changes. No per-module configuration is needed.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                <ShieldCheck size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-bold text-emerald-800">{role} has full access</p>
+                                    <p className="text-xs text-emerald-600 mt-0.5">This role can access all modules without restrictions. No per-module configuration is needed.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 pb-6 pt-2 flex gap-3 shrink-0">
+                        <button type="button" onClick={onClose}
+                            className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={saving}
+                            className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-indigo-200">
+                            {saving && <Loader2 size={14} className="animate-spin" />}
+                            {isEdit ? 'Save Changes' : 'Create Staff Member'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ── Permission Drawer (standalone) ────────────────────────────────────────────
+
+const PermDrawer: React.FC<{
+    staff: StaffMember;
+    onSave: (perms: Permission[]) => Promise<void>;
+    onClose: () => void;
+}> = ({ staff, onSave, onClose }) => {
+    const [perms, setPerms] = useState<Permission[]>(staff.permissions ?? []);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const handleSave = async () => {
+        setSaving(true); setErr(null);
+        try { await onSave(perms); }
+        catch (e: any) { setErr(e?.response?.data?.message ?? 'Failed to update.'); setSaving(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-md flex flex-col shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600">
+                    <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+                        <Lock size={16} className="text-white" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-sm font-bold text-white">Module Access</h2>
+                        <p className="text-xs text-white/60 mt-0.5">{staff.firstName} {staff.lastName}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5">
+                    {isFullAccess(staff.role) ? (
+                        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                            <ShieldCheck size={18} className="text-emerald-500 shrink-0" />
+                            <div>
+                                <p className="text-sm font-bold text-emerald-800">{staff.role} — Full Access</p>
+                                <p className="text-xs text-emerald-600 mt-0.5">No per-module restrictions apply.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {err && (
+                                <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 mb-4">
+                                    <AlertTriangle size={15} className="shrink-0" /> {err}
+                                </div>
+                            )}
+                            <PermissionGrid permissions={perms} onChange={setPerms} />
+                        </>
+                    )}
+                </div>
+
+                {/* Footer */}
+                {!isFullAccess(staff.role) && (
+                    <div className="px-6 pb-6 pt-2 flex gap-3 shrink-0 border-t border-slate-100">
+                        <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button onClick={handleSave} disabled={saving}
+                            className="flex-1 py-2.5 text-sm font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-violet-200">
+                            {saving && <Loader2 size={14} className="animate-spin" />}
+                            Save Permissions
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ── Reset Password Modal ──────────────────────────────────────────────────────
+
+const ResetPasswordModal: React.FC<{
+    target: { name: string; role?: string };
+    onConfirm: (pw: string) => Promise<void>;
+    onClose: () => void;
+}> = ({ target, onConfirm, onClose }) => {
+    const [pw, setPw] = useState('');
+    const [show, setShow] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (pw.length < 8) { setErr('Password must be at least 8 characters.'); return; }
+        setSaving(true); setErr(null);
+        try { await onConfirm(pw); }
+        catch (e: any) { setErr(e?.response?.data?.message ?? 'Failed to reset password.'); setSaving(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <KeyRound size={18} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-900">Reset Password</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{target.name}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                        <X size={15} />
+                    </button>
+                </div>
+                <form onSubmit={submit} className="p-5 space-y-4">
+                    {err && <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2.5 rounded-xl">{err}</p>}
+                    <div className="relative">
+                        <Lock size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                        <input type={show ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)}
+                            required minLength={8} autoFocus
+                            placeholder="New password (min 8 characters)"
+                            className="w-full pl-9 pr-10 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-colors" />
+                        <button type="button" onClick={() => setShow(v => !v)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                            {show ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={onClose}
+                            className="py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={saving || pw.length < 8}
+                            className="py-2.5 text-sm font-semibold text-white bg-amber-500 rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                            {saving && <Loader2 size={13} className="animate-spin" />}
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ── Delete Confirmation Modal ─────────────────────────────────────────────────
+
+const DeleteModal: React.FC<{
+    name: string;
+    onConfirm: () => Promise<void>;
+    onClose: () => void;
+}> = ({ name, onConfirm, onClose }) => {
+    const [deleting, setDeleting] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const confirm = async () => {
+        setDeleting(true); setErr(null);
+        try { await onConfirm(); }
+        catch (e: any) { setErr(e?.response?.data?.message ?? 'Delete failed.'); setDeleting(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 text-center">
+                    <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Trash2 size={22} className="text-red-500" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 mb-1">Delete Staff Member</h3>
+                    <p className="text-sm text-slate-500">
+                        <strong className="text-slate-700">{name}</strong> will be permanently deleted and lose portal access. This cannot be undone.
+                    </p>
+                    {err && <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{err}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3 px-6 pb-6">
+                    <button onClick={onClose} className="py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button onClick={confirm} disabled={deleting}
+                        className="py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                        {deleting && <Loader2 size={13} className="animate-spin" />}
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+type TabKey = 'staff' | 'teachers';
 
 const StaffHome: React.FC = () => {
-  const [users, setUsers] = useState<ManagementUser[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<TabKey>('admin');
-  const [resetTarget, setResetTarget] = useState<{ id: string; name: string; type: 'admin' | 'teacher' } | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const { role: currentRole, userId: currentUserId } = useAuthContext();
+    // Only ADMIN and PRINCIPAL can create/edit/delete staff; DIRECTOR is read-only
+    const canManageStaff = currentRole === 'ADMIN' || currentRole === 'PRINCIPAL';
+    const { addToast } = useToast();
 
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+    const queryClient = useQueryClient();
+    const [search,    setSearch]    = useState('');
+    const [tab,       setTab]       = useState<TabKey>('staff');
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [usersData, teachersData] = await Promise.all([
-        api.getManagementUsers(),
-        api.getTeachers(),
-      ]);
-      setUsers(usersData ?? []);
-      const tList = Array.isArray(teachersData) ? teachersData : (teachersData?.teachers ?? []);
-      setTeachers(tList);
-    } catch {
-      showToast('Failed to load staff data.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    // Drawer / modal state
+    const [showCreate,    setShowCreate]    = useState(false);
+    const [editTarget,    setEditTarget]    = useState<StaffMember | null>(null);
+    const [permTarget,    setPermTarget]    = useState<StaffMember | null>(null);
+    const [resetTarget,   setResetTarget]   = useState<{ id: string; name: string; type: 'staff' | 'teacher' } | null>(null);
+    const [deleteTarget,  setDeleteTarget]  = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+    // Staff + teachers as separate queries; teachers query key is shared
+    // with TeacherHome / Dashboard so revisits hydrate from cache.
+    const staffQuery = useQuery({
+        queryKey: ["staff", "list"],
+        queryFn: () => api.getStaff(),
+        select: (d: any) => d?.staff ?? [],
+    });
+    const teachersQuery = useQuery({
+        queryKey: ["teachers", "list"],
+        queryFn: () => api.getTeachers(),
+        select: (d: any) => Array.isArray(d) ? d : (d?.teachers ?? []),
+    });
 
-  const handleResetPassword = async (password: string) => {
-    if (!resetTarget) return;
-    if (resetTarget.type === 'admin') {
-      await api.resetManagementUserPassword(resetTarget.id, password);
-    } else {
-      await api.resetTeacherPassword(resetTarget.id, password);
-    }
-    showToast(`Password reset successfully for ${resetTarget.name}.`, 'success');
-    setResetTarget(null);
-  };
+    const staffList: StaffMember[] = staffQuery.data ?? [];
+    const teachers:  Teacher[]     = teachersQuery.data ?? [];
+    const loading = staffQuery.isLoading || teachersQuery.isLoading;
 
-  const filteredUsers = users.filter(u => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const name = `${u.firstName} ${u.middleName ?? ''} ${u.lastName}`.toLowerCase();
-    return name.includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(q) || (u.role ?? '').toLowerCase().includes(q);
-  });
+    useEffect(() => {
+        if (staffQuery.error || teachersQuery.error) {
+            addToast('Failed to load staff data.', 'error');
+        }
+    }, [staffQuery.error, teachersQuery.error, addToast]);
 
-  const filteredTeachers = teachers.filter(t => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return t.name.toLowerCase().includes(q) || (t.email ?? '').toLowerCase().includes(q) || t.phone.includes(q) || t.qualification.toLowerCase().includes(q);
-  });
+    const fetchAll = () => {
+        queryClient.invalidateQueries({ queryKey: ["staff", "list"] });
+        queryClient.invalidateQueries({ queryKey: ["teachers", "list"] });
+    };
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType; count: number }[] = [
-    { key: 'admin', label: 'Admin Accounts', icon: UserCog, count: users.length },
-    { key: 'teachers', label: 'Teachers', icon: GraduationCap, count: teachers.length },
-  ];
+    // ── CRUD handlers ──────────────────────────────────────────────────────
 
-  return (
-    <div className="min-h-full bg-slate-50 pb-20">
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-xl text-white text-sm font-bold ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
-          {toast.message}
-        </div>
-      )}
+    const handleCreate = async (data: any) => {
+        await api.createStaff(data);
+        addToast('Staff member created successfully.', 'success');
+        setShowCreate(false);
+        fetchAll();
+    };
 
-      <ResetPasswordDialog
-        isOpen={!!resetTarget}
-        userName={resetTarget?.name ?? ''}
-        onConfirm={handleResetPassword}
-        onCancel={() => setResetTarget(null)}
-      />
+    const handleEdit = async (data: any) => {
+        if (!editTarget) return;
+        await api.updateStaff(editTarget.id, data);
+        // Also update permissions in the same call
+        if (!isFullAccess(data.role)) {
+            await api.updateStaffPermissions(editTarget.id, data.permissions ?? []);
+        }
+        addToast('Staff member updated.', 'success');
+        setEditTarget(null);
+        fetchAll();
+    };
 
-      <PageHeader
-        icon={UserCog}
-        title="Staff Management"
-        subtitle="View and manage all school staff accounts"
-        gradient="from-indigo-600 via-violet-600 to-purple-600"
-      />
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        await api.deleteStaff(deleteTarget.id);
+        addToast('Staff member deleted.', 'success');
+        setDeleteTarget(null);
+        fetchAll();
+    };
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center border border-indigo-100">
-              <Users size={18} className="text-indigo-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-slate-900">{users.length + teachers.length}</p>
-              <p className="text-xs text-slate-500 font-medium">Total Staff</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center border border-purple-100">
-              <UserCog size={18} className="text-purple-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-slate-900">{users.length}</p>
-              <p className="text-xs text-slate-500 font-medium">Admin Accounts</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 col-span-2 md:col-span-1">
-            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
-              <GraduationCap size={18} className="text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-slate-900">{teachers.length}</p>
-              <p className="text-xs text-slate-500 font-medium">Teachers</p>
-            </div>
-          </div>
-        </div>
+    const handlePermsSave = async (id: string, perms: Permission[]) => {
+        await api.updateStaffPermissions(id, perms);
+        addToast('Module access updated.', 'success');
+        setPermTarget(null);
+        fetchAll();
+    };
 
-        {/* Tabs + Search */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-          <div className="flex bg-white border border-slate-200 rounded-xl p-1 gap-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeTab === tab.key
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <tab.icon size={15} />
-                {tab.label}
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email, phone…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
+    const handleResetPassword = async (password: string) => {
+        if (!resetTarget) return;
+        if (resetTarget.type === 'staff') {
+            await api.updateStaff(resetTarget.id, { password });
+        } else {
+            await api.resetTeacherPassword(resetTarget.id, password);
+        }
+        addToast(`Password reset for ${resetTarget.name}.`, 'success');
+        setResetTarget(null);
+    };
+
+    // ── Filtered lists ─────────────────────────────────────────────────────
+
+    const filteredStaff = staffList.filter(u => {
+        const q = search.toLowerCase();
+        return !q
+            || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
+            || u.email.toLowerCase().includes(q)
+            || u.phone.includes(q)
+            || (u.role ?? '').toLowerCase().includes(q);
+    });
+
+    const filteredTeachers = teachers.filter(t => {
+        const q = search.toLowerCase();
+        return !q
+            || t.name.toLowerCase().includes(q)
+            || (t.email ?? '').toLowerCase().includes(q)
+            || t.phone.includes(q);
+    });
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+
+    const fullAccessCount  = staffList.filter(u => isFullAccess(u.role)).length;
+    const staffOnlyCount   = staffList.filter(u => !isFullAccess(u.role)).length;
+
+    // Richer insights: role breakdown, recent additions, teachers split,
+    // module reach, and "needs attention" count for staff with zero permissions.
+    const insights = useMemo(() => {
+        // eslint-disable-next-line react-hooks/purity
+        const now = Date.now();
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+        const byRole: Record<string, number> = {};
+        for (const s of staffList) {
+            const r = s.role ?? 'UNASSIGNED';
+            byRole[r] = (byRole[r] ?? 0) + 1;
+        }
+
+        const newStaffWeek = staffList.filter(s => s.createdAt && now - new Date(s.createdAt).getTime() < SEVEN_DAYS).length;
+        const newStaffMonth = staffList.filter(s => s.createdAt && now - new Date(s.createdAt).getTime() < THIRTY_DAYS).length;
+        const newTeacherWeek = teachers.filter(t => t.createdAt && now - new Date(t.createdAt).getTime() < SEVEN_DAYS).length;
+
+        const activeTeachers = teachers.filter(t => t.isActive).length;
+        const inactiveTeachers = teachers.length - activeTeachers;
+
+        // Custom-access staff with empty permission grids — likely an admin oversight.
+        const noPermsCount = staffList.filter(s =>
+            !isFullAccess(s.role) && (!s.permissions || s.permissions.length === 0),
+        ).length;
+
+        // Module coverage: number of distinct modules at least one staff has READ/ADMIN on.
+        const reachedModules = new Set<string>();
+        for (const s of staffList) {
+            if (isFullAccess(s.role)) {
+                ALL_MODULES.forEach(m => reachedModules.add(m));
+                break;
+            }
+            for (const p of s.permissions ?? []) reachedModules.add(p.module);
+        }
+
+        return {
+            byRole,
+            newStaffWeek,
+            newStaffMonth,
+            newTeacherWeek,
+            activeTeachers,
+            inactiveTeachers,
+            noPermsCount,
+            reachedModules: reachedModules.size,
+            totalModules: ALL_MODULES.length,
+        };
+    }, [staffList, teachers]);
+
+    // ── Render ─────────────────────────────────────────────────────────────
+
+    return (
+        <div className="min-h-full bg-slate-50 pb-20">
+            {/* Drawers & Modals */}
+            {(showCreate || editTarget) && (
+                <StaffDrawer
+                    initial={editTarget}
+                    currentUserId={currentUserId ?? undefined}
+                    onSave={editTarget ? handleEdit : handleCreate}
+                    onClose={() => { setShowCreate(false); setEditTarget(null); }}
+                />
+            )}
+            {permTarget && (
+                <PermDrawer
+                    staff={permTarget}
+                    onSave={(perms) => handlePermsSave(permTarget.id, perms)}
+                    onClose={() => setPermTarget(null)}
+                />
+            )}
+            {resetTarget && (
+                <ResetPasswordModal
+                    target={{ name: resetTarget.name }}
+                    onConfirm={handleResetPassword}
+                    onClose={() => setResetTarget(null)}
+                />
+            )}
+            {deleteTarget && (
+                <DeleteModal
+                    name={deleteTarget.name}
+                    onConfirm={handleDelete}
+                    onClose={() => setDeleteTarget(null)}
+                />
+            )}
+
+            <PageHeader
+                icon={Shield}
+                title="Staff Accounts"
+                subtitle="Manage management staff, roles, and per-module permissions"
+                gradient={MODULE_THEMES.admin}
+                onRefresh={fetchAll}
+                refreshing={loading}
             />
-          </div>
-          <button onClick={fetchAll} disabled={loading} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition disabled:opacity-50 shrink-0">
-            <RefreshCcw size={17} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-20 text-center">
-              <Loader2 size={32} className="animate-spin mx-auto text-indigo-400/30 mb-3" />
-              <p className="text-slate-400 text-sm font-medium">Loading staff members...</p>
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 mt-3 space-y-2.5">
+
+                {/* ── Primary stat strip (compact) ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {[
+                        {
+                            label: 'Total Personnel', count: staffList.length + teachers.length,
+                            sub: insights.newStaffMonth + insights.newTeacherWeek > 0 ? `+${insights.newStaffMonth} staff this month` : undefined,
+                            icon: Users, bg: 'bg-indigo-50', ic: 'text-indigo-500', border: 'border-indigo-100',
+                        },
+                        {
+                            label: 'Management Accounts', count: staffList.length,
+                            sub: staffOnlyCount > 0 ? `${staffOnlyCount} with custom access` : undefined,
+                            icon: Shield, bg: 'bg-violet-50', ic: 'text-violet-500', border: 'border-violet-100',
+                        },
+                        {
+                            label: 'Full-Access Roles', count: fullAccessCount,
+                            sub: fullAccessCount > 0 && staffList.length > 0 ? `${Math.round((fullAccessCount / staffList.length) * 100)}% of accounts` : undefined,
+                            icon: ShieldCheck, bg: 'bg-emerald-50', ic: 'text-emerald-500', border: 'border-emerald-100',
+                        },
+                        {
+                            label: 'Teachers', count: teachers.length,
+                            sub: insights.activeTeachers > 0 ? `${insights.activeTeachers} active · ${insights.inactiveTeachers} inactive` : undefined,
+                            icon: GraduationCap, bg: 'bg-blue-50', ic: 'text-blue-500', border: 'border-blue-100',
+                        },
+                    ].map(({ label, count, sub, icon: Icon, bg, ic, border }) => (
+                        <div key={label} className="bg-white rounded-lg border border-slate-200 p-2.5 flex items-center gap-2.5 shadow-sm shadow-slate-100">
+                            <div className={`w-8 h-8 rounded-lg ${bg} border ${border} flex items-center justify-center shrink-0`}>
+                                <Icon size={14} className={ic} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-lg font-black text-slate-900 leading-tight">{count}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">{label}</p>
+                                {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Secondary insights row ── */}
+                {staffList.length + teachers.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {/* Role breakdown — inline mini stacked bar */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Crown size={12} className="text-slate-400" />
+                                <p className="text-[10px] uppercase font-semibold tracking-wider text-slate-500">Role mix</p>
+                                {insights.noPermsCount > 0 && (
+                                    <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                                        <AlertTriangle size={10} /> {insights.noPermsCount} unset
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center h-2.5 rounded-full overflow-hidden bg-slate-100">
+                                {(['ADMIN', 'PRINCIPAL', 'DIRECTOR', 'MANAGEMENT_STAFF'] as const).map(r => {
+                                    const c = insights.byRole[r] ?? 0;
+                                    if (c === 0 || staffList.length === 0) return null;
+                                    const pct = (c / staffList.length) * 100;
+                                    const cls =
+                                        r === 'ADMIN' ? 'bg-emerald-500'
+                                        : r === 'PRINCIPAL' ? 'bg-blue-500'
+                                        : r === 'DIRECTOR' ? 'bg-amber-500'
+                                        : 'bg-violet-500';
+                                    return <div key={r} className={cls} style={{ width: `${pct}%` }} title={`${ROLE_BADGE[r]?.label ?? r}: ${c}`} />;
+                                })}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[10px] font-semibold text-slate-500">
+                                {(['ADMIN', 'PRINCIPAL', 'DIRECTOR', 'MANAGEMENT_STAFF'] as const).map(r => {
+                                    const c = insights.byRole[r] ?? 0;
+                                    if (c === 0) return null;
+                                    const dot =
+                                        r === 'ADMIN' ? 'bg-emerald-500'
+                                        : r === 'PRINCIPAL' ? 'bg-blue-500'
+                                        : r === 'DIRECTOR' ? 'bg-amber-500'
+                                        : 'bg-violet-500';
+                                    return (
+                                        <span key={r} className="flex items-center gap-1">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                                            {ROLE_BADGE[r]?.label ?? r} {c}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* New this week */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5 flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center shrink-0">
+                                <TrendingUp size={14} className="text-violet-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{insights.newStaffWeek + insights.newTeacherWeek}</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Added this week</p>
+                                {(insights.newStaffWeek > 0 || insights.newTeacherWeek > 0) && (
+                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                        {insights.newStaffWeek > 0 && `${insights.newStaffWeek} staff`}
+                                        {insights.newStaffWeek > 0 && insights.newTeacherWeek > 0 && ' · '}
+                                        {insights.newTeacherWeek > 0 && `${insights.newTeacherWeek} teacher${insights.newTeacherWeek > 1 ? 's' : ''}`}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Module coverage */}
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2.5 flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-cyan-50 rounded-lg flex items-center justify-center shrink-0">
+                                <Activity size={14} className="text-cyan-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-slate-900">{insights.reachedModules}<span className="text-slate-400 font-normal text-xs"> / {insights.totalModules}</span></p>
+                                <p className="text-[10px] text-slate-500 font-medium">Modules covered by staff</p>
+                            </div>
+                            {insights.reachedModules < insights.totalModules && (
+                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                                    {insights.totalModules - insights.reachedModules} gap
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Toolbar ── */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    {/* Tab switcher */}
+                    <div className="flex bg-white border border-slate-200 rounded-lg p-1 gap-1 shadow-sm shadow-slate-100 shrink-0">
+                        {(['staff', 'teachers'] as TabKey[]).map(t => (
+                            <button key={t} onClick={() => setTab(t)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                    tab === t
+                                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-300'
+                                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                }`}>
+                                {t === 'staff' ? <Shield size={12} /> : <GraduationCap size={12} />}
+                                {t === 'staff' ? 'Management' : 'Teachers'}
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                                    tab === t ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                    {t === 'staff' ? staffList.length : teachers.length}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative flex-1 max-w-sm">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                            value={search} onChange={e => setSearch(e.target.value)}
+                            placeholder="Search by name, email, or phone…"
+                            className="w-full pl-8 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors shadow-sm shadow-slate-100" />
+                        {search && (
+                            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        {/* Refresh moved to the page header for consistency. */}
+                        {canManageStaff && tab === 'staff' && (
+                            <button onClick={() => setShowCreate(true)}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-300">
+                                <UserPlus size={12} /> Add Staff
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Table ── */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm shadow-slate-100 overflow-hidden">
+
+                    {/* Column headers */}
+                    {!loading && ((tab === 'staff' && filteredStaff.length > 0) || (tab === 'teachers' && filteredTeachers.length > 0)) && (
+                        <div className={`grid ${tab === 'staff' ? 'grid-cols-[2fr_1fr_2fr_auto]' : 'grid-cols-[2fr_1fr_1fr_auto]'} gap-3 px-4 py-2 bg-slate-50 border-b border-slate-200`}>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Member</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{tab === 'staff' ? 'Role' : 'Status'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{tab === 'staff' ? 'Module Access' : 'Contact'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</p>
+                        </div>
+                    )}
+
+                    {loading ? (
+                        <div className="divide-y divide-slate-100">
+                            {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+                        </div>
+                    ) : tab === 'staff' ? (
+                        filteredStaff.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                                    <Shield size={20} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-600 mb-1">
+                                    {search ? 'No matching staff found' : 'No management accounts yet'}
+                                </p>
+                                <p className="text-xs text-slate-400 max-w-xs mb-4">
+                                    {search
+                                        ? 'Try a different search term.'
+                                        : 'Create staff accounts to give your team access to the management portal with specific module permissions.'}
+                                </p>
+                                {canManageStaff && !search && (
+                                    <button onClick={() => setShowCreate(true)}
+                                        className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                                        <UserPlus size={12} /> Create First Staff Member
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {filteredStaff.map(user => {
+                                    const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
+                                    const initials = `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase();
+                                    const isSelf   = user.id === currentUserId;
+                                    const fullR    = isFullAccess(user.role);
+
+                                    const avatarGrad = fullR
+                                        ? 'from-emerald-500 to-teal-600'
+                                        : 'from-indigo-500 to-violet-600';
+
+                                    return (
+                                        <div key={user.id}
+                                            className="grid grid-cols-[2fr_1fr_2fr_auto] gap-2 sm:gap-3 items-center px-3 sm:px-4 py-3 sm:py-2.5 hover:bg-slate-50/60 transition-colors">
+                                            {/* Member — bigger text on mobile */}
+                                            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                                <div className={`w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br ${avatarGrad} text-white flex items-center justify-center font-black text-xs sm:text-[11px] shrink-0`}>
+                                                    {initials}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <p className="text-xs font-bold text-slate-900 truncate">{fullName}</p>
+                                                        {isSelf && (
+                                                            <span className="text-[10px] sm:text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 sm:px-1 py-0.5 rounded-full">You</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                        <span className="flex items-center gap-1 text-[11px] sm:text-[10px] text-slate-400">
+                                                            <Phone size={9} /> {user.phone}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 text-[11px] sm:text-[10px] text-slate-400 truncate">
+                                                            <Mail size={9} /> {user.email}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Role */}
+                                            <div>
+                                                <RoleBadge role={user.role} />
+                                            </div>
+
+                                            {/* Module Access */}
+                                            <div className="min-w-0">
+                                                <PermSummary permissions={user.permissions} role={user.role} />
+                                            </div>
+
+                                            {/* Actions — bigger tap targets on mobile */}
+                                            <div className="flex items-center gap-1 justify-end shrink-0">
+                                                {canManageStaff && !fullR && (
+                                                    <button
+                                                        onClick={() => setPermTarget(user)}
+                                                        title="Edit module access"
+                                                        className="hidden sm:flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-md transition-colors">
+                                                        <Lock size={10} /> Access
+                                                    </button>
+                                                )}
+                                                {canManageStaff && (
+                                                    <>
+                                                        {!fullR && (
+                                                            <button
+                                                                onClick={() => setPermTarget(user)}
+                                                                aria-label="Edit module access"
+                                                                className="sm:hidden w-9 h-9 flex items-center justify-center text-violet-600 hover:bg-violet-50 active:bg-violet-100 rounded-md transition-colors">
+                                                                <Lock size={14} />
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => setEditTarget(user)} aria-label="Edit staff member"
+                                                            className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 rounded-md transition-colors">
+                                                            <Pencil size={14} className="sm:hidden" />
+                                                            <Pencil size={12} className="hidden sm:block" />
+                                                        </button>
+                                                        <button onClick={() => setResetTarget({ id: user.id, name: fullName, type: 'staff' })}
+                                                            aria-label="Reset password"
+                                                            className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:bg-amber-100 rounded-md transition-colors">
+                                                            <KeyRound size={14} className="sm:hidden" />
+                                                            <KeyRound size={12} className="hidden sm:block" />
+                                                        </button>
+                                                        {!isSelf && (
+                                                            <button onClick={() => setDeleteTarget({ id: user.id, name: fullName })}
+                                                                aria-label="Delete staff member"
+                                                                className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded-md transition-colors">
+                                                                <Trash2 size={14} className="sm:hidden" />
+                                                                <Trash2 size={12} className="hidden sm:block" />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )
+                    ) : (
+                        /* ── Teachers Tab ── */
+                        filteredTeachers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                                    <GraduationCap size={20} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-600 mb-1">
+                                    {search ? 'No matching teachers' : 'No teachers yet'}
+                                </p>
+                                <p className="text-xs text-slate-400 max-w-xs">
+                                    {search ? 'Try a different search term.' : 'Add teachers from the Teachers section.'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {filteredTeachers.map(t => {
+                                    const initials = t.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
+                                    return (
+                                        <div key={t.id}
+                                            className="grid grid-cols-[2fr_1fr_1fr_auto] gap-3 items-center px-4 py-2.5 hover:bg-slate-50/60 transition-colors">
+                                            {/* Member */}
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-[11px] shrink-0">
+                                                    {initials}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-900 truncate">{t.name}</p>
+                                                    <p className="text-[10px] text-slate-400 truncate">{t.qualification} · {t.gender} · Age {t.age}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Status */}
+                                            <div>
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                                    t.isActive
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                                                }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                    {t.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </div>
+
+                                            {/* Contact */}
+                                            <div className="space-y-0">
+                                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                                    <Phone size={9} className="text-slate-300" /> {t.phone}
+                                                </div>
+                                                {t.email && (
+                                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 truncate">
+                                                        <Mail size={9} className="text-slate-300" /> {t.email}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className="flex items-center gap-1 justify-end">
+                                                {canManageStaff && (
+                                                    <button
+                                                        onClick={() => setResetTarget({ id: t.id, name: t.name, type: 'teacher' })}
+                                                        title="Reset teacher password"
+                                                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors">
+                                                        <KeyRound size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )
+                    )}
+                </div>
+
+                {/* Footer note */}
+                {!loading && tab === 'staff' && filteredStaff.length > 0 && (
+                    <p className="text-[11px] text-slate-400 text-center pb-2">
+                        {filteredStaff.length} management account{filteredStaff.length !== 1 ? 's' : ''}
+                        {staffOnlyCount > 0 && ` · ${staffOnlyCount} with custom access`}
+                        {fullAccessCount > 0 && ` · ${fullAccessCount} full access`}
+                    </p>
+                )}
             </div>
-          ) : activeTab === 'admin' ? (
-            filteredUsers.length === 0 ? (
-              <div className="p-20 text-center">
-                <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-200"><Users size={28} /></div>
-                <p className="text-slate-500 font-bold">{search ? 'No matching admin accounts found' : 'No admin accounts found'}</p>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Staff Member</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden md:table-cell">Contact</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden lg:table-cell">Role</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden lg:table-cell">Joined</th>
-                    <th className="px-5 py-3.5 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filteredUsers.map(user => {
-                    const fullName = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
-                    const initials = [user.firstName[0], user.lastName[0]].join('').toUpperCase();
-                    return (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 text-white flex items-center justify-center font-black text-sm flex-shrink-0">
-                              {initials}
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-900 text-sm">{fullName}</p>
-                              <p className="text-xs text-slate-400 font-mono mt-0.5">{user.id.split('-')[0].toUpperCase()}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 hidden md:table-cell">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-600"><Phone size={11} className="text-slate-400" /> {user.phone}</div>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-600"><Mail size={11} className="text-slate-400" /> {user.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 hidden lg:table-cell"><RoleBadge role={user.role} /></td>
-                        <td className="px-5 py-4 hidden lg:table-cell">
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                            <Clock size={11} className="text-slate-400" />
-                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <button
-                            onClick={() => setResetTarget({ id: user.id, name: fullName, type: 'admin' })}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-xl hover:bg-amber-100 hover:border-amber-200 transition-all"
-                          >
-                            <KeyRound size={13} /> Reset Password
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredTeachers.length === 0 ? (
-              <div className="p-20 text-center">
-                <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100 text-slate-200"><GraduationCap size={28} /></div>
-                <p className="text-slate-500 font-bold">{search ? 'No matching teachers found' : 'No teachers found'}</p>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider">Teacher</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden md:table-cell">Contact</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden lg:table-cell">Qualification</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-black text-slate-400 uppercase tracking-wider hidden lg:table-cell">Status</th>
-                    <th className="px-5 py-3.5 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filteredTeachers.map(teacher => {
-                    const initials = teacher.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
-                    return (
-                      <tr key={teacher.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-black text-sm flex-shrink-0">
-                              {initials}
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-900 text-sm">{teacher.name}</p>
-                              <p className="text-xs text-slate-400 mt-0.5">{teacher.gender} · Age {teacher.age}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 hidden md:table-cell">
-                          <div className="space-y-1">
-                            {teacher.phone && <div className="flex items-center gap-1.5 text-xs text-slate-600"><Phone size={11} className="text-slate-400" /> {teacher.phone}</div>}
-                            {teacher.email && <div className="flex items-center gap-1.5 text-xs text-slate-600"><Mail size={11} className="text-slate-400" /> {teacher.email}</div>}
-                            {!teacher.phone && !teacher.email && <span className="text-xs text-slate-400">—</span>}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 hidden lg:table-cell">
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                            <BookOpen size={11} className="text-slate-400" /> {teacher.qualification}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 hidden lg:table-cell">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${teacher.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${teacher.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                            {teacher.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <button
-                            onClick={() => setResetTarget({ id: teacher.id, name: teacher.name, type: 'teacher' })}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-xl hover:bg-amber-100 hover:border-amber-200 transition-all"
-                          >
-                            <KeyRound size={13} /> Reset Password
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          )}
         </div>
-
-        <p className="text-xs text-slate-400 mt-4 text-center font-medium">
-          {activeTab === 'admin' ? `${filteredUsers.length} of ${users.length} admin account${users.length !== 1 ? 's' : ''}` : `${filteredTeachers.length} of ${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`}
-        </p>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default StaffHome;
-

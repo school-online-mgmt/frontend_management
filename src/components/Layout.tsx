@@ -3,21 +3,29 @@ import React from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, LogOut, School, Users,
-  UserPlus, UserCog, Layers, ClipboardList, Bell, Calendar, CreditCard,
+  UserPlus, UserCog, Layers, ClipboardList, Calendar, CreditCard,
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff,
+  KeyRound, Eye, EyeOff, Send,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
+import { useAuthContext } from "../context/AuthContext";
+import { SessionProvider } from "../context/SessionContext";
+import TopbarSessionSelector from "./common/TopbarSessionSelector";
+import TopbarClock from "./common/TopbarClock";
 import api from "../api/api";
+import DesktopOnlyGate from "./DesktopOnlyGate";
+import PageFooter from "./PageFooter";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
+// module: matches AppModule enum. null = always visible (no permission needed)
 const NAV_SECTIONS = [
   {
     label: "Overview",
     icon: LayoutDashboard,
     collapsible: false,
+    module: null,
     items: [
       { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
@@ -26,11 +34,10 @@ const NAV_SECTIONS = [
     label: "People",
     icon: Users,
     collapsible: true,
+    module: "PEOPLE" as const,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
-      { path: "/student-admission", label: "Admission", icon: GraduationCap },
       { path: "/students-home", label: "Students", icon: Users },
-      { path: "/student-home", label: "Student Hub", icon: UserCheck },
       { path: "/staff", label: "Staff Accounts", icon: Settings },
     ],
   },
@@ -38,6 +45,7 @@ const NAV_SECTIONS = [
     label: "Teachers",
     icon: UserCog,
     collapsible: true,
+    module: "TEACHERS" as const,
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
       { path: "/assignments", label: "Assignments", icon: ClipboardList },
@@ -47,10 +55,10 @@ const NAV_SECTIONS = [
     label: "Academics",
     icon: GraduationCap,
     collapsible: true,
+    module: "ACADEMICS" as const,
     items: [
       { path: "/sessions", label: "Sessions", icon: CalendarDays },
       { path: "/class-Home", label: "Classes", icon: Layers },
-      { path: "/section-home", label: "Sections", icon: Layers },
       { path: "/course-Home", label: "Courses", icon: BookMarked },
       { path: "/subject-Home", label: "Subjects", icon: BookOpen },
     ],
@@ -59,6 +67,7 @@ const NAV_SECTIONS = [
     label: "Studies",
     icon: BookMarked,
     collapsible: true,
+    module: "STUDIES" as const,
     items: [
       { path: "/exam-home", label: "Exams", icon: ClipboardList },
       { path: "/performance", label: "Performance", icon: BarChart3 },
@@ -68,6 +77,7 @@ const NAV_SECTIONS = [
     label: "Attendance",
     icon: ClipboardCheck,
     collapsible: true,
+    module: "ATTENDANCE" as const,
     items: [
       { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck },
       { path: "/teacher-attendance", label: "Teacher Attendance", icon: UserCheck },
@@ -78,6 +88,7 @@ const NAV_SECTIONS = [
     label: "Library",
     icon: Library,
     collapsible: true,
+    module: "LIBRARY" as const,
     items: [
       { path: "/library", label: "Library", icon: Library },
     ],
@@ -86,15 +97,18 @@ const NAV_SECTIONS = [
     label: "Communication",
     icon: MessageSquare,
     collapsible: true,
+    module: "COMMUNICATION" as const,
     items: [
-      { path: "/notices", label: "Notice Board", icon: Megaphone },
-      { path: "/calendar", label: "Calendar", icon: Calendar },
+      { path: "/notices",       label: "Notice Board",  icon: Megaphone },
+      { path: "/communication", label: "Email Blast",   icon: Send },
+      { path: "/calendar",      label: "Calendar",      icon: Calendar },
     ],
   },
   {
     label: "Finance",
     icon: Wallet,
     collapsible: true,
+    module: "FINANCE" as const,
     items: [
       { path: "/fees", label: "Fee Management", icon: CreditCard },
       { path: "/transport", label: "Transport", icon: Bus },
@@ -104,9 +118,11 @@ const NAV_SECTIONS = [
     label: "Account",
     icon: School,
     collapsible: true,
+    module: null,
     items: [
-      { path: "/account", label: "My Account", icon: School },
-      { path: "/support", label: "Support Center", icon: MessageSquare },
+      { path: "/account",         label: "My Account",     icon: School },
+      { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
+      { path: "/support",         label: "Support Center", icon: MessageSquare },
     ],
   },
 ];
@@ -217,6 +233,7 @@ const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { hasModule } = useAuthContext();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -241,6 +258,19 @@ const Layout = () => {
   };
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+  // Publish the school name to a global so PageFooter can render it without
+  // wiring a context. Resolved once on mount; cheap if we already have it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.__schoolName) return;
+    api.getTenantConfig()
+      .then((res: any) => {
+        const name = res?.config?.schoolName?.trim();
+        if (name) window.__schoolName = name;
+      })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
@@ -249,21 +279,36 @@ const Layout = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Auto-expand section containing the active route
+  // Auto-expand section containing the active route. Uses the same
+  // exact-or-`/<base>/:id` rule as `isActive` so we never expand the
+  // wrong section.
   useEffect(() => {
+    const matches = (path: string) => {
+      const p = location.pathname;
+      if (p === path) return true;
+      if (path === "/dashboard" && p === "/") return true;
+      const dash = path.indexOf("-");
+      if (dash > 0) {
+        const base = path.slice(0, dash);
+        const suffix = path.slice(dash + 1).toLowerCase();
+        if (suffix === "home" && base.length > 1) {
+          if (p === base || p.startsWith(base + "/")) return true;
+        }
+      }
+      return false;
+    };
     NAV_SECTIONS.forEach(s => {
       if (!s.collapsible || s.items.length <= 1) return;
-      const hasActive = s.items.some(i =>
-        location.pathname === i.path ||
-        (i.path !== "/dashboard" && location.pathname.startsWith(i.path.split("-")[0]) && i.path.split("-")[0].length > 1)
-      );
-      if (hasActive) {
+      if (s.items.some(i => matches(i.path))) {
         setExpandedSections(prev => prev[s.label] ? prev : { ...prev, [s.label]: true });
       }
     });
   }, [location.pathname]);
 
-  // Persist nav scroll position across refreshes
+  // Persist nav scroll position across hard refreshes. Across in-app
+  // navigation we don't need this at all because SidebarContent is now
+  // invoked as a function (not a JSX component), so React diffs the nav
+  // subtree in place — the scroll offset survives route changes for free.
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -274,12 +319,51 @@ const Layout = () => {
     return () => nav.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Make sure the active nav item is in view whenever the route changes.
+  // Uses `block: "nearest"` so we never scroll if the active link is
+  // already visible — the user's manual scroll position wins. Only when
+  // the active item would be off-screen do we nudge it into view.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    // Defer to the next frame so the DOM has settled after the click +
+    // any expand/collapse re-render kicked off by `setExpandedSections`.
+    const id = requestAnimationFrame(() => {
+      const active = nav.querySelector<HTMLAnchorElement>('[data-active="true"]');
+      if (!active) return;
+      const navRect = nav.getBoundingClientRect();
+      const elRect = active.getBoundingClientRect();
+      const offscreen = elRect.top < navRect.top || elRect.bottom > navRect.bottom;
+      if (offscreen) active.scrollIntoView({ block: "nearest", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [location.pathname]);
+
   const handleLogout = async () => { await logout(); navigate("/login"); };
 
-  const isActive = (path: string) =>
-    location.pathname === path ||
-    (path === "/dashboard" && location.pathname === "/") ||
-    (path !== "/dashboard" && location.pathname.startsWith(path.split("-")[0]) && path.split("-")[0].length > 1);
+  // A nav item is active when the current pathname is its `path` exactly,
+  // OR — for the convention `/<entity>-home` list pages — when we're on
+  // a detail route `/<entity>/:id`. Crucially, we do NOT treat other
+  // dashed routes (like `/teacher-attendance`) as variants of `/teacher`,
+  // which the old prefix-on-first-dash heuristic did and caused two nav
+  // items to highlight when on `/teacher-home`.
+  const isActive = (path: string) => {
+    const p = location.pathname;
+    if (p === path) return true;
+    if (path === "/dashboard" && p === "/") return true;
+    const dash = path.indexOf("-");
+    if (dash > 0) {
+      const base   = path.slice(0, dash);            // "/teacher" from "/teacher-home"
+      const suffix = path.slice(dash + 1).toLowerCase(); // "home"
+      // Only the *-home / *-Home list page claims its `/<base>/:id`
+      // detail route. Sibling dashed routes (teacher-attendance, etc.)
+      // are exact-match only.
+      if (suffix === "home" && base.length > 1) {
+        if (p === base || p.startsWith(base + "/")) return true;
+      }
+    }
+    return false;
+  };
 
   const isSectionActive = (section: typeof NAV_SECTIONS[0]) =>
     section.items.some(i => isActive(i.path));
@@ -288,6 +372,12 @@ const Layout = () => {
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
     const showFull = !collapsed || isMobile;
+    const role = user?.role;
+    const hideAccount = role === 'PRINCIPAL' || role === 'DIRECTOR';
+    const visibleSections = NAV_SECTIONS.filter(s => {
+      if (s.label === 'Account' && hideAccount) return false;
+      return s.module === null || hasModule(s.module);
+    });
 
     return (
       <div className="flex flex-col h-full bg-slate-900">
@@ -305,8 +395,10 @@ const Layout = () => {
             )}
           </Link>
           {isMobile && (
-            <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
-              <X size={16} />
+            <button onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+              className="ml-auto w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors active:bg-white/20">
+              <X size={20} />
             </button>
           )}
         </div>
@@ -314,7 +406,7 @@ const Layout = () => {
         {/* Navigation */}
         <nav ref={isMobile ? undefined : navRef} className={`flex-1 overflow-y-auto py-3 ${showFull ? "px-2.5" : "px-1.5"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
           <div className="space-y-0.5">
-            {NAV_SECTIONS.map((section) => {
+            {visibleSections.map((section) => {
               const sectionActive = isSectionActive(section);
               const isExpanded = expandedSections[section.label] ?? false;
               const SectionIcon = section.icon;
@@ -331,6 +423,9 @@ const Layout = () => {
                       const active = isActive(item.path);
                       return (
                         <Link key={item.path} to={item.path}
+                          data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                          data-nav-label={item.label}
+                          data-active={active ? "true" : undefined}
                           title={!showFull ? item.label : undefined}
                           className={`group flex items-center gap-2.5 rounded-lg transition-all duration-200 relative
                             ${showFull ? "px-2.5 py-2" : "justify-center px-2 py-2"}
@@ -359,6 +454,9 @@ const Layout = () => {
                       const active = isActive(item.path);
                       return (
                         <Link key={item.path} to={item.path} title={item.label}
+                          data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                          data-nav-label={item.label}
+                          data-active={active ? "true" : undefined}
                           className={`group flex justify-center px-2 py-2 rounded-lg transition-all duration-200 relative
                             ${active ? "bg-emerald-500/15 text-emerald-400" : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
                         >
@@ -376,6 +474,8 @@ const Layout = () => {
               return (
                 <div key={section.label} className="mt-1.5">
                   <button onClick={() => toggleSection(section.label)}
+                    data-testid={`nav-section-${section.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    data-section-label={section.label}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg transition-all duration-200 group
                       ${sectionActive
                         ? "text-emerald-400"
@@ -400,6 +500,8 @@ const Layout = () => {
                         const active = isActive(item.path);
                         return (
                           <Link key={item.path} to={item.path}
+                            data-testid={`nav-item-${item.path.replace(/\//g, "")}`}
+                            data-nav-label={item.label}
                             className={`group flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg transition-all duration-200 relative
                               ${active
                                 ? "bg-emerald-500/15 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.1)]"
@@ -421,8 +523,9 @@ const Layout = () => {
           </div>
         </nav>
 
-        {/* Bottom user area */}
-        <div className={`border-t border-white/[0.06] shrink-0 ${showFull ? "p-2.5" : "p-2"}`}>
+        {/* Bottom user area — pads for iOS home indicator on mobile */}
+        <div className={`border-t border-white/[0.06] shrink-0 ${showFull ? "p-2.5" : "p-2"}`}
+          style={isMobile ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined}>
           {showFull ? (
             <>
               <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/[0.04] mb-1.5">
@@ -456,11 +559,19 @@ const Layout = () => {
   };
 
   return (
+    <SessionProvider>
     <div className="flex h-screen bg-slate-100 overflow-hidden">
+      {/* Mobile devices see a desktop-required gate instead of the cramped layout */}
+      <DesktopOnlyGate />
       {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
-        <SidebarContent />
+        {/* Invoke SidebarContent as a plain function call (not as a JSX
+            component) so React diffs the returned JSX in place across
+            route changes. Rendering it as `<SidebarContent />` would
+            create a new component type on every Layout render — that
+            unmounts the <nav> and resets scroll position to 0. */}
+        {SidebarContent({})}
         {/* Collapse extender tab — matches the h-14 (56px) brand header */}
         <button
           onClick={() => setCollapsed((c) => !c)}
@@ -476,29 +587,38 @@ const Layout = () => {
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Mobile Sidebar */}
-      <aside className={`fixed left-0 top-0 bottom-0 z-50 w-[260px] shadow-2xl transform transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <SidebarContent isMobile />
+      {/* Mobile Sidebar — capped width so it never covers the whole screen on tiny devices */}
+      <aside className={`fixed left-0 top-0 bottom-0 z-50 w-[min(280px,85vw)] shadow-2xl transform transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        {SidebarContent({ isMobile: true })}
       </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
-        <header className="h-12 bg-slate-900 border-b border-white/[0.06] flex items-center gap-3 px-4 lg:px-5 shrink-0 z-10">
+        {/* Header — sticky topbar with iOS safe-area inset on mobile */}
+        <header
+          className="bg-slate-900 border-b border-white/[0.06] flex items-center gap-2 px-3 sm:px-4 lg:px-5 shrink-0 z-10"
+          style={{ paddingTop: "env(safe-area-inset-top)", minHeight: "calc(48px + env(safe-area-inset-top))" }}
+        >
           <button onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-1.5 -ml-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-            <Menu size={18} />
+            aria-label="Open navigation"
+            className="lg:hidden w-10 h-10 -ml-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors">
+            <Menu size={20} />
           </button>
           <div className="flex-1 min-w-0" />
 
-          <div className="flex items-center gap-1">
-            <button className="relative p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-              <Bell size={16} />
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-slate-900" />
-            </button>
+          <div className="flex items-center gap-1.5">
+            {/* Live IST clock — shows current date + time so management
+                always knows the timezone of every action they take. */}
+            <TopbarClock />
+
+            {/* Global session selector — applies to every page that scopes
+                data per academic session. Lives here instead of per-page
+                so changing sessions updates everything at once. */}
+            <TopbarSessionSelector />
             <div ref={profileRef} className="relative">
               <button onClick={() => setProfileOpen((o) => !o)}
-                className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-white/[0.06] transition-colors">
+                aria-label="Open account menu"
+                className="flex items-center gap-1.5 px-1.5 h-10 rounded-lg hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors">
                 <div className="w-7 h-7 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
                   <span className="text-emerald-400 text-[10px] font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
                 </div>
@@ -535,14 +655,21 @@ const Layout = () => {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* Page content. Outlet renders the page; the shared footer hangs
+            below it inside the same scroll container. flex-col + min-h-full
+            on the inner wrapper makes the footer stick to the bottom of
+            short pages instead of floating mid-screen. */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-100">
-          <div className="min-h-full">
-            <Outlet />
+          <div className="min-h-full flex flex-col">
+            <div className="flex-1 flex flex-col">
+              <Outlet />
+            </div>
+            <PageFooter />
           </div>
         </main>
       </div>
     </div>
+    </SessionProvider>
   );
 };
 

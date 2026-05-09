@@ -437,7 +437,7 @@ const TeacherDetails = () => {
                                     {(assignments?.classTeacherOf.length ?? 0) > 0 && (
                                         <div>
                                             <div className="px-8 py-3 bg-slate-50/50">
-                                                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><School size={14} /> Head Class Teacher</p>
+                                                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2"><School size={14} /> Class Incharge</p>
                                             </div>
                                             {assignments!.classTeacherOf.map(cls => (
                                                 <AssignmentRow

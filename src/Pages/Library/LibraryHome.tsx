@@ -1,23 +1,25 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
     BookOpen, Plus, RefreshCcw, Search, ToggleLeft, ToggleRight,
-    BookMarked, AlertTriangle, ClipboardList, RotateCcw, X,
+    BookMarked, AlertTriangle, ClipboardList, RotateCcw, X, CheckCircle, XCircle,
 } from "lucide-react";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 type Tab = "catalog" | "issues" | "requests" | "renewals";
 
+type RejectModal = { requestId: string; reason: string; submitting: boolean } | null;
+type RenewalModal = { renewalId: string; action: "APPROVED" | "REJECTED"; remarks: string; submitting: boolean } | null;
+
 const LibraryHome = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [tab, setTab] = useState<Tab>("catalog");
-    const [stats, setStats] = useState<any>(null);
-    const [books, setBooks] = useState<any[]>([]);
-    const [issues, setIssues] = useState<any[]>([]);
-    const [requests, setRequests] = useState<any[]>([]);
-    const [renewals, setRenewals] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState<any>(null);
@@ -26,59 +28,65 @@ const LibraryHome = () => {
     const [requestFilter, setRequestFilter] = useState("PENDING");
     const [renewalFilter, setRenewalFilter] = useState("PENDING");
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [rejectModal, setRejectModal] = useState<RejectModal>(null);
+    const [renewalModal, setRenewalModal] = useState<RenewalModal>(null);
 
     const showMsg = (type: "success" | "error", text: string) => {
         setMessage({ type, text });
         setTimeout(() => setMessage(null), 4000);
     };
 
-    const fetchStats = useCallback(async () => {
-        try {
-            const data = await api.getLibraryStats();
-            setStats(data.stats);
-        } catch { /* ignore */ }
-    }, []);
+    // Library stats — kept warm across all tabs. Stale time: 30s so a
+    // tab change inside 30s reads from cache without a round trip.
+    const statsQuery = useQuery({
+        queryKey: ["library", "stats"],
+        queryFn: () => api.getLibraryStats(),
+        staleTime: 30_000,
+        select: (d: any) => d?.stats,
+    });
+    const stats = statsQuery.data ?? null;
+    const fetchStats = () => queryClient.invalidateQueries({ queryKey: ["library", "stats"] });
 
-    const fetchBooks = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryBooks({ search: search || undefined });
-            setBooks(data.books || []);
-        } catch { setBooks([]); } finally { setIsLoading(false); }
-    }, [search]);
+    // Each tab is its own query — only the active tab fetches. Switching
+    // tabs reads cached data instantly when previously fetched.
+    const booksQuery = useQuery({
+        queryKey: ["library", "books", search],
+        queryFn: () => api.getLibraryBooks({ search: search || undefined }),
+        enabled: tab === "catalog",
+        select: (d: any) => d?.books ?? [],
+    });
+    const issuesQuery = useQuery({
+        queryKey: ["library", "issues", issueFilter],
+        queryFn: () => api.getLibraryIssues({ status: issueFilter }),
+        enabled: tab === "issues",
+        select: (d: any) => d?.issues ?? [],
+    });
+    const requestsQuery = useQuery({
+        queryKey: ["library", "requests", requestFilter],
+        queryFn: () => api.getLibraryRequests({ status: requestFilter }),
+        enabled: tab === "requests",
+        select: (d: any) => d?.requests ?? [],
+    });
+    const renewalsQuery = useQuery({
+        queryKey: ["library", "renewals", renewalFilter],
+        queryFn: () => api.getLibraryRenewals({ status: renewalFilter }),
+        enabled: tab === "renewals",
+        select: (d: any) => d?.renewals ?? [],
+    });
 
-    const fetchIssues = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryIssues({ status: issueFilter });
-            setIssues(data.issues || []);
-        } catch { setIssues([]); } finally { setIsLoading(false); }
-    }, [issueFilter]);
+    const books:    any[] = booksQuery.data    ?? [];
+    const issues:   any[] = issuesQuery.data   ?? [];
+    const requests: any[] = requestsQuery.data ?? [];
+    const renewals: any[] = renewalsQuery.data ?? [];
+    const isLoading = (tab === "catalog"   && booksQuery.isFetching)
+                  || (tab === "issues"    && issuesQuery.isFetching)
+                  || (tab === "requests"  && requestsQuery.isFetching)
+                  || (tab === "renewals"  && renewalsQuery.isFetching);
 
-    const fetchRequests = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryRequests({ status: requestFilter });
-            setRequests(data.requests || []);
-        } catch { setRequests([]); } finally { setIsLoading(false); }
-    }, [requestFilter]);
-
-    const fetchRenewals = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await api.getLibraryRenewals({ status: renewalFilter });
-            setRenewals(data.renewals || []);
-        } catch { setRenewals([]); } finally { setIsLoading(false); }
-    }, [renewalFilter]);
-
-    useEffect(() => { fetchStats(); }, [fetchStats]);
-
-    useEffect(() => {
-        if (tab === "catalog") fetchBooks();
-        else if (tab === "issues") fetchIssues();
-        else if (tab === "requests") fetchRequests();
-        else if (tab === "renewals") fetchRenewals();
-    }, [tab, fetchBooks, fetchIssues, fetchRequests, fetchRenewals]);
+    const fetchBooks    = () => queryClient.invalidateQueries({ queryKey: ["library", "books"] });
+    const fetchIssues   = () => queryClient.invalidateQueries({ queryKey: ["library", "issues"] });
+    const fetchRequests = () => queryClient.invalidateQueries({ queryKey: ["library", "requests"] });
+    const fetchRenewals = () => queryClient.invalidateQueries({ queryKey: ["library", "renewals"] });
 
     const handleToggleBook = async (bookId: string) => {
         try {
@@ -89,31 +97,53 @@ const LibraryHome = () => {
         } catch { showMsg("error", "Failed to toggle book status"); }
     };
 
-    const handleApproveRequest = async (requestId: string) => {
-        if (!confirm("Approve this request? The book will be marked as ISSUED immediately.")) return;
-        try {
-            await api.approveLibraryRequest(requestId);
-            showMsg("success", "Request approved and book issued");
-            fetchRequests(); fetchStats();
-        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to approve"); }
+    const handleApproveRequest = (requestId: string) => {
+        confirm({
+            title: "Approve Borrow Request",
+            message: "Approve this request? The book will be marked as ISSUED immediately.",
+            confirmText: "Approve & Issue",
+            onConfirm: async () => {
+                await api.approveLibraryRequest(requestId);
+                showMsg("success", "Request approved and book issued");
+                fetchRequests(); fetchStats();
+            },
+        });
     };
 
-    const handleRejectRequest = async (requestId: string) => {
-        const reason = prompt("Rejection reason (optional):");
+    const handleRejectRequest = (requestId: string) => {
+        setRejectModal({ requestId, reason: "", submitting: false });
+    };
+
+    const submitReject = async () => {
+        if (!rejectModal) return;
+        setRejectModal(m => m ? { ...m, submitting: true } : null);
         try {
-            await api.rejectLibraryRequest(requestId, reason || "");
+            await api.rejectLibraryRequest(rejectModal.requestId, rejectModal.reason);
             showMsg("success", "Request rejected");
             fetchRequests(); fetchStats();
-        } catch { showMsg("error", "Failed to reject"); }
+            setRejectModal(null);
+        } catch {
+            showMsg("error", "Failed to reject");
+            setRejectModal(m => m ? { ...m, submitting: false } : null);
+        }
     };
 
-    const handleRespondRenewal = async (renewalId: string, action: "APPROVED" | "REJECTED") => {
-        const remarks = action === "REJECTED" ? (prompt("Remarks:") || "") : "";
+    const handleRespondRenewal = (renewalId: string, action: "APPROVED" | "REJECTED") => {
+        setRenewalModal({ renewalId, action, remarks: "", submitting: false });
+    };
+
+    const submitRenewal = async () => {
+        if (!renewalModal) return;
+        setRenewalModal(m => m ? { ...m, submitting: true } : null);
         try {
-            await api.respondLibraryRenewal(renewalId, action, remarks);
-            showMsg("success", `Renewal ${action.toLowerCase()}`);
+            await api.respondLibraryRenewal(renewalModal.renewalId, renewalModal.action, renewalModal.remarks);
+            showMsg("success", `Renewal ${renewalModal.action.toLowerCase()}`);
             fetchRenewals(); fetchStats();
-        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to respond"); }
+            setRenewalModal(null);
+        } catch (e: any) {
+            showMsg("error", e?.response?.data?.message || "Failed to respond");
+            setRenewalModal(m => m ? { ...m, submitting: false } : null);
+        }
     };
 
     const handleMarkOverdue = async () => {
@@ -150,67 +180,137 @@ const LibraryHome = () => {
 
     return (
         <div className="min-h-full bg-slate-50">
+            {confirmDialog}
+
+            {/* Reject Request Modal */}
+            {rejectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-bold text-slate-800">Reject Borrow Request</h3>
+                            <button onClick={() => setRejectModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-4">Optionally provide a reason for the student.</p>
+                        <textarea
+                            value={rejectModal.reason}
+                            onChange={e => setRejectModal(m => m ? { ...m, reason: e.target.value } : null)}
+                            placeholder="Rejection reason (optional)"
+                            rows={3}
+                            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                        />
+                        <div className="flex gap-3 mt-4">
+                            <button onClick={() => setRejectModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button onClick={submitReject} disabled={rejectModal.submitting}
+                                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2">
+                                {rejectModal.submitting ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Rejecting…</> : <><XCircle size={15} />Reject</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Renewal Response Modal */}
+            {renewalModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-base font-bold text-slate-800">
+                                {renewalModal.action === "APPROVED" ? "Approve Renewal" : "Reject Renewal"}
+                            </h3>
+                            <button onClick={() => setRenewalModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        </div>
+                        {renewalModal.action === "REJECTED" && (
+                            <>
+                                <p className="text-sm text-slate-500 mb-4">Optionally provide remarks for the student.</p>
+                                <textarea
+                                    value={renewalModal.remarks}
+                                    onChange={e => setRenewalModal(m => m ? { ...m, remarks: e.target.value } : null)}
+                                    placeholder="Remarks (optional)"
+                                    rows={3}
+                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
+                                />
+                            </>
+                        )}
+                        {renewalModal.action === "APPROVED" && (
+                            <p className="text-sm text-slate-500 mb-4">This will extend the book's due date by 21 days from today.</p>
+                        )}
+                        <div className="flex gap-3 mt-4">
+                            <button onClick={() => setRenewalModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button onClick={submitRenewal} disabled={renewalModal.submitting}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 text-white
+                                    ${renewalModal.action === "APPROVED" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
+                                {renewalModal.submitting
+                                    ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Processing…</>
+                                    : renewalModal.action === "APPROVED"
+                                        ? <><CheckCircle size={15} />Approve</>
+                                        : <><XCircle size={15} />Reject</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <PageHeader
                 icon={BookOpen}
                 title="Library Management"
                 subtitle="Manage books, issues, requests & renewals"
-                actions={
+                gradient={MODULE_THEMES.library}
+                onRefresh={() => {
+                    fetchStats();
+                    if (tab === "catalog") fetchBooks();
+                    else if (tab === "issues") fetchIssues();
+                    else if (tab === "requests") fetchRequests();
+                    else if (tab === "renewals") fetchRenewals();
+                }}
+                refreshing={isLoading}
+                primaryActions={
                     <button onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-white/15 border border-white/25 text-white rounded-xl flex items-center gap-2 hover:bg-white/25 transition-all backdrop-blur-sm">
-                        <Plus size={18} /> Add Book
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
+                        <Plus size={15} /> Add Book
                     </button>
                 }
             />
+
             <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+                {message && (
+                    <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                        {message.text}
+                    </div>
+                )}
 
-            {message && (
-                <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                    {message.text}
-                </div>
-            )}
-
-            {/* Stats */}
-            {stats && (
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    {[
-                        { label: "Total Books", value: stats.totalBooks, icon: BookOpen, color: "text-indigo-600 bg-indigo-50" },
-                        { label: "Active Issues", value: stats.activeIssues, icon: BookMarked, color: "text-blue-600 bg-blue-50" },
-                        { label: "Overdue", value: stats.overdueIssues, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
-                        { label: "Pending Requests", value: stats.pendingRequests, icon: ClipboardList, color: "text-amber-600 bg-amber-50" },
-                        { label: "Pending Renewals", value: stats.pendingRenewals, icon: RotateCcw, color: "text-emerald-600 bg-emerald-50" },
-                    ].map((s) => (
-                        <div key={s.label} className="bg-white rounded-2xl border p-4 flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
-                                <s.icon size={20} />
+                {/* Stats */}
+                {stats && (
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                        {[
+                            { label: "Total Books", value: stats.totalBooks, icon: BookOpen, color: "text-indigo-600 bg-indigo-50" },
+                            { label: "Active Issues", value: stats.activeIssues, icon: BookMarked, color: "text-blue-600 bg-blue-50" },
+                            { label: "Overdue", value: stats.overdueIssues, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
+                            { label: "Pending Requests", value: stats.pendingRequests, icon: ClipboardList, color: "text-amber-600 bg-amber-50" },
+                            { label: "Pending Renewals", value: stats.pendingRenewals, icon: RotateCcw, color: "text-emerald-600 bg-emerald-50" },
+                        ].map((s) => (
+                            <div key={s.label} className="bg-white rounded-2xl border p-4 flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
+                                    <s.icon size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold">{s.value}</p>
+                                    <p className="text-xs text-slate-500">{s.label}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-2xl font-bold">{s.value}</p>
-                                <p className="text-xs text-slate-500">{s.label}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-                {TABS.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${tab === t.key ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
-                    >
-                        <t.icon size={15} />
-                        {t.label}
-                        {t.badge && t.badge > 0 ? (
-                            <span className="bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{t.badge}</span>
-                        ) : null}
-                    </button>
-                ))}
+                        ))}
+                    </div>
+                )}
             </div>
 
+            <TabbedSection
+                idPrefix="library"
+                value={tab}
+                onChange={(k) => setTab(k as Tab)}
+                theme="amber"
+                flushPanel
+                tabs={TABS.map((t) => ({ key: t.key, label: t.label, icon: t.icon, badge: t.badge }))}
+            >
             {/* ── CATALOG ─────────────────────────────────────────────────── */}
-            {tab === "catalog" && (
+            <TabPanel tabKey="catalog">{tab === "catalog" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="relative">
@@ -289,10 +389,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── ISSUES ───────────────────────────────────────────────────── */}
-            {tab === "issues" && (
+            <TabPanel tabKey="issues">{tab === "issues" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b gap-3">
                         <div className="flex gap-2">
@@ -376,10 +476,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── REQUESTS ─────────────────────────────────────────────────── */}
-            {tab === "requests" && (
+            <TabPanel tabKey="requests">{tab === "requests" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="flex gap-2">
@@ -472,10 +572,10 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
 
             {/* ── RENEWALS ─────────────────────────────────────────────────── */}
-            {tab === "renewals" && (
+            <TabPanel tabKey="renewals">{tab === "renewals" && (
                 <div className="bg-white rounded-2xl border shadow-sm">
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="flex gap-2">
@@ -551,7 +651,8 @@ const LibraryHome = () => {
                         </tbody>
                     </table>
                 </div>
-            )}
+            )}</TabPanel>
+            </TabbedSection>
 
             {/* Add Book Modal */}
             {showAddModal && (
@@ -578,7 +679,6 @@ const LibraryHome = () => {
                     onSuccess={(msg: string) => { showMsg("success", msg); setShowIssueModal(null); fetchRequests(); fetchStats(); fetchIssues(); }}
                 />
             )}
-            </div>
         </div>
     );
 };

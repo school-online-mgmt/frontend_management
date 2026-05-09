@@ -367,7 +367,7 @@ const SubjectDetailsPage = () => {
                             <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">
                                 <GraduationCap size={15} className="text-emerald-600" />
                             </div>
-                            <h2 className="font-bold text-slate-800">Subject Teachers</h2>
+                            <h2 className="font-bold text-slate-800">Subject Incharges</h2>
                         </div>
                         <span className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-semibold">
                             {uniqueTeachers.length} teacher{uniqueTeachers.length !== 1 ? 's' : ''}

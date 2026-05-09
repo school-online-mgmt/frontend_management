@@ -1,7 +1,16 @@
 import {useState} from "react";
 import api from "../../api/api";
 import ConfirmModal from "../common/ConfirmModal";
-const CreateClassModal = ({ onClose, onSuccess }: any) => {
+
+interface CreateClassModalProps {
+    /** The session this class will be created under — required, since classes
+        are session-scoped. Provided by the parent ClassHome page. */
+    sessionId: string;
+    onClose: () => void;
+    onSuccess: (msg: { type: "success" | "error"; text: string }) => void;
+}
+
+const CreateClassModal = ({ sessionId, onClose, onSuccess }: CreateClassModalProps) => {
 
     const [slug, setSlug] = useState("");
     const [name, setName] = useState("");
@@ -13,7 +22,7 @@ const CreateClassModal = ({ onClose, onSuccess }: any) => {
         setLoading(true);
 
         try {
-            const payload: any = { slug, name };
+            const payload = { sessionId, slug, name };
 
             const res = await api.createClass(payload);
             onSuccess({

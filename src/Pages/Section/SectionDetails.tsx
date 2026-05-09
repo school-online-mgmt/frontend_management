@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     ArrowLeft, Loader2, Layers, Users, User, BookOpen,
-    School, Calendar, AlertTriangle, RefreshCcw, GraduationCap, Phone, UserX,
+    School, Calendar, AlertTriangle, RefreshCcw, GraduationCap, Phone, UserX, Bell,
 } from "lucide-react";
 import api from "../../api/api";
+import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
+import NoticeBoardsModal from "../../components/Classes/NoticeBoardsModal";
 
 
 const SectionDetails = () => {
@@ -16,6 +18,7 @@ const SectionDetails = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showBoardsModal, setShowBoardsModal] = useState(false);
 
     const fetchSection = useCallback(async (refresh = false) => {
         if (refresh) setIsRefreshing(true);
@@ -120,20 +123,36 @@ const SectionDetails = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => fetchSection(true)}
-                        disabled={isRefreshing}
-                        className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition disabled:opacity-60"
-                    >
-                        <RefreshCcw size={14} className={isRefreshing ? "animate-spin" : ""} /> Refresh
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setShowBoardsModal(true)}
+                            data-testid="section-notice-boards-btn"
+                            className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center gap-2 text-sm font-semibold shadow-sm transition-colors"
+                        >
+                            <Bell size={14} /> Notice Boards
+                        </button>
+                        <button
+                            onClick={() => fetchSection(true)}
+                            disabled={isRefreshing}
+                            className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition disabled:opacity-60"
+                        >
+                            <RefreshCcw size={14} className={isRefreshing ? "animate-spin" : ""} /> Refresh
+                        </button>
+                    </div>
                 </div>
+
+                <NoticeBoardsModal
+                    open={showBoardsModal}
+                    onClose={() => setShowBoardsModal(false)}
+                    sectionId={sectionId!}
+                    scopeLabel={`Boards visible to ${section.class?.name ?? ""} · ${section.name}`}
+                />
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mt-6">
                     {[
                         { icon: <Users size={18} className="text-emerald-500" />, value: section.studentCount ?? 0, label: "Students Enrolled", bg: "bg-emerald-50" },
-                        { icon: <BookOpen size={18} className="text-amber-500" />, value: section.subjectAssignments?.length ?? 0, label: "Subject Teachers", bg: "bg-amber-50" },
+                        { icon: <BookOpen size={18} className="text-amber-500" />, value: section.subjectAssignments?.length ?? 0, label: "Subject Incharges", bg: "bg-amber-50" },
                         { icon: <AlertTriangle size={18} className="text-rose-500" />, value: unassignedSubjects.length, label: unassignedSubjects.length === 0 ? "All Covered" : "Subjects Unassigned", bg: unassignedSubjects.length === 0 ? "bg-emerald-50" : "bg-rose-50" },
                     ].map(stat => (
                         <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3">
@@ -153,7 +172,7 @@ const SectionDetails = () => {
                     <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
                         <User size={16} className="text-slate-600" />
                     </div>
-                    <h2 className="text-base font-bold text-slate-800">Section Teacher</h2>
+                    <h2 className="text-base font-bold text-slate-800">Section Incharge</h2>
                 </div>
 
                 {section.teacher ? (
@@ -195,7 +214,7 @@ const SectionDetails = () => {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-base font-bold text-slate-800">Subject Teachers</h2>
+                        <h2 className="text-base font-bold text-slate-800">Subject Incharges</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Teachers assigned to subjects in this section</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -285,6 +304,14 @@ const SectionDetails = () => {
                     </div>
                 )}
             </div>
+
+            {/* Enrolled students for the chosen session */}
+            <SessionStudentsTable
+                filterSectionId={sectionId}
+                title={`Students in ${section.class?.name ? section.class.name + " · " : ""}${section.name}`}
+                subtitle="Pick a session to see who's enrolled — click any row to open the student profile."
+                accent="violet"
+            />
         </div>
     );
 };

@@ -1,5 +1,16 @@
 import axios from 'axios';
-import type { CreateClassData, UpdateTeacherData, UpdateExamPayload, UpdateSchoolEventData, UpdateLibraryBookData } from './types';
+import type {
+    CreateClassData,
+    UpdateTeacherData,
+    UpdateExamPayload,
+    UpdateSchoolEventData,
+    UpdateLibraryBookData,
+    AdmitCardRelease,
+    PublishAdmitCardPayload,
+    GenerateInvoicesResult,
+    TeacherApplication,
+    FeeStructureItem,
+} from './types';
 
 // Create an Axios instance with a base URL from environment variables
 const apiClient = axios.create({
@@ -21,7 +32,11 @@ export const setLogoutCallback = (callback: () => void) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't trigger logout for verifyAuth — it's used to CHECK auth, not make real API calls.
+    // A 401 there just means "not authenticated yet"; the AuthContext handles that state.
+    const url: string = error.config?.url ?? '';
+    const isAuthCheck = url.includes('/management/auth/verifyAuth');
+    if (error.response?.status === 401 && !isAuthCheck) {
       if (logoutCallback) {
           logoutCallback();
       }
@@ -164,9 +179,10 @@ class API {
 
   // ----------Classes APIs----------
 
-  // Get All Classes
-  getClasses = async () => {
-    const response = await apiClient.get("/management/class");
+  // Get All Classes (optionally scoped to a session).
+  getClasses = async (sessionId?: string) => {
+    const params = sessionId ? { sessionId } : undefined;
+    const response = await apiClient.get("/management/class", { params });
     return response.data.classes;
   };
 
@@ -215,15 +231,48 @@ class API {
     return response.data;
   };
 
+  getSchoolStats = async () => {
+    const response = await apiClient.get("/management/dashboard/school-stats");
+    return response.data as {
+      students: { total: number; active: number; withDisability: number; byGender: { gender: string; count: number }[]; byStatus: { status: string; count: number }[] };
+      teachers: { total: number; active: number; byGender: { gender: string; count: number }[] };
+      transport: { opted: number; notOpted: number; optedPercent: number; byZone: { zoneName: string; zonePrice: number; count: number }[] };
+      ratios: { studentsPerTeacher: number };
+      byClass: { className: string; count: number }[];
+      currentSession: { id: string; name: string; startDate: string; endDate: string } | null;
+    };
+  };
+
 //get All Sessions
 getSessions= async () => {
     const response = await apiClient.get("/management/session");
     return response.data.sessions;
 };
 
+// Bulk insights for the sessions list page — one round trip returns
+// counts of students / classes / sections / courses / subjects / exams
+// plus calendar stats (elapsed days, weekends, holidays, attendance
+// days), keyed by sessionId.
+getSessionInsights = async (): Promise<{
+    sessionId: string;
+    students: number; activeStudents: number;
+    classes: number; sections: number;
+    courses: number; subjects: number;
+    exams: number;
+    attendanceDays: number;
+    elapsedDays: number;
+    weekendDays: number;
+    holidayDays: number;
+    workingDays: number;
+}[]> => {
+    const response = await apiClient.get("/management/session/insights");
+    return response.data.insights ?? [];
+};
+
 // Create Session
 createSession = async (body: {
-    slug: string; name: string; startDate: string; endDate: string; description?: string;
+    slug: string; name: string; startDate: string; endDate: string;
+    description?: string; acceptAdmission?: boolean;
 }) => {
     const response = await apiClient.post("/management/session/create", body);
     return response.data;
@@ -232,6 +281,7 @@ createSession = async (body: {
 // Update Session
 updateSession = async (id: string, body: {
     slug?: string; name?: string; startDate?: string; endDate?: string;
+    acceptAdmission?: boolean;
 }) => {
     const response = await apiClient.put(`/management/session/${id}`, body);
     return response.data;
@@ -240,6 +290,68 @@ updateSession = async (id: string, body: {
 // Delete Session
 deleteSession = async (id: string) => {
     const response = await apiClient.delete(`/management/session/${id}`);
+    return response.data;
+};
+
+// ── Session End Workflow ───────────────────────────────────────────────
+initiateEndSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/initiate-end`);
+    return response.data;
+};
+
+cancelEndSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/cancel-end`);
+    return response.data;
+};
+
+getEndSessionProgress = async (id: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-progress`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED"; endInitiatedAt: string | null; endedAt: string | null };
+        totals: { pending: number; promote: number; holdBack: number; total: number };
+        teachers: { teacherId: string | null; teacherName: string | null; total: number; pending: number; promote: number; holdBack: number }[];
+        canEnd: boolean;
+    };
+};
+
+endSession = async (id: string) => {
+    const response = await apiClient.post(`/management/session/${id}/end`);
+    return response.data;
+};
+
+// Per-section review (acknowledgement is purely UI-side, no DB).
+getEndSessionSections = async (id: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-sections`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED" };
+        sections: {
+            sectionId: string; sectionName: string | null;
+            classId: string | null; className: string | null;
+            teacherName: string | null;
+            total: number; pending: number; promote: number; holdBack: number;
+        }[];
+    };
+};
+
+getEndSessionSectionDetail = async (id: string, sectionId: string) => {
+    const response = await apiClient.get(`/management/session/${id}/end-sections/${sectionId}`);
+    return response.data as {
+        session: { id: string; name: string; status: "ACTIVE" | "ENDING" | "ENDED" };
+        section: { id: string; name: string; className: string | null; teacherName: string | null };
+        students: {
+            academicId: string; studentId: string; rollNo: string | null;
+            promotionStatus: "PENDING" | "PROMOTE" | "HOLD_BACK";
+            decidedBy: string | null; decidedAt: string | null; decisionNote: string | null;
+            decidedByName: string | null;
+            firstName: string; lastName: string; gender: string | null;
+        }[];
+    };
+};
+
+bulkUpdateSectionDecisions = async (id: string, sectionId: string, body: {
+    updates: { academicId: string; decision: "PROMOTE" | "HOLD_BACK" | "PENDING"; note?: string }[];
+}) => {
+    const response = await apiClient.patch(`/management/session/${id}/end-sections/${sectionId}/decisions`, body);
     return response.data;
 };
 
@@ -275,12 +387,22 @@ updateSubject = async (id: string, data: { name?: string, slug?: string, bookNam
 
     // ── Notice Board APIs ─────────────────────────────────────────────────────
 
-    getNoticeBoards = async (params?: { visibility?: string; classId?: string }) => {
+    /**
+     * Pass a sessionId (positional shorthand) OR a params object. Most callers
+     * use the shorthand to scope to the session selected on the page.
+     */
+    getNoticeBoards = async (
+        sessionIdOrParams?: string | { sessionId?: string; visibility?: string; classId?: string },
+    ) => {
+        const params = typeof sessionIdOrParams === "string"
+            ? { sessionId: sessionIdOrParams }
+            : sessionIdOrParams;
         const res = await apiClient.get("/management/notice/boards", { params });
         return res.data;
     };
 
     createNoticeBoard = async (data: {
+        sessionId: string;
         name: string; description?: string; visibility: string;
         classId?: string; sectionId?: string; approverId?: string;
     }) => {
@@ -354,8 +476,14 @@ updateSubject = async (id: string, data: { name?: string, slug?: string, bookNam
     // ── END Notice Board APIs ─────────────────────────────────────────────────
 
     // --- Student APIs ---
-getAppliedStudents = async () => {
-    const response = await apiClient.get('/management/student/applied');
+/**
+ * Pass `sessionId` to filter applicants to a specific session, or "none" for
+ * applicants with no session set (legacy rows pre-dating per-session admissions).
+ * Omit to get all applicants for the tenant.
+ */
+getAppliedStudents = async (sessionId?: string) => {
+    const params = sessionId ? { sessionId } : undefined;
+    const response = await apiClient.get('/management/student/applied', { params });
     return response.data;
 };
 
@@ -385,11 +513,12 @@ acceptApplication = async (applicantId: string) => {
     return response.data;
 };
 
-getStudents = async (subjectId?: string, sessionId?: string) => {
+getStudents = async (subjectId?: string, sessionId?: string, bySession?: string) => {
     const response = await apiClient.get('/management/student/', {
         params: {
             ...(subjectId && { subjectId }),
             ...(sessionId && { sessionId }),
+            ...(bySession && { bySession }),
         },
     });
     return response.data;
@@ -516,6 +645,12 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Get enrolled students eligible for an exam (READY_TO_CONDUCT onwards)
+    getExamEnrolledStudents = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/enrolled-students`);
+        return res.data;
+    };
+
     // Get exam results
     getExamResults = async (examId: string) => {
         const res = await apiClient.get(`/management/exam/${examId}/results`);
@@ -549,11 +684,69 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Publish exam (CREATED → PUBLISHED)
+    publishExam = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-exam`);
+        return res.data;
+    };
+
+    // Mark exam as conducted without payload (READY_TO_CONDUCT → CONDUCTED)
+    markConducted = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/conduct`);
+        return res.data;
+    };
+
+    // Get per-section marks progress summary
+    getExamSections = async (examId: string) => {
+        const res = await apiClient.get(`/management/exam/${examId}/sections`);
+        return res.data;
+    };
+
+    // ── Exam Lifecycle Stage Transitions ──────────────────────────────────────
+
+    // CREATED → SYLLABUS_CONFIRMED
+    confirmSyllabus = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-syllabus`);
+        return res.data;
+    };
+
+    // SYLLABUS_CONFIRMED → DATE_CONFIRMED
+    confirmDate = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/confirm-date`);
+        return res.data;
+    };
+
+    // DATE_CONFIRMED → PAPER_SET
+    setPaper = async (examId: string, payload?: { questionPaper?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/set-paper`, payload ?? {});
+        return res.data;
+    };
+
+    // PAPER_SET → ADMIT_CARD_PUBLISHED
+    examPublishAdmitCards = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/publish-admit-cards`);
+        return res.data;
+    };
+
+    // ADMIT_CARD_PUBLISHED → READY_TO_CONDUCT
+    readyToConduct = async (examId: string, payload?: { readyToConductNotes?: string }) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/ready-to-conduct`, payload ?? {});
+        return res.data;
+    };
+
+    // CONDUCTED → PAPER_EVALUATED
+    evaluatePaper = async (examId: string) => {
+        const res = await apiClient.patch(`/management/exam/${examId}/evaluate-paper`);
+        return res.data;
+    };
+
     // ── Student Management APIs ───────────────────────────────────────────────
 
-    // Get all applicants
-    getApplicants = async () => {
-        const res = await apiClient.get("/management/student/applied");
+    // Get all applicants. Pass `sessionId` to filter by session, "none" for
+    // legacy applicants without a session set.
+    getApplicants = async (sessionId?: string) => {
+        const params = sessionId ? { sessionId } : undefined;
+        const res = await apiClient.get("/management/student/applied", { params });
         return res.data;
     };
 
@@ -667,6 +860,16 @@ createStudent = async (data: {
         return res.data;
     };
 
+    getTeacherApplications = async (status?: string): Promise<{ applications: TeacherApplication[] }> => {
+        const res = await apiClient.get('/management/teacher/applications', { params: status ? { status } : {} });
+        return res.data;
+    };
+
+    updateTeacherApplicationStatus = async (id: string, data: { status: string; comments?: string }) => {
+        const res = await apiClient.patch(`/management/teacher/applications/${id}`, data);
+        return res.data;
+    };
+
     // Assign subject to teacher
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
@@ -776,6 +979,14 @@ createStudent = async (data: {
         const res = await apiClient.post("/management/fees/extra-charges", data);
         return res.data;
     };
+    previewBulkExtraCharge = async (params: { sessionId: string; classId?: string; sectionId?: string; courseId?: string }) => {
+        const res = await apiClient.get("/management/fees/extra-charges/bulk/preview", { params });
+        return res.data as { students: Array<{ academicId: string; studentId: string; firstName: string; lastName: string; phone: string }>; total: number };
+    };
+    addBulkExtraCharge = async (data: { type: string; description?: string; amount: number; month: number; year: number; sessionId: string; classId?: string; sectionId?: string; courseId?: string; studentIds?: string[]; applyToAll?: boolean }) => {
+        const res = await apiClient.post("/management/fees/extra-charges/bulk", data);
+        return res.data as { message: string; created: number; total: number };
+    };
     updateExtraCharge = async (id: string, data: Partial<{ type: string; description: string; amount: number; month: number; year: number }>) => {
         const res = await apiClient.patch(`/management/fees/extra-charges/${id}`, data);
         return res.data;
@@ -790,49 +1001,34 @@ createStudent = async (data: {
         const res = await apiClient.get("/management/fees/invoices", { params });
         return res.data;
     };
-    generateInvoices = async (data: { month: number; year: number; sessionId: string; dueDate: string }) => {
+    generateInvoices = async (data: {
+        month: number;
+        year: number;
+        sessionId: string;
+        dueDate: string;
+    }): Promise<GenerateInvoicesResult & { message?: string }> => {
         const res = await apiClient.post("/management/fees/invoices/generate", data);
         return res.data;
     };
 
-    /**
-     * Stream invoice generation with real-time progress via SSE.
-     */
-    generateInvoicesStream = async (
-        data: { month: number; year: number; sessionId: string; dueDate: string },
-        onProgress: (event: { type: string; generated: number; skipped: number; processed: number; total: number }) => void,
-    ): Promise<{ generated: number; skipped: number; total: number }> => {
-        const baseURL = apiClient.defaults.baseURL || "";
-        const response = await fetch(`${baseURL}/management/fees/invoices/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
-            credentials: "include",
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ message: "Generation failed" }));
-            throw new Error(err.message || "Generation failed");
-        }
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let result: any = { generated: 0, skipped: 0, total: 0 };
+    // ── Admit Cards ──────────────────────────────────────────────────────────
+    getAdmitCardReleases = async (): Promise<{ success: boolean; data: AdmitCardRelease[] }> => {
+        const res = await apiClient.get("/management/exam/admit-cards");
+        return res.data;
+    };
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const payload = JSON.parse(line.slice(6));
-                    onProgress(payload);
-                    if (payload.type === "complete") result = payload;
-                }
-            }
-        }
-        return result;
+    publishAdmitCardRelease = async (
+        payload: PublishAdmitCardPayload,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post("/management/exam/admit-cards/publish", payload);
+        return res.data;
+    };
+
+    revokeAdmitCardRelease = async (
+        id: string,
+    ): Promise<{ success: boolean; data: AdmitCardRelease }> => {
+        const res = await apiClient.post(`/management/exam/admit-cards/${id}/revoke`);
+        return res.data;
     };
 
     getFeeInvoiceById = async (id: string) => {
@@ -860,9 +1056,58 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // ── Fee Structures ────────────────────────────────────────────────────────
+
+    getFeeStructures = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/fees/structures', { params: sessionId ? { sessionId } : {} });
+        return res.data as { structures: Array<{ id: string; name: string; sessionId: string; sessionName: string; isActive: boolean; itemCount: number; createdAt: string }> };
+    };
+
+    createFeeStructure = async (data: { sessionId: string; name: string; description?: string; isActive: boolean }) => {
+        const res = await apiClient.post('/management/fees/structures', data);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean } };
+    };
+
+    getFeeStructureById = async (id: string) => {
+        const res = await apiClient.get(`/management/fees/structures/${id}`);
+        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean; items: FeeStructureItem[] } };
+    };
+
+    createFeeStructureItem = async (structureId: string, data: {
+        name: string; feeType: string; scope: 'GLOBAL' | 'COURSE';
+        amount: number; frequency: string;
+        courseId?: string; description?: string;
+    }) => {
+        const res = await apiClient.post(`/management/fees/structures/${structureId}/items`, data);
+        return res.data;
+    };
+
+    updateFeeStructureItem = async (structureId: string, itemId: string, data: Partial<{
+        name: string; amount: number; frequency: string; description: string;
+    }>) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}/items/${itemId}`, data);
+        return res.data;
+    };
+
+    deleteFeeStructureItem = async (structureId: string, itemId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}/items/${itemId}`);
+        return res.data;
+    };
+
+    updateFeeStructure = async (structureId: string, data: { name?: string; description?: string; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/fees/structures/${structureId}`, data);
+        return res.data as { structure: { id: string; name: string; isActive: boolean } };
+    };
+
+    deleteFeeStructure = async (structureId: string) => {
+        const res = await apiClient.delete(`/management/fees/structures/${structureId}`);
+        return res.data;
+    };
+
     // ── Attendance Module ─────────────────────────────────────────────────────
-    getAttendanceSections = async () => {
-        const res = await apiClient.get("/management/attendance/sections");
+    getAttendanceSections = async (sessionId?: string) => {
+        const params = sessionId ? { sessionId } : undefined;
+        const res = await apiClient.get("/management/attendance/sections", { params });
         return res.data;
     };
 
@@ -913,7 +1158,7 @@ createStudent = async (data: {
         return res.data;
     };
 
-    getTeacherAttendanceView = async (params?: { teacherId?: string; date?: string; from?: string; to?: string }) => {
+    getTeacherAttendanceView = async (params?: { teacherId?: string; date?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/teacher-attendance/view", { params });
         return res.data;
     };
@@ -936,7 +1181,7 @@ createStudent = async (data: {
     };
 
     // ── Leave Management ────────────────────────────────────────────────────
-    getStudentLeaves = async (params?: { status?: string; classId?: string; sectionId?: string; from?: string; to?: string }) => {
+    getStudentLeaves = async (params?: { status?: string; classId?: string; sectionId?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/leave/student-leaves", { params });
         return res.data;
     };
@@ -946,7 +1191,7 @@ createStudent = async (data: {
         return res.data;
     };
 
-    getTeacherLeaves = async (params?: { status?: string; teacherId?: string; from?: string; to?: string }) => {
+    getTeacherLeaves = async (params?: { status?: string; teacherId?: string; from?: string; to?: string; sessionId?: string }) => {
         const res = await apiClient.get("/management/leave/teacher-leaves", { params });
         return res.data;
     };
@@ -1156,6 +1401,382 @@ createStudent = async (data: {
     createFeatureRequest = async (data: { title: string; description: string; category?: string }) => {
         const res = await apiClient.post('/management/support/feature-requests', data);
         return res.data;
+    };
+
+    // Onboarding
+    getOnboardingStatus = async (): Promise<{
+        isComplete: boolean;
+        steps: {
+            session:          { complete: boolean; count: number };
+            classAndSection:  { complete: boolean; classCount: number; sectionCount: number };
+            subjectAndCourse: { complete: boolean; subjectCount: number; courseCount: number };
+            teacher:          { complete: boolean; count: number };
+            principal:        { complete: boolean; count: number };
+            fees:             { complete: boolean; courseFeeCount: number; feeStructureCount: number };
+            transport:        { complete: boolean; count: number };
+            noticeBoard:      { complete: boolean; count: number };
+        };
+    }> => {
+        const res = await apiClient.get('/management/onboarding/status');
+        return res.data;
+    };
+
+    // ── Staff Management ──────────────────────────────────────────────────────
+
+    getStaff = async (): Promise<{ staff: Array<{
+        id: string; firstName: string; middleName?: string; lastName: string;
+        phone: string; email: string; role: string | null; createdAt: string;
+        permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> | null;
+    }> }> => {
+        const res = await apiClient.get('/management/staff');
+        return res.data;
+    };
+
+    createStaff = async (data: {
+        firstName: string; lastName: string; phone: string; email: string;
+        password: string; role?: string;
+        permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
+    }) => {
+        const res = await apiClient.post('/management/staff', data);
+        return res.data;
+    };
+
+    updateStaff = async (id: string, data: {
+        firstName?: string; lastName?: string; phone?: string; email?: string;
+        role?: string; password?: string;
+    }) => {
+        const res = await apiClient.patch(`/management/staff/${id}`, data);
+        return res.data;
+    };
+
+    deleteStaff = async (id: string) => {
+        const res = await apiClient.delete(`/management/staff/${id}`);
+        return res.data;
+    };
+
+    updateStaffPermissions = async (id: string, permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>) => {
+        const res = await apiClient.put(`/management/staff/${id}/permissions`, { permissions });
+        return res.data;
+    };
+
+    // Tenant Config / School Settings
+    getTenantConfig = async () => {
+        const res = await apiClient.get("/management/settings/config");
+        return res.data;
+    };
+    updateTenantConfig = async (data: {
+        schoolName: string;
+        tagline?: string | null;
+        bio?: string | null;
+        address?: string | null;
+        city?: string | null;
+        state?: string | null;
+        country?: string | null;
+        pincode?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        logoUrl?: string | null;
+        footerText?: string | null;
+        acceptingApplications?: boolean;
+        acceptingOnlineFees?: boolean;
+        establishedYear?: number | null;
+        boardAffiliation?: string | null;
+        schoolType?: string | null;
+        emergencyContact?: string | null;
+        principalName?: string | null;
+    }) => {
+        const res = await apiClient.patch("/management/settings/config", data);
+        return res.data;
+    };
+
+    getPlatformCharge = async () => {
+        const res = await apiClient.get("/management/settings/platform-charge");
+        return res.data as { costPerStudent: number };
+    };
+
+    getMyAdmissionCharges = async () => {
+        const res = await apiClient.get("/management/settings/admission-charges");
+        return res.data as {
+            charges: Array<{
+                id: string; studentName: string; amount: number; status: string;
+                paidAt: string | null; notes: string | null; createdAt: string;
+            }>;
+            summary: {
+                total: number; pendingCount: number; paidCount: number;
+                pendingAmount: number; paidAmount: number; totalAmount: number;
+            } | null;
+        };
+    };
+
+    // ── Settings: Razorpay payments (per-tenant credentials) ────────────────
+    getPaymentSettings = async () => {
+        const res = await apiClient.get("/management/settings/payments");
+        return res.data as {
+            payments: {
+                enabled: boolean;
+                isFullyConfigured: boolean;
+                keyId: string | null;
+                keyIdEnvironment: "live" | "test" | null;
+                hasKeySecret: boolean;
+                hasWebhookSecret: boolean;
+                keySecretMask: string | null;
+                webhookSecretMask: string | null;
+                configuredAt: string | null;
+                configuredBy: string | null;
+                configuredByName: string | null;
+                webhookUrl: string;
+            };
+        };
+    };
+
+    updatePaymentSettings = async (payload: {
+        enabled?: boolean;
+        keyId?: string;
+        keySecret?: string;
+        webhookSecret?: string;
+        clearWebhookSecret?: boolean;
+    }) => {
+        const res = await apiClient.patch("/management/settings/payments", payload);
+        return res.data as {
+            message: string;
+            payments: { enabled: boolean; keyId: string | null; configuredAt: string | null };
+        };
+    };
+
+    // ── Settings: Email service (Zepto BYO or platform-shared) ─────────────
+    getEmailSettings = async () => {
+        const res = await apiClient.get("/management/settings/email");
+        return res.data as {
+            email: {
+                enabled: boolean;
+                useOwnCredentials: boolean;
+                isFullyConfigured: boolean;
+                byoComplete: boolean;
+                platformAvailable: boolean;
+                schoolEmailSlug: string | null;
+                emailDomain: string | null;
+                emailFromAddress: string | null;
+                emailFromName: string | null;
+                hasAuthKey: boolean;
+                authKeyMask: string | null;
+                pricingMessage: string;
+                pricing: { usingShared: boolean; pricePerBlock: number; emailsPerBlock: number };
+                configuredAt: string | null;
+                configuredByName: string | null;
+                moduleAddresses: Record<string, string>;
+                modulePreview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+                note: string;
+            };
+        };
+    };
+
+    /**
+     * Self-service email setup. Management can:
+     *   - Toggle service on/off (`enabled`)
+     *   - Pick mode (`useOwnCredentials`: true=BYO, false=shared)
+     *   - For BYO: provide `emailAuthKey` + `emailDomain`
+     *   - Set the display `emailFromName`
+     * In shared mode, the backend auto-fills `school_email_slug` from
+     * `tenants.slug` when management first enables — no superadmin needed.
+     */
+    updateEmailSettings = async (payload: {
+        enabled?: boolean;
+        useOwnCredentials?: boolean;
+        emailAuthKey?: string;
+        emailDomain?: string;
+        emailFromName?: string;
+        clearAuthKey?: boolean;
+    }) => {
+        const res = await apiClient.patch("/management/settings/email", payload);
+        return res.data as {
+            message: string;
+            email: {
+                enabled: boolean;
+                useOwnCredentials: boolean;
+                schoolEmailSlug?: string | null;
+                configuredAt: string | null;
+            };
+        };
+    };
+
+    getEmailModuleAddresses = async () => {
+        const res = await apiClient.get("/management/settings/email/module-addresses");
+        return res.data as {
+            serviceEnabled: boolean;
+            modules: Record<string, { localPart: string; isOverride: boolean }>;
+            preview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+            defaults: Record<string, string>;
+        };
+    };
+
+    updateEmailModuleAddresses = async (addresses: Record<string, string>) => {
+        const res = await apiClient.patch("/management/settings/email/module-addresses", { addresses });
+        return res.data as {
+            message: string;
+            modules: Record<string, { localPart: string; isOverride: boolean }>;
+            preview: Record<string, { localPart: string; email: string; isOverride: boolean }> | null;
+        };
+    };
+
+    getEmailUsage = async () => {
+        const res = await apiClient.get("/management/settings/email/usage");
+        return res.data as {
+            usage: {
+                serviceEnabled: boolean;
+                usingShared: boolean;
+                pricingMessage: string;
+                thisMonth: { totalSent: number; billableSent: number; failed: number; bounced: number; estimatedAmount: number };
+                lastMonth: { totalSent: number; billableSent: number; failed: number; bounced: number; estimatedAmount: number };
+                pricing: { pricePerBlock: number; emailsPerBlock: number };
+            };
+            bills: Array<{
+                id: string; invoiceNumber: string;
+                periodStart: string; periodEnd: string;
+                emailCount: number; billableEmailCount: number;
+                amount: number; status: string;
+                generatedAt: string;
+            }>;
+        };
+    };
+
+    sendTestEmail = async (payload: { to: { email: string; name?: string }; subject?: string; body?: string }) => {
+        const res = await apiClient.post("/management/settings/email/test", payload);
+        return res.data as {
+            message: string;
+            result: { logId: string | null; providerMessageId: string | null; status: "SENT" | "FAILED"; usedSharedCredentials: boolean; billable: boolean };
+        };
+    };
+
+    // ── Settings: Email module toggles ──────────────────────────────────────
+    getEmailModules = async () => {
+        const res = await apiClient.get("/management/settings/email-modules");
+        return res.data as {
+            serviceEnabled: boolean;
+            modules: Record<string, boolean>;
+            availableModules: string[];
+        };
+    };
+
+    updateEmailModules = async (settings: Record<string, boolean | null>) => {
+        const res = await apiClient.patch("/management/settings/email-modules", { settings });
+        return res.data as {
+            message: string;
+            serviceEnabled: boolean;
+            modules: Record<string, boolean>;
+        };
+    };
+
+    // ── Platform bills (management → platform) ──────────────────────────────
+    getPlatformBills = async (status?: string) => {
+        const res = await apiClient.get("/management/platform-bills", {
+            params: status ? { status } : {},
+        });
+        return res.data as {
+            summary: { total: number; pendingAmount: number; paidAmount: number };
+            bills: Array<{
+                id: string;
+                source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE";
+                label: string;
+                amount: number;
+                status: string;
+                paidAt: string | null;
+                createdAt: string;
+                extra?: Record<string, unknown>;
+            }>;
+        };
+    };
+
+    createPlatformBillBulkOrder = async (items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>) => {
+        const res = await apiClient.post("/management/platform-bills/pay-multiple/create-order", { items });
+        return res.data as {
+            orderId: string;
+            amount: number;
+            currency: string;
+            keyId: string | null;
+            billsCount: number;
+            totalAmount: number;
+            items: Array<{ source: string; id: string; amount: number; label: string }>;
+        };
+    };
+
+    verifyPlatformBillBulkOrder = async (payload: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+        items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>;
+    }) => {
+        const res = await apiClient.post("/management/platform-bills/pay-multiple/verify", payload);
+        return res.data as {
+            message: string;
+            count: number;
+            items: Array<{ source: string; id: string; amount: number; label: string }>;
+        };
+    };
+
+    // ── Bulk fee invoice payment (school-side, tenant Razorpay) ─────────────
+    createBulkFeeInvoiceOrder = async (invoiceIds: string[]) => {
+        const res = await apiClient.post("/management/fees/invoices/bulk-pay/create-order", { invoiceIds });
+        return res.data as {
+            orderId: string;
+            amount: number;
+            currency: string;
+            keyId: string;
+            invoiceCount: number;
+            totalAmount: number;
+            items: Array<{ id: string; invoiceNo: string; balance: number; studentId: string }>;
+        };
+    };
+
+    verifyBulkFeeInvoiceOrder = async (payload: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+        invoiceIds: string[];
+    }) => {
+        const res = await apiClient.post("/management/fees/invoices/bulk-pay/verify", payload);
+        return res.data as {
+            message: string;
+            count: number;
+            totalAmount: number;
+            invoiceIds: string[];
+        };
+    };
+
+    // ── Communication broadcast ─────────────────────────────────────────────
+    previewEmailBroadcast = async (audience: {
+        type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+        recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
+        ids?: string[];
+    }) => {
+        const res = await apiClient.post("/management/communication/email-broadcast/preview", audience);
+        return res.data as {
+            audience: typeof audience;
+            recipientCount: number;
+            sample: Array<{ name: string; email: string; role: string }>;
+        };
+    };
+
+    sendEmailBroadcast = async (payload: {
+        subject: string;
+        body: string;
+        audience: {
+            type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+            recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
+            ids?: string[];
+        };
+        dryRun?: boolean;
+    }) => {
+        const res = await apiClient.post("/management/communication/email-broadcast", payload);
+        return res.data as {
+            message: string;
+            skipped: boolean;
+            attempted: number;
+            sent: number;
+            failed: number;
+            recipientCount: number;
+            reasons?: string[];
+        };
     };
 }
 export default new API();

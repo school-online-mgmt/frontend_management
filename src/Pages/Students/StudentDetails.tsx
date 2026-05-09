@@ -94,6 +94,7 @@ const StudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<StudentDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showAdmitModal, setShowAdmitModal] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -108,7 +109,9 @@ const StudentDetails: React.FC = () => {
     try {
       const res = await api.getStudentById(id!);
       setData(res);
-    } catch { /* silent */ } finally { setLoading(false); }
+    } catch (err: any) {
+      if (err?.response?.status !== 404) setLoadError(true);
+    } finally { setLoading(false); }
   }, [id]);
 
   useEffect(() => { if (id) fetchStudent(); }, [id, fetchStudent]);
@@ -143,8 +146,12 @@ const StudentDetails: React.FC = () => {
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <AlertTriangle className="mx-auto text-amber-500 mb-3" size={36} />
-        <p className="text-slate-700 font-bold">Student not found</p>
-        <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Go Back</button>
+        <p className="text-slate-700 font-bold">{loadError ? "Failed to load student profile" : "Student not found"}</p>
+        <p className="text-slate-500 text-sm mt-1">{loadError ? "Please check your connection and try again." : "The student may have been removed."}</p>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          {loadError && <button onClick={() => { setLoadError(false); fetchStudent(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Try Again</button>}
+          <button onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition">Go Back</button>
+        </div>
       </div>
     </div>
   );

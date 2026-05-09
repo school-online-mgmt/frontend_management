@@ -5,6 +5,7 @@ import {
     RotateCcw, X, Save,
 } from "lucide-react";
 import api from "../../api/api";
+import { useConfirm } from "../../hooks/useConfirm";
 
 const GENRES = ["Fiction", "Non-Fiction", "Science", "Mathematics", "History", "Geography",
     "Literature", "Reference", "Biography", "Technology", "Arts", "Sports", "Other"];
@@ -20,6 +21,7 @@ const BookDetailsPage = () => {
     const { bookId } = useParams<{ bookId: string }>();
     const location = useLocation();
     const navigate = useNavigate();
+    const { confirm, dialog: confirmDialog } = useConfirm();
 
     const [book, setBook] = useState<any>(null);
     const [activeIssues, setActiveIssues] = useState<any[]>([]);
@@ -65,6 +67,7 @@ const BookDetailsPage = () => {
 
     return (
         <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-6">
+            {confirmDialog}
             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
                 <ArrowLeft size={16} /> Back
             </button>
@@ -119,13 +122,20 @@ const BookDetailsPage = () => {
                                     <Edit2 size={14} /> Edit
                                 </button>
                                 <button
-                                    onClick={async () => {
-                                        if (!confirm("Delete this book? This cannot be undone.")) return;
-                                        try {
-                                            await api.deleteLibraryBook(book.id);
-                                            navigate("/library");
-                                        } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed to delete"); }
-                                    }}
+                                    onClick={() => confirm({
+                                        title: "Delete this book?",
+                                        message: `"${book.title}" will be permanently removed from the library. This cannot be undone.`,
+                                        confirmText: "Delete",
+                                        onConfirm: async () => {
+                                            try {
+                                                await api.deleteLibraryBook(book.id);
+                                                navigate("/library");
+                                            } catch (e: any) {
+                                                showMsg("error", e?.response?.data?.message || "Failed to delete");
+                                                throw e;
+                                            }
+                                        },
+                                    })}
                                     className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50"
                                 >
                                     <Trash2 size={14} /> Delete
@@ -187,14 +197,21 @@ const BookDetailsPage = () => {
                                         <span className="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-lg self-center">Awaiting Teacher</span>
                                     ) : (
                                         <button
-                                            onClick={async () => {
-                                                if (!confirm("Approve this request? The book will be marked as ISSUED immediately.")) return;
-                                                try {
-                                                    await api.approveLibraryRequest(req.id);
-                                                    showMsg("success", "Request approved and book issued");
-                                                    fetchBook();
-                                                } catch (e: any) { showMsg("error", e?.response?.data?.message || "Failed"); }
-                                            }}
+                                            onClick={() => confirm({
+                                                title: "Approve this request?",
+                                                message: "The book will be marked as ISSUED to the student immediately.",
+                                                confirmText: "Approve & Issue",
+                                                onConfirm: async () => {
+                                                    try {
+                                                        await api.approveLibraryRequest(req.id);
+                                                        showMsg("success", "Request approved and book issued");
+                                                        fetchBook();
+                                                    } catch (e: any) {
+                                                        showMsg("error", e?.response?.data?.message || "Failed");
+                                                        throw e;
+                                                    }
+                                                },
+                                            })}
                                             className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700"
                                         >
                                             Approve & Issue

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, Loader2, AlertCircle, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../../api/api";
+import { useToast } from "../../context/ToastContext";
+import { useConfirm } from "../../hooks/useConfirm";
 
 interface SchoolEvent {
     id: string;
@@ -25,10 +27,13 @@ const eventTypeIcons: Record<string, string> = {
 };
 
 const EventManagement: React.FC = () => {
+    const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
     const [events, setEvents] = useState<SchoolEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         title: "",
@@ -59,11 +64,17 @@ const EventManagement: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.title || !formData.date) {
+        if (submitting) return;
+        if (!formData.title.trim() || !formData.date) {
             setError("Title and date are required");
             return;
         }
+        if (formData.endDate && formData.endDate < formData.date) {
+            setError("End date must be on or after the start date");
+            return;
+        }
 
+        setSubmitting(true);
         try {
             if (editingId) {
                 await api.updateSchoolEvent?.(editingId, formData);
@@ -74,21 +85,33 @@ const EventManagement: React.FC = () => {
             setEditingId(null);
             setShowForm(false);
             setError(null);
+            addToast(editingId ? "Event updated" : "Event created", "success");
             fetchEvents();
         } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to save event");
+            const message = err.response?.data?.message || "Failed to save event";
+            setError(message);
+            addToast("Failed to save event", "error", message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm("Are you sure you want to delete this event?")) {
-            try {
-                await api.deleteSchoolEvent?.(id);
-                fetchEvents();
-            } catch (err: any) {
-                setError(err.response?.data?.message || "Failed to delete event");
-            }
-        }
+    const handleDelete = (event: SchoolEvent) => {
+        confirm({
+            title: "Delete this event?",
+            message: `"${event.title}" will be removed from the school calendar. This cannot be undone.`,
+            confirmText: "Delete",
+            onConfirm: async () => {
+                try {
+                    await api.deleteSchoolEvent?.(event.id);
+                    addToast("Event deleted", "success");
+                    fetchEvents();
+                } catch (err: any) {
+                    addToast("Failed to delete event", "error", err.response?.data?.message);
+                    throw err;
+                }
+            },
+        });
     };
 
     const handleEdit = (event: SchoolEvent) => {
@@ -105,6 +128,7 @@ const EventManagement: React.FC = () => {
 
     return (
         <div className="p-8">
+                {confirmDialog}
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -176,17 +200,26 @@ const EventManagement: React.FC = () => {
                                 />
                             </div>
                             <div className="flex gap-2">
-                                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                                    {editingId ? "Update" : "Create"} Event
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {submitting && <Loader2 size={16} className="animate-spin" />}
+                                    {submitting
+                                        ? (editingId ? "Updating…" : "Creating…")
+                                        : (editingId ? "Update Event" : "Create Event")}
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={submitting}
                                     onClick={() => {
                                         setShowForm(false);
                                         setEditingId(null);
                                         setFormData({ title: "", description: "", type: "OTHER", date: "", endDate: "" });
+                                        setError(null);
                                     }}
-                                    className="bg-slate-300 text-slate-700 px-6 py-2 rounded-lg hover:bg-slate-400 transition"
+                                    className="bg-slate-300 text-slate-700 px-6 py-2 rounded-lg hover:bg-slate-400 transition disabled:opacity-60"
                                 >
                                     Cancel
                                 </button>
@@ -239,7 +272,7 @@ const EventManagement: React.FC = () => {
                                         Edit
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(event.id)}
+                                        onClick={() => handleDelete(event)}
                                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm font-medium"
                                     >
                                         <Trash2 size={16} />

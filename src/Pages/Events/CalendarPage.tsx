@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2,
     AlertCircle, Plus, Edit2, Trash2, X, List,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../api/api";
-import PageHeader from "../../components/PageHeader";
+import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../context/ToastContext";
+import { useSession } from "../../context/SessionContext";
 
 /* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface CalendarEvent {
@@ -50,10 +54,14 @@ const emptyForm = { title: "", description: "", type: "OTHER", date: "", endDate
 
 /* ═══════════════════════ Component ═══════════════════════ */
 const CalendarPage = () => {
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [activeSession, setActiveSession] = useState<Session | null>(null);
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { confirm, dialog } = useConfirm();
+    const { addToast } = useToast();
+    // Session selection comes from the global SessionContext (rendered
+    // in the layout topbar). We use the active session for date-bounded
+    // navigation; the full sessions list isn't needed here.
+    const { selectedSession } = useSession();
+    const activeSession: Session | null = (selectedSession as unknown as Session) ?? null;
+    const queryClient = useQueryClient();
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -70,35 +78,33 @@ const CalendarPage = () => {
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-    // ── Load sessions on mount ──
+    // When the global session changes, snap the calendar to its start month.
     useEffect(() => {
-        api.getCalendarSessions().then((res: any) => {
-            const list = res.sessions ?? res ?? [];
-            setSessions(list);
-            if (list.length > 0) {
-                setActiveSession(list[0]);
-                setCurrentDate(new Date(list[0].startDate));
-            }
-        });
-    }, []);
+        if (activeSession) setCurrentDate(new Date(activeSession.startDate));
+    }, [activeSession?.id]);
 
     // ── Load events when month / session changes ──
-    const fetchEvents = useCallback(async () => {
-        setLoading(true);
-        try {
-            const y = currentDate.getFullYear();
-            const m = currentDate.getMonth();
-            const from = `${y}-${String(m + 1).padStart(2, "0")}-01`;
-            const lastDay = new Date(y, m + 1, 0).getDate();
-            const to = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
-            const res = await api.getCalendarEvents(from, to);
-            setEvents(res.events ?? res ?? []);
-        } finally {
-            setLoading(false);
-        }
-    }, [currentDate]);
-
-    useEffect(() => { fetchEvents(); }, [fetchEvents]);
+    // Cached per (year, month) so navigating back to a previously
+    // viewed month is instant.
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    const from = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const to = `${y}-${String(m + 1).padStart(2, "0")}-${lastDay}`;
+    const eventsQuery = useQuery({
+        queryKey: ["calendar", "events", from, to],
+        queryFn: () => api.getCalendarEvents(from, to),
+        select: (res: any) => res?.events ?? res ?? [],
+    });
+    useEffect(() => {
+        const e = eventsQuery.error as any;
+        if (e) addToast(e?.response?.data?.message || 'Failed to load calendar events', 'error');
+    }, [eventsQuery.error, addToast]);
+    const events: CalendarEvent[] = eventsQuery.data ?? [];
+    const loading = eventsQuery.isFetching;
+    const fetchEvents = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ["calendar", "events"] });
+    }, [queryClient]);
 
     // ── Calendar grid helpers ──
     const calendarDays: number[] = (() => {
@@ -173,12 +179,16 @@ const CalendarPage = () => {
         } finally { setSaving(false); }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Delete this event?")) return;
-        try {
-            await api.deleteSchoolEvent(id);
-            fetchEvents();
-        } catch {}
+    const handleDelete = (id: string, title: string) => {
+        confirm({
+            title: "Delete Event",
+            message: `Delete "${title}"? This cannot be undone.`,
+            confirmText: "Delete",
+            onConfirm: async () => {
+                await api.deleteSchoolEvent(id);
+                fetchEvents();
+            },
+        });
     };
 
     const toggleAllEvents = async () => {
@@ -193,38 +203,32 @@ const CalendarPage = () => {
 
     return (
         <div className="min-h-full bg-slate-50">
+            {dialog}
             <PageHeader
                 icon={CalendarIcon}
                 title="Academic Calendar"
                 subtitle="Manage & view events, holidays & exam dates"
-                actions={
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {sessions.length > 0 && (
-                            <select
-                                value={activeSession?.id ?? ""}
-                                onChange={e => {
-                                    const s = sessions.find(x => x.id === e.target.value);
-                                    if (s) { setActiveSession(s); setCurrentDate(new Date(s.startDate)); }
-                                }}
-                                className="px-3 py-2 rounded-lg border border-white/20 text-sm font-medium bg-white/10 text-white backdrop-blur-sm"
-                            >
-                                {sessions.map(s => <option key={s.id} value={s.id} className="text-slate-800">{s.name}</option>)}
-                            </select>
-                        )}
+                gradient={MODULE_THEMES.communication}
+                onRefresh={fetchEvents}
+                refreshing={loading}
+                primaryActions={
+                    <>
                         <button onClick={toggleAllEvents}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                                showAllEvents ? "bg-white/20 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+                            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition backdrop-blur-sm shrink-0 ${
+                                showAllEvents
+                                    ? "bg-white text-violet-700 border-white"
+                                    : "bg-white/15 border-white/25 text-white hover:bg-white/25"
                             }`}>
-                            <List size={18} /> All Events
+                            <List size={14} /> All Events
                         </button>
                         <button onClick={() => openCreateForm(selectedDate ?? "")}
-                            className="flex items-center gap-2 bg-white/15 border border-white/25 text-white px-4 py-2 rounded-lg hover:bg-white/25 transition text-sm font-medium backdrop-blur-sm">
-                            <Plus size={18} /> New Event
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
+                            <Plus size={14} /> New Event
                         </button>
-                    </div>
+                    </>
                 }
             />
-            <div className="max-w-7xl mx-auto p-4 md:p-8">
+            <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-5">
 
             {/* Create / Edit Form (slide down) */}
             <AnimatePresence>
@@ -344,7 +348,7 @@ const CalendarPage = () => {
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-xs font-medium">
                                                             <Edit2 size={14} /> Edit
                                                         </button>
-                                                        <button onClick={() => handleDelete(ev.id)}
+                                                        <button onClick={() => handleDelete(ev.id, ev.title)}
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-xs font-medium">
                                                             <Trash2 size={14} /> Delete
                                                         </button>
@@ -473,7 +477,7 @@ const CalendarPage = () => {
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-blue-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Edit2 size={12} /> Edit
                                                     </button>
-                                                    <button onClick={() => handleDelete(ev.id)}
+                                                    <button onClick={() => handleDelete(ev.id, ev.title)}
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-red-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Trash2 size={12} /> Delete
                                                     </button>

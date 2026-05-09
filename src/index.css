@@ -14,6 +14,21 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* ── Mobile UX defaults ─────────────────────────────────────────────────── */
+/* iOS: stop input zoom (font-size < 16px triggers zoom); render at 14px on mobile
+   to preserve density without forcing the tap-to-zoom behavior. */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px; }
+  /* Keep all interactive controls at a min 32px tap target on mobile so dense
+     desktop UIs stay usable on touch screens without resizing every component. */
+  button, a[role="button"], [role="button"] {
+    min-height: 32px;
+  }
+  /* Hide horizontal scrollbars on mobile when content overflows narrowly. */
+  .scrollbar-hide-mobile::-webkit-scrollbar { display: none; }
+  .scrollbar-hide-mobile { scrollbar-width: none; }
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #f1f5f9;
@@ -30,6 +45,10 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -42,9 +61,38 @@ body {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
+/* TabbedSection panel entrance — gentle slide-up + fade so tab changes
+   have a clear sense of motion without feeling sluggish. */
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .animate-fade-up     { animation: fadeInUp   0.35s ease-out both; }
 .animate-slide-right { animation: slideRight 0.3s  ease-out both; }
+.animate-tabFadeIn   { animation: tabFadeIn  0.28s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* 3D flip card primitives — used by SessionCard.
+   `.flip-card` is the perspective container, `.flip-card-inner` is the
+   element that rotates, and the two faces use `backface-visibility: hidden`
+   so only the visible side paints. */
+.flip-card { perspective: 1400px; }
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card.is-flipped .flip-card-inner { transform: rotateY(180deg); }
+.flip-card-face {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+  border-radius: inherit;
+}
+.flip-card-back { transform: rotateY(180deg); }
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.10s; }
 .stagger-3 { animation-delay: 0.15s; }

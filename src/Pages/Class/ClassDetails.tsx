@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCcw, Layers, Plus, Users, User, BookOpen, ChevronRight, ArrowLeft, Calendar } from "lucide-react";
+import { RefreshCcw, Layers, Plus, Users, User, BookOpen, ChevronRight, ArrowLeft, Calendar, Bell } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import AddSectionModal from "../../components/Classes/AddSectionModal";
 import CreateCourseInClassModal from "../../components/Courses/CreateCourseInClassModal.tsx";
+import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
+import NoticeBoardsModal from "../../components/Classes/NoticeBoardsModal";
 
 const ClassDetails = () => {
     const { classId } = useParams() as { classId: string };
@@ -12,6 +14,7 @@ const ClassDetails = () => {
     const [classData, setClassData] = useState<any>(null);
     const [showSectionModal, setShowSectionModal] = useState(false);
     const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+    const [showBoardsModal, setShowBoardsModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -60,6 +63,12 @@ const ClassDetails = () => {
                     onSuccess={(msg: string) => { showToast(msg, "success"); fetchClass(); }}
                 />
             )}
+            <NoticeBoardsModal
+                open={showBoardsModal}
+                onClose={() => setShowBoardsModal(false)}
+                classId={classId}
+                scopeLabel={`Boards visible to ${classData.name}`}
+            />
 
             {/* Back */}
             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium">
@@ -86,9 +95,18 @@ const ClassDetails = () => {
                             </div>
                         </div>
                     </div>
-                    <button onClick={fetchClass} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition">
-                        <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setShowBoardsModal(true)}
+                            data-testid="class-notice-boards-btn"
+                            className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center gap-2 text-sm font-semibold shadow-sm transition-colors"
+                        >
+                            <Bell size={14} /> Notice Boards
+                        </button>
+                        <button onClick={fetchClass} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition">
+                            <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary stats */}
@@ -171,6 +189,14 @@ const ClassDetails = () => {
                 )}
             </div>
 
+            {/* Students enrolled in this class for the chosen session */}
+            <SessionStudentsTable
+                filterClassId={classId}
+                title={`Students in ${classData.name}`}
+                subtitle="Pick a session to see who's enrolled — click any row to open the student profile."
+                accent="indigo"
+            />
+
             {/* Courses */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -193,6 +219,7 @@ const ClassDetails = () => {
                         {classData.courses?.map((course: any) => (
                             <div
                                 key={course.id}
+                                data-testid={`course-row-${course.slug}`}
                                 onClick={() => navigate(`/course/${course.id}`)}
                                 className="px-6 py-4 hover:bg-slate-50/60 cursor-pointer transition-colors group"
                             >

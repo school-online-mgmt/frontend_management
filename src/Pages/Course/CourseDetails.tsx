@@ -45,7 +45,7 @@ const CourseDetails = () => {
             const data = await api.getCourseById(courseId);
             setCourse(data);
         } catch {
-            alert("Failed to load course");
+            showMessage("error", "Failed to load course");
         } finally {
             setIsLoading(false);
         }
@@ -231,6 +231,7 @@ const CourseDetails = () => {
                         {course.subjects.map((subject: any, idx: number) => (
                             <div
                                 key={subject.id}
+                                data-testid={`course-subject-row-${subject.slug ?? subject.id}`}
                                 className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition group"
                             >
                                 <div className="flex items-center gap-3">
