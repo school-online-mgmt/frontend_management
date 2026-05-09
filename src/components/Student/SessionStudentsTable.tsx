@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import type { Student } from "../../api/types";
-
-interface SessionOpt { id: string; name: string; status?: "ACTIVE" | "ENDING" | "ENDED" }
+import { useSessionId } from "../../context/SessionContext";
 
 interface Props {
     /** Filter students by their academic.classId for the selected session. */
@@ -17,7 +16,7 @@ interface Props {
     /** Header label customisation. */
     title?: string;
     subtitle?: string;
-    /** Theme tint for the empty state icon + selector header. */
+    /** Theme tint for the empty state icon + search bar gradient. */
     accent?: "indigo" | "violet" | "emerald";
 }
 
@@ -35,34 +34,15 @@ const SessionStudentsTable: React.FC<Props> = ({
     const navigate = useNavigate();
     const a = ACCENT[accent];
 
-    const [sessions, setSessions]               = useState<SessionOpt[]>([]);
-    const [sessionsLoading, setSessionsLoading] = useState(true);
-    const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+    // Session is owned by the layout topbar (SessionContext) — we just read it.
+    const selectedSessionId = useSessionId();
+
     const [students, setStudents]               = useState<Student[]>([]);
     const [loading, setLoading]                 = useState(false);
     const [error, setError]                     = useState<string | null>(null);
     const [search, setSearch]                   = useState("");
 
-    // Load sessions on mount; preselect the ACTIVE one.
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setSessionsLoading(true);
-            try {
-                const data = await api.getSessions();
-                if (cancelled) return;
-                const list: SessionOpt[] = Array.isArray(data) ? data : [];
-                setSessions(list);
-                const active = list.find(s => s.status === "ACTIVE") ?? list[0];
-                if (active) setSelectedSessionId(active.id);
-            } catch {
-                if (!cancelled) setError("Failed to load sessions.");
-            } finally { if (!cancelled) setSessionsLoading(false); }
-        })();
-        return () => { cancelled = true; };
-    }, []);
-
-    // Refetch students whenever the session changes.
+    // Refetch students whenever the global session changes.
     useEffect(() => {
         if (!selectedSessionId) { setStudents([]); return; }
         let cancelled = false;
@@ -108,42 +88,21 @@ const SessionStudentsTable: React.FC<Props> = ({
                 </div>
             </div>
 
-            {/* Session selector + search */}
+            {/* Search bar — session is picked via the global topbar selector */}
             <div className={`px-5 sm:px-6 py-3.5 bg-gradient-to-r ${a.from} ${a.to} text-white`}>
-                <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center">
-                    <div className="flex items-center gap-2 shrink-0">
-                        <CalendarDays size={14} />
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-white/80">Session</span>
-                    </div>
-                    <select
-                        value={selectedSessionId}
-                        onChange={e => setSelectedSessionId(e.target.value)}
-                        disabled={sessionsLoading}
-                        className="flex-1 sm:max-w-xs px-3 py-1.5 rounded-lg bg-white text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-                    >
-                        {sessionsLoading && <option>Loading sessions…</option>}
-                        {!sessionsLoading && sessions.length === 0 && <option value="">No sessions found</option>}
-                        {!sessionsLoading && sessions.length > 0 && <option value="">— Select a session —</option>}
-                        {sessions.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {s.name}{s.status && s.status !== "ACTIVE" ? ` (${s.status.toLowerCase()})` : ""}
-                            </option>
-                        ))}
-                    </select>
-                    <div className="relative flex-1">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Search by name, roll, phone…"
-                            className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-white/15 border border-white/20 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
-                        />
-                        {search && (
-                            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
-                                <X size={13} />
-                            </button>
-                        )}
-                    </div>
+                <div className="relative">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by name, roll, phone…"
+                        className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-white/15 border border-white/20 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
+                            <X size={13} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -161,7 +120,7 @@ const SessionStudentsTable: React.FC<Props> = ({
                     <div className={`w-12 h-12 ${a.tint} ${a.tintBorder} border rounded-2xl flex items-center justify-center mx-auto mb-3`}>
                         <CalendarDays size={22} className="text-slate-400" />
                     </div>
-                    <p className="text-sm font-bold text-slate-700">Pick a session above</p>
+                    <p className="text-sm font-bold text-slate-700">Pick a session in the topbar</p>
                     <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Students are listed per academic session.</p>
                 </div>
             ) : filtered.length === 0 ? (
