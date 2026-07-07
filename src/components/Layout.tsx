@@ -256,6 +256,7 @@ const Layout = () => {
   const { canUseModule } = useAuthContext();
 
   const [collapsed, setCollapsed] = useState(false);
+  const [schoolName, setSchoolName] = useState<string>("EduAdmin");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -279,15 +280,18 @@ const Layout = () => {
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  // Publish the school name to a global so PageFooter can render it without
-  // wiring a context. Resolved once on mount; cheap if we already have it.
+  // Resolve the school name once on mount: drive the sidebar brand heading and
+  // publish it to a global so PageFooter can render it without wiring a context.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.__schoolName) return;
+    if (window.__schoolName) { setSchoolName(window.__schoolName); return; }
     api.getTenantConfig()
       .then((res: any) => {
         const name = res?.config?.schoolName?.trim();
-        if (name) window.__schoolName = name;
+        if (name) {
+          window.__schoolName = name;
+          setSchoolName(name);
+        }
       })
       .catch(() => {});
   }, []);
@@ -409,7 +413,7 @@ const Layout = () => {
             </div>
             {showFull && (
               <div className="min-w-0">
-                <h1 className="text-xs font-bold text-white tracking-tight leading-none">EduAdmin</h1>
+                <h1 className="text-xs font-bold text-white tracking-tight leading-none truncate">{schoolName}</h1>
                 <p className="text-[9px] text-slate-500 font-medium mt-0.5">Management Portal</p>
               </div>
             )}
