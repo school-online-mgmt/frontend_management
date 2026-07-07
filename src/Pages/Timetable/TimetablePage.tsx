@@ -218,7 +218,7 @@ const TimetablePage = () => {
             <PageHeader icon={CalendarDays} title="Timetable" gradient={MODULE_THEMES.classes}
                 subtitle="Build the weekly class timetable. Teachers & students can view any section." onRefresh={loadGrid} refreshing={loading} />
 
-            <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6 pb-16 space-y-4">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
                 {/* Section selector + conflict banner */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="relative">

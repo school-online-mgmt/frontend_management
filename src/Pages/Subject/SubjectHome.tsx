@@ -254,7 +254,7 @@ const SubjectPage = () => {
         }
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
 
         {/* Empty gate */}
         {!selectedSession && !sessionsLoading && (

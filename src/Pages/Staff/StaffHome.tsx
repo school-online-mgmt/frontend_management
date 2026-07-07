@@ -1146,7 +1146,7 @@ const StaffHome: React.FC = () => {
                 refreshing={loading}
             />
 
-            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 mt-3 space-y-2.5">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-2.5">
 
                 {/* ── Primary stat strip (compact) ── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

@@ -50,7 +50,7 @@ const JobsPage: React.FC = () => {
                 subtitle="Scheduled background jobs you can trigger on demand, and history of past runs."
                 gradient={MODULE_THEMES.communication}
             />
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-5 space-y-6">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
                 <AttendanceReportJobCard />
                 <LateFeeSweepJobCard />
             </div>

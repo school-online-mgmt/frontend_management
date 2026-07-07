@@ -180,7 +180,7 @@ const StudentsHome: React.FC = () => {
         }
       />
 
-      <div className="max-w-7xl mx-auto px-3 lg:px-5 py-3 space-y-2.5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-2.5">
 
         {selectedSessionId && (
           <ActionBar
