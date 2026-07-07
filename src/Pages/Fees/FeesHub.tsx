@@ -5,7 +5,9 @@ import {
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
     Users, UserCheck, Receipt, Tag, Globe, Layers,
     GraduationCap, X, Check, ToggleLeft, ToggleRight, School,
-    Filter, Loader2,
+    Filter, Loader2, Clock, Percent, Zap,
+    // Summary-tab icons
+    BookOpen, Calendar, PieChart, Activity,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import api from '../../api/api';
@@ -15,6 +17,7 @@ import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import { EmptySessionState } from '../../components/common/SessionGate';
 import TabbedSection, { TabPanel } from '../../components/common/TabbedSection';
+import LateFeeConfigCard from '../../components/Fees/LateFeeConfigCard';
 import useTabState from '../../hooks/useTabState';
 import { useSessionId } from '../../context/SessionContext';
 
@@ -58,7 +61,51 @@ const currentYear = new Date().getFullYear();
 // ── types ─────────────────────────────────────────────────────────────────────
 interface ExtraCharge { id: string; studentId: string; academicId: string; type: string; description?: string; amount: number; month: number; year: number; studentFirstName: string; studentLastName: string; }
 interface Invoice { id: string; invoiceNo: string; month: number; year: number; dueDate: string; tuitionFee: number; transportFee: number; extraChargesTotal: number; totalAmount: number; paidAmount: number; status: string; studentId: string; studentFirstName: string; studentLastName: string; studentPhone: string; }
-interface Summary { totalInvoices: number; totalDemand: number; totalCollected: number; outstanding: number; pending: number; partiallyPaid: number; paid: number; overdue: number; waived: number; cancelled: number; }
+interface Summary {
+    totalInvoices: number;
+    totalDemand: number; totalCollected: number; outstanding: number;
+    pending: number; partiallyPaid: number; paid: number;
+    overdue: number; overdueAmount: number;
+    waived: number; cancelled: number;
+    /** Sub-view of LATE_FEE invoices (already counted in totals above). */
+    lateFees: {
+        count: number; demand: number; collected: number; outstanding: number; overdueCount: number;
+    };
+    /** Outstanding rupees bucketed by days past due. */
+    aging: { notYetDue: number; d0_30: number; d31_60: number; d61_90: number; d90plus: number };
+    agingAmount: { notYetDue: number; d0_30: number; d31_60: number; d61_90: number; d90plus: number };
+    /** Money split by line-item type (TUITION / LATE_FEE / …). */
+    byItemType: Array<{
+        itemType: string; demand: number; collected: number; outstanding: number; count: number; share: number;
+    }>;
+    /** Money split by class. */
+    byClass: Array<{
+        classId: string; className: string;
+        demand: number; collected: number; outstanding: number;
+        students: number; invoices: number; collectionRate: number;
+    }>;
+    /** Money split by course. */
+    byCourse: Array<{
+        courseId: string; courseName: string;
+        demand: number; collected: number; outstanding: number;
+        students: number; invoices: number; collectionRate: number;
+    }>;
+    /** Top 10 defaulters (highest outstanding). */
+    topDefaulters: Array<{
+        studentId: string; name: string; phone: string; admissionId: string | null;
+        className: string | null; sectionName: string | null;
+        outstanding: number; overdueCount: number; oldestOverdueDays: number;
+    }>;
+    /** Collection by payment method (CASH / CHEQUE / ONLINE / BANK_TRANSFER / DD). */
+    byPaymentMode: Array<{
+        mode: string; amount: number; count: number; share: number;
+    }>;
+    /** Invoices due in the next 7 days — proactive follow-up view. */
+    upcoming: { count: number; amount: number };
+    /** Refunds issued in the current filter — never inflates "collected". */
+    refunds:  { count: number; amount: number };
+    asOf: string;
+}
 interface Course { id: string; name: string; slug: string; }
 interface Student { id: string; firstName: string; lastName: string; phone: string; }
 interface Academic { id: string; studentId: string; courseId?: string; }
@@ -82,7 +129,7 @@ export default function FeesHub() {
             <PageHeader
                 icon={CreditCard}
                 title="Fee Management"
-                subtitle="Manage tuition fees, extra charges and invoices"
+                subtitle="Manage tuition, ad-hoc charges &amp; fines, and invoices"
                 gradient={MODULE_THEMES.finance}
                 onRefresh={handleRefresh}
                 refreshing={refreshing}
@@ -97,11 +144,15 @@ export default function FeesHub() {
                     theme="emerald"
                     flushPanel
                     tabs={[
-                        { key: 'summary',       label: 'Summary',       icon: TrendingUp },
-                        { key: 'fee-structure', label: 'Fee Structure', icon: Receipt },
-                        { key: 'extra',         label: 'Extra Charges', icon: AlertCircle },
-                        { key: 'invoices',      label: 'Invoices',      icon: CreditCard },
-                        { key: 'payments',      label: 'Payments',      icon: Wallet },
+                        { key: 'summary',       label: 'Summary',        icon: TrendingUp },
+                        { key: 'fee-structure', label: 'Fee Structure',  icon: Receipt },
+                        // "Extra Charges" was ambiguous — this tab actually
+                        // hosts per-student ad-hoc levies (fines, damages,
+                        // exam/library/uniform/development fees, etc.).
+                        // Renamed for clarity.
+                        { key: 'extra',         label: 'Charges & Fines', icon: AlertCircle },
+                        { key: 'invoices',      label: 'Invoices',        icon: CreditCard },
+                        { key: 'payments',      label: 'Payments',        icon: Wallet },
                     ]}
                 >
                     <TabPanel tabKey="summary"       key={`summary-${refreshKey}`}><SummaryTab /></TabPanel>
@@ -121,33 +172,72 @@ export default function FeesHub() {
 function SummaryTab() {
     const { addToast } = useToast();
     const [summary, setSummary] = useState<Summary | null>(null);
-    const [month, setMonth] = useState('');
-    const [year, setYear] = useState(String(currentYear));
+
+    // ── Filter state ────────────────────────────────────────────────
+    // Default on load = no filters applied. The Indian academic session
+    // straddles two calendar years (Apr → Mar), so any default year filter
+    // silently hides part of the cohort — better to show operators the full
+    // picture and let them narrow down from there.
+    const [month,       setMonth]       = useState('');
+    const [year,        setYear]        = useState('');
+    const [classId,     setClassId]     = useState('');
+    const [courseId,    setCourseId]    = useState('');
+    const [status,      setStatus]      = useState('');
+    const [invoiceType, setInvoiceType] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Load classes / courses once for the slicer selects.
+    const [classes, setClasses] = useState<ClassInfo[]>([]);
+    const [courses, setCourses] = useState<Course[]>([]);
+    const selectedSessionId = useFeesSession();
+    useEffect(() => {
+        if (!selectedSessionId) return;
+        api.getClasses(selectedSessionId)
+            .then((d: { classes?: ClassInfo[] } | ClassInfo[]) =>
+                setClasses(Array.isArray(d) ? d : d.classes ?? []))
+            .catch(() => setClasses([]));
+        api.getCourses({ sessionId: selectedSessionId })
+            .then((c: Course[]) => setCourses(Array.isArray(c) ? c : []))
+            .catch(() => setCourses([]));
+    }, [selectedSessionId]);
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
-        const params: Record<string, number> = {};
-        if (month) params.month = Number.parseInt(month);
-        if (year) params.year = Number.parseInt(year);
+        const params: Record<string, string | number> = {};
+        if (month)       params.month       = Number.parseInt(month);
+        if (year)        params.year        = Number.parseInt(year);
+        if (classId)     params.classId     = classId;
+        if (courseId)    params.courseId    = courseId;
+        if (status)      params.status      = status;
+        if (invoiceType) params.invoiceType = invoiceType;
         api.getFeeSummary(params)
             .then(data => setSummary(data.summary))
             .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load fee summary'), 'error'))
             .finally(() => setLoading(false));
-    }, [month, year, addToast]);
+    }, [month, year, classId, courseId, status, invoiceType, addToast]);
 
-    const statCards = summary ? [
-        { label: 'Total Demand', value: fmt(summary.totalDemand), icon: Wallet, color: 'bg-blue-50 text-blue-700' },
-        { label: 'Collected', value: fmt(summary.totalCollected), icon: CheckCircle, color: 'bg-green-50 text-green-700' },
-        { label: 'Outstanding', value: fmt(summary.outstanding), icon: TrendingUp, color: 'bg-orange-50 text-orange-700' },
-        { label: 'Overdue', value: summary.overdue, icon: AlertTriangle, color: 'bg-red-50 text-red-700' },
-        { label: 'Total Invoices', value: summary.totalInvoices, icon: CreditCard, color: 'bg-slate-50 text-slate-700' },
-        { label: 'Paid', value: summary.paid, icon: CheckCircle, color: 'bg-emerald-50 text-emerald-700' },
-    ] : [];
+    // Collection rate — percent of demand that's actually been received.
+    // Guarded against divide-by-zero when there are no invoices yet.
+    const collectionRate = summary && summary.totalDemand > 0
+        ? Math.round((summary.totalCollected / summary.totalDemand) * 100)
+        : 0;
 
-    const activeFilters = (month ? 1 : 0) + (year !== String(currentYear) ? 1 : 0);
-    const clearFilters = () => { setMonth(''); setYear(String(currentYear)); };
+    // Active-filter count for the header pill.
+    const activeFilters =
+        (month ? 1 : 0) + (year ? 1 : 0) +
+        (classId ? 1 : 0) + (courseId ? 1 : 0) +
+        (status ? 1 : 0) + (invoiceType ? 1 : 0);
+    const clearFilters = () => {
+        setMonth(''); setYear('');
+        setClassId(''); setCourseId('');
+        setStatus(''); setInvoiceType('');
+    };
+    const nowMonth = String(new Date().getMonth() + 1);
+    const nowYear  = String(currentYear);
+    const isAllTime   = activeFilters === 0;
+    const isThisYear  = !month && year === nowYear && !classId && !courseId && !status && !invoiceType;
+    const isThisMonth = month === nowMonth && year === nowYear && !classId && !courseId && !status && !invoiceType;
 
     return (
         <div className="p-4 sm:p-5 md:p-6 space-y-6">
@@ -168,24 +258,54 @@ function SummaryTab() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                    {/* Quick presets */}
+                    {/* Presets — meaningful for a real school finance officer.
+                        Default (page load) is All-time so numbers match the
+                        Invoices tab's default. */}
                     <button
-                        onClick={() => { setMonth(''); setYear(String(currentYear)); }}
+                        onClick={() => { setMonth(''); setYear(''); }}
                         className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
-                            !month && year === String(currentYear)
+                            isAllTime
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                                 : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
                         }`}>
-                        Year to date
+                        All-time
                     </button>
                     <button
-                        onClick={() => { setMonth(String(new Date().getMonth() + 1)); setYear(String(currentYear)); }}
+                        onClick={() => { setMonth(''); setYear(nowYear); }}
                         className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
-                            month === String(new Date().getMonth() + 1) && year === String(currentYear)
+                            isThisYear
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                        }`}>
+                        This year
+                    </button>
+                    <button
+                        onClick={() => { setMonth(nowMonth); setYear(nowYear); }}
+                        className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
+                            isThisMonth
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                                 : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
                         }`}>
                         This month
+                    </button>
+                    <button
+                        onClick={() => {
+                            // "Last month" — walks back from today's month.
+                            const now = new Date();
+                            const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                            setMonth(String(prev.getMonth() + 1));
+                            setYear(String(prev.getFullYear()));
+                        }}
+                        className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-all ${
+                            (() => {
+                                const now = new Date();
+                                const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                return month === String(prev.getMonth() + 1) && year === String(prev.getFullYear());
+                            })()
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                        }`}>
+                        Last month
                     </button>
 
                     <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -199,43 +319,665 @@ function SummaryTab() {
                     <select value={year} onChange={e => setYear(e.target.value)}
                         aria-label="Year"
                         className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors">
-                        {[currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
+                        <option value="">All years</option>
+                        {[currentYear-2, currentYear-1, currentYear, currentYear+1].map(y => <option key={y} value={String(y)}>{y}</option>)}
+                    </select>
+                </div>
+
+                {/* ── Slicers — cohort + type + status. Wrapped in a subtle
+                    band so it's visually distinct from the time presets above. */}
+                <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Slice by</span>
+                    <select value={classId} onChange={e => setClassId(e.target.value)}
+                        aria-label="Class"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors max-w-[10rem] truncate">
+                        <option value="">All classes</option>
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select value={courseId} onChange={e => setCourseId(e.target.value)}
+                        aria-label="Course"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors max-w-[10rem] truncate">
+                        <option value="">All courses</option>
+                        {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select value={status} onChange={e => setStatus(e.target.value)}
+                        aria-label="Status"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors">
+                        <option value="">All statuses</option>
+                        <option value="PAID">Paid</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="PARTIALLY_PAID">Partially paid</option>
+                        <option value="OVERDUE">Overdue</option>
+                        <option value="WAIVED">Waived</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)}
+                        aria-label="Invoice type"
+                        className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-emerald-400 focus:bg-white transition-colors">
+                        <option value="">All types</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="ANNUAL">Annual</option>
+                        <option value="ADMISSION">Admission</option>
+                        <option value="EXTRA_CHARGE">Charges &amp; fines</option>
+                        <option value="LATE_FEE">Late fees</option>
                     </select>
                 </div>
             </div>
 
             {summary && (
                 <>
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-                        {statCards.map(c => (
-                            <div key={c.label} className={`p-4 rounded-2xl ${c.color} flex flex-col gap-1`}>
-                                <c.icon size={20} />
-                                <div className="text-2xl font-bold">{c.value}</div>
-                                <div className="text-xs font-medium opacity-75">{c.label}</div>
-                            </div>
-                        ))}
+                    {/* ── Money row — three big cards with consistent visual weight ── */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <MoneyCard
+                            icon={Wallet}
+                            label="Total Demand"
+                            value={summary.totalDemand}
+                            accent="blue"
+                            note={`${summary.totalInvoices} invoice${summary.totalInvoices === 1 ? '' : 's'} in scope · CANCELLED excluded`}
+                        />
+                        <MoneyCard
+                            icon={CheckCircle}
+                            label="Collected"
+                            value={summary.totalCollected}
+                            accent="emerald"
+                            note={
+                                <>
+                                    <span className="font-bold tabular-nums text-emerald-800">{collectionRate}%</span>
+                                    <span className="text-emerald-700"> of demand received</span>
+                                </>
+                            }
+                            progress={collectionRate}
+                        />
+                        <MoneyCard
+                            icon={TrendingUp}
+                            label="Outstanding"
+                            value={summary.outstanding}
+                            accent={summary.overdueAmount > 0 ? 'rose' : 'amber'}
+                            note={
+                                summary.overdueAmount > 0
+                                    ? <>Includes <span className="font-bold tabular-nums text-rose-700">{fmt(summary.overdueAmount)}</span> overdue</>
+                                    : <>All outstanding is current — nothing past due</>
+                            }
+                        />
                     </div>
 
-                    {/* Status breakdown */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                        <h3 className="font-semibold text-slate-800 mb-4">Invoice Status Breakdown</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {STATUSES.map(s => {
-                                const key = s === 'PARTIALLY_PAID' ? 'partiallyPaid' : s.toLowerCase() as keyof Summary;
-                                return (
-                                    <div key={s} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[s]}`}>{s.replaceAll('_', ' ')}</span>
-                                        <span className="font-bold text-slate-800">{summary[key]}</span>
-                                    </div>
-                                );
-                            })}
+                    {/* ── Forward-looking pair: due-next-7-days + refunds ── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <ForecastCard
+                            icon={Calendar}
+                            title="Due in next 7 days"
+                            subtitle="Proactive follow-up window"
+                            amount={summary.upcoming.amount}
+                            count={summary.upcoming.count}
+                            countLabel={`invoice${summary.upcoming.count === 1 ? '' : 's'}`}
+                            tone="sky"
+                            emptyText="No dues coming up in the next week."
+                        />
+                        <ForecastCard
+                            icon={RotateCcw}
+                            title="Refunds issued"
+                            subtitle="Not counted in collected"
+                            amount={summary.refunds.amount}
+                            count={summary.refunds.count}
+                            countLabel={`refund${summary.refunds.count === 1 ? '' : 's'}`}
+                            tone="slate"
+                            emptyText="No refunds in this period."
+                        />
+                    </div>
+
+                    {/* ── Late fines callout — subset of the money row above ── */}
+                    <LateFinesRow lateFees={summary.lateFees} totalDemand={summary.totalDemand} />
+
+                    {/* ── Status breakdown pills — counts only, aligned columns ── */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800">Invoice status breakdown</h3>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    Live view — invoices past their due date are counted as <strong>Overdue</strong> even if the nightly sweep hasn't flipped their status yet.
+                                </p>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                                as of {new Date(summary.asOf).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                            {[
+                                { key: 'paid',          label: 'Paid',          value: summary.paid,          color: 'emerald' },
+                                { key: 'pending',       label: 'Pending',       value: summary.pending,       color: 'sky' },
+                                { key: 'partiallyPaid', label: 'Partial',       value: summary.partiallyPaid, color: 'amber' },
+                                { key: 'overdue',       label: 'Overdue',       value: summary.overdue,       color: 'rose' },
+                                { key: 'waived',        label: 'Waived',        value: summary.waived,        color: 'slate' },
+                                { key: 'cancelled',     label: 'Cancelled',     value: summary.cancelled,     color: 'slate' },
+                            ].map(b => <StatusPill key={b.key} {...b} />)}
                         </div>
                     </div>
+
+                    {/* ── Aging distribution — how old is the outstanding? ── */}
+                    <AgingDistribution
+                        aging={summary.aging}
+                        agingAmount={summary.agingAmount}
+                        totalOutstanding={summary.outstanding}
+                    />
+
+                    {/* ── Composition row: by line-item / by payment mode ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <ByItemTypeCard rows={summary.byItemType} totalDemand={summary.totalDemand} />
+                        <PaymentModeCard rows={summary.byPaymentMode} />
+                    </div>
+
+                    {/* ── Cohort row: by class / by course ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <ByClassCard rows={summary.byClass} />
+                        <ByCourseCard rows={summary.byCourse} />
+                    </div>
+
+                    {/* ── Top defaulters — actionable follow-up list ── */}
+                    {summary.topDefaulters.length > 0 && <TopDefaultersCard rows={summary.topDefaulters} />}
                 </>
             )}
         </div>
     );
 }
+
+// ── Summary-tab visual primitives ────────────────────────────────────────
+type MoneyAccent = 'blue' | 'emerald' | 'amber' | 'rose';
+const MONEY_ACCENT: Record<MoneyAccent, { bg: string; border: string; icon: string; label: string; note: string; progressBg: string; progressFill: string }> = {
+    blue:    { bg: 'bg-blue-50',    border: 'border-blue-200/70',    icon: 'text-blue-600',    label: 'text-blue-700',    note: 'text-blue-700',    progressBg: 'bg-blue-100',    progressFill: 'bg-blue-500' },
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200/70', icon: 'text-emerald-600', label: 'text-emerald-700', note: 'text-emerald-700', progressBg: 'bg-emerald-100', progressFill: 'bg-emerald-500' },
+    amber:   { bg: 'bg-amber-50',   border: 'border-amber-200/70',   icon: 'text-amber-600',   label: 'text-amber-700',   note: 'text-amber-700',   progressBg: 'bg-amber-100',   progressFill: 'bg-amber-500' },
+    rose:    { bg: 'bg-rose-50',    border: 'border-rose-200/70',    icon: 'text-rose-600',    label: 'text-rose-700',    note: 'text-rose-700',    progressBg: 'bg-rose-100',    progressFill: 'bg-rose-500' },
+};
+const MoneyCard: React.FC<{
+    icon: LucideIcon;
+    label: string;
+    value: number;
+    accent: MoneyAccent;
+    note?: React.ReactNode;
+    /** 0-100 — draws a progress bar under the amount if provided. */
+    progress?: number;
+}> = ({ icon: Icon, label, value, accent, note, progress }) => {
+    const cfg = MONEY_ACCENT[accent];
+    return (
+        <div className={`p-5 rounded-2xl border ${cfg.bg} ${cfg.border} shadow-sm`}>
+            <div className="flex items-center gap-2 mb-3">
+                <Icon size={16} className={cfg.icon} />
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${cfg.label}`}>{label}</span>
+            </div>
+            <div className={`text-2xl sm:text-3xl font-black tabular-nums leading-tight ${cfg.label}`}>{fmt(value)}</div>
+            {progress !== undefined && (
+                <div className={`h-1.5 rounded-full overflow-hidden mt-3 ${cfg.progressBg}`}>
+                    <div className={`h-full transition-all duration-500 ${cfg.progressFill}`} style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
+                </div>
+            )}
+            {note && <div className={`text-[11px] mt-2 ${cfg.note}`}>{note}</div>}
+        </div>
+    );
+};
+
+/**
+ * Late-fines callout — a horizontal band between the money row and the
+ * status pills. Late-fee invoices are already reflected in Total Demand /
+ * Collected / Outstanding above; this row surfaces how much of those totals
+ * is late fines specifically, so the operator can gauge the impact of the
+ * overdue-sweep policy at a glance.
+ *
+ * Rendered as a subtle amber band when there are late fines, and hidden
+ * entirely when there aren't (avoids a distracting zero-state).
+ */
+/* ── Aging distribution ─────────────────────────────────────────────────
+ * How old is the outstanding money? Standard finance-team view: 0-30 /
+ * 31-60 / 61-90 / 90+ days past due. Also surfaces the "not yet due" bucket
+ * so operators can see how much revenue is booked but hasn't hit its due
+ * date yet.
+ */
+const AgingDistribution: React.FC<{
+    aging: Summary['aging'];
+    agingAmount: Summary['agingAmount'];
+    totalOutstanding: number;
+}> = ({ aging, agingAmount, totalOutstanding }) => {
+    const buckets = [
+        { key: 'notYetDue', label: 'Not yet due',   sub: 'Future dated',   color: 'sky',   count: aging.notYetDue, amount: agingAmount.notYetDue },
+        { key: 'd0_30',     label: '0-30 days',     sub: 'Recently late',  color: 'amber', count: aging.d0_30,     amount: agingAmount.d0_30 },
+        { key: 'd31_60',    label: '31-60 days',    sub: 'Follow up',      color: 'orange', count: aging.d31_60,    amount: agingAmount.d31_60 },
+        { key: 'd61_90',    label: '61-90 days',    sub: 'Escalate',       color: 'rose',  count: aging.d61_90,    amount: agingAmount.d61_90 },
+        { key: 'd90plus',   label: '90+ days',      sub: 'Write-off risk', color: 'rose',  count: aging.d90plus,   amount: agingAmount.d90plus },
+    ] as const;
+    // Anything left after the "not yet due" bucket is the true overdue pool.
+    const overdueAmount = agingAmount.d0_30 + agingAmount.d31_60 + agingAmount.d61_90 + agingAmount.d90plus;
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h3 className="text-sm font-bold text-slate-800">Aging distribution</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                        Outstanding balance bucketed by days past due. Older buckets need more urgent follow-up.
+                    </p>
+                </div>
+                {overdueAmount > 0 && (
+                    <span className="text-[11px] text-slate-500">
+                        Overdue pool: <span className="font-bold text-rose-700 tabular-nums">{fmt(overdueAmount)}</span>
+                    </span>
+                )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {buckets.map(b => {
+                    const share = totalOutstanding > 0 ? Math.round((b.amount / totalOutstanding) * 100) : 0;
+                    const cfg = AGING_COLOR[b.color];
+                    return (
+                        <div key={b.key} className={`p-3 rounded-xl border ${cfg.bg} ${cfg.border} flex flex-col`}>
+                            <span className={`text-[10px] uppercase tracking-wider font-bold ${cfg.text}`}>{b.label}</span>
+                            <span className={`tabular-nums text-lg font-black leading-tight mt-1 ${cfg.number}`}>{fmt(b.amount)}</span>
+                            <span className={`text-[10px] mt-0.5 ${cfg.text}`}>
+                                {b.count} invoice{b.count === 1 ? '' : 's'} · {share}%
+                            </span>
+                            <span className={`text-[9px] mt-1 opacity-70 ${cfg.text}`}>{b.sub}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+const AGING_COLOR: Record<string, { bg: string; border: string; text: string; number: string }> = {
+    sky:    { bg: 'bg-sky-50',    border: 'border-sky-200',    text: 'text-sky-700',    number: 'text-sky-900' },
+    amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  number: 'text-amber-900' },
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', number: 'text-orange-900' },
+    rose:   { bg: 'bg-rose-50',   border: 'border-rose-200',   text: 'text-rose-700',   number: 'text-rose-900' },
+};
+
+/* ── By line-item type ────────────────────────────────────────────────────
+ * Which categories of fees drive the demand and collection? Helps answer
+ * "how much of our revenue is tuition vs transport vs late fines?"
+ */
+const ITEM_LABEL: Record<string, { label: string; icon: LucideIcon; tone: string }> = {
+    TUITION:      { label: 'Tuition',           icon: GraduationCap, tone: 'text-blue-600 bg-blue-50 border-blue-200' },
+    TRANSPORT:    { label: 'Transport',         icon: Wallet,        tone: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
+    LATE_FEE:     { label: 'Late fees',         icon: AlertTriangle, tone: 'text-amber-600 bg-amber-50 border-amber-200' },
+    EXTRA_CHARGE: { label: 'Charges & fines',   icon: AlertCircle,   tone: 'text-rose-600 bg-rose-50 border-rose-200' },
+    LIBRARY:      { label: 'Library',           icon: Layers,        tone: 'text-violet-600 bg-violet-50 border-violet-200' },
+    LAB:          { label: 'Lab',               icon: Layers,        tone: 'text-purple-600 bg-purple-50 border-purple-200' },
+    SPORTS:       { label: 'Sports',            icon: Layers,        tone: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+    COMPUTER:     { label: 'Computer',          icon: Layers,        tone: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+    DEVELOPMENT:  { label: 'Development',       icon: Layers,        tone: 'text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200' },
+    EXAM:         { label: 'Exam',              icon: Layers,        tone: 'text-orange-600 bg-orange-50 border-orange-200' },
+    ADMISSION:    { label: 'Admission',         icon: Layers,        tone: 'text-teal-600 bg-teal-50 border-teal-200' },
+    BOOKS:        { label: 'Books',             icon: Layers,        tone: 'text-yellow-600 bg-yellow-50 border-yellow-200' },
+    UNIFORM:      { label: 'Uniform',           icon: Layers,        tone: 'text-lime-600 bg-lime-50 border-lime-200' },
+    ID_CARD:      { label: 'ID card',           icon: Layers,        tone: 'text-slate-600 bg-slate-50 border-slate-200' },
+    MISC:         { label: 'Miscellaneous',     icon: Layers,        tone: 'text-slate-600 bg-slate-50 border-slate-200' },
+    OTHER:        { label: 'Other',             icon: Layers,        tone: 'text-slate-600 bg-slate-50 border-slate-200' },
+};
+const ByItemTypeCard: React.FC<{
+    rows: Summary['byItemType'];
+    totalDemand: number;
+}> = ({ rows, totalDemand }) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+            <Layers size={14} className="text-slate-500" />
+            <h3 className="text-sm font-bold text-slate-800">By line item</h3>
+            <span className="text-[10px] text-slate-500 ml-auto">
+                {rows.length} categor{rows.length === 1 ? 'y' : 'ies'}
+            </span>
+        </div>
+        {rows.length === 0 ? (
+            <p className="text-xs text-slate-400 py-6 text-center">No line items yet.</p>
+        ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {rows.map(r => {
+                    const cfg = ITEM_LABEL[r.itemType] ?? ITEM_LABEL.OTHER!;
+                    const collectRate = r.demand > 0 ? Math.round((r.collected / r.demand) * 100) : 0;
+                    return (
+                        <div key={r.itemType} className="p-3 border border-slate-100 rounded-xl hover:border-slate-200 hover:bg-slate-50/30 transition-colors">
+                            <div className="flex items-center justify-between gap-3 mb-1.5">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${cfg.tone}`}>
+                                        <cfg.icon size={10} /> {cfg.label}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500">{r.count} line{r.count === 1 ? '' : 's'}</span>
+                                </div>
+                                <span className="text-sm font-bold text-slate-800 tabular-nums shrink-0">{fmt(r.demand)}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${collectRate}%` }} />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] mt-1 text-slate-500">
+                                <span>Collected <span className="font-bold text-emerald-700 tabular-nums">{fmt(r.collected)}</span></span>
+                                <span>Outstanding <span className="font-bold text-rose-700 tabular-nums">{fmt(r.outstanding)}</span></span>
+                                <span className="font-bold">{totalDemand > 0 ? Math.round((r.demand / totalDemand) * 100) : 0}% of total</span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        )}
+    </div>
+);
+
+/* ── By class ─────────────────────────────────────────────────────────────
+ * Which classes are the healthiest financially? Which are the collection
+ * hotspots? A class with collection rate < 60% is usually where a fee
+ * officer should focus their week.
+ */
+const ByClassCard: React.FC<{ rows: Summary['byClass'] }> = ({ rows }) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+            <School size={14} className="text-slate-500" />
+            <h3 className="text-sm font-bold text-slate-800">By class</h3>
+            <span className="text-[10px] text-slate-500 ml-auto">
+                {rows.length} class{rows.length === 1 ? '' : 'es'}
+            </span>
+        </div>
+        {rows.length === 0 ? (
+            <p className="text-xs text-slate-400 py-6 text-center">No class-level data yet.</p>
+        ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {rows.map(r => <ByGroupRow key={r.classId}
+                    name={r.className}
+                    demand={r.demand}
+                    collected={r.collected}
+                    outstanding={r.outstanding}
+                    collectionRate={r.collectionRate}
+                    students={r.students}
+                    invoices={r.invoices} />)}
+            </div>
+        )}
+    </div>
+);
+
+/* ── By course ────────────────────────────────────────────────────────── */
+/* ── Forecast card (upcoming due / refunds) ────────────────────────────── */
+const FORECAST_TONE: Record<string, { bg: string; border: string; icon: string; label: string; amount: string }> = {
+    sky:   { bg: 'bg-sky-50',   border: 'border-sky-200/70',   icon: 'text-sky-600',   label: 'text-sky-700',   amount: 'text-sky-900' },
+    slate: { bg: 'bg-slate-50', border: 'border-slate-200/70', icon: 'text-slate-600', label: 'text-slate-700', amount: 'text-slate-900' },
+};
+const ForecastCard: React.FC<{
+    icon: LucideIcon;
+    title: string;
+    subtitle: string;
+    amount: number;
+    count: number;
+    countLabel: string;
+    tone: 'sky' | 'slate';
+    emptyText: string;
+}> = ({ icon: Icon, title, subtitle, amount, count, countLabel, tone, emptyText }) => {
+    const cfg = FORECAST_TONE[tone] ?? FORECAST_TONE.slate!;
+    return (
+        <div className={`p-4 rounded-2xl border ${cfg.bg} ${cfg.border} shadow-sm`}>
+            <div className="flex items-center gap-2 mb-2">
+                <Icon size={14} className={cfg.icon} />
+                <div className="flex-1 min-w-0">
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${cfg.label}`}>{title}</p>
+                    <p className="text-[10px] text-slate-500">{subtitle}</p>
+                </div>
+            </div>
+            {count === 0 ? (
+                <p className="text-xs text-slate-500 py-1">{emptyText}</p>
+            ) : (
+                <div className="flex items-baseline justify-between gap-3">
+                    <span className={`text-2xl font-black tabular-nums ${cfg.amount}`}>{fmt(amount)}</span>
+                    <span className="text-[11px] text-slate-500 tabular-nums">
+                        <span className="font-bold text-slate-700">{count}</span> {countLabel}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+};
+
+/* ── Collection by payment mode ────────────────────────────────────────
+ * Real-world reconciliation view. Ops team's answer to "how much cash
+ * came in?" — matches the daily cash-drawer close-out and cheque bank
+ * deposits, plus tells them if online payments are working.
+ */
+const PAYMENT_MODE_META: Record<string, { label: string; icon: LucideIcon; color: string }> = {
+    CASH:          { label: 'Cash',          icon: Wallet,        color: 'emerald' },
+    CHEQUE:        { label: 'Cheque',        icon: Receipt,       color: 'amber' },
+    ONLINE:        { label: 'Online',        icon: CreditCard,    color: 'indigo' },
+    BANK_TRANSFER: { label: 'Bank transfer', icon: Activity,      color: 'sky' },
+    DD:            { label: 'DD',            icon: Receipt,       color: 'violet' },
+};
+const PAYMENT_MODE_COLOR: Record<string, { bar: string; badge: string }> = {
+    emerald: { bar: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700' },
+    amber:   { bar: 'bg-amber-500',   badge: 'bg-amber-100 text-amber-700' },
+    indigo:  { bar: 'bg-indigo-500',  badge: 'bg-indigo-100 text-indigo-700' },
+    sky:     { bar: 'bg-sky-500',     badge: 'bg-sky-100 text-sky-700' },
+    violet:  { bar: 'bg-violet-500',  badge: 'bg-violet-100 text-violet-700' },
+    slate:   { bar: 'bg-slate-500',   badge: 'bg-slate-100 text-slate-600' },
+};
+const PaymentModeCard: React.FC<{ rows: Summary['byPaymentMode'] }> = ({ rows }) => {
+    const totalReceived = rows.reduce((s, r) => s + r.amount, 0);
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+                <PieChart size={14} className="text-slate-500" />
+                <h3 className="text-sm font-bold text-slate-800">Collection by payment mode</h3>
+                <span className="text-[10px] text-slate-500 ml-auto tabular-nums">
+                    Total received <span className="font-bold text-slate-700">{fmt(totalReceived)}</span>
+                </span>
+            </div>
+            {rows.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">No payments received in this period.</p>
+            ) : (
+                <div className="space-y-2">
+                    {rows.map(r => {
+                        const meta = PAYMENT_MODE_META[r.mode] ?? { label: r.mode, icon: Wallet, color: 'slate' };
+                        const cfg = PAYMENT_MODE_COLOR[meta.color] ?? PAYMENT_MODE_COLOR.slate!;
+                        return (
+                            <div key={r.mode} className="p-3 border border-slate-100 rounded-xl">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${cfg.badge}`}>
+                                            <meta.icon size={10} /> {meta.label}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500">
+                                            {r.count} payment{r.count === 1 ? '' : 's'}
+                                        </span>
+                                    </div>
+                                    <span className="text-sm font-black tabular-nums text-slate-800 shrink-0">
+                                        {fmt(r.amount)}
+                                    </span>
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className={`h-full transition-all ${cfg.bar}`} style={{ width: `${r.share}%` }} />
+                                </div>
+                                <div className="flex items-center justify-end text-[10px] mt-1 text-slate-500">
+                                    <span><span className="font-bold text-slate-700">{r.share}%</span> of collected</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ByCourseCard: React.FC<{ rows: Summary['byCourse'] }> = ({ rows }) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+            <BookOpen size={14} className="text-slate-500" />
+            <h3 className="text-sm font-bold text-slate-800">By course</h3>
+            <span className="text-[10px] text-slate-500 ml-auto">
+                {rows.length} course{rows.length === 1 ? '' : 's'}
+            </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {rows.map(r => <ByGroupRow key={r.courseId}
+                name={r.courseName}
+                demand={r.demand}
+                collected={r.collected}
+                outstanding={r.outstanding}
+                collectionRate={r.collectionRate}
+                students={r.students}
+                invoices={r.invoices} />)}
+        </div>
+    </div>
+);
+
+const ByGroupRow: React.FC<{
+    name: string;
+    demand: number;
+    collected: number;
+    outstanding: number;
+    collectionRate: number;
+    students: number;
+    invoices: number;
+}> = ({ name, demand, collected, outstanding, collectionRate, students, invoices }) => {
+    const health = collectionRate >= 90 ? 'emerald' : collectionRate >= 75 ? 'sky' : collectionRate >= 60 ? 'amber' : 'rose';
+    const bar = health === 'emerald' ? 'bg-emerald-500' : health === 'sky' ? 'bg-sky-500' : health === 'amber' ? 'bg-amber-500' : 'bg-rose-500';
+    const pill = health === 'emerald' ? 'bg-emerald-100 text-emerald-700' : health === 'sky' ? 'bg-sky-100 text-sky-700' : health === 'amber' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+    return (
+        <div className="p-3 border border-slate-100 rounded-xl">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{name}</p>
+                    <p className="text-[10px] text-slate-500">
+                        {students} student{students === 1 ? '' : 's'} · {invoices} invoice{invoices === 1 ? '' : 's'}
+                    </p>
+                </div>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${pill}`}>
+                    {collectionRate}%
+                </span>
+            </div>
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1">
+                <div className={`h-full transition-all ${bar}`} style={{ width: `${collectionRate}%` }} />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-slate-500 tabular-nums">
+                <span><span className="text-slate-400">Demand</span> <span className="font-bold text-slate-700">{fmt(demand)}</span></span>
+                <span><span className="text-slate-400">Coll'd</span> <span className="font-bold text-emerald-700">{fmt(collected)}</span></span>
+                <span><span className="text-slate-400">O/S</span> <span className={`font-bold ${outstanding > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{fmt(outstanding)}</span></span>
+            </div>
+        </div>
+    );
+};
+
+/* ── Top defaulters ───────────────────────────────────────────────────────
+ * The people who owe the most money right now. Rendered as an actionable
+ * table with click-through to the student's fee history (via /students/:id).
+ */
+const TopDefaultersCard: React.FC<{ rows: Summary['topDefaulters'] }> = ({ rows }) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle size={14} className="text-rose-500" />
+            <h3 className="text-sm font-bold text-slate-800">Top defaulters</h3>
+            <span className="text-[10px] text-slate-500">Highest outstanding — priority follow-up</span>
+            <span className="text-[10px] text-slate-500 ml-auto font-bold">Top {rows.length}</span>
+        </div>
+        <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+                <thead>
+                    <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        <th className="text-left py-2 px-2">Student</th>
+                        <th className="text-left py-2 px-2">Class · Section</th>
+                        <th className="text-right py-2 px-2">Overdue</th>
+                        <th className="text-right py-2 px-2">Oldest</th>
+                        <th className="text-right py-2 px-2">Outstanding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((r, i) => (
+                        <tr key={r.studentId} className="border-b border-slate-100 hover:bg-slate-50/60">
+                            <td className="py-2 px-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded bg-rose-100 text-rose-700 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-slate-800 truncate">{r.name}</p>
+                                        <p className="text-[10px] text-slate-500">#{r.admissionId ?? '—'} · {r.phone}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="py-2 px-2 text-slate-600">
+                                {r.className ?? '—'}{r.sectionName ? ` · ${r.sectionName}` : ''}
+                            </td>
+                            <td className="py-2 px-2 text-right tabular-nums">
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${r.overdueCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {r.overdueCount}
+                                </span>
+                            </td>
+                            <td className="py-2 px-2 text-right tabular-nums text-slate-600">
+                                {r.oldestOverdueDays > 0 ? `${r.oldestOverdueDays}d` : '—'}
+                            </td>
+                            <td className="py-2 px-2 text-right tabular-nums font-black text-rose-700">
+                                {fmt(r.outstanding)}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+const LateFinesRow: React.FC<{
+    lateFees: Summary['lateFees'];
+    totalDemand: number;
+}> = ({ lateFees, totalDemand }) => {
+    if (lateFees.count === 0) return null;
+    const shareOfDemand = totalDemand > 0
+        ? Math.max(0, Math.min(100, Math.round((lateFees.demand / totalDemand) * 100)))
+        : 0;
+    return (
+        <div className="bg-gradient-to-r from-amber-50 via-amber-50/60 to-white border border-amber-200/70 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-amber-600" />
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Late fines · included in totals above</span>
+                </div>
+                <span className="text-[11px] text-amber-700 tabular-nums">
+                    <span className="font-bold">{lateFees.count}</span> invoice{lateFees.count === 1 ? '' : 's'} ·
+                    {' '}<span className="font-bold">{shareOfDemand}%</span> of total demand
+                </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <LateFinesStat label="Total charged" value={lateFees.demand} accent="strong" />
+                <LateFinesStat label="Collected"     value={lateFees.collected} accent="normal" />
+                <LateFinesStat label="Outstanding"   value={lateFees.outstanding}
+                    hint={lateFees.overdueCount > 0
+                        ? `${lateFees.overdueCount} late-fine invoice${lateFees.overdueCount === 1 ? '' : 's'} themselves overdue`
+                        : undefined}
+                    accent={lateFees.outstanding > 0 ? 'strong' : 'normal'} />
+            </div>
+        </div>
+    );
+};
+
+const LateFinesStat: React.FC<{
+    label: string;
+    value: number;
+    hint?: string;
+    accent: 'strong' | 'normal';
+}> = ({ label, value, hint, accent }) => (
+    <div className="rounded-xl bg-white/70 border border-amber-100 px-3 py-2">
+        <p className="text-[10px] uppercase tracking-wider font-bold text-amber-700">{label}</p>
+        <p className={`tabular-nums leading-tight mt-0.5 ${accent === 'strong' ? 'text-lg font-black text-amber-900' : 'text-lg font-bold text-amber-800'}`}>
+            {fmt(value)}
+        </p>
+        {hint && <p className="text-[10px] text-amber-700 mt-0.5">{hint}</p>}
+    </div>
+);
+
+type PillColor = 'emerald' | 'sky' | 'amber' | 'rose' | 'slate';
+const PILL_COLOR: Record<PillColor, { bg: string; text: string; dot: string; number: string }> = {
+    emerald: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500', number: 'text-emerald-800' },
+    sky:     { bg: 'bg-sky-50 border-sky-200',         text: 'text-sky-700',     dot: 'bg-sky-500',     number: 'text-sky-800' },
+    amber:   { bg: 'bg-amber-50 border-amber-200',     text: 'text-amber-700',   dot: 'bg-amber-500',   number: 'text-amber-800' },
+    rose:    { bg: 'bg-rose-50 border-rose-200',       text: 'text-rose-700',    dot: 'bg-rose-500',    number: 'text-rose-800' },
+    slate:   { bg: 'bg-slate-100 border-slate-200',    text: 'text-slate-600',   dot: 'bg-slate-400',   number: 'text-slate-700' },
+};
+const StatusPill: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => {
+    const cfg = PILL_COLOR[color as PillColor] ?? PILL_COLOR.slate;
+    return (
+        <div className={`p-3 rounded-xl border ${cfg.bg}`}>
+            <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                <span className={`text-[10px] uppercase tracking-wider font-bold ${cfg.text}`}>{label}</span>
+            </div>
+            <div className={`text-xl font-black tabular-nums mt-1 leading-none ${cfg.number}`}>{value.toLocaleString('en-IN')}</div>
+        </div>
+    );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FEE STRUCTURE TAB
@@ -271,6 +1013,11 @@ function FeeStructureTab() {
     const [structures, setStructures] = useState<StructureMeta[]>([]);
     const [structureId, setStructureId] = useState('');
     const [items, setItems] = useState<FeeStructureItem[]>([]);
+    const [structureConfig, setStructureConfig] = useState<{
+        lateFeeEnabled?: boolean; lateFeeGraceDays?: number;
+        lateFeeFlatAmount?: number; lateFeePercent?: number;
+        lateFeeMaxAmount?: number; lateFeeCompound?: boolean;
+    } | null>(null);
     const [courses, setCourses] = useState<Course[]>([]);
     const [classes, setClasses] = useState<ClassInfo[]>([]);
 
@@ -305,10 +1052,20 @@ function FeeStructureTab() {
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (!structureId) { setItems([]); return; }
+        if (!structureId) { setItems([]); setStructureConfig(null); return; }
         api.getFeeStructureById(structureId)
-            .then(d => setItems(d.structure.items ?? []))
-            .catch(() => setItems([]));
+            .then(d => {
+                setItems(d.structure.items ?? []);
+                setStructureConfig({
+                    lateFeeEnabled:    d.structure.lateFeeEnabled,
+                    lateFeeGraceDays:  d.structure.lateFeeGraceDays,
+                    lateFeeFlatAmount: d.structure.lateFeeFlatAmount,
+                    lateFeePercent:    d.structure.lateFeePercent,
+                    lateFeeMaxAmount:  d.structure.lateFeeMaxAmount,
+                    lateFeeCompound:   d.structure.lateFeeCompound,
+                });
+            })
+            .catch(() => { setItems([]); setStructureConfig(null); });
     }, [structureId, itemsTick]);
 
     const handleCreateStructure = async () => {
@@ -558,6 +1315,15 @@ function FeeStructureTab() {
                             </div>
                         )}
                     </div>
+
+                    {/* Late fee configuration */}
+                    {structureConfig && (
+                        <LateFeeConfigCard
+                            structureId={structureId}
+                            initial={structureConfig}
+                            onSaved={refreshItems}
+                        />
+                    )}
 
                     {/* Add / Edit form */}
                     {showForm && (
@@ -1006,7 +1772,7 @@ function ExtraChargesTab() {
         if (filterYear) p.year = Number.parseInt(filterYear);
         api.getExtraCharges(p)
             .then(d => setCharges(d.extraCharges || []))
-            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load extra charges'), 'error'));
+            .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load charges &amp; fines'), 'error'));
     }, [filterMonth, filterYear, chargeTick, addToast]);
 
     // Load students for single mode
@@ -1113,7 +1879,7 @@ function ExtraChargesTab() {
     const del = (id: string) => {
         confirm({
             title: 'Remove this charge?',
-            message: 'The student will no longer be billed for this extra charge.',
+            message: 'The student will no longer be billed for this charge.',
             confirmText: 'Remove',
             onConfirm: async () => {
                 try {
@@ -1337,7 +2103,7 @@ function ExtraChargesTab() {
                         <tr>{['Student','Type','Description','Amount','Month/Year','Actions'].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                        {charges.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No extra charges for selected period</td></tr>}
+                        {charges.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No charges or fines for the selected period</td></tr>}
                         {charges.map(c => (
                             <tr key={c.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 font-medium">{c.studentFirstName} {c.studentLastName}</td>

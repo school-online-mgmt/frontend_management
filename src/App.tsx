@@ -29,6 +29,7 @@ import CalendarPage from "./Pages/Events/CalendarPage.tsx";
 import FeesHub from "./Pages/Fees/FeesHub.tsx";
 import FeeInvoiceDetails from "./Pages/Fees/FeeInvoiceDetails.tsx";
 import AttendanceHome from "./Pages/Attendance/AttendanceHome.tsx";
+import JobsPage from "./Pages/Jobs/JobsPage.tsx";
 import TeacherAttendanceHome from "./Pages/Attendance/TeacherAttendanceHome.tsx";
 import LeaveHome from "./Pages/Leave/LeaveHome.tsx";
 import LibraryHome from "./Pages/Library/LibraryHome.tsx";
@@ -43,6 +44,10 @@ import CommunicationPage from "./Pages/Communication/CommunicationPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
+import SportsHome from "./Pages/Sports/SportsHome.tsx";
+import SportsEventDetail from "./Pages/Sports/SportsEventDetail.tsx";
+import InventoryHub from "./Pages/Inventory/InventoryHub.tsx";
+import ModuleGate from "./components/ModuleGate.tsx";
 
 function App() {
   return (
@@ -58,43 +63,91 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+
+            {/* PEOPLE — students, applicants, staff (always-on bundled default) */}
             <Route path="/applicants-home" element={<ApplicantsHome />} />
             <Route path="/students-home" element={<StudentsHome />} />
-            <Route path="/subject-Home" element={<SubjectHomePage />} />
-             <Route path="/subject/:slug" element={<SubjectDetails />} /> 
-            <Route path="/course-Home" element={<CourseHome />} />
-            <Route path="/course/:courseId" element={<CourseDetails />} />
-            <Route path="/exam-home" element={<ExamHome />} />
-            <Route path="/exam/:examId" element={<ExamDetails />} />
-            <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
-            <Route path="/performance" element={<ResultsPerformancePage />} />
-            <Route path="/notices" element={<NoticeBoardHome />} />
-            <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
-            <Route path="/events" element={<Navigate to="/calendar" replace />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-
-            {/* Teacher Routes */}
-            <Route path="/teacher-home" element={<TeacherHome />} />
-            <Route path="/teacher/:id" element={<TeacherDetails />} />
-            <Route path="/assignments" element={<AssignmentsPage />} />
-            <Route path="/class-Home" element={<ClassHome />} />
-            <Route path="/class/:classId" element={<ClassDetails />} />
-            <Route path="/section/:sectionId" element={<SectionDetails />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
-            <Route path="/fees" element={<FeesHub />} />
-            <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
-            <Route path="/attendance" element={<AttendanceHome />} />
-            <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
-            <Route path="/leaves" element={<LeaveHome />} />
-            <Route path="/library" element={<LibraryHome />} />
-            <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
             <Route path="/staff" element={<StaffHome />} />
-            <Route path="/transport" element={<TransportHub />} />
-            <Route path="/sessions" element={<SessionsPage />} />
+
+            {/* TEACHERS — teacher onboarding & directory (always-on bundled default) */}
+            <Route path="/teacher-home" element={<TeacherHome />} />
+            <Route path="/teacher/:id" element={<TeacherDetails />} />
+
+            {/* ACADEMICS — sessions, classes, sections, courses, subjects */}
+            <Route element={<ModuleGate module="ACADEMICS" />}>
+              <Route path="/subject-Home" element={<SubjectHomePage />} />
+              <Route path="/subject/:slug" element={<SubjectDetails />} />
+              <Route path="/course-Home" element={<CourseHome />} />
+              <Route path="/course/:courseId" element={<CourseDetails />} />
+              <Route path="/class-Home" element={<ClassHome />} />
+              <Route path="/class/:classId" element={<ClassDetails />} />
+              <Route path="/section/:sectionId" element={<SectionDetails />} />
+              <Route path="/sessions" element={<SessionsPage />} />
+              <Route path="/assignments" element={<AssignmentsPage />} />
+            </Route>
+
+            {/* STUDIES — exam workflow + performance */}
+            <Route element={<ModuleGate module="STUDIES" />}>
+              <Route path="/exam-home" element={<ExamHome />} />
+              <Route path="/exam/:examId" element={<ExamDetails />} />
+              <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
+              <Route path="/performance" element={<ResultsPerformancePage />} />
+            </Route>
+
+            {/* ATTENDANCE — daily student & teacher attendance + leaves + reports */}
+            <Route element={<ModuleGate module="ATTENDANCE" />}>
+              <Route path="/attendance" element={<AttendanceHome />} />
+              <Route path="/attendance/jobs" element={<JobsPage />} />
+              <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
+              <Route path="/leaves" element={<LeaveHome />} />
+            </Route>
+
+            {/* LIBRARY */}
+            <Route element={<ModuleGate module="LIBRARY" />}>
+              <Route path="/library" element={<LibraryHome />} />
+              <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
+            </Route>
+
+            {/* COMMUNICATION — notices, broadcasts, calendar */}
+            <Route element={<ModuleGate module="COMMUNICATION" />}>
+              <Route path="/notices" element={<NoticeBoardHome />} />
+              <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
+              <Route path="/events" element={<Navigate to="/calendar" replace />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/communication" element={<CommunicationPage />} />
+            </Route>
+
+            {/* FINANCE — fees & invoices */}
+            <Route element={<ModuleGate module="FINANCE" />}>
+              <Route path="/fees" element={<FeesHub />} />
+              <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
+              <Route path="/fees/jobs" element={<JobsPage />} />
+            </Route>
+
+            {/* Automated jobs — accessible from any module owning a job */}
+            <Route path="/jobs" element={<JobsPage />} />
+
+            {/* TRANSPORT */}
+            <Route element={<ModuleGate module="TRANSPORT" />}>
+              <Route path="/transport" element={<TransportHub />} />
+            </Route>
+
+            {/* SPORTS */}
+            <Route element={<ModuleGate module="SPORTS" />}>
+              <Route path="/sports" element={<SportsHome />} />
+              <Route path="/sports/events/:eventId" element={<SportsEventDetail />} />
+            </Route>
+
+            {/* INVENTORY — item master, procurement, consumption ledger */}
+            <Route element={<ModuleGate module="INVENTORY" />}>
+              <Route path="/inventory" element={<InventoryHub />} />
+            </Route>
+
+            {/* Account / support / onboarding — not module-gated */}
             <Route path="/account" element={<AccountPage />} />
             <Route path="/platform-bills" element={<PlatformBillsPage />} />
-            <Route path="/communication" element={<CommunicationPage />} />
             <Route path="/support" element={<SupportCenter />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
