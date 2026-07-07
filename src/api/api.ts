@@ -1449,6 +1449,7 @@ createStudent = async (data: {
     // Onboarding
     getOnboardingStatus = async (): Promise<{
         isComplete: boolean;
+        tenantName: string | null;
         session: { id: string; name: string; slug: string; startDate: string; endDate: string } | null;
         steps: {
             schoolProfile: { complete: boolean; required: boolean; detail: string | null };

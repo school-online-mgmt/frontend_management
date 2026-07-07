@@ -6,7 +6,7 @@ export type ModulePermission = { module: string; level: 'READ' | 'ADMIN' };
 
 // ADMIN + PRINCIPAL have full write access; DIRECTOR has read-only to all modules
 export const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL'] as const;
-export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY'] as const;
+export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK', 'TIMETABLE'] as const;
 export type AppModule = typeof ALL_MODULES[number];
 
 /**

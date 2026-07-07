@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
+import { GRADE_COLORS, GRADE_ORDER, gradeFromPercent } from "../../utils/grades";
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SchoolSummary {
@@ -52,16 +53,7 @@ interface ExamReportData {
 }
 
 // â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const GRADE_COLORS: Record<string, { bg: string; text: string; bar: string; border: string }> = {
-    "A+": { bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-500", border: "border-emerald-200" },
-    "A":  { bg: "bg-emerald-50", text: "text-emerald-600", bar: "bg-emerald-400", border: "border-emerald-200" },
-    "B+": { bg: "bg-blue-50",    text: "text-blue-700",    bar: "bg-blue-500",    border: "border-blue-200"    },
-    "B":  { bg: "bg-blue-50",    text: "text-blue-600",    bar: "bg-blue-400",    border: "border-blue-200"    },
-    "C":  { bg: "bg-amber-50",   text: "text-amber-700",   bar: "bg-amber-500",   border: "border-amber-200"   },
-    "D":  { bg: "bg-orange-50",  text: "text-orange-700",  bar: "bg-orange-500",  border: "border-orange-200"  },
-    "F":  { bg: "bg-red-50",     text: "text-red-700",     bar: "bg-red-500",     border: "border-red-200"     },
-};
-const GRADE_ORDER = ["A+", "A", "B+", "B", "C", "D", "F"];
+// Grade palette + boundaries centralised in ../../utils/grades
 
 // â”€â”€ SVG Radar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RadarChart = ({ data, size = 260, color = "#6366f1" }: { data: { label: string; value: number }[]; size?: number; color?: string }) => {
@@ -450,7 +442,7 @@ const reasonClasses = (tone: "red" | "amber" | "rose" | "slate" | "violet") =>
     : tone === "slate" ? "bg-slate-50 border-slate-200 text-slate-700"
     : "bg-violet-50 border-violet-200 text-violet-700";
 
-const gradeFromPctMgmt = (p: number) => p >= 90 ? "A+" : p >= 80 ? "A" : p >= 70 ? "B+" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 40 ? "D" : "F";
+const gradeFromPctMgmt = gradeFromPercent;
 
 const AttentionCard = ({ s }: { s: AttentionStudent }) => {
     const grade = s.averagePercentage !== null ? gradeFromPctMgmt(s.averagePercentage) : null;

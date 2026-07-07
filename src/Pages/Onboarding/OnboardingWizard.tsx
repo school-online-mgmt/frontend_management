@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     School, CalendarDays, Layers, BookOpen, Bus, Library,
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
@@ -1180,6 +1180,17 @@ const OnboardingWizard: React.FC = () => {
         boardName:      'School Notice Board',
         boardDesc:      'Main notice board for school-wide announcements',
     });
+
+    // Pre-fill the School Name from the tenant's registered name (set by the
+    // platform at onboarding) — or an already-saved profile — the moment the
+    // onboarding status resolves. Never clobbers a value the user has typed.
+    useEffect(() => {
+        const preset = status?.steps?.schoolProfile?.detail || status?.tenantName || '';
+        if (!preset) return;
+        setState(p => p.config.schoolName.trim()
+            ? p
+            : { ...p, config: { ...p.config, schoolName: preset } });
+    }, [status]);
 
     const logRef = useRef<LogEntry[]>([]);
     const [submitLog,   setSubmitLog]   = useState<LogEntry[]>([]);
