@@ -5,13 +5,12 @@ import {
   ChevronRight, School, BookOpen, UserCheck,
   GraduationCap, Users, ClipboardList, UserCog,
   UserMinus, Edit2, ChevronDown, Layers, Shield,
-  Search, Award,
+  Search, Award, Filter,
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import { useSessionId } from "../../context/SessionContext";
-import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 interface TeacherRef  { id: string; name: string; qualification?: string }
@@ -27,13 +26,14 @@ interface AssignedPair {
   teacherId: string; teacherName: string;
 }
 
+/** A single "who teaches this subject in this section" cell. */
+interface TeachingCell { subjectId: string; subjectName: string; teacherId: string | null; teacherName: string | null }
+
 type AssignTarget =
   | { type: "class";            id: string; label: string; currentTeacherId?: string }
   | { type: "section";          id: string; label: string; currentTeacherId?: string }
   | { type: "subject-incharge"; subjectId: string; subjectData: SubjectEntry; label: string; currentTeacherId?: string }
   | { type: "subject";          subjectId: string; sectionId: string; label: string; currentTeacherId?: string };
-
-type TabKey = "classes-sections" | "subject-incharge" | "section-teaching";
 
 /* ── Assign Modal ─────────────────────────────────────────────────────────── */
 const AssignModal = ({
@@ -101,10 +101,10 @@ const AssignModal = ({
     } finally { setUnassigning(false); }
   };
 
-  const typeLabel = target.type === "class" ? "Class Incharge"
-    : target.type === "section" ? "Section Incharge"
-    : target.type === "subject-incharge" ? "Subject Incharge"
-    : "Section Mapping";
+  const typeLabel = target.type === "class" ? "Class Teacher"
+    : target.type === "section" ? "Section Teacher"
+    : target.type === "subject-incharge" ? "Subject Head"
+    : "Subject Teacher";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
@@ -307,7 +307,29 @@ const CoverageBar = ({ assigned, total, color }: { assigned: number; total: numb
   );
 };
 
-/* ── Teacher Chip ──────────────────────────────────────────────────────────── */
+/* ── Coverage Meter (header card) ──────────────────────────────────────────── */
+const CoverageMeter = ({ icon: Icon, label, assigned, total, color, tint, tintText }: {
+  icon: typeof School; label: string; assigned: number; total: number; color: string; tint: string; tintText: string;
+}) => {
+  const done = total > 0 && assigned === total;
+  const gaps = total - assigned;
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-8 h-8 ${tint} rounded-lg flex items-center justify-center shrink-0`}><Icon size={15} className={tintText} /></div>
+          <span className="text-xs font-semibold text-slate-600 truncate">{label}</span>
+        </div>
+        {done
+          ? <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 shrink-0"><CheckCircle2 size={11} /> All set</span>
+          : <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full shrink-0">{gaps} gap{gaps !== 1 ? "s" : ""}</span>}
+      </div>
+      <CoverageBar assigned={assigned} total={total} color={color} />
+    </div>
+  );
+};
+
+/* ── Teacher Chips ─────────────────────────────────────────────────────────── */
 const AssignedChip = ({ teacher, onReassign, variant }: { teacher: TeacherRef; onReassign?: () => void; variant?: "incharge" }) => (
   <button onClick={onReassign} disabled={!onReassign}
     className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 max-w-[200px] transition-all
@@ -318,7 +340,6 @@ const AssignedChip = ({ teacher, onReassign, variant }: { teacher: TeacherRef; o
       ${onReassign ? "active:scale-95 cursor-pointer" : "cursor-default"}`}>
     {variant === "incharge" ? <Shield size={11} className="shrink-0" /> : <GraduationCap size={12} className="shrink-0" />}
     <span className="text-xs font-semibold truncate">{teacher.name}</span>
-    {variant === "incharge" && <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">IC</span>}
     {onReassign && <Edit2 size={11} className="shrink-0 opacity-50 ml-0.5" />}
   </button>
 );
@@ -327,83 +348,9 @@ const UnassignedChip = ({ onAssign, label, testId }: { onAssign: () => void; lab
   <button onClick={onAssign} data-testid={testId ?? "unassigned-chip"}
     className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-2.5 py-1 hover:bg-amber-100 active:scale-95 transition-all">
     <AlertTriangle size={12} className="shrink-0" />
-    <span className="text-xs font-semibold">{label ?? "Unassigned"}</span>
-    <span className="text-[10px] text-amber-500 hidden sm:inline">· Assign</span>
+    <span className="text-xs font-semibold">{label ?? "Assign"}</span>
   </button>
 );
-
-/* ── Stat Card ─────────────────────────────────────────────────────────────── */
-/**
- * Sticky insight banner shown at the top of a tab panel. Calls out the
- * current gap state in plain language and lists 3 numeric stats so
- * management can see at a glance how much work remains. Tone drives the
- * left rail colour and pill background — green when everything is mapped,
- * amber when there are gaps.
- */
-const InsightStrip = ({ tone, icon: Icon, title, subtitle, stats }: {
-  tone: "success" | "warning";
-  icon: typeof Shield;
-  title: string;
-  subtitle: string;
-  stats: { label: string; value: number; tone: "good" | "bad" | "muted" }[];
-}) => {
-  const accent = tone === "success"
-    ? { rail: "bg-emerald-400", iconBg: "bg-emerald-50", iconText: "text-emerald-600", pill: "bg-emerald-50 text-emerald-700 border-emerald-200" }
-    : { rail: "bg-amber-400",   iconBg: "bg-amber-50",   iconText: "text-amber-600",   pill: "bg-amber-50 text-amber-700 border-amber-200" };
-  return (
-    <div className="relative bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${accent.rail}`} />
-      <div className="flex flex-wrap items-center gap-4 px-5 py-3.5 pl-6">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${accent.iconBg}`}>
-          <Icon size={16} className={accent.iconText} />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <p className="text-sm font-bold text-slate-800">{title}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>
-        </div>
-        <div className="flex items-center gap-2 ml-auto">
-          {stats.map(s => {
-            const cls = s.tone === "good"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : s.tone === "bad"
-                ? "bg-rose-50 text-rose-700 border-rose-200"
-                : "bg-white text-slate-600 border-slate-200";
-            return (
-              <div key={s.label} className={`inline-flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border ${cls} min-w-[64px]`}>
-                <span className="text-base font-black tabular-nums leading-none">{s.value}</span>
-                <span className="text-[9px] font-bold uppercase tracking-wider opacity-70 mt-0.5">{s.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const StatCard = ({ icon: Icon, label, assigned, total, bg, iconColor, barColor, onClick, active }: {
-  icon: typeof School; label: string; assigned: number; total: number;
-  bg: string; iconColor: string; barColor: string; onClick: () => void; active?: boolean;
-}) => {
-  const gaps = total - assigned;
-  return (
-    <button onClick={onClick}
-      className={`bg-white rounded-2xl border shadow-sm p-5 text-left hover:shadow-md transition-all group w-full ${active ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100 hover:border-slate-200"}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center shrink-0`}>
-          <Icon size={16} className={iconColor} />
-        </div>
-        {gaps > 0
-          ? <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full animate-pulse">{gaps} gap{gaps > 1 ? "s" : ""}</span>
-          : <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600"><CheckCircle2 size={11} /> All set</span>
-        }
-      </div>
-      <p className="text-2xl font-bold text-slate-900 tabular-nums">{assigned}<span className="text-sm font-medium text-slate-400">/{total}</span></p>
-      <p className="text-xs text-slate-500 font-medium mt-0.5 mb-3">{label}</p>
-      <CoverageBar assigned={assigned} total={total} color={barColor} />
-    </button>
-  );
-};
 
 /* ── Main Page ────────────────────────────────────────────────────────────── */
 const AssignmentsPage = () => {
@@ -419,16 +366,14 @@ const AssignmentsPage = () => {
   const [allSubjects, setAllSubjects] = useState<SubjectEntry[]>([]);
   const [assignedPairs, setAssignedPairs] = useState<AssignedPair[]>([]);
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
-  const [activeTab, setActiveTab]     = useState<TabKey>("classes-sections");
   const [search, setSearch]           = useState("");
+  const [gapsOnly, setGapsOnly]       = useState(false);
+  const [showHeads, setShowHeads]     = useState(false);
 
-  const [expandedClasses, setExpandedClasses]   = useState<Set<string>>(new Set());
-  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+  const toggleClass = (id: string) => setExpandedClasses(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
-  const toggleClass   = (id: string) => setExpandedClasses(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-  const toggleSubject = (id: string) => setExpandedSubjects(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-
-  /* ── load assigned pairs ─────────────────────────────────────────────────── */
+  /* ── load assigned pairs (per-section subject teaching) ──────────────────── */
   const loadAssignedPairs = useCallback(async (classList: ClassEntry[]) => {
     const pairs: AssignedPair[] = [];
     await Promise.all(
@@ -477,6 +422,7 @@ const AssignmentsPage = () => {
         const d = classResult.value;
         classList = Array.isArray(d) ? d : d?.classes ?? [];
         setClasses(classList);
+        // Auto-expand classes that still have any gap so the work is visible.
         setExpandedClasses(new Set(
           classList
             .filter((c: ClassEntry) => !c.teacher || c.sections.some((s: SectionRef) => !s.teacher))
@@ -488,7 +434,6 @@ const AssignmentsPage = () => {
         const gaps: SubjectGap[] = gapsResult.value.subjectGaps ?? [];
         setSubjectGaps(gaps);
         setTotalSubjectPairs(gapsResult.value.totalSubjectSectionPairs ?? 0);
-        setExpandedSubjects(new Set(gaps.map((g: SubjectGap) => g.subjectId)));
       } else { errors.push("subject gaps"); }
 
       if (teacherResult.status === "fulfilled") {
@@ -500,7 +445,6 @@ const AssignmentsPage = () => {
 
       if (subjectResult.status === "fulfilled") {
         const subjects = Array.isArray(subjectResult.value) ? subjectResult.value : [];
-        // Enrich with teacher name from teacher list
         const enriched = subjects.map((s: SubjectEntry) => ({
           ...s,
           teacherName: s.teacherId ? (teacherList.find(t => t.id === s.teacherId)?.name ?? undefined) : undefined,
@@ -510,7 +454,6 @@ const AssignmentsPage = () => {
 
       if (errors.length) setLoadError(`Failed to load: ${errors.join(", ")}.`);
 
-      // Load assigned pairs after classes are known
       if (classList.length) await loadAssignedPairs(classList);
     } catch {
       setLoadError("Unexpected error loading assignment data.");
@@ -520,37 +463,42 @@ const AssignmentsPage = () => {
   useEffect(() => { load(); }, [load]);
 
   /* ── Derived ─────────────────────────────────────────────────────────────── */
-  const allSections     = classes.flatMap(c => c.sections.map(s => ({ ...s, className: c.name, classId: c.id })));
+  const allSections     = classes.flatMap(c => c.sections);
   const classAssigned   = classes.filter(c => !!c.teacher).length;
   const sectionAssigned = allSections.filter(s => !!s.teacher).length;
   const subjectAssigned = totalSubjectPairs - subjectGaps.length;
-  const subjectInchargeCount = allSubjects.filter(s => !!s.teacherId).length;
-
-  // Build subject → section map from assignedPairs + subjectGaps
-  const subjectSectionMap = new Map<string, {
-    assigned: AssignedPair[];
-    unassigned: SubjectGap[];
-  }>();
-  allSubjects.forEach(s => subjectSectionMap.set(s.id, { assigned: [], unassigned: [] }));
-  assignedPairs.forEach(p => subjectSectionMap.get(p.subjectId)?.assigned.push(p));
-  subjectGaps.forEach(g => subjectSectionMap.get(g.subjectId)?.unassigned.push(g));
+  const subjectHeadCount = allSubjects.filter(s => !!s.teacherId).length;
 
   const q = search.trim().toLowerCase();
 
-  const filteredClasses = classes.filter(c =>
-    !q || c.name.toLowerCase().includes(q) || c.teacher?.name.toLowerCase().includes(q) ||
-    c.sections.some(s => s.name.toLowerCase().includes(q) || s.teacher?.name.toLowerCase().includes(q))
-  );
-  const filteredSubjects = allSubjects.filter(s =>
-    !q || s.name.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q) ||
-    (s.teacherName?.toLowerCase().includes(q) ?? false) || (s.type?.toLowerCase().includes(q) ?? false)
-  );
+  /** Subject-teaching cells for a section = assigned pairs + gaps, sorted by subject. */
+  const teachingCellsFor = (sectionId: string): TeachingCell[] => {
+    const cells: TeachingCell[] = [
+      ...assignedPairs.filter(p => p.sectionId === sectionId).map(p => ({
+        subjectId: p.subjectId, subjectName: p.subjectName, teacherId: p.teacherId, teacherName: p.teacherName,
+      })),
+      ...subjectGaps.filter(g => g.sectionId === sectionId).map(g => ({
+        subjectId: g.subjectId, subjectName: g.subjectName, teacherId: null, teacherName: null,
+      })),
+    ];
+    return cells.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  };
 
-  const TABS: { key: TabKey; label: string; icon: typeof School; count?: number }[] = [
-    { key: "classes-sections",  label: "Classes & Sections",  icon: School,  count: classes.length - classAssigned + allSections.length - sectionAssigned },
-    { key: "subject-incharge",  label: "Subject Incharge",    icon: Shield,  count: allSubjects.length - subjectInchargeCount },
-    { key: "section-teaching",  label: "Section Teaching",    icon: Layers,  count: subjectGaps.length },
-  ];
+  const sectionHasGap = (s: SectionRef) => !s.teacher || teachingCellsFor(s.id).some(c => !c.teacherId);
+  const classHasGap   = (c: ClassEntry) => !c.teacher || c.sections.some(sectionHasGap);
+
+  const classMatchesSearch = (c: ClassEntry) =>
+    !q ||
+    c.name.toLowerCase().includes(q) ||
+    (c.teacher?.name.toLowerCase().includes(q) ?? false) ||
+    c.sections.some(s => s.name.toLowerCase().includes(q) || (s.teacher?.name.toLowerCase().includes(q) ?? false)) ||
+    assignedPairs.some(p => p.classId === c.id && (p.subjectName.toLowerCase().includes(q) || p.teacherName.toLowerCase().includes(q)));
+
+  const filteredClasses = classes.filter(c => classMatchesSearch(c) && (!gapsOnly || classHasGap(c)));
+
+  const filteredHeads = allSubjects.filter(s =>
+    !q || s.name.toLowerCase().includes(q) || (s.teacherName?.toLowerCase().includes(q) ?? false)
+  );
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -581,7 +529,7 @@ const AssignmentsPage = () => {
       <PageHeader
         icon={UserCog} title="Staff Assignments"
         gradient={MODULE_THEMES.assignment}
-        subtitle="Assign teachers to classes, sections, and subjects — manage incharges and section-level mappings"
+        subtitle="Staff each class top to bottom — class teacher, section teachers, and who teaches every subject."
         onRefresh={load}
         refreshing={loading}
         primaryActions={
@@ -596,22 +544,20 @@ const AssignmentsPage = () => {
         <div className="p-6 max-w-6xl mx-auto"><EmptySessionState entityPlural="staff assignments" /></div>
       ) : (<>
 
-      <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6 pb-4 space-y-6">
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={School}       label="Class teachers assigned"    assigned={classAssigned}   total={classes.length}     bg="bg-indigo-50" iconColor="text-indigo-600"  barColor="bg-indigo-500"  onClick={() => setActiveTab("classes-sections")} active={activeTab === "classes-sections"} />
-          <StatCard icon={Layers}       label="Section teachers assigned"  assigned={sectionAssigned} total={allSections.length} bg="bg-violet-50" iconColor="text-violet-600"  barColor="bg-violet-500"  onClick={() => setActiveTab("classes-sections")} active={activeTab === "classes-sections"} />
-          <StatCard icon={Shield}       label="Subjects with incharge"     assigned={subjectInchargeCount} total={allSubjects.length} bg="bg-teal-50" iconColor="text-teal-600" barColor="bg-teal-500" onClick={() => setActiveTab("subject-incharge")} active={activeTab === "subject-incharge"} />
-          <StatCard icon={ClipboardList} label="Subject-section pairs"     assigned={subjectAssigned} total={totalSubjectPairs}  bg="bg-rose-50"   iconColor="text-rose-500"    barColor="bg-rose-500"    onClick={() => setActiveTab("section-teaching")} active={activeTab === "section-teaching"} />
+      <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6 pb-4 space-y-5">
+        {/* Coverage meters */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <CoverageMeter icon={School}        label="Class teachers"   assigned={classAssigned}   total={classes.length}     color="bg-indigo-500" tint="bg-indigo-50" tintText="text-indigo-600" />
+          <CoverageMeter icon={Layers}        label="Section teachers" assigned={sectionAssigned} total={allSections.length} color="bg-violet-500" tint="bg-violet-50" tintText="text-violet-600" />
+          <CoverageMeter icon={ClipboardList} label="Subject teaching" assigned={subjectAssigned} total={totalSubjectPairs}   color="bg-teal-500"   tint="bg-teal-50"   tintText="text-teal-600" />
         </div>
 
-        {/* Search row + legend (above the tabbed section so it filters
-            both views) */}
+        {/* Search + gaps-only filter + legend */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1 max-w-md">
-            <ClipboardList size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search teachers, classes, subjects…"
+              placeholder="Search classes, sections, subjects, teachers…"
               className="w-full pl-9 pr-9 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white shadow-sm placeholder-slate-400" />
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -619,341 +565,160 @@ const AssignmentsPage = () => {
               </button>
             )}
           </div>
-          <div className="hidden lg:flex items-center gap-3 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-400 rounded-full" /> Incharge</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-full" /> Section Incharge</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-400 rounded-full" /> Unassigned</span>
+          <button onClick={() => setGapsOnly(v => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
+              gapsOnly ? "bg-amber-100 border-amber-300 text-amber-800" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}>
+            <Filter size={13} /> {gapsOnly ? "Showing gaps only" : "Only show gaps"}
+          </button>
+          <div className="hidden lg:flex items-center gap-3 text-[10px] text-slate-400 ml-auto">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-full" /> Assigned</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-400 rounded-full" /> Gap</span>
           </div>
         </div>
       </div>
 
-      <TabbedSection
-        idPrefix="assignments"
-        theme="orange"
-        flushPanel
-        value={activeTab}
-        onChange={setActiveTab}
-        tabs={TABS.map(t => ({ key: t.key, label: t.label, icon: t.icon, badge: t.count }))}
-      >
-        {/* ── CLASSES & SECTIONS accordion ── */}
-        <TabPanel tabKey="classes-sections">{activeTab === "classes-sections" && (
-            <div className="divide-y divide-slate-100">
-              {filteredClasses.length === 0 ? (
-                <div className="py-16 text-center text-slate-400 text-sm">
-                  {search ? `No classes matching "${search}"` : "No classes found."}
+      {/* Unified Class → Section → Subject accordion */}
+      <div className="max-w-6xl mx-auto px-6 lg:px-8 pb-16 space-y-3">
+        {filteredClasses.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">
+            {gapsOnly ? "No gaps — every class is fully staffed. 🎉" : search ? `No classes matching "${search}"` : "No classes found for this session."}
+          </div>
+        ) : filteredClasses.map(cls => {
+          const isExpanded = expandedClasses.has(cls.id);
+          const secAssigned = cls.sections.filter(s => !!s.teacher).length;
+          const gapClass = classHasGap(cls);
+          return (
+            <div key={cls.id} data-testid="class-row" data-class-name={cls.name} data-expanded={isExpanded ? "true" : "false"}
+              className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${gapClass ? "border-amber-200" : "border-slate-100"}`}>
+              {/* Class header */}
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/70 transition-colors">
+                <button onClick={() => toggleClass(cls.id)} data-testid="expand-class-toggle" data-class-name={cls.name}
+                  className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors shrink-0">
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
+                </button>
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                  <School size={16} className="text-indigo-500" />
                 </div>
-              ) : filteredClasses.map(cls => {
-                const isExpanded = expandedClasses.has(cls.id);
-                const secAssigned = cls.sections.filter(s => !!s.teacher).length;
-                return (
-                  <div key={cls.id}>
-                    {/* Class row */}
-                    <div data-testid={`class-row`} data-class-name={cls.name} data-expanded={isExpanded ? "true" : "false"} className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors group ${(!cls.teacher || cls.sections.some(s => !s.teacher)) ? "border-l-2 border-amber-400" : ""}`}>
-                      {/* Expand toggle */}
-                      <button onClick={() => toggleClass(cls.id)}
-                        data-testid="expand-class-toggle"
-                        data-class-name={cls.name}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors shrink-0">
-                        <ChevronDown size={15} className={`transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
-                      </button>
-                      {/* Icon */}
-                      <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                        <School size={15} className="text-indigo-500" />
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-800">{cls.name}</p>
-                        <p className="text-xs text-slate-400 font-mono mt-0.5">
-                          #{cls.slug} · {cls.sections.length} section{cls.sections.length !== 1 ? "s" : ""} · {secAssigned}/{cls.sections.length} assigned
-                        </p>
-                      </div>
-                      {/* Class teacher chip */}
-                      <div className="shrink-0">
-                        {cls.teacher
-                          ? <AssignedChip teacher={cls.teacher} onReassign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}`, currentTeacherId: cls.teacher!.id })} />
-                          : <UnassignedChip testId="unassigned-badge" onAssign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}` })} />
-                        }
-                      </div>
-                      <button onClick={() => navigate(`/class/${cls.id}`)}
-                        className="p-1.5 text-slate-300 group-hover:text-indigo-400 rounded-lg hover:bg-indigo-50 transition-colors shrink-0">
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800">{cls.name}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {cls.sections.length} section{cls.sections.length !== 1 ? "s" : ""} · {secAssigned}/{cls.sections.length} have a section teacher
+                  </p>
+                </div>
+                {/* Class Teacher */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-wider text-slate-400">Class Teacher</span>
+                  {cls.teacher
+                    ? <AssignedChip variant="incharge" teacher={cls.teacher} onReassign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class ${cls.name}`, currentTeacherId: cls.teacher!.id })} />
+                    : <UnassignedChip testId="unassigned-badge" onAssign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class ${cls.name}` })} />
+                  }
+                </div>
+              </div>
 
-                    {/* Sections (expanded) */}
-                    {isExpanded && cls.sections.length > 0 && (
-                      <div className="bg-slate-50/60 border-t border-slate-100">
-                        {cls.sections.map((sec, idx) => (
-                          <div key={sec.id}
-                            data-testid="section-row"
-                            data-class-name={cls.name}
-                            data-section-name={sec.name}
-                            className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-slate-100/60 transition-colors group ${idx < cls.sections.length - 1 ? "border-b border-slate-100" : ""} ${!sec.teacher ? "bg-amber-50/40" : ""}`}>
-                            <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0">
-                              <Layers size={13} className="text-violet-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-700">{sec.name}</p>
-                              <p className="text-xs text-slate-400 font-mono">#{sec.slug}</p>
-                            </div>
-                            <div className="shrink-0">
-                              {sec.teacher
-                                ? <AssignedChip teacher={sec.teacher} onReassign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section: ${sec.name} (${cls.name})`, currentTeacherId: sec.teacher!.id })} />
-                                : <UnassignedChip onAssign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section: ${sec.name} (${cls.name})` })} />
-                              }
-                            </div>
+              {/* Sections + subject teaching */}
+              {isExpanded && (
+                <div className="border-t border-slate-100 divide-y divide-slate-100">
+                  {cls.sections.length === 0 ? (
+                    <p className="px-6 py-4 text-xs text-slate-400">No sections in this class yet.</p>
+                  ) : cls.sections.map(sec => {
+                    const cells = teachingCellsFor(sec.id);
+                    const visibleCells = gapsOnly ? cells.filter(c => !c.teacherId) : cells;
+                    return (
+                      <div key={sec.id} data-testid="section-row" data-class-name={cls.name} data-section-name={sec.name}
+                        className={`px-4 py-3 ${!sec.teacher ? "bg-amber-50/30" : ""}`}>
+                        {/* Section header row */}
+                        <div className="flex items-center gap-3 mb-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0 ml-9">
+                            <Layers size={14} className="text-violet-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-700">Section {sec.name}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-wider text-slate-400">Section Teacher</span>
+                            {sec.teacher
+                              ? <AssignedChip teacher={sec.teacher} onReassign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section ${sec.name} (${cls.name})`, currentTeacherId: sec.teacher!.id })} />
+                              : <UnassignedChip onAssign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section ${sec.name} (${cls.name})` })} />
+                            }
                             <button onClick={() => navigate(`/section/${sec.id}`)}
-                              className="p-1.5 text-slate-300 group-hover:text-violet-400 rounded-lg hover:bg-violet-50 transition-colors shrink-0">
+                              className="p-1.5 text-slate-300 hover:text-violet-500 rounded-lg hover:bg-violet-50 transition-colors shrink-0">
                               <ChevronRight size={15} />
                             </button>
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Subject → teacher grid */}
+                        {cells.length === 0 ? (
+                          <p className="pl-16 text-[11px] text-slate-400 italic">No subjects mapped to this section's course yet — add subjects to the course first.</p>
+                        ) : visibleCells.length === 0 ? (
+                          <p className="pl-16 text-[11px] text-emerald-600 flex items-center gap-1"><CheckCircle2 size={11} /> All subjects staffed.</p>
+                        ) : (
+                          <div className="pl-16 grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                            {visibleCells.map(cell => (
+                              <div key={cell.subjectId}
+                                data-testid="teaching-cell"
+                                data-subject-name={cell.subjectName}
+                                data-section-name={sec.name}
+                                className={`flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 border ${cell.teacherId ? "bg-white border-slate-100" : "bg-amber-50/60 border-amber-100"}`}>
+                                <span className="text-xs font-medium text-slate-600 truncate flex items-center gap-1.5 min-w-0">
+                                  <BookOpen size={11} className="text-slate-400 shrink-0" />{cell.subjectName}
+                                </span>
+                                {cell.teacherId
+                                  ? <AssignedChip teacher={{ id: cell.teacherId, name: cell.teacherName ?? "Teacher" }}
+                                      onReassign={() => setAssignTarget({ type: "subject", subjectId: cell.subjectId, sectionId: sec.id, label: `${cell.subjectName} · Section ${sec.name} (${cls.name})`, currentTeacherId: cell.teacherId! })} />
+                                  : <UnassignedChip onAssign={() => setAssignTarget({ type: "subject", subjectId: cell.subjectId, sectionId: sec.id, label: `${cell.subjectName} · Section ${sec.name} (${cls.name})` })} />
+                                }
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {isExpanded && cls.sections.length === 0 && (
-                      <div className="pl-14 pr-5 py-3 text-xs text-slate-400 italic bg-slate-50/60 border-t border-slate-100">
-                        No sections in this class.
-                      </div>
-                    )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Secondary: Subject Heads (session-wide subject owners) */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button onClick={() => setShowHeads(v => !v)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50/70 transition-colors">
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${showHeads ? "rotate-0" : "-rotate-90"}`} />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Shield size={14} className="text-slate-500" /></div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-bold text-slate-700">Subject Heads <span className="text-[11px] font-normal text-slate-400">· optional, session-wide owner per subject</span></p>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500 shrink-0">{subjectHeadCount}/{allSubjects.length}</span>
+          </button>
+          {showHeads && (
+            <div className="border-t border-slate-100 p-3 grid grid-cols-1 md:grid-cols-2 gap-1.5">
+              {filteredHeads.length === 0 ? (
+                <p className="text-xs text-slate-400 px-2 py-2">No subjects.</p>
+              ) : filteredHeads.map(s => {
+                const head = teachers.find(t => t.id === s.teacherId);
+                return (
+                  <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 border border-slate-100 bg-white">
+                    <span className="text-xs font-medium text-slate-600 truncate flex items-center gap-1.5 min-w-0">
+                      <BookOpen size={11} className="text-slate-400 shrink-0" />{s.name}
+                      {s.type && <span className="text-[9px] uppercase tracking-wide text-slate-400">{s.type}</span>}
+                    </span>
+                    {s.teacherId && head
+                      ? <AssignedChip variant="incharge" teacher={head} onReassign={() => setAssignTarget({ type: "subject-incharge", subjectId: s.id, subjectData: s, label: `Head of ${s.name}`, currentTeacherId: s.teacherId! })} />
+                      : <UnassignedChip label="Set head" onAssign={() => setAssignTarget({ type: "subject-incharge", subjectId: s.id, subjectData: s, label: `Head of ${s.name}` })} />
+                    }
                   </div>
                 );
               })}
             </div>
           )}
-        </TabPanel>
-
-        {/* ── SUBJECT INCHARGE TAB ─────────────────────────────────────
-            One row per subject: shows whether a single incharge is set
-            and lets management assign / reassign in one click. */}
-        <TabPanel tabKey="subject-incharge">{activeTab === "subject-incharge" && (
-          <div>
-            {/* Insight strip */}
-            <InsightStrip
-              tone={subjectInchargeCount === allSubjects.length ? "success" : "warning"}
-              icon={Shield}
-              title={
-                allSubjects.length === 0
-                  ? "No subjects defined"
-                  : subjectInchargeCount === allSubjects.length
-                    ? `All ${allSubjects.length} subject${allSubjects.length === 1 ? " has" : "s have"} an incharge`
-                    : `${allSubjects.length - subjectInchargeCount} of ${allSubjects.length} subjects need an incharge`
-              }
-              subtitle="Subject incharges own the syllabus & exam paper for the entire school"
-              stats={[
-                { label: "Assigned",   value: subjectInchargeCount, tone: "good" },
-                { label: "Unassigned", value: allSubjects.length - subjectInchargeCount, tone: subjectInchargeCount === allSubjects.length ? "muted" : "bad" },
-                { label: "Total",      value: allSubjects.length, tone: "muted" },
-              ]}
-            />
-
-            {/* Subjects list — incharge focus only, no section drilldown */}
-            <div className="divide-y divide-slate-100">
-              {filteredSubjects.length === 0 ? (
-                <div className="py-16 text-center text-slate-400 text-sm">
-                  {search ? `No subjects matching "${search}"` : "No subjects found."}
-                </div>
-              ) : filteredSubjects.map(subject => {
-                const inchargeTeacher = subject.teacherId
-                  ? teachers.find(t => t.id === subject.teacherId) ?? null
-                  : null;
-                return (
-                  <div key={subject.id}
-                    data-testid="subject-incharge-row"
-                    data-subject-name={subject.name}
-                    className={`flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group ${!inchargeTeacher ? "border-l-2 border-amber-400 bg-amber-50/20" : ""}`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${inchargeTeacher ? "bg-teal-50" : "bg-amber-50"}`}>
-                      <BookOpen size={15} className={inchargeTeacher ? "text-teal-500" : "text-amber-500"} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-slate-800 truncate">{subject.name}</p>
-                        {subject.type && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-md uppercase shrink-0">{subject.type}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">
-                        {subject.bookName ? `📖 ${subject.bookName}` : `Slug: ${subject.slug}`}
-                      </p>
-                    </div>
-                    <div className="shrink-0">
-                      {inchargeTeacher ? (
-                        <AssignedChip
-                          teacher={inchargeTeacher}
-                          variant="incharge"
-                          onReassign={() => setAssignTarget({ type: "subject-incharge", subjectId: subject.id, subjectData: subject, label: `Subject Incharge: ${subject.name}`, currentTeacherId: inchargeTeacher.id })}
-                        />
-                      ) : (
-                        <UnassignedChip
-                          label="Assign Incharge"
-                          onAssign={() => setAssignTarget({ type: "subject-incharge", subjectId: subject.id, subjectData: subject, label: `Assign Incharge: ${subject.name}` })}
-                        />
-                      )}
-                    </div>
-                    <button onClick={() => navigate(`/subject/${subject.slug}`)}
-                      className="p-1.5 text-slate-300 group-hover:text-teal-400 rounded-lg hover:bg-teal-50 transition-colors shrink-0">
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}</TabPanel>
-
-        {/* ── SECTION TEACHING TAB ─────────────────────────────────────
-            One row per (subject × section) pair: shows the teacher who
-            actually teaches that subject in that specific section. */}
-        <TabPanel tabKey="section-teaching">{activeTab === "section-teaching" && (
-          <div>
-            {/* Insight strip */}
-            <InsightStrip
-              tone={subjectGaps.length === 0 ? "success" : "warning"}
-              icon={Layers}
-              title={
-                totalSubjectPairs === 0
-                  ? "No subject-section mappings configured"
-                  : subjectGaps.length === 0
-                    ? `All ${totalSubjectPairs} subject-section pairs have a teacher`
-                    : `${subjectGaps.length} of ${totalSubjectPairs} subject-section pairs need a teacher`
-              }
-              subtitle="Each row binds a teacher to a subject in one specific section. Same subject in two sections needs two assignments."
-              stats={[
-                { label: "Mapped",      value: subjectAssigned, tone: "good" },
-                { label: "Gaps",        value: subjectGaps.length, tone: subjectGaps.length === 0 ? "muted" : "bad" },
-                { label: "Total Pairs", value: totalSubjectPairs, tone: "muted" },
-              ]}
-            />
-
-            {/* Section-teaching rows grouped by subject (collapsible) */}
-            <div className="divide-y divide-slate-100">
-              {filteredSubjects.filter(s => (subjectSectionMap.get(s.id)?.assigned.length ?? 0) + (subjectSectionMap.get(s.id)?.unassigned.length ?? 0) > 0).length === 0 ? (
-                <div className="py-16 text-center text-slate-400 text-sm">
-                  {search ? `No subjects matching "${search}"` : (
-                    totalSubjectPairs === 0
-                      ? "No subjects are mapped to any section yet. Map subjects to sections first to assign teachers."
-                      : "No subject-section mappings found."
-                  )}
-                </div>
-              ) : filteredSubjects.map(subject => {
-                const isExpanded = expandedSubjects.has(subject.id);
-                const sectionData = subjectSectionMap.get(subject.id) ?? { assigned: [], unassigned: [] };
-                const totalSec = sectionData.assigned.length + sectionData.unassigned.length;
-                const assignedSec = sectionData.assigned.length;
-                if (totalSec === 0) return null; // hide subjects with no section mappings here
-                const allMapped = sectionData.unassigned.length === 0;
-                const pct = totalSec > 0 ? Math.round((assignedSec / totalSec) * 100) : 0;
-                return (
-                  <div key={subject.id}>
-                    {/* Subject header — click to expand */}
-                    <div onClick={() => toggleSubject(subject.id)}
-                      data-testid="section-teaching-subject-header"
-                      data-subject-name={subject.name}
-                      className={`flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group cursor-pointer ${!allMapped ? "border-l-2 border-amber-400" : ""}`}>
-                      <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${allMapped ? "bg-teal-50" : "bg-amber-50"}`}>
-                        <BookOpen size={15} className={allMapped ? "text-teal-500" : "text-amber-500"} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-slate-800 truncate">{subject.name}</p>
-                          {subject.type && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-md uppercase shrink-0">{subject.type}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-1 max-w-[140px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${allMapped ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <p className="text-[11px] text-slate-500 font-semibold tabular-nums">{assignedSec}/{totalSec}</p>
-                        </div>
-                      </div>
-
-                      {/* Status pill */}
-                      <div className="shrink-0">
-                        {allMapped ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold">
-                            <CheckCircle2 size={11} /> All mapped
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-semibold">
-                            <AlertTriangle size={11} /> {sectionData.unassigned.length} gap{sectionData.unassigned.length > 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Expanded — section list */}
-                    {isExpanded && (
-                      <div className="bg-slate-50/60 border-t border-slate-100">
-                        {sectionData.assigned.map((p, idx) => (
-                          <div key={`a_${p.sectionId}_${idx}`}
-                            data-testid="section-teaching-row"
-                            data-subject-name={subject.name}
-                            data-section-name={p.sectionName}
-                            data-class-name={p.className}
-                            className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-slate-100/60 transition-colors group ${(idx < sectionData.assigned.length - 1 || sectionData.unassigned.length > 0) ? "border-b border-slate-100" : ""}`}>
-                            <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
-                              <Layers size={13} className="text-teal-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-700 truncate">{p.sectionName}</p>
-                              <p className="text-xs text-slate-400 truncate">{p.className}</p>
-                            </div>
-                            <div className="shrink-0">
-                              <AssignedChip
-                                teacher={{ id: p.teacherId, name: p.teacherName }}
-                                onReassign={() => setAssignTarget({
-                                  type: "subject", subjectId: p.subjectId, sectionId: p.sectionId,
-                                  label: `${subject.name} in ${p.sectionName} (${p.className})`,
-                                  currentTeacherId: p.teacherId,
-                                })}
-                              />
-                            </div>
-                            <button onClick={() => navigate(`/section/${p.sectionId}`)}
-                              className="p-1.5 text-slate-300 group-hover:text-teal-400 rounded-lg hover:bg-teal-50 transition-colors shrink-0">
-                              <ChevronRight size={15} />
-                            </button>
-                          </div>
-                        ))}
-                        {sectionData.unassigned.map((g, idx) => (
-                          <div key={`u_${g.sectionId}_${idx}`}
-                            data-testid="section-teaching-row"
-                            data-subject-name={subject.name}
-                            data-section-name={g.sectionName}
-                            data-class-name={g.className}
-                            className={`flex items-center gap-3 pl-14 pr-5 py-2 hover:bg-amber-50/60 transition-colors group bg-amber-50/30 ${idx < sectionData.unassigned.length - 1 ? "border-b border-slate-100" : ""}`}>
-                            <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
-                              <Layers size={13} className="text-rose-400" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-700 truncate">{g.sectionName}</p>
-                              <p className="text-xs text-slate-400 truncate">{g.className}</p>
-                            </div>
-                            <div className="shrink-0">
-                              <UnassignedChip onAssign={() => setAssignTarget({
-                                type: "subject", subjectId: g.subjectId, sectionId: g.sectionId,
-                                label: `${subject.name} in ${g.sectionName} (${g.className})`,
-                              })} />
-                            </div>
-                            <button onClick={() => navigate(`/section/${g.sectionId}`)}
-                              className="p-1.5 text-slate-300 group-hover:text-rose-400 rounded-lg hover:bg-rose-50 transition-colors shrink-0">
-                              <ChevronRight size={15} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}</TabPanel>
-      </TabbedSection>
+        </div>
+      </div>
       </>)}
     </div>
   );
 };
 
 export default AssignmentsPage;
-

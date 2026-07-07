@@ -4,7 +4,7 @@ import {
   AlertTriangle,
   Shield, Phone, Mail, ExternalLink, RefreshCw,
   Edit2, X, Check, MapPin, CreditCard,
-  AlertCircle, FileText, Settings2, UserCircle,
+  AlertCircle, FileText, Settings2, UserCircle, GraduationCap, Loader2,
 } from "lucide-react";
 import api from "../../api/api";
 import PaymentSettingsTab from "./PaymentSettingsTab";
@@ -95,6 +95,100 @@ function configToForm(c: any): ConfigForm {
     schoolType: c.schoolType ?? '', principalName: c.principalName ?? '',
     emergencyContact: c.emergencyContact ?? '',
   };
+}
+
+// ── Admissions & Operations (always-visible; instant toggles) ─────────────────
+// Online admission acceptance is per-session (a school can accept for the new
+// year while the old one winds down), so we surface a toggle for each ACTIVE /
+// ENDING session here as a one-stop operational control. Writes go to the same
+// per-session endpoint the Sessions page uses (`PATCH /session/:id/accept-admission`).
+function AdmissionsOperationsCard({ isAdmin }: { isAdmin: boolean }) {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.getSessions()
+      .then((s: any[]) => setSessions((s ?? []).filter((x: any) => x.status === "ACTIVE" || x.status === "ENDING")))
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (session: any, next: boolean) => {
+    setBusyId(session.id);
+    try {
+      await api.updateAcceptAdmission(session.id, next);
+      setSessions(prev => prev.map(s => (s.id === session.id ? { ...s, acceptAdmission: next } : s)));
+      setFlash({ ok: true, text: next ? `Admissions opened for ${session.name}.` : `Admissions closed for ${session.name}.` });
+    } catch {
+      setFlash({ ok: false, text: "Couldn't update admissions. Please try again." });
+    } finally {
+      setBusyId(null);
+      setTimeout(() => setFlash(null), 3000);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+        <GraduationCap size={14} className="text-slate-400" />
+        <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Admissions &amp; Operations</p>
+      </div>
+      <div className="p-5 space-y-3">
+        <p className="text-xs text-slate-500">
+          Control whether the public admission form accepts new applications. This is set per academic session.
+        </p>
+
+        {flash && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border ${flash.ok ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+            {flash.ok ? <Check size={13} /> : <AlertCircle size={13} />} {flash.text}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-slate-400 text-sm py-3"><Loader2 size={15} className="animate-spin" /> Loading sessions…</div>
+        ) : sessions.length === 0 ? (
+          <p className="text-sm text-slate-400 py-2">No active session. Admissions open once your school is subscribed to a session.</p>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map(s => {
+              const on = !!s.acceptAdmission;
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 border border-slate-200 rounded-xl">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-2">
+                      <Calendar size={13} className="text-slate-400 shrink-0" /> {s.name}
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.status === "ACTIVE" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{s.status}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {on ? "Accepting new admission applications." : "Not accepting applications."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => isAdmin && toggle(s, !on)}
+                    disabled={!isAdmin || busyId === s.id}
+                    title={isAdmin ? "" : "Only ADMIN / PRINCIPAL / DIRECTOR can change this."}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60
+                      ${on ? "bg-emerald-500" : "bg-slate-300"} ${!isAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    {busyId === s.id
+                      ? <Loader2 size={12} className="animate-spin text-white mx-auto" />
+                      : <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-slate-400">
+          Tip: full end-of-session controls (promotions, closing a year) live on the <span className="font-semibold">Sessions</span> page.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // ── Tab: School Profile ───────────────────────────────────────────────────────
@@ -220,8 +314,11 @@ function SchoolProfileTab({ user }: { user: any }) {
         </div>
       )}
 
+      {/* Operational toggles — admissions per session (always visible). */}
+      <AdmissionsOperationsCard isAdmin={isAdmin} />
+
       {/*
-        Operational toggles section was removed:
+        Other operational toggles live where they belong:
           - "Accepting Student Applications" → moved to per-session control on
             the Sessions page (each session has its own acceptAdmission flag).
           - "Online Fee Payments" → moved to the Payments tab where it lives

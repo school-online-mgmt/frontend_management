@@ -5,7 +5,7 @@ import {
     Shield, Search, GraduationCap, UserPlus, Trash2, Pencil, ShieldCheck,
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
-    TrendingUp, Activity, Info, Bus, Trophy, Sparkles, Package,
+    TrendingUp, Activity, Info, Bus, Trophy, Sparkles, Package, CalendarDays,
 } from 'lucide-react';
 import api from '../../api/api';
 import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
@@ -90,6 +90,12 @@ const MODULE_META: Record<AppModule, {
     INVENTORY:     { label: 'Inventory',     icon: Package,        color: 'text-lime-600',    bg: 'bg-lime-50',
         desc: 'Item master, procurement, consumption ledger.',
         pages: ['Inventory'] },
+    HOMEWORK:      { label: 'Homework',      icon: BookMarked,     color: 'text-rose-600',    bg: 'bg-rose-50',
+        desc: 'Assign homework, track & grade submissions.',
+        pages: ['Homework'] },
+    TIMETABLE:     { label: 'Timetable',     icon: CalendarDays,   color: 'text-sky-600',     bg: 'bg-sky-50',
+        desc: 'Build the weekly class timetable.',
+        pages: ['Timetable'] },
 };
 
 const ROLE_CARDS = [
