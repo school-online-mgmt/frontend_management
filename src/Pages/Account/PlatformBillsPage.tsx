@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Receipt, AlertCircle, Building2, Mail, IndianRupee, CheckCircle,
-    Clock, XCircle, Calendar,
+    Clock, XCircle, Calendar, ChevronDown, Layers,
+    ListChecks, CircleDollarSign,
 } from "lucide-react";
 import api from "../../api/api";
 import { useToast } from "../../context/ToastContext";
@@ -28,10 +29,50 @@ const StatusPill = ({ value, isOverdue }: { value: string; isOverdue?: boolean }
     return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${s.bg} ${s.text}`}>{s.icon} {status}</span>;
 };
 
+/** Human label for a module code used in invoice line items. */
+const MODULE_LABEL: Record<string, string> = {
+    PEOPLE: "People", TEACHERS: "Teachers", ACADEMICS: "Academics", STUDIES: "Studies / Exam",
+    ATTENDANCE: "Attendance", LIBRARY: "Library", COMMUNICATION: "Communication", FINANCE: "Finance",
+    TRANSPORT: "Transport", SPORTS: "Sports", INVENTORY: "Inventory", HOMEWORK: "Homework", TIMETABLE: "Timetable",
+};
+
+const StatTile = ({ icon: Icon, label, value, tint, tintText }: { icon: any; label: string; value: React.ReactNode; tint: string; tintText: string }) => (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
+        <div className={`w-10 h-10 ${tint} rounded-xl flex items-center justify-center shrink-0`}><Icon size={18} className={tintText} /></div>
+        <div className="min-w-0"><p className="text-lg font-bold text-slate-900 tabular-nums leading-none">{value}</p><p className="text-[11px] text-slate-500 mt-1">{label}</p></div>
+    </div>
+);
+
+/** Renders the per-module line-item breakdown of an invoice. */
+const LineItems = ({ items }: { items: any[] }) => {
+    if (!items || items.length === 0) return <p className="text-xs text-slate-400 px-4 py-3">No line-item breakdown available for this invoice.</p>;
+    return (
+        <div className="px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><ListChecks size={12} /> Breakdown</p>
+            <div className="rounded-xl border border-slate-100 overflow-hidden">
+                {items.map((li: any, idx: number) => (
+                    <div key={idx} className={`flex items-center justify-between gap-3 px-3 py-2 text-xs ${idx % 2 ? "bg-slate-50/60" : "bg-white"}`}>
+                        <div className="min-w-0">
+                            <p className="font-semibold text-slate-700">{MODULE_LABEL[li.module] ?? li.module ?? "Item"}</p>
+                            <p className="text-[11px] text-slate-400">
+                                {li.description
+                                    ? li.description
+                                    : `₹${li.pricePerSeat}/seat × ${li.seats} seats${li.months ? ` × ${li.months} mo` : ""}`}
+                            </p>
+                        </div>
+                        <span className="font-bold text-slate-800 shrink-0">{fmtINR(li.amountINR)}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 const PlatformBillsPage = () => {
     const qc = useQueryClient();
     const { addToast: toast } = useToast();
     const [paying, setPaying] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState<string | null>(null);
 
     const query = useQuery({
         queryKey: ["platform-bills"],
@@ -90,6 +131,20 @@ const PlatformBillsPage = () => {
                 gradient={MODULE_THEMES.finance}
                 onRefresh={() => qc.invalidateQueries({ queryKey: ["platform-bills"] })}
             />
+
+            {/* Summary tiles */}
+            {(() => {
+                const paidCount = rows.filter(r => r.status === "PAID").length;
+                const paidAmount = rows.filter(r => r.status === "PAID").reduce((s, r) => s + r.amount, 0);
+                return (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <StatTile icon={Receipt} label="Total invoices" value={rows.length} tint="bg-slate-100" tintText="text-slate-600" />
+                        <StatTile icon={CircleDollarSign} label="Outstanding" value={fmtINR(totals.pendingAmountINR)} tint="bg-amber-50" tintText="text-amber-600" />
+                        <StatTile icon={CheckCircle} label="Paid" value={`${paidCount} · ${fmtINR(paidAmount)}`} tint="bg-emerald-50" tintText="text-emerald-600" />
+                        <StatTile icon={AlertCircle} label="Overdue" value={totals.overdueCount ?? 0} tint="bg-rose-50" tintText="text-rose-600" />
+                    </div>
+                );
+            })()}
 
             {/* Overdue banner */}
             {totals.overdueCount > 0 && (
@@ -150,18 +205,29 @@ const PlatformBillsPage = () => {
                     <div className="space-y-2">
                         {rows.map((r) => {
                             const IconEl = r.source === "SUBSCRIPTION" ? Building2 : Mail;
+                            const isOpen = expanded === r.id;
+                            const lineItems = (r.lineItems as any[]) ?? [];
+                            const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
                             return (
-                                <div key={r.id} className={`bg-white border rounded-xl p-4 ${r.isOverdue ? "border-rose-200" : "border-slate-200"}`}>
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 rounded-lg ${r.source === "SUBSCRIPTION" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"}`}>
+                                <div key={r.id} className={`bg-white border rounded-xl overflow-hidden ${r.isOverdue ? "border-rose-200" : "border-slate-200"}`}>
+                                    <div className="p-4 flex items-start gap-3">
+                                        <button onClick={() => setExpanded(isOpen ? null : r.id)}
+                                            className="mt-0.5 w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0"
+                                            title={isOpen ? "Hide breakdown" : "Show breakdown"}>
+                                            <ChevronDown size={15} className={`transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
+                                        </button>
+                                        <div className={`p-2 rounded-lg shrink-0 ${r.source === "SUBSCRIPTION" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"}`}>
                                             <IconEl size={18} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between gap-3">
-                                                <div>
+                                                <div className="min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-semibold text-slate-900">{r.title}</span>
                                                         <StatusPill value={r.status} isOverdue={r.isOverdue} />
+                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.source === "SUBSCRIPTION" ? "bg-emerald-50 text-emerald-600" : "bg-indigo-50 text-indigo-600"}`}>
+                                                            {r.source === "SUBSCRIPTION" ? "Contract" : "Email usage"}
+                                                        </span>
                                                     </div>
                                                     <p className="text-xs text-slate-500 mt-0.5">
                                                         <span className="font-mono">{r.invoiceNumber}</span>
@@ -187,8 +253,22 @@ const PlatformBillsPage = () => {
                                                     )}
                                                 </div>
                                             </div>
+                                            {!isOpen && hasLineItems && (
+                                                <button onClick={() => setExpanded(r.id)} className="text-[11px] text-emerald-600 font-semibold mt-1.5 inline-flex items-center gap-1 hover:underline">
+                                                    <Layers size={11} /> View {lineItems.length}-item breakdown
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
+                                    {isOpen && (
+                                        <div className="border-t border-slate-100 bg-slate-50/40">
+                                            <LineItems items={lineItems} />
+                                            <div className="flex items-center justify-between px-4 pb-3 text-xs">
+                                                <span className="text-slate-500">Invoice total</span>
+                                                <span className="font-bold text-slate-900">{fmtINR(r.amount)}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

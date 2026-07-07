@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Phone, Eye, EyeOff, Loader2, CheckCircle, School } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Lock, Phone, Eye, EyeOff, Loader2, CheckCircle, School, Mail, ShieldCheck } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/api.ts';
 import { useToast } from '../context/ToastContext';
 import { useAuthContext } from '../context/AuthContext';
@@ -9,18 +9,34 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [asSuperAdmin, setAsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ phone?: string; email?: string; password?: string }>({});
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { refresh, loginDirect } = useAuthContext();
+
+  // The super-admin support login is hidden by default; it only appears when the
+  // page is opened with ?debugMode=true. Without the flag the page behaves
+  // exactly like the normal management login (phone + password).
+  const debugMode = searchParams.get('debugMode') === 'true';
+  // Never allow the super-admin path to engage unless the flag is present.
+  const superAdminActive = debugMode && asSuperAdmin;
 
   // Validation function
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
-    
-    if (!phone.trim()) {
+
+    if (superAdminActive) {
+      if (!email.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        newErrors.email = 'Enter a valid email';
+      }
+    } else if (!phone.trim()) {
       newErrors.phone = 'Phone number is required';
     } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
       newErrors.phone = 'Phone number must be exactly 10 digits';
@@ -45,7 +61,9 @@ const Login: React.FC = () => {
     setErrors({});
 
     try {
-      const res = await api.login(phone, password);
+      const res = superAdminActive
+        ? await api.superAdminLogin(email.trim().toLowerCase(), password)
+        : await api.login(phone, password);
       if (res.user?.id) {
         // Set auth state immediately from the login response so navigation works
         // even if the follow-up checkAuth call takes time
@@ -60,7 +78,12 @@ const Login: React.FC = () => {
           permissions: res.user.permissions,
         });
         setIsSuccess(true);
-        addToast(`Welcome back, ${res.user.firstName || 'Admin'}!`, 'success');
+        addToast(
+          res.impersonated
+            ? `Signed in as ${res.user.firstName || 'Admin'} (super-admin support session).`
+            : `Welcome back, ${res.user.firstName || 'Admin'}!`,
+          'success',
+        );
         navigate('/dashboard', { replace: true });
         // Background refresh to get full permissions
         refresh();
@@ -101,32 +124,59 @@ const Login: React.FC = () => {
           )}
 
           <form onSubmit={handleLogin} className="space-y-5" data-testid="login-form">
-            {/* Phone Input */}
-            <div>
-              <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
-                <input 
-                  id="phone-input"
-                  data-testid="phone-input"
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="Enter your 10-digit phone number"
-                  value={phone}
-                  maxLength={10}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '');
-                    setPhone(digits);
-                    if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
-                  }}
-                  disabled={isLoading || isSuccess}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-500 transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    errors.phone ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-emerald-500'
-                  }`}
-                />
+            {superAdminActive ? (
+              /* Super-admin support access → email credential */
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Super-Admin Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
+                  <input
+                    id="email-input"
+                    data-testid="superadmin-email-input"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="admin@edupilots.in"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                    }}
+                    disabled={isLoading || isSuccess}
+                    className={`w-full pl-11 pr-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-500 transition-all outline-none focus:ring-2 focus:ring-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      errors.email ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-amber-500'
+                    }`}
+                  />
+                </div>
+                {errors.email && <p data-testid="email-error" className="text-red-400 text-xs mt-2 font-medium">{errors.email}</p>}
               </div>
-              {errors.phone && <p data-testid="phone-error" className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
-            </div>
+            ) : (
+              /* Normal management login → phone credential */
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
+                  <input
+                    id="phone-input"
+                    data-testid="phone-input"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="Enter your 10-digit phone number"
+                    value={phone}
+                    maxLength={10}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      setPhone(digits);
+                      if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
+                    }}
+                    disabled={isLoading || isSuccess}
+                    className={`w-full pl-11 pr-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-500 transition-all outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      errors.phone ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-emerald-500'
+                    }`}
+                  />
+                </div>
+                {errors.phone && <p data-testid="phone-error" className="text-red-400 text-xs mt-2 font-medium">{errors.phone}</p>}
+              </div>
+            )}
 
             {/* Password Input */}
             <div>
@@ -161,7 +211,33 @@ const Login: React.FC = () => {
               {errors.password && <p data-testid="password-error" className="text-red-400 text-xs mt-2 font-medium">{errors.password}</p>}
             </div>
 
-            <button 
+            {/* Super-admin support access toggle — hidden unless ?debugMode=true */}
+            {debugMode && (
+              <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  data-testid="superadmin-checkbox"
+                  checked={asSuperAdmin}
+                  onChange={(e) => { setAsSuperAdmin(e.target.checked); setErrors({}); }}
+                  disabled={isLoading || isSuccess}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-2 cursor-pointer"
+                />
+                <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-amber-400" /> Login as Super-Admin
+                </span>
+              </label>
+            )}
+
+            {superAdminActive && (
+              <div className="flex items-start gap-2.5 px-3.5 py-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+                <ShieldCheck size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                  Platform support access. Sign in with your <strong>super-admin</strong> credentials to enter this school's portal as its admin. This session is logged for audit.
+                </p>
+              </div>
+            )}
+
+            <button
               id="login-btn"
               data-testid="login-btn"
               type="submit"
