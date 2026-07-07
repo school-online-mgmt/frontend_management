@@ -48,6 +48,7 @@ import SportsHome from "./Pages/Sports/SportsHome.tsx";
 import SportsEventDetail from "./Pages/Sports/SportsEventDetail.tsx";
 import InventoryHub from "./Pages/Inventory/InventoryHub.tsx";
 import HomeworkPage from "./Pages/Homework/HomeworkPage.tsx";
+import DocumentsPage from "./Pages/Documents/DocumentsPage.tsx";
 import TimetablePage from "./Pages/Timetable/TimetablePage.tsx";
 import ModuleGate from "./components/ModuleGate.tsx";
 import AdminRoute from "./components/AdminRoute.tsx";
@@ -73,6 +74,7 @@ function App() {
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/staff" element={<StaffHome />} />
+            <Route path="/documents" element={<DocumentsPage />} />
 
             {/* TEACHERS — teacher onboarding & directory (always-on bundled default) */}
             <Route path="/teacher-home" element={<TeacherHome />} />

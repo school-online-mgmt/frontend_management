@@ -242,6 +242,7 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                 disability: form.disability,
                 disabilityDescription: form.disabilityDescription || undefined,
                 email: form.email,
+                dateOfBirth: form.dateOfBirth,
                 comments: form.comments || undefined,
             });
             onCreated();
