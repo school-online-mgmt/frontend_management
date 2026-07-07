@@ -64,7 +64,7 @@ const JobsPage: React.FC = () => {
 
 const AttendanceReportJobCard: React.FC = () => {
     const qc = useQueryClient();
-    const { showToast } = useToast();
+    const { addToast: showToast } = useToast();
     const months = monthOptions();
     const [selectedIdx, setSelectedIdx] = useState(0);
     const [running, setRunning] = useState(false);
@@ -154,7 +154,7 @@ const AttendanceReportJobCard: React.FC = () => {
 
 const LateFeeSweepJobCard: React.FC = () => {
     const qc = useQueryClient();
-    const { showToast } = useToast();
+    const { addToast: showToast } = useToast();
     const [running, setRunning] = useState(false);
 
     const runsQuery = useQuery({

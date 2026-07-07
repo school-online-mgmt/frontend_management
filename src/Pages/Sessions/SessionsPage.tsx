@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   CalendarDays, X, CheckCircle2, AlertTriangle, Loader2, ChevronRight,
-  Clock, BookOpen, GraduationCap, Hourglass, Lock, Users, ArrowLeft,
-  Hash, ShieldCheck, Layers, Sun, Sparkles, ClipboardCheck, Info,
-  ArrowRight, UserPlus, Play, XCircle, CheckCheck, RotateCcw, Rocket,
-  Archive, Award, TriangleAlert, ChevronDown, ChevronUp,
+  Clock, BookOpen, Hourglass, Lock, Users, ArrowLeft,
+  Hash, ShieldCheck, Layers, Sparkles, ClipboardCheck, Info,
+  UserPlus, Play, CheckCheck, RotateCcw, Rocket,
+  Archive, TriangleAlert, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -138,8 +138,8 @@ const SectionReviewView: React.FC<{
     if (edits.size === 0) return;
     setSaving(true);
     try {
-      await api.updateEndSessionSectionDecisions(sessionId, sectionId, {
-        decisions: Array.from(edits.entries()).map(([academicId, v]) => ({
+      await api.bulkUpdateSectionDecisions(sessionId, sectionId, {
+        updates: Array.from(edits.entries()).map(([academicId, v]) => ({
           academicId, decision: v.decision, note: v.note || undefined,
         })),
       });
@@ -167,7 +167,7 @@ const SectionReviewView: React.FC<{
           <ArrowLeft size={16} />
         </button>
         <div>
-          <h3 className="text-sm font-bold text-slate-900">{data.section.className} · Section {data.section.sectionName}</h3>
+          <h3 className="text-sm font-bold text-slate-900">{data.section.className} · Section {data.section.name}</h3>
           <p className="text-[11px] text-slate-500">Class teacher: {data.section.teacherName ?? "—"}</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ const SectionReviewView: React.FC<{
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-900 truncate">{s.firstName} {s.lastName}</p>
-                  <p className="text-[11px] text-slate-500">#{s.admissionId ?? "—"} · Roll {s.rollNo ?? "—"}</p>
+                  <p className="text-[11px] text-slate-500">Roll {s.rollNo ?? "—"}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {(["PROMOTE", "HOLD_BACK"] as Decision[]).map(d => (

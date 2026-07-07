@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-    Receipt, RefreshCw, AlertCircle, Building2, Mail, IndianRupee, CheckCircle,
+    Receipt, AlertCircle, Building2, Mail, IndianRupee, CheckCircle,
     Clock, XCircle, Calendar,
 } from "lucide-react";
 import api from "../../api/api";
@@ -30,7 +30,7 @@ const StatusPill = ({ value, isOverdue }: { value: string; isOverdue?: boolean }
 
 const PlatformBillsPage = () => {
     const qc = useQueryClient();
-    const { toast } = useToast();
+    const { addToast: toast } = useToast();
     const [paying, setPaying] = useState<string | null>(null);
 
     const query = useQuery({

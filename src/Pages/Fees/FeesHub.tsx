@@ -5,7 +5,7 @@ import {
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
     Users, UserCheck, Receipt, Tag, Globe, Layers,
     GraduationCap, X, Check, ToggleLeft, ToggleRight, School,
-    Filter, Loader2, Clock, Percent, Zap,
+    Filter, Loader2,
     // Summary-tab icons
     BookOpen, Calendar, PieChart, Activity,
 } from 'lucide-react';
@@ -449,7 +449,7 @@ function SummaryTab() {
                                 { key: 'overdue',       label: 'Overdue',       value: summary.overdue,       color: 'rose' },
                                 { key: 'waived',        label: 'Waived',        value: summary.waived,        color: 'slate' },
                                 { key: 'cancelled',     label: 'Cancelled',     value: summary.cancelled,     color: 'slate' },
-                            ].map(b => <StatusPill key={b.key} {...b} />)}
+                            ].map(({ key, ...b }) => <StatusPill key={key} {...b} />)}
                         </div>
                     </div>
 

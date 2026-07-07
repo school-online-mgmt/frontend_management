@@ -288,6 +288,13 @@ deleteSession = async (_id: string) => {
     throw new Error("Sessions are shared and read-only for management. Contact your EduPilots administrator.");
 };
 
+// Toggle acceptAdmission on this tenant's subscription for a given session.
+// The only per-session setting management can flip themselves.
+updateAcceptAdmission = async (id: string, acceptAdmission: boolean) => {
+    const response = await apiClient.patch(`/management/session/${id}/accept-admission`, { acceptAdmission });
+    return response.data;
+};
+
 // End-of-session lifecycle IS per-tenant: each school independently ends
 // its participation. Backend flips the tenant's subscription row through
 // ACTIVE → ENDING → ENDED. See Routes/Management/Session.ts.
