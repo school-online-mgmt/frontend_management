@@ -4,7 +4,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, LogOut, School, Users,
   UserPlus, UserCog, Layers, ClipboardList, Calendar, CreditCard,
-  Menu, X, ChevronDown, Settings, HelpCircle,
+  ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package,
@@ -271,11 +271,7 @@ const Layout = () => {
   const { user, logout } = useAuth();
   const { canUseModule } = useAuthContext();
 
-  // Icon-rail fly-out state: `hovered` is the section under the cursor;
-  // `pinned` is a section kept open after a click. The open panel is
-  // `hovered ?? pinned` so hovering always previews, and a click pins.
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [pinned, setPinned] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const [schoolName, setSchoolName] = useState<string>("EduAdmin");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -420,16 +416,9 @@ const Layout = () => {
     return s.module === null || canUseModule(s.module);
   });
 
-  // The fly-out shows the hovered section, falling back to the pinned one.
-  const openLabel = hovered ?? pinned;
-  const flyoutSection = visibleSections.find(s => s.label === openLabel) ?? null;
-
-  // Close the pinned fly-out whenever the route changes (a page was opened).
-  useEffect(() => { setPinned(null); setHovered(null); }, [location.pathname]);
-
-  /* ── Mobile sidebar (accordion) ──────────────────────────────────────── */
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
-    const showFull = true; // mobile drawer is always expanded
+    const showFull = !collapsed || isMobile;
 
     return (
       <div className="flex flex-col h-full bg-slate-900">
@@ -468,7 +457,10 @@ const Layout = () => {
               if (!section.collapsible || isSingleItem) {
                 return (
                   <div key={section.label}>
-                    {section.collapsible && showFull && (
+                    {/* Only show the section title when it groups more than one
+                        item. Single-item sections (Library, Sports, Homework,
+                        Timetable, Inventory) render as a bare link — no header. */}
+                    {section.collapsible && showFull && section.items.length > 1 && (
                       <p className="px-2.5 mt-3 mb-1 text-[9px] font-semibold text-slate-600 uppercase tracking-widest">{section.label}</p>
                     )}
                     {section.items.map((item) => {
@@ -616,120 +608,22 @@ const Layout = () => {
       {/* Mobile devices see a desktop-required gate instead of the cramped layout */}
       <DesktopOnlyGate />
       {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
-      {/* Desktop icon rail + fly-out.
-          The rail is always visible (one icon per module group). Hovering an
-          icon previews that group's pages in a fly-out panel; clicking a
-          multi-item icon pins the panel open. The panel is a child of the
-          <aside> (absolutely positioned past its width) so moving the cursor
-          from the rail into the panel never triggers the aside's mouse-leave. */}
-      <aside
-        className="hidden lg:flex shrink-0 relative z-30 w-[64px]"
-        onMouseLeave={() => setHovered(null)}
-      >
-        {/* Rail */}
-        <div className="flex flex-col items-center h-full w-[64px] bg-slate-900 border-r border-white/[0.06] py-3">
-          {/* Brand */}
-          <Link to="/dashboard" title={schoolName}
-            className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/25 flex items-center justify-center mb-3 shrink-0 hover:bg-emerald-500/30 transition-colors">
-            <School size={18} className="text-emerald-400" />
-          </Link>
-
-          {/* Section icons */}
-          <div className="flex-1 flex flex-col items-center gap-1 w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {visibleSections.map((section) => {
-              const SectionIcon = section.icon;
-              const active = isSectionActive(section);
-              const single = section.items.length === 1;
-              const isOpen = openLabel === section.label;
-              const cls = `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group shrink-0
-                ${active
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : isOpen
-                    ? "bg-white/[0.08] text-slate-200"
-                    : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`;
-              const inner = (
-                <>
-                  {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-emerald-400 rounded-r-full" />}
-                  <SectionIcon size={18} strokeWidth={active ? 2.2 : 1.8}
-                    className={`transition-transform duration-200 ${active ? "text-emerald-400 scale-110" : "text-slate-400 group-hover:text-slate-200"}`} />
-                </>
-              );
-              return single ? (
-                <Link key={section.label} to={section.items[0]!.path}
-                  onMouseEnter={() => setHovered(section.label)}
-                  onClick={() => { setPinned(null); setHovered(null); }}
-                  title={section.label}
-                  data-testid={`nav-item-${section.items[0]!.path.replace(/\//g, "")}`}
-                  data-nav-label={section.items[0]!.label}
-                  data-active={active ? "true" : undefined}
-                  className={cls}>
-                  {inner}
-                </Link>
-              ) : (
-                <button key={section.label} type="button"
-                  onMouseEnter={() => setHovered(section.label)}
-                  onClick={() => setPinned(p => (p === section.label ? null : section.label))}
-                  title={section.label}
-                  data-testid={`nav-section-${section.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  data-section-label={section.label}
-                  data-active={active ? "true" : undefined}
-                  className={cls}>
-                  {inner}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Bottom: avatar + logout */}
-          <div className="flex flex-col items-center gap-1.5 pt-2 mt-1 border-t border-white/[0.06] w-full shrink-0">
-            <div className="w-9 h-9 bg-emerald-500/20 rounded-full flex items-center justify-center" title={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Account"}>
-              <span className="text-emerald-400 text-[10px] font-bold">{getInitials(user?.firstName, user?.lastName)}</span>
-            </div>
-            <button onClick={handleLogout} title="Sign Out"
-              className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Fly-out panel */}
-        {flyoutSection && (
-          <div
-            onMouseEnter={() => setHovered(flyoutSection.label)}
-            className="absolute left-full top-0 h-full w-[224px] bg-slate-900 border-r border-white/[0.06] shadow-2xl shadow-black/50 flex flex-col z-40"
-          >
-            <div className="h-14 flex items-center px-4 border-b border-white/[0.06] shrink-0">
-              <p className="text-[11px] font-bold text-white uppercase tracking-widest">{flyoutSection.label}</p>
-              {pinned === flyoutSection.label && (
-                <button onClick={() => { setPinned(null); setHovered(null); }} title="Close"
-                  className="ml-auto p-1 rounded-md text-slate-500 hover:text-slate-200 hover:bg-white/10 transition-colors">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {flyoutSection.items.map((item) => {
-                const active = isActive(item.path);
-                return (
-                  <Link key={item.path} to={item.path}
-                    onClick={() => { setPinned(null); setHovered(null); }}
-                    data-testid={`nav-flyout-item-${item.path.replace(/\//g, "")}`}
-                    data-nav-label={item.label}
-                    data-active={active ? "true" : undefined}
-                    className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all duration-150 relative
-                      ${active
-                        ? "bg-emerald-500/15 text-emerald-400 font-semibold shadow-[inset_0_0_0_1px_rgba(16,185,129,0.1)]"
-                        : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200 font-medium"}`}>
-                    {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-emerald-400 rounded-r-full" />}
-                    <item.icon size={15} strokeWidth={active ? 2.2 : 1.8}
-                      className={`shrink-0 ${active ? "text-emerald-400" : "text-slate-500 group-hover:text-slate-300"}`} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      {/* Desktop Sidebar */}
+      <aside className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ease-in-out relative ${collapsed ? "w-[60px]" : "w-[240px]"}`}>
+        {/* Invoke SidebarContent as a plain function call (not as a JSX
+            component) so React diffs the returned JSX in place across
+            route changes. Rendering it as `<SidebarContent />` would
+            create a new component type on every Layout render — that
+            unmounts the <nav> and resets scroll position to 0. */}
+        {SidebarContent({})}
+        {/* Collapse extender tab — matches the h-14 (56px) brand header */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden lg:flex absolute -right-3 top-0 z-20 w-6 h-14 items-center justify-center bg-slate-800 hover:bg-slate-700 border border-white/[0.08] rounded-r-lg text-slate-400 hover:text-slate-200 transition-colors shadow-md"
+        >
+          <ChevronLeft size={13} className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
+        </button>
       </aside>
 
       {/* Mobile Overlay */}
