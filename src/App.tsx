@@ -47,7 +47,10 @@ import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
 import SportsHome from "./Pages/Sports/SportsHome.tsx";
 import SportsEventDetail from "./Pages/Sports/SportsEventDetail.tsx";
 import InventoryHub from "./Pages/Inventory/InventoryHub.tsx";
+import HomeworkPage from "./Pages/Homework/HomeworkPage.tsx";
+import TimetablePage from "./Pages/Timetable/TimetablePage.tsx";
 import ModuleGate from "./components/ModuleGate.tsx";
+import AdminRoute from "./components/AdminRoute.tsx";
 
 function App() {
   return (
@@ -126,8 +129,12 @@ function App() {
               <Route path="/fees/jobs" element={<JobsPage />} />
             </Route>
 
-            {/* Automated jobs — accessible from any module owning a job */}
-            <Route path="/jobs" element={<JobsPage />} />
+            {/* Automated jobs — the standalone /jobs hub is ADMIN-only.
+                Module-scoped job views (/attendance/jobs, /fees/jobs) stay open
+                to those module's users above. */}
+            <Route element={<AdminRoute />}>
+              <Route path="/jobs" element={<JobsPage />} />
+            </Route>
 
             {/* TRANSPORT */}
             <Route element={<ModuleGate module="TRANSPORT" />}>
@@ -145,10 +152,22 @@ function App() {
               <Route path="/inventory" element={<InventoryHub />} />
             </Route>
 
-            {/* Account / support / onboarding — not module-gated */}
-            <Route path="/account" element={<AccountPage />} />
-            <Route path="/platform-bills" element={<PlatformBillsPage />} />
-            <Route path="/support" element={<SupportCenter />} />
+            {/* HOMEWORK — school-wide oversight */}
+            <Route element={<ModuleGate module="HOMEWORK" />}>
+              <Route path="/homework" element={<HomeworkPage />} />
+            </Route>
+
+            {/* TIMETABLE — weekly class timetable editor */}
+            <Route element={<ModuleGate module="TIMETABLE" />}>
+              <Route path="/timetable" element={<TimetablePage />} />
+            </Route>
+
+            {/* Account / billing / support — ADMIN-only (not module-gated). */}
+            <Route element={<AdminRoute />}>
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="/platform-bills" element={<PlatformBillsPage />} />
+              <Route path="/support" element={<SupportCenter />} />
+            </Route>
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
           </Route>

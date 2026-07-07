@@ -705,6 +705,39 @@ export default function AccountPage() {
                 )}
               </div>
             </div>
+
+            {/* Subscription & Contract summary — the school's EduPilots plan at a glance. */}
+            {(() => {
+              const cycle = (data as any)?.activeCycle;
+              const invoices: any[] = (data as any)?.invoices ?? [];
+              if (!cycle) return null;
+              const paidPct = Math.min(100, Math.round(((cycle.paidINR ?? 0) / Math.max(1, cycle.totalINR ?? 0)) * 100));
+              const nextDue = invoices
+                .filter(i => i.status === 'PENDING' || i.status === 'OVERDUE')
+                .sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))[0];
+              const fmt = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
+              const fmtD = (s: string) => s ? new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+              return (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><CreditCard size={15} className="text-violet-500" /> Subscription &amp; Contract</p>
+                    <a href="/platform-bills" className="text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1">
+                      View bills <ExternalLink size={11} />
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div><p className="text-[10px] uppercase tracking-wider text-slate-400">Contract period</p><p className="text-sm font-bold text-slate-800 mt-0.5">{fmtD(cycle.startDate)} → {fmtD(cycle.endDate)}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-slate-400">Seats</p><p className="text-sm font-bold text-slate-800 mt-0.5">{cycle.seatsSnapshot}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-slate-400">Contract value</p><p className="text-sm font-bold text-slate-800 mt-0.5">{fmt(cycle.totalINR)}{cycle.discountPercent > 0 && <span className="text-emerald-600 font-semibold"> · {cycle.discountPercent}% off</span>}</p></div>
+                    <div><p className="text-[10px] uppercase tracking-wider text-slate-400">Next due</p><p className="text-sm font-bold text-slate-800 mt-0.5">{nextDue ? <>{fmt(nextDue.amountINR)} <span className="text-slate-400 font-normal">· {fmtD(nextDue.dueDate)}</span></> : <span className="text-emerald-600">All settled</span>}</p></div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="flex justify-between text-xs mb-1.5"><span className="text-slate-500">Paid so far</span><span className="font-bold text-emerald-700">{fmt(cycle.paidINR)} / {fmt(cycle.totalINR)} ({paidPct}%)</span></div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 transition-all" style={{ width: `${paidPct}%` }} /></div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <TabbedSection

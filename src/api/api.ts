@@ -50,6 +50,12 @@ class API {
     const response = await apiClient.post('/management/auth/login', {phone, password});
     return response.data;
   };
+  // Platform-admin support access: a super-admin signs in with their own email +
+  // password and is logged in AS this school's ADMIN. Tenant resolved by origin.
+  superAdminLogin = async (email: string, password: string) => {
+    const response = await apiClient.post('/management/auth/superadmin-login', { email, password });
+    return response.data;
+  };
   checkAuth = async () => {
     const response = await apiClient.get('/management/auth/verifyAuth');
     return response.data;
@@ -2263,6 +2269,45 @@ createStudent = async (data: {
             success: true;
             options: Array<{ id: string; label: string }>;
         };
+    };
+
+    // ── Homework (management oversight) ───────────────────────────────────────
+    getHomeworkList = async (params: { sessionId?: string; classId?: string; sectionId?: string; subjectId?: string; status?: string }) => {
+        const res = await apiClient.get('/management/homework', { params });
+        return res.data as { count: number; homework: any[] };
+    };
+    getHomeworkInsights = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/homework/insights', { params: sessionId ? { sessionId } : undefined });
+        return res.data as { summary: any; byClass: any[] };
+    };
+    getHomeworkDetail = async (id: string) => {
+        const res = await apiClient.get(`/management/homework/${id}`);
+        return res.data as { homework: any; submissionsByStatus: Array<{ status: string; cnt: number }> };
+    };
+
+    // ── Timetable (management edit) ───────────────────────────────────────────
+    getSectionTimetable = async (sectionId: string, sessionId?: string) => {
+        const res = await apiClient.get(`/management/timetable/section/${sectionId}`, { params: sessionId ? { sessionId } : undefined });
+        return res.data as { sectionId: string; count: number; entries: any[] };
+    };
+    createTimetableEntry = async (data: {
+        sessionId: string; sectionId: string; classId?: string; dayOfWeek: number; periodNumber: number;
+        startTime: string; endTime: string; type?: string; subjectId?: string | null; teacherId?: string | null; room?: string | null; note?: string | null;
+    }) => {
+        const res = await apiClient.post('/management/timetable/entry', data);
+        return res.data as { message: string; entry: any };
+    };
+    updateTimetableEntry = async (id: string, data: Partial<{ startTime: string; endTime: string; type: string; subjectId: string | null; teacherId: string | null; room: string | null; note: string | null }>) => {
+        const res = await apiClient.patch(`/management/timetable/entry/${id}`, data);
+        return res.data as { message: string; entry: any };
+    };
+    deleteTimetableEntry = async (id: string) => {
+        const res = await apiClient.delete(`/management/timetable/entry/${id}`);
+        return res.data as { message: string };
+    };
+    getTimetableConflicts = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/timetable/conflicts', { params: sessionId ? { sessionId } : undefined });
+        return res.data as { conflictCount: number; conflicts: any[] };
     };
 }
 export default new API();
