@@ -7,7 +7,7 @@ import {
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package,
+  KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -39,6 +39,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
       { path: "/students-home", label: "Students", icon: Users },
+      { path: "/documents", label: "Documents", icon: FileText },
       { path: "/staff", label: "Staff Accounts", icon: Settings },
     ],
   },

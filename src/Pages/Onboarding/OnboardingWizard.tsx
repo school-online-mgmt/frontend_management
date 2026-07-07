@@ -40,6 +40,10 @@ interface WizardState {
     books:          BookInput[];
     boardName:      string;
     boardDesc:      string;
+    perClassBoards: boolean;
+    perSectionBoards: boolean;
+    /** Editable annual App Development Fee per student (platform module cost × 12). */
+    appDevFeeAmount: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -69,11 +73,36 @@ function slugify(s: string): string {
 const yr = new Date().getFullYear();
 const defaultSessionName = `${yr}-${String(yr + 1).slice(2)}`;
 
-const mkSubject       = (): SubjectInput  => ({ name: '', bookName: '', type: 'core' });
 const mkCourseFeeItem = (): CourseFeeItem => ({ name: '', feeType: 'MISC', frequency: 'MONTHLY', amount: '' });
 const mkGlobalFeeItem = (): GlobalFeeItem => ({ name: '', feeType: 'MISC', frequency: 'MONTHLY', amount: '' });
-const mkCourse        = (): CourseInput   => ({ name: '', description: '', subjectIndices: [], feeItems: [] });
-const mkClass         = (): ClassInput    => ({ name: '', sections: ['A'], subjects: [mkSubject()], courses: [mkCourse()] });
+
+// ─── Class / section click-to-add helpers ─────────────────────────────────────
+// The canonical class list every school picks from. Section codes build the
+// section names: numbered grades → "1A", named grades → "Nursery-A".
+const CLASS_CATALOGUE: { grade: string; code: string }[] = [
+    { grade: 'Nursery', code: 'Nursery' }, { grade: 'LKG', code: 'LKG' }, { grade: 'UKG', code: 'UKG' },
+    ...Array.from({ length: 12 }, (_, i) => ({ grade: `Class ${i + 1}`, code: String(i + 1) })),
+];
+const SECTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']; // up to 10
+const MAX_SECTIONS = 10;
+
+const codeForGrade = (grade: string): string =>
+    CLASS_CATALOGUE.find(c => c.grade === grade)?.code
+    ?? grade.replace(/^class\s*/i, '').trim()
+    ?? grade;
+
+/** Section display name: numbered grade → "1A"; named grade → "Nursery-A". */
+const sectionName = (grade: string, letter: string): string => {
+    const code = codeForGrade(grade);
+    return /^\d+$/.test(code) ? `${code}${letter}` : `${code}-${letter}`;
+};
+
+/** Build a class with N auto-named sections. */
+const mkClassWithSections = (grade: string, count: number): ClassInput => ({
+    name: grade,
+    sections: SECTION_LETTERS.slice(0, count).map(l => sectionName(grade, l)),
+    subjects: [], courses: [],
+});
 const mkZone          = (): ZoneInput     => ({ name: '', description: '', price: '' });
 const mkBook          = (): BookInput     => ({ title: '', author: '', genre: '', totalCopies: '1' });
 
@@ -342,123 +371,183 @@ const SessionStep: React.FC<{
 
 const ClassesStep: React.FC<{
     classes: ClassInput[];
-    updateClass: (ci: number, cls: ClassInput) => void;
-    addClass: () => void;
-    removeClass: (ci: number) => void;
+    update: (classes: ClassInput[]) => void;
     showErrors: boolean;
-}> = ({ classes, updateClass, addClass, removeClass, showErrors }) => {
-    const addSection = (ci: number) =>
-        updateClass(ci, { ...classes[ci], sections: [...classes[ci].sections, ''] });
-    const removeSection = (ci: number, si: number) =>
-        updateClass(ci, { ...classes[ci], sections: classes[ci].sections.filter((_, i) => i !== si) });
-    const setSection = (ci: number, si: number, v: string) => {
-        const sections = [...classes[ci].sections]; sections[si] = v;
-        updateClass(ci, { ...classes[ci], sections });
+}> = ({ classes, update, showErrors }) => {
+    // Click to add a class from the catalogue (auto-seeds Section A).
+    const addGrade = (grade: string) => {
+        if (classes.some(c => c.name === grade)) return;
+        // Keep catalogue order.
+        const next = [...classes, mkClassWithSections(grade, 1)]
+            .sort((a, b) => CLASS_CATALOGUE.findIndex(c => c.grade === a.name) - CLASS_CATALOGUE.findIndex(c => c.grade === b.name));
+        update(next);
+    };
+    const addAll = () => {
+        const missing = CLASS_CATALOGUE.filter(c => !classes.some(x => x.name === c.grade));
+        update([...classes, ...missing.map(c => mkClassWithSections(c.grade, 1))]
+            .sort((a, b) => CLASS_CATALOGUE.findIndex(c => c.grade === a.name) - CLASS_CATALOGUE.findIndex(c => c.grade === b.name)));
+    };
+    const removeClass = (grade: string) => update(classes.filter(c => c.name !== grade));
+    const patch = (grade: string, sections: string[]) =>
+        update(classes.map(c => c.name === grade ? { ...c, sections } : c));
+
+    const addSection = (cls: ClassInput) => {
+        if (cls.sections.length >= MAX_SECTIONS) return;
+        patch(cls.name, [...cls.sections, sectionName(cls.name, SECTION_LETTERS[cls.sections.length])]);
+    };
+    const removeSection = (cls: ClassInput) => {
+        if (cls.sections.length <= 1) return;
+        patch(cls.name, cls.sections.slice(0, -1));
     };
 
+    const selected = new Set(classes.map(c => c.name));
+
     return (
-        <div className="space-y-4 max-w-2xl">
-            {classes.map((cls, ci) => (
-                <div key={ci} className={`bg-slate-50 border rounded-2xl p-5 transition-colors ${showErrors && !cls.name.trim() ? 'border-red-300' : 'border-slate-200'}`}>
-                    <div className="flex items-start gap-3 mb-4">
-                        <div className="flex-1">
-                            <label className={lbl}>Class Name <span className="text-red-400">*</span></label>
-                            <input data-testid={`wizard-class-name-${ci}`} value={cls.name}
-                                onChange={e => updateClass(ci, { ...cls, name: e.target.value })}
-                                placeholder="e.g. Class 10"
-                                className={errCls(showErrors && !cls.name.trim())} />
-                            {showErrors && !cls.name.trim() && <p className="text-xs text-red-500 mt-1">Class name is required.</p>}
-                        </div>
-                        {classes.length > 1 && (
-                            <button onClick={() => removeClass(ci)}
-                                className="mt-6 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-                                <Trash2 size={15} />
-                            </button>
-                        )}
-                    </div>
-                    <div>
-                        <label className={lbl + ' mb-2'}>Sections <span className="text-red-400">*</span></label>
-                        <div className="flex flex-wrap gap-2">
-                            {cls.sections.map((sec, si) => (
-                                <div key={si}
-                                    className={`flex items-center gap-1.5 bg-white border rounded-xl px-3 py-1.5 shadow-sm transition-colors ${showErrors && !sec.trim() ? 'border-red-400' : 'border-slate-200'}`}>
-                                    <input data-testid={`wizard-class-${ci}-section-${si}`} value={sec} onChange={e => setSection(ci, si, e.target.value)}
-                                        placeholder="A" maxLength={12}
-                                        className="w-14 text-sm font-bold text-slate-700 bg-transparent border-none outline-none text-center" />
-                                    {cls.sections.length > 1 && (
-                                        <button onClick={() => removeSection(ci, si)}
-                                            className="text-slate-300 hover:text-red-400 transition-colors">
-                                            <X size={11} />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                            <button data-testid={`wizard-add-section-${ci}`} onClick={() => addSection(ci)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 border border-dashed border-emerald-300 rounded-xl hover:bg-emerald-50 transition-colors">
-                                <Plus size={12} /> Section
-                            </button>
-                        </div>
-                        {showErrors && cls.sections.some(s => !s.trim()) && (
-                            <p className="text-xs text-red-500 mt-2">All sections must have a name.</p>
-                        )}
-                    </div>
+        <div className="space-y-5 max-w-3xl">
+            {/* Class picker */}
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className={lbl}>Add classes <span className="text-slate-400 font-normal normal-case">(click to add)</span></label>
+                    <button data-testid="wizard-add-all-classes" onClick={addAll}
+                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1">
+                        <Sparkles size={12} /> Add all
+                    </button>
                 </div>
-            ))}
-            <button data-testid="wizard-add-class" onClick={addClass}
-                className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 hover:border-emerald-300 transition-colors flex items-center justify-center gap-2">
-                <Plus size={15} /> Add Another Class
-            </button>
+                <div className="flex flex-wrap gap-2">
+                    {CLASS_CATALOGUE.map(c => {
+                        const on = selected.has(c.grade);
+                        return (
+                            <button key={c.grade} data-testid={`wizard-pick-class-${c.code}`}
+                                onClick={() => on ? removeClass(c.grade) : addGrade(c.grade)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                    on ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600'
+                                }`}>
+                                {on && <Check size={11} className="inline mr-1 -mt-0.5" />}{c.grade}
+                            </button>
+                        );
+                    })}
+                </div>
+                {showErrors && classes.length === 0 && <p className="text-xs text-red-500 mt-2">Add at least one class.</p>}
+            </div>
+
+            {/* Per-class sections */}
+            {classes.length > 0 && (
+                <div className="space-y-2.5">
+                    <label className={lbl}>Sections <span className="text-slate-400 font-normal normal-case">(add/remove with the buttons — up to {MAX_SECTIONS})</span></label>
+                    {classes.map(cls => (
+                        <div key={cls.name} data-testid={`wizard-class-row-${codeForGrade(cls.name)}`}
+                            className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                            <div className="w-24 shrink-0">
+                                <p className="text-sm font-black text-slate-800">{cls.name}</p>
+                                <p className="text-[10px] text-slate-400">{cls.sections.length} section{cls.sections.length !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="flex-1 flex flex-wrap gap-1.5">
+                                {cls.sections.map(sec => (
+                                    <span key={sec} className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm">{sec}</span>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                                <button data-testid={`wizard-remove-section-${codeForGrade(cls.name)}`} onClick={() => removeSection(cls)} disabled={cls.sections.length <= 1}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <X size={13} />
+                                </button>
+                                <button data-testid={`wizard-add-section-${codeForGrade(cls.name)}`} onClick={() => addSection(cls)} disabled={cls.sections.length >= MAX_SECTIONS}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <Plus size={13} />
+                                </button>
+                                <button onClick={() => removeClass(cls.name)}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 ml-1">
+                                    <Trash2 size={13} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
 
 // ─── Step 3: Courses & Subjects ───────────────────────────────────────────────
 
+// A grade default, from the backend catalogue.
+type GradeDefault = {
+    grade: string; sectionCode: string;
+    subjects: { name: string; bookName: string; type: 'core' | 'elective' }[];
+    courses: { name: string; description: string; subjects: string[] }[];
+};
+// Strip the "Class N : " prefix to get the base subject/course name.
+const baseName = (className: string, full: string): string =>
+    full.startsWith(`${className} : `) ? full.slice(`${className} : `.length) : full;
+const prefixed = (className: string, name: string): string => `${className} : ${name}`;
+
 const CoursesStep: React.FC<{
     classes: ClassInput[];
     update: (classes: ClassInput[]) => void;
     showErrors: boolean;
-}> = ({ classes, update, showErrors }) => {
+    defaults: GradeDefault[];
+}> = ({ classes, update, showErrors, defaults }) => {
     const [activeTab, setActiveTab] = useState(0);
     const ci = Math.min(activeTab, classes.length - 1);
     const cls = classes[ci];
+    const def = defaults.find(d => d.grade === cls?.name);
 
     const patchClass = (newCls: ClassInput) => {
         const next = [...classes]; next[ci] = newCls; update(next);
     };
 
-    const addSubject = () => patchClass({ ...cls, subjects: [...cls.subjects, mkSubject()] });
-    const removeSubject = (si: number) => {
-        const subjects = cls.subjects.filter((_, i) => i !== si);
-        const courses = cls.courses.map(cr => ({
-            ...cr,
-            subjectIndices: cr.subjectIndices.filter(idx => idx !== si).map(idx => idx > si ? idx - 1 : idx),
-        }));
-        patchClass({ ...cls, subjects, courses });
-    };
-    const patchSubject = (si: number, s: SubjectInput) => {
-        const subjects = [...cls.subjects]; subjects[si] = s; patchClass({ ...cls, subjects });
+    // Add/remove a subject by its BASE name (stored prefixed with the class).
+    const toggleSubject = (base: string, bookName: string, type: 'core' | 'elective') => {
+        const full = prefixed(cls.name, base);
+        const existingIdx = cls.subjects.findIndex(s => s.name === full);
+        if (existingIdx >= 0) {
+            // Remove + fix course indices.
+            const subjects = cls.subjects.filter((_, i) => i !== existingIdx);
+            const courses = cls.courses.map(cr => ({
+                ...cr,
+                subjectIndices: cr.subjectIndices.filter(idx => idx !== existingIdx).map(idx => idx > existingIdx ? idx - 1 : idx),
+            }));
+            patchClass({ ...cls, subjects, courses });
+        } else {
+            patchClass({ ...cls, subjects: [...cls.subjects, { name: full, bookName, type }] });
+        }
     };
 
-    const addCourse = () => patchClass({ ...cls, courses: [...cls.courses, mkCourse()] });
-    const removeCourse = (cIdx: number) =>
-        patchClass({ ...cls, courses: cls.courses.filter((_, i) => i !== cIdx) });
-    const patchCourse = (cIdx: number, c: CourseInput) => {
-        const courses = [...cls.courses]; courses[cIdx] = c; patchClass({ ...cls, courses });
+    // Add a default course preset: ensure its subjects exist, then create the
+    // course selecting exactly those subjects.
+    const addCoursePreset = (preset: { name: string; description: string; subjects: string[] }) => {
+        const courseName = prefixed(cls.name, preset.name);
+        if (cls.courses.some(c => c.name === courseName)) return;
+        let subjects = [...cls.subjects];
+        for (const base of preset.subjects) {
+            const full = prefixed(cls.name, base);
+            if (!subjects.some(s => s.name === full)) {
+                const d = def?.subjects.find(s => s.name === base);
+                subjects.push({ name: full, bookName: d?.bookName ?? `${base} — Textbook`, type: d?.type ?? 'core' });
+            }
+        }
+        const subjectIndices = preset.subjects
+            .map(base => subjects.findIndex(s => s.name === prefixed(cls.name, base)))
+            .filter(i => i >= 0);
+        patchClass({ ...cls, subjects, courses: [...cls.courses, { name: courseName, description: preset.description, subjectIndices, feeItems: [] }] });
     };
-    const toggleSubject = (cIdx: number, si: number) => {
+    const removeCourse = (cIdx: number) => patchClass({ ...cls, courses: cls.courses.filter((_, i) => i !== cIdx) });
+    const toggleCourseSubject = (cIdx: number, si: number) => {
         const course = cls.courses[cIdx];
         const has = course.subjectIndices.includes(si);
-        patchCourse(cIdx, {
-            ...course,
-            subjectIndices: has
-                ? course.subjectIndices.filter(i => i !== si)
-                : [...course.subjectIndices, si].sort((a, b) => a - b),
-        });
+        const courses = [...cls.courses];
+        courses[cIdx] = { ...course, subjectIndices: has ? course.subjectIndices.filter(i => i !== si) : [...course.subjectIndices, si].sort((a, b) => a - b) };
+        patchClass({ ...cls, courses });
     };
 
+    const selectedSubjectBases = new Set(cls?.subjects.map(s => baseName(cls.name, s.name)) ?? []);
+    const addedCourseNames = new Set(cls?.courses.map(c => c.name) ?? []);
+
+    if (!cls) return <div className="text-sm text-slate-400">Add classes in the previous step first.</div>;
+
     return (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-5 max-w-3xl">
+            {/* Class tabs */}
             {classes.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1" data-testid="wizard-class-tabs">
                     {classes.map((c, i) => (
@@ -466,135 +555,104 @@ const CoursesStep: React.FC<{
                             className={`px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                                 i === ci ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-300'
                             }`}>
-                            {c.name || `Class ${i + 1}`}
+                            {c.name}
                         </button>
                     ))}
                 </div>
             )}
 
-            {/* Subject pool */}
+            <p className="text-xs text-slate-500">
+                Subjects are stored per class (e.g. <b>{cls.name} : English</b>), so the same subject in another class stays distinct.
+                Click to add. Then add one or more courses/streams.
+            </p>
+
+            {/* Suggested subjects (click chips) */}
             <div>
-                <div className="flex items-center justify-between mb-3">
-                    <p className={lbl + ' mb-0'}>
-                        Subjects for {cls.name || `Class ${ci + 1}`} <span className="text-red-400">*</span>
-                    </p>
-                    <button data-testid="wizard-add-subject" onClick={addSubject}
-                        className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
-                        <Plus size={12} /> Add Subject
-                    </button>
-                </div>
-                <div className="space-y-2">
-                    {cls.subjects.map((subj, si) => (
-                        <div key={si} className="grid gap-2 items-start bg-slate-50 border border-slate-200 rounded-xl p-3"
-                            data-testid={`wizard-subject-row-${si}`}
-                            style={{ gridTemplateColumns: '1fr 1fr 120px auto' }}>
-                            <div>
-                                <input data-testid={`wizard-subject-name-${si}`} value={subj.name}
-                                    onChange={e => patchSubject(si, { ...subj, name: e.target.value })}
-                                    placeholder="Subject name *"
-                                    className={errClsXs(showErrors && !subj.name.trim())} />
-                                {showErrors && !subj.name.trim() && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
-                            </div>
-                            <div>
-                                <input data-testid={`wizard-subject-book-${si}`} value={subj.bookName}
-                                    onChange={e => patchSubject(si, { ...subj, bookName: e.target.value })}
-                                    placeholder="Book / textbook *"
-                                    className={errClsXs(showErrors && !subj.bookName.trim())} />
-                                {showErrors && !subj.bookName.trim() && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
-                            </div>
-                            <select data-testid={`wizard-subject-type-${si}`} value={subj.type}
-                                onChange={e => patchSubject(si, { ...subj, type: e.target.value as 'core' | 'elective' })}
-                                className={inpXs}>
-                                <option value="core">Core</option>
-                                <option value="elective">Elective</option>
-                            </select>
-                            {cls.subjects.length > 1 ? (
-                                <button onClick={() => removeSubject(si)}
-                                    className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors justify-self-end">
-                                    <Trash2 size={13} />
+                <p className={lbl + ' mb-2'}>Subjects for {cls.name} <span className="text-red-400">*</span></p>
+                {def ? (
+                    <div className="flex flex-wrap gap-2">
+                        {def.subjects.map(s => {
+                            const on = selectedSubjectBases.has(s.name);
+                            return (
+                                <button key={s.name} type="button"
+                                    data-testid={`wizard-subject-chip-${s.name}`} data-selected={on ? 'true' : 'false'}
+                                    onClick={() => toggleSubject(s.name, s.bookName, s.type)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                        on ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                                    }`}>
+                                    {on && <Check size={11} className="inline mr-1 -mt-0.5" />}{s.name}
+                                    <span className="ml-1 opacity-50 font-normal">{s.type === 'elective' ? '· elective' : ''}</span>
                                 </button>
-                            ) : <div />}
-                        </div>
-                    ))}
-                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <p className="text-xs text-slate-400 italic">No default subjects for this class — add courses below.</p>
+                )}
+                {showErrors && cls.subjects.length === 0 && <p className="text-xs text-red-500 mt-2">Add at least one subject.</p>}
             </div>
 
             <div className="border-t border-slate-100" />
 
-            {/* Courses */}
-            <div className="space-y-4">
-                {cls.courses.map((course, cIdx) => (
-                    <div key={cIdx} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="flex items-start gap-3 p-5 pb-4">
-                            <div className="flex-1 space-y-3">
-                                <div>
-                                    <label className={lbl}>Course Name <span className="text-red-400">*</span></label>
-                                    <input data-testid={`wizard-course-name-${cIdx}`} value={course.name}
-                                        onChange={e => patchCourse(cIdx, { ...course, name: e.target.value })}
-                                        placeholder="e.g. Science"
-                                        className={errCls(showErrors && !course.name.trim())} />
-                                    {showErrors && !course.name.trim() && <p className="text-xs text-red-500 mt-1">Course name is required.</p>}
-                                </div>
-                                <div>
-                                    <label className={lbl}>Description <span className="text-red-400">*</span></label>
-                                    <textarea data-testid={`wizard-course-desc-${cIdx}`} value={course.description}
-                                        onChange={e => patchCourse(cIdx, { ...course, description: e.target.value })}
-                                        rows={2} placeholder="e.g. Covers Physics, Chemistry and Biology for Class 10 students"
-                                        className={errCls(showErrors && !course.description.trim()) + ' resize-none'} />
-                                    {showErrors && !course.description.trim() && <p className="text-xs text-red-500 mt-1">Course description is required.</p>}
-                                </div>
-                            </div>
-                            {cls.courses.length > 1 && (
-                                <button onClick={() => removeCourse(cIdx)}
-                                    className="mt-5 p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
-                                    <Trash2 size={15} />
+            {/* Suggested course presets */}
+            {def && def.courses.length > 0 && (
+                <div>
+                    <p className={lbl + ' mb-2'}>Add a course / stream <span className="text-slate-400 font-normal normal-case">(one class can have several)</span></p>
+                    <div className="flex flex-wrap gap-2">
+                        {def.courses.map(c => {
+                            const added = addedCourseNames.has(prefixed(cls.name, c.name));
+                            return (
+                                <button key={c.name} type="button" disabled={added}
+                                    data-testid={`wizard-course-preset-${c.name}`}
+                                    onClick={() => addCoursePreset(c)} title={c.description}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                        added ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'
+                                    }`}>
+                                    {added ? <Check size={11} className="inline mr-1 -mt-0.5" /> : <Plus size={11} className="inline mr-1 -mt-0.5" />}{c.name}
                                 </button>
-                            )}
-                        </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
-                        <div className="px-5 pb-4 border-t border-slate-50 pt-4">
-                            <p className={lbl + ' mb-2'}>
-                                Subjects in this course <span className="text-red-400">*</span>
-                                <span className="text-[10px] font-normal normal-case text-slate-400 ml-1">
-                                    — a subject can be shared across multiple courses
-                                </span>
-                            </p>
-                            {cls.subjects.length === 0 ? (
-                                <p className="text-xs text-slate-400 italic">Add subjects above first.</p>
-                            ) : (
-                                <>
-                                    <div className="flex flex-wrap gap-2">
-                                        {cls.subjects.map((subj, si) => {
-                                            const selected = course.subjectIndices.includes(si);
-                                            return (
-                                                <button key={si} type="button"
-                                                    data-testid={`wizard-toggle-subject-${cIdx}-${si}`}
-                                                    data-subject-name={subj.name || ''}
-                                                    data-selected={selected ? "true" : "false"}
-                                                    onClick={() => toggleSubject(cIdx, si)}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                                        selected
-                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                                            : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
-                                                    }`}>
-                                                    {selected && <Check size={11} />}
-                                                    {subj.name || `Subject ${si + 1}`}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    {showErrors && course.subjectIndices.length === 0 && (
-                                        <p className="text-xs text-red-500 mt-2">Select at least one subject for this course.</p>
-                                    )}
-                                </>
-                            )}
+            {/* Added courses */}
+            <div className="space-y-3">
+                {cls.courses.map((course, cIdx) => (
+                    <div key={cIdx} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4" data-testid={`wizard-course-card-${cIdx}`}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="min-w-0">
+                                <p className="text-sm font-black text-slate-800">{course.name}</p>
+                                <p className="text-[11px] text-slate-400">{course.description}</p>
+                            </div>
+                            <button onClick={() => removeCourse(cIdx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg shrink-0"><Trash2 size={14} /></button>
                         </div>
+                        <p className={lbl + ' mb-1.5'}>Subjects in this course <span className="text-red-400">*</span></p>
+                        {cls.subjects.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">Add subjects above first.</p>
+                        ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                                {cls.subjects.map((subj, si) => {
+                                    const selected = course.subjectIndices.includes(si);
+                                    return (
+                                        <button key={si} type="button"
+                                            data-testid={`wizard-toggle-subject-${cIdx}-${si}`} data-selected={selected ? 'true' : 'false'}
+                                            onClick={() => toggleCourseSubject(cIdx, si)}
+                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                                                selected ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                                            }`}>
+                                            {selected && <Check size={10} className="inline mr-0.5" />}{baseName(cls.name, subj.name)}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {showErrors && course.subjectIndices.length === 0 && <p className="text-xs text-red-500 mt-2">Select at least one subject.</p>}
                     </div>
                 ))}
-                <button data-testid="wizard-add-course" onClick={addCourse}
-                    className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
-                    <Plus size={15} /> Add Another Course to {cls.name || `Class ${ci + 1}`}
-                </button>
+                {cls.courses.length === 0 && (
+                    <p className="text-xs text-slate-400">{showErrors ? <span className="text-red-500">Add at least one course for {cls.name}.</span> : 'Click a course/stream above to add it.'}</p>
+                )}
             </div>
         </div>
     );
@@ -730,29 +788,83 @@ const CourseFeeStep: React.FC<{
 
 // ─── Step 5: Global Fees ──────────────────────────────────────────────────────
 
+// The App Development Fee card — prefilled platform cost, editable, always shown.
+const AppDevFeeCard: React.FC<{
+    amount: string; onAmount: (v: string) => void;
+    appFee: { annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null;
+    showErrors: boolean;
+}> = ({ amount, onAmount, appFee, showErrors }) => {
+    const amtErr = showErrors && (amount === '' || Number(amount) < 0);
+    return (
+        <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-violet-500 flex items-center justify-center shrink-0"><Sparkles size={16} className="text-white" /></div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-violet-900">App Development Fee <span className="text-[10px] font-bold uppercase bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-md ml-1">Annual · All students</span></p>
+                    <p className="text-xs text-violet-600 mt-0.5">
+                        Charged once a year to every student to cover your school's software platform.
+                        Recommended = your enabled modules’ yearly cost per student{appFee ? <> (₹{appFee.monthlyPerSeat}/mo × 12)</> : ''}.
+                        You can change this amount.
+                    </p>
+                    {appFee && appFee.enabledModules.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            {appFee.enabledModules.map(m => (
+                                <span key={m.module} className="text-[10px] font-semibold bg-white/70 border border-violet-200 text-violet-700 rounded-md px-1.5 py-0.5">{m.label} ₹{m.pricePerSeat}</span>
+                            ))}
+                        </div>
+                    )}
+                    <div className="flex items-end gap-3 mt-3">
+                        <div>
+                            <label className="text-[10px] font-bold text-violet-700 uppercase tracking-wide">Amount / student / year (₹)</label>
+                            <input data-testid="wizard-appdev-fee-amount" type="number" min={0} value={amount}
+                                onChange={e => onAmount(e.target.value)} placeholder="0"
+                                className={`mt-1 block w-40 rounded-xl border px-3 py-2 text-sm font-bold ${amtErr ? 'border-red-400' : 'border-violet-300'} bg-white`} />
+                        </div>
+                        {appFee && String(appFee.annualPerStudent) !== amount && (
+                            <button type="button" onClick={() => onAmount(String(appFee.annualPerStudent))}
+                                className="text-[11px] font-bold text-violet-600 hover:text-violet-800 pb-2.5">Reset to ₹{appFee.annualPerStudent}</button>
+                        )}
+                    </div>
+                    {amtErr && <p className="text-[10px] text-red-500 mt-1">Enter a valid amount (0 or more).</p>}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const GlobalFeeStep: React.FC<{
     items: GlobalFeeItem[];
     update: (items: GlobalFeeItem[]) => void;
     showErrors: boolean;
-}> = ({ items, update, showErrors }) => {
+    appDevAmount: string;
+    onAppDevAmount: (v: string) => void;
+    appFee: { annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null;
+}> = ({ items, update, showErrors, appDevAmount, onAppDevAmount, appFee }) => {
     const add    = () => update([...items, mkGlobalFeeItem()]);
     const remove = (i: number) => update(items.filter((_, idx) => idx !== i));
     const patch  = (i: number, item: GlobalFeeItem) => { const arr = [...items]; arr[i] = item; update(arr); };
 
+    const header = (
+        <>
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                <Landmark size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                    <p className="text-sm font-bold text-blue-800">School-Wide Fee Items</p>
+                    <p className="text-xs text-blue-600 mt-0.5">These fees apply to all students regardless of course — e.g. Development Fund, Smart Class, Sports Day charges.</p>
+                </div>
+            </div>
+            <AppDevFeeCard amount={appDevAmount} onAmount={onAppDevAmount} appFee={appFee} showErrors={showErrors} />
+        </>
+    );
+
     if (items.length === 0) {
         return (
-            <div className="max-w-xl space-y-5">
-                <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-                    <Landmark size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                        <p className="text-sm font-bold text-blue-800">School-Wide Fee Items</p>
-                        <p className="text-xs text-blue-600 mt-0.5">These fees apply to all students regardless of course — e.g. Development Fund, Smart Class, Sports Day charges.</p>
-                    </div>
-                </div>
-                <div className="text-center py-10 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
-                    <Landmark size={24} className="mx-auto text-slate-300 mb-3" />
-                    <p className="text-sm font-bold text-slate-500 mb-1">No global fees yet</p>
-                    <p className="text-xs text-slate-400 mb-4">Skip this step — you can configure school-wide fees later from the Fees hub.</p>
+            <div className="max-w-3xl space-y-5">
+                {header}
+                <div className="text-center py-8 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                    <Landmark size={22} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-500 mb-1">No other global fees</p>
+                    <p className="text-xs text-slate-400 mb-4">Add more school-wide fees, or click Next — you can add them later from the Fees hub.</p>
                     <button data-testid="wizard-add-global-fee" onClick={add}
                         className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors mx-auto">
                         <Plus size={14} /> Add Global Fee Item
@@ -764,13 +876,7 @@ const GlobalFeeStep: React.FC<{
 
     return (
         <div className="max-w-3xl space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-                <Landmark size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                <div>
-                    <p className="text-sm font-bold text-blue-800">School-Wide Fee Items</p>
-                    <p className="text-xs text-blue-600 mt-0.5">These fees apply to all students regardless of their course or class.</p>
-                </div>
-            </div>
+            {header}
 
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="grid gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-2.5 border-b border-slate-100 bg-slate-50"
@@ -969,28 +1075,55 @@ const LibraryStep: React.FC<{
 const NoticeBoardStep: React.FC<{
     name: string; desc: string;
     onName: (v: string) => void; onDesc: (v: string) => void;
-}> = ({ name, desc, onName, onDesc }) => (
-    <div className="space-y-5 max-w-xl">
-        <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-            <Bell size={18} className="text-blue-500 shrink-0 mt-0.5" />
+    classes: ClassInput[];
+    perClass: boolean; perSection: boolean;
+    onPerClass: (v: boolean) => void; onPerSection: (v: boolean) => void;
+}> = ({ name, desc, onName, onDesc, classes, perClass, perSection, onPerClass, onPerSection }) => {
+    const classCount = classes.length;
+    const sectionCount = classes.reduce((s, c) => s + c.sections.length, 0);
+    const Toggle = ({ on, onChange, title, sub }: { on: boolean; onChange: (v: boolean) => void; title: string; sub: string }) => (
+        <button type="button" onClick={() => onChange(!on)}
+            className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-colors ${on ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+            <div className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${on ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
+            <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-800">{title}</p>
+                <p className="text-[11px] text-slate-500">{sub}</p>
+            </div>
+        </button>
+    );
+    return (
+        <div className="space-y-5 max-w-xl">
+            <div className="flex items-start gap-4 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                <Bell size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                    <p className="text-sm font-bold text-blue-800">Notice Boards</p>
+                    <p className="text-xs text-blue-600 mt-1">Create a school-wide board and, optionally, one board per class / section — all in one click.</p>
+                </div>
+            </div>
             <div>
-                <p className="text-sm font-bold text-blue-800">School-Wide Notice Board</p>
-                <p className="text-xs text-blue-600 mt-1">Creates a public board visible to all students, teachers, and parents. You can create more boards after setup.</p>
+                <label className={lbl}>School Board Name</label>
+                <input data-testid="wizard-board-name" value={name} onChange={e => onName(e.target.value)}
+                    placeholder="School Notice Board" className={inp} />
+            </div>
+            <div>
+                <label className={lbl}>Description <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                <textarea data-testid="wizard-board-desc" value={desc} onChange={e => onDesc(e.target.value)} rows={2}
+                    placeholder="Main board for school-wide announcements and circulars"
+                    className={inp + ' resize-none'} />
+            </div>
+            <div className="space-y-2">
+                <Toggle on={perClass} onChange={onPerClass}
+                    title={`A board for every class (${classCount})`}
+                    sub="e.g. “Class 10 — Notice Board”, visible to that class" />
+                <Toggle on={perSection} onChange={onPerSection}
+                    title={`A board for every section (${sectionCount})`}
+                    sub="e.g. “Class 10 - 10A — Notice Board”, visible to that section" />
             </div>
         </div>
-        <div>
-            <label className={lbl}>Board Name</label>
-            <input data-testid="wizard-board-name" value={name} onChange={e => onName(e.target.value)}
-                placeholder="School Notice Board" className={inp} />
-        </div>
-        <div>
-            <label className={lbl}>Description <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-            <textarea data-testid="wizard-board-desc" value={desc} onChange={e => onDesc(e.target.value)} rows={3}
-                placeholder="Main board for school-wide announcements and circulars"
-                className={inp + ' resize-none'} />
-        </div>
-    </div>
-);
+    );
+};
 
 // ─── Step 9: Review & Launch ──────────────────────────────────────────────────
 
@@ -1008,7 +1141,7 @@ const ReviewStep: React.FC<{
     const totalSections = state.classes.reduce((s, c) => s + c.sections.length, 0);
     const totalCourses  = state.classes.reduce((s, c) => s + c.courses.length, 0);
     const totalSubjects = state.classes.reduce((s, c) => s + c.subjects.length, 0);
-    const totalFeeItems = state.classes.reduce((s, c) => s + c.courses.reduce((cs, cr) => cs + cr.feeItems.length, 0), 0) + state.globalFeeItems.length;
+    const totalFeeItems = state.classes.reduce((s, c) => s + c.courses.reduce((cs, cr) => cs + cr.feeItems.length, 0), 0) + state.globalFeeItems.length + (state.appDevFeeAmount !== '' && Number(state.appDevFeeAmount) >= 0 ? 1 : 0);
 
     if (done) {
         return (
@@ -1173,12 +1306,15 @@ const OnboardingWizard: React.FC = () => {
 
             establishedYear: '', boardAffiliation: '', schoolType: '', principalName: '', emergencyContact: '',
         },
-        classes:        [mkClass()],
+        classes:        [],
         globalFeeItems: [],
         zones:          [],
         books:          [],
         boardName:      'School Notice Board',
         boardDesc:      'Main notice board for school-wide announcements',
+        perClassBoards: true,
+        perSectionBoards: false,
+        appDevFeeAmount: '',
     });
 
     // Pre-fill the School Name from the tenant's registered name (set by the
@@ -1199,9 +1335,20 @@ const OnboardingWizard: React.FC = () => {
     const [done,        setDone]        = useState(false);
 
     // ── State helpers ──────────────────────────────────────────────────────────
-    const updateClass = (ci: number, cls: ClassInput) =>
-        setState(p => { const classes = [...p.classes]; classes[ci] = cls; return { ...p, classes }; });
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));
+
+    // Default class → subjects/courses catalogue (drives click-to-add).
+    const [classDefaults, setClassDefaults] = useState<GradeDefault[]>([]);
+    // Recommended annual App Development Fee (platform module cost × 12) + breakdown.
+    const [appFee, setAppFee] = useState<{ annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null>(null);
+    useEffect(() => {
+        api.getClassDefaults().then(r => setClassDefaults(r.grades as GradeDefault[])).catch(() => {});
+        api.getAppDevFee().then(r => {
+            setAppFee(r);
+            // Prefill the editable amount once (management can still override it).
+            setState(p => p.appDevFeeAmount === '' ? { ...p, appDevFeeAmount: String(r.annualPerStudent) } : p);
+        }).catch(() => {});
+    }, []);
 
     // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -1233,6 +1380,8 @@ const OnboardingWizard: React.FC = () => {
                     )
                 );
             case 6:
+                // The App Development Fee amount must be a valid non-negative number.
+                if (state.appDevFeeAmount === '' || Number(state.appDevFeeAmount) < 0 || isNaN(Number(state.appDevFeeAmount))) return false;
                 return globalFeeItems.length === 0
                     || globalFeeItems.every(f => f.name.trim() && f.amount !== '' && Number(f.amount) >= 0);
             case 7: return zones.length === 0 || zones.every(z => z.name.trim() && z.price !== '' && Number(z.price) >= 0);
@@ -1270,6 +1419,8 @@ const OnboardingWizard: React.FC = () => {
                 if (classes.some(c => c.courses.some(cr => cr.feeItems.some(f => f.amount === '' || Number(f.amount) < 0)))) return 'All fee items need a valid amount (0 or more).';
                 return null;
             case 6:
+                if (state.appDevFeeAmount === '' || Number(state.appDevFeeAmount) < 0 || isNaN(Number(state.appDevFeeAmount)))
+                    return 'Enter a valid App Development Fee amount (0 or more).';
                 if (globalFeeItems.some(f => !f.name.trim()))                                return 'All global fee items need a name.';
                 if (globalFeeItems.some(f => f.amount === '' || Number(f.amount) < 0))       return 'All global fee items need a valid amount.';
                 return null;
@@ -1322,7 +1473,7 @@ const OnboardingWizard: React.FC = () => {
         setSubmitError(null);
         setSubmitting(true);
 
-        const { config, classes, globalFeeItems, zones, books, boardName, boardDesc } = state;
+        const { config, classes, globalFeeItems, zones, books, boardName, boardDesc, perClassBoards, perSectionBoards } = state;
 
         try {
             // 0 ── School profile / tenant config
@@ -1362,6 +1513,10 @@ const OnboardingWizard: React.FC = () => {
 
             // 2 ── Classes → sections → subjects → courses
             const courseIdMap = new Map<string, string>();
+            // Captured for notice-board creation: class name → id, and
+            // { classId, className, sectionName, sectionId } per section.
+            const classIdByName = new Map<string, string>();
+            const sectionRefs: { classId: string; className: string; sectionName: string; sectionId: string }[] = [];
 
             for (let classIdx = 0; classIdx < classes.length; classIdx++) {
                 const cls = classes[classIdx];
@@ -1369,11 +1524,14 @@ const OnboardingWizard: React.FC = () => {
                 const classRes = await api.createClass({ sessionId, name: cls.name.trim(), slug: slugify(cls.name.trim()) });
                 const classId: string = classRes.newClass?.id;
                 if (!classId) throw new Error(`Class "${cls.name}" creation did not return an ID.`);
+                classIdByName.set(cls.name, classId);
                 updateLog(idx, 'done');
 
                 idx = addLog(`  └ Creating ${cls.sections.length} section(s) for ${cls.name}…`);
                 for (const secName of cls.sections) {
-                    await api.createSection(classId, { name: secName.trim(), slug: slugify(`${cls.name}-${secName}`) });
+                    const secRes = await api.createSection(classId, { name: secName.trim(), slug: slugify(`${cls.name}-${secName}`) });
+                    const sectionId: string = secRes?.responseData?.id ?? secRes?.responseData?.sectionData?.id;
+                    if (sectionId) sectionRefs.push({ classId, className: cls.name, sectionName: secName.trim(), sectionId });
                 }
                 updateLog(idx, 'done');
 
@@ -1381,7 +1539,9 @@ const OnboardingWizard: React.FC = () => {
                 idx = addLog(`  └ Creating ${cls.subjects.length} subject(s) for ${cls.name}…`);
                 for (const subj of cls.subjects) {
                     const subjRes = await api.createSubject({
-                        name: subj.name.trim(), slug: slugify(`${cls.name}-${subj.name}`),
+                        // subj.name is already class-prefixed ("Class 1 : English"),
+                        // so it produces a session-unique slug on its own.
+                        name: subj.name.trim(), slug: slugify(subj.name),
                         bookName: subj.bookName.trim(), sessionId, type: subj.type,
                     });
                     const subjectId: string = subjRes.subject?.id;
@@ -1394,7 +1554,8 @@ const OnboardingWizard: React.FC = () => {
                     const course = cls.courses[courseIdx];
                     idx = addLog(`  └ Creating course "${course.name}" (${cls.name})…`);
                     const courseRes = await api.createCourse({
-                        name: course.name.trim(), slug: slugify(`${cls.name}-${course.name}`),
+                        // course.name is already class-prefixed ("Class 1 : General").
+                        name: course.name.trim(), slug: slugify(course.name),
                         classId, sessionId, description: course.description.trim(),
                     });
                     const courseId: string = courseRes.course?.id;
@@ -1434,6 +1595,14 @@ const OnboardingWizard: React.FC = () => {
                         });
                     }
                 }
+            }
+            // App Development Fee — annual, global, applies to every student.
+            if (state.appDevFeeAmount !== '' && Number(state.appDevFeeAmount) >= 0) {
+                allFeePayloads.push({
+                    name: 'App Development Fee', feeType: 'DEVELOPMENT',
+                    scope: 'GLOBAL', frequency: 'ANNUAL',
+                    amount: parseFloat(String(state.appDevFeeAmount)) || 0,
+                });
             }
             for (const f of globalFeeItems) {
                 if (!f.name.trim() || f.amount === '') continue;
@@ -1478,10 +1647,24 @@ const OnboardingWizard: React.FC = () => {
                 updateLog(idx, 'done');
             }
 
-            // 6 ── Notice board
+            // 6 ── Notice boards — school-wide + optional per class / per section
             if (boardName.trim()) {
                 idx = addLog('Creating school notice board…');
                 await api.createNoticeBoard({ sessionId, name: boardName.trim(), description: boardDesc.trim() || undefined, visibility: 'PUBLIC' });
+                updateLog(idx, 'done');
+            }
+            if (perClassBoards && classIdByName.size > 0) {
+                idx = addLog(`Creating ${classIdByName.size} class notice board(s)…`);
+                for (const [className, classId] of classIdByName) {
+                    await api.createNoticeBoard({ sessionId, name: `${className} — Notice Board`, visibility: 'CLASS', classId });
+                }
+                updateLog(idx, 'done');
+            }
+            if (perSectionBoards && sectionRefs.length > 0) {
+                idx = addLog(`Creating ${sectionRefs.length} section notice board(s)…`);
+                for (const s of sectionRefs) {
+                    await api.createNoticeBoard({ sessionId, name: `${s.className} - ${s.sectionName} — Notice Board`, visibility: 'SECTION', classId: s.classId, sectionId: s.sectionId });
+                }
                 updateLog(idx, 'done');
             }
 
@@ -1524,7 +1707,8 @@ const OnboardingWizard: React.FC = () => {
     const err         = showErrors ? stepError() : null;
 
     const optionalEmpty = meta.optional && (
-        (step === 6 && state.globalFeeItems.length === 0) ||
+        // Step 6 always shows "Next" — the App Development Fee is prefilled and
+        // meant to be confirmed, not skipped.
         (step === 7 && state.zones.length === 0) ||
         (step === 8 && state.books.length === 0) ||
         (step === 9 && !state.boardName.trim())
@@ -1642,19 +1826,20 @@ const OnboardingWizard: React.FC = () => {
                     {step === 3 && (
                         <ClassesStep
                             classes={state.classes}
-                            updateClass={updateClass}
-                            addClass={() => setState(p => ({ ...p, classes: [...p.classes, mkClass()] }))}
-                            removeClass={ci => setState(p => ({ ...p, classes: p.classes.filter((_, i) => i !== ci) }))}
+                            update={setClasses}
                             showErrors={showErrors}
                         />
                     )}
-                    {step === 4 && <CoursesStep classes={state.classes} update={setClasses} showErrors={showErrors} />}
+                    {step === 4 && <CoursesStep classes={state.classes} update={setClasses} showErrors={showErrors} defaults={classDefaults} />}
                     {step === 5 && <CourseFeeStep classes={state.classes} update={setClasses} showErrors={showErrors} />}
                     {step === 6 && (
                         <GlobalFeeStep
                             items={state.globalFeeItems}
                             update={items => setState(p => ({ ...p, globalFeeItems: items }))}
                             showErrors={showErrors}
+                            appDevAmount={state.appDevFeeAmount}
+                            onAppDevAmount={v => setState(p => ({ ...p, appDevFeeAmount: v }))}
+                            appFee={appFee}
                         />
                     )}
                     {step === 7 && <TransportStep zones={state.zones} update={zs => setState(p => ({ ...p, zones: zs }))} />}
@@ -1664,6 +1849,10 @@ const OnboardingWizard: React.FC = () => {
                             name={state.boardName} desc={state.boardDesc}
                             onName={v => setState(p => ({ ...p, boardName: v }))}
                             onDesc={v => setState(p => ({ ...p, boardDesc: v }))}
+                            classes={state.classes}
+                            perClass={state.perClassBoards} perSection={state.perSectionBoards}
+                            onPerClass={v => setState(p => ({ ...p, perClassBoards: v }))}
+                            onPerSection={v => setState(p => ({ ...p, perSectionBoards: v }))}
                         />
                     )}
                     {step === 10 && (

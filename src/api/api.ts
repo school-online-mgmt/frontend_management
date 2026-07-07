@@ -559,7 +559,7 @@ createStudent = async (data: {
     fatherName: string; motherName: string; gender: string;
     phone: string; address: string; password: string;
     disability: boolean; disabilityDescription?: string;
-    email: string; comments?: string;
+    email: string; dateOfBirth: string; comments?: string;
 }) => {
     const response = await apiClient.post('/management/student/create', data);
     return response.data;
@@ -1474,6 +1474,25 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Default class → subjects & courses catalogue for the onboarding wizard.
+    getClassDefaults = async (): Promise<{ grades: Array<{
+        grade: string; sectionCode: string;
+        subjects: Array<{ name: string; bookName: string; type: 'core' | 'elective' }>;
+        courses: Array<{ name: string; description: string; subjects: string[] }>;
+    }> }> => {
+        const res = await apiClient.get('/management/onboarding/class-defaults');
+        return res.data;
+    };
+
+    // Recommended annual App Development Fee (platform module cost × 12 per seat).
+    getAppDevFee = async (): Promise<{
+        annualPerStudent: number; monthlyPerSeat: number;
+        enabledModules: Array<{ module: string; label: string; pricePerSeat: number }>;
+    }> => {
+        const res = await apiClient.get('/management/onboarding/app-fee');
+        return res.data;
+    };
+
     // ── Staff Management ──────────────────────────────────────────────────────
 
     getStaff = async (): Promise<{ staff: Array<{
@@ -2308,6 +2327,44 @@ createStudent = async (data: {
     getTimetableConflicts = async (sessionId?: string) => {
         const res = await apiClient.get('/management/timetable/conflicts', { params: sessionId ? { sessionId } : undefined });
         return res.data as { conflictCount: number; conflicts: any[] };
+    };
+
+    // ── Documents & Certificates (under People) ───────────────────────────────
+    getCertificateCatalogue = async () => {
+        const res = await apiClient.get('/management/documents/catalogue');
+        return res.data as { catalogue: any[] };
+    };
+    getCertificates = async (params?: { status?: string; studentId?: string }) => {
+        const res = await apiClient.get('/management/documents/certificates', { params });
+        return res.data as { count: number; certificates: any[] };
+    };
+    getCertificatePrefill = async (id: string) => {
+        const res = await apiClient.get(`/management/documents/certificates/${id}/prefill`);
+        return res.data as { certType: string; fields: any[]; prefill: any; defaultExpiryDate: string; infinityDate: string };
+    };
+    publishCertificate = async (id: string, data: { fields: Record<string, any>; expiryDate: string; issueDate?: string }) => {
+        const res = await apiClient.post(`/management/documents/certificates/${id}/publish`, data);
+        return res.data;
+    };
+    rejectCertificate = async (id: string, reason: string) => {
+        const res = await apiClient.post(`/management/documents/certificates/${id}/reject`, { reason });
+        return res.data;
+    };
+    downloadCertificate = async (id: string) => {
+        const res = await apiClient.get(`/management/documents/certificates/${id}/download`);
+        return res.data as { url: string; fileName: string };
+    };
+    getStudentUploads = async (params?: { status?: string; studentId?: string }) => {
+        const res = await apiClient.get('/management/documents/uploads', { params });
+        return res.data as { count: number; uploads: any[] };
+    };
+    viewStudentUpload = async (id: string) => {
+        const res = await apiClient.get(`/management/documents/uploads/${id}/view`);
+        return res.data as { url: string; fileName: string };
+    };
+    verifyStudentUpload = async (id: string, action: 'VERIFY' | 'REJECT', reason?: string) => {
+        const res = await apiClient.patch(`/management/documents/uploads/${id}/verify`, { action, ...(reason ? { reason } : {}) });
+        return res.data;
     };
 }
 export default new API();
