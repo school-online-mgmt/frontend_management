@@ -309,7 +309,7 @@ const SectionDetails = () => {
             <SessionStudentsTable
                 filterSectionId={sectionId}
                 title={`Students in ${section.class?.name ? section.class.name + " · " : ""}${section.name}`}
-                subtitle="Pick a session to see who's enrolled — click any row to open the student profile."
+                subtitle="Click any row to open the student profile."
                 accent="violet"
             />
         </div>

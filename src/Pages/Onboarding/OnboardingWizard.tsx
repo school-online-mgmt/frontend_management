@@ -45,8 +45,11 @@ interface WizardState {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEPS = [
-    { id: 1,  label: 'Academic Session',   icon: CalendarDays, optional: false, desc: 'Define the school year start and end dates' },
-    { id: 2,  label: 'School Profile',     icon: Settings,     optional: false, desc: 'Configure school identity and operational settings' },
+    // Sessions are provisioned by EduPilots and shared across schools —
+    // management can't create them. Step 1 just confirms which session the
+    // rest of the wizard will populate; the id + dates come from context.
+    { id: 1,  label: 'Current Session',    icon: CalendarDays, optional: false, desc: 'The academic year we are setting up for your school' },
+    { id: 2,  label: 'School Profile',     icon: Settings,     optional: false, desc: 'Configure your school identity — logo, address, principal, board' },
     { id: 3,  label: 'Classes & Sections', icon: Layers,       optional: false, desc: 'Add classes with their section divisions' },
     { id: 4,  label: 'Courses & Subjects', icon: BookOpen,     optional: false, desc: 'Configure courses and subjects per class' },
     { id: 5,  label: 'Course Fees',        icon: Receipt,      optional: false, desc: 'Set tuition and fee items for each course' },
@@ -260,45 +263,76 @@ const SettingsStep: React.FC<{
     </div>
 );
 
-// ─── Step 1: Session ──────────────────────────────────────────────────────────
+// ─── Step 1: Current Session (read-only) ──────────────────────────────────
+//
+// Sessions are provisioned by the EduPilots platform and shared across every
+// school. Management doesn't create sessions from the wizard — this step just
+// shows the session the rest of the wizard will populate for. The `data`
+// prop is retained for backward-compat but no longer edited here.
 
 const SessionStep: React.FC<{
-    data: SessionInput;
-    onChange: (f: keyof SessionInput, v: string) => void;
-    showErrors: boolean;
-}> = ({ data, onChange, showErrors }) => {
-    const endInvalid = showErrors && !!data.startDate && !!data.endDate && new Date(data.endDate) <= new Date(data.startDate);
+    session: { id: string; name: string; startDate: string; endDate: string } | null;
+}> = ({ session }) => {
+    if (!session) {
+        return (
+            <div className="max-w-xl">
+                <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <div className="flex items-start gap-3 mb-3">
+                        <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-amber-900">No active session</h3>
+                            <p className="text-sm text-amber-800 mt-1">
+                                Your school isn't subscribed to any academic session yet. Sessions are provisioned
+                                by the EduPilots platform team. Contact your platform administrator to subscribe
+                                your school to a session before continuing setup.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    const durationMonths = Math.round(
+        (new Date(session.endDate).getTime() - new Date(session.startDate).getTime()) / (86400000 * 30)
+    );
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
     return (
-        <div className="space-y-5 max-w-xl">
-            <div>
-                <label className={lbl}>Session Name <span className="text-red-400">*</span></label>
-                <input data-testid="wizard-session-name" value={data.name} onChange={e => onChange('name', e.target.value)}
-                    placeholder={`e.g. ${defaultSessionName}`}
-                    className={errCls(showErrors && !data.name.trim())} />
-                {showErrors && !data.name.trim() && <p className="text-xs text-red-500 mt-1">Session name is required.</p>}
-                <p className="text-xs text-slate-400 mt-1.5">Identifies the academic year across all records (e.g. 2024-25).</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className={lbl}>Start Date <span className="text-red-400">*</span></label>
-                    <input data-testid="wizard-session-start-date" type="date" value={data.startDate} onChange={e => onChange('startDate', e.target.value)}
-                        className={errCls(showErrors && !data.startDate)} />
-                    {showErrors && !data.startDate && <p className="text-xs text-red-500 mt-1">Start date is required.</p>}
+        <div className="space-y-4 max-w-xl">
+            <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-start gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <CalendarDays size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-700">
+                                Setting up for
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-700">
+                                <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                                Active
+                            </span>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight">{session.name}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            {fmt(session.startDate)} → {fmt(session.endDate)} · {durationMonths} months
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <label className={lbl}>End Date <span className="text-red-400">*</span></label>
-                    <input data-testid="wizard-session-end-date" type="date" value={data.endDate} min={data.startDate || undefined}
-                        onChange={e => onChange('endDate', e.target.value)}
-                        className={errCls((showErrors && !data.endDate) || endInvalid)} />
-                    {showErrors && !data.endDate && <p className="text-xs text-red-500 mt-1">End date is required.</p>}
-                    {endInvalid && <p className="text-xs text-red-500 mt-1">Must be after start date.</p>}
-                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                    Classes, sections, courses, subjects and fee structures you create in the next steps will all
+                    belong to this session. Everything you set up here is <strong>additive</strong> — you can add
+                    more later from the individual module pages.
+                </p>
             </div>
-            <div>
-                <label className={lbl}>Description <span className="text-slate-300 normal-case font-normal">(optional)</span></label>
-                <textarea value={data.description} onChange={e => onChange('description', e.target.value)}
-                    rows={2} placeholder="e.g. Academic year for Class 6–12"
-                    className={inp + ' resize-none'} />
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-xs text-blue-900 flex gap-2">
+                    <Sparkles size={13} className="text-blue-500 shrink-0 mt-0.5" />
+                    <span>
+                        <strong>Tip:</strong> There's no rush — press <kbd className="px-1.5 py-0.5 bg-white border border-blue-200 rounded text-[10px] font-mono">Save &amp; continue later</kbd> at
+                        any point to bookmark and come back.
+                    </span>
+                </p>
             </div>
         </div>
     );
@@ -606,9 +640,9 @@ const CourseFeeStep: React.FC<{
             </div>
 
             {classes.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1" data-testid="wizard-course-fee-tabs">
                     {classes.map((c, i) => (
-                        <button key={i} onClick={() => setActiveTab(i)}
+                        <button key={i} data-testid={`wizard-course-fee-tab-${i}`} onClick={() => setActiveTab(i)}
                             className={`px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                                 i === ci ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-300'
                             }`}>
@@ -647,26 +681,32 @@ const CourseFeeStep: React.FC<{
                                     const amtErr  = showErrors && (fi.amount === '' || Number(fi.amount) < 0);
                                     return (
                                         <div key={fIdx} className="grid gap-2 items-start"
+                                            data-testid={`wizard-course-fee-${cIdx}-${fIdx}`}
+                                            data-fee-type={fi.feeType}
                                             style={{ gridTemplateColumns: '2fr 1fr 1fr 110px 32px' }}>
                                             <div>
-                                                <input value={fi.name}
+                                                <input data-testid={`wizard-course-fee-${cIdx}-${fIdx}-name`}
+                                                    value={fi.name}
                                                     onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, name: e.target.value })}
                                                     placeholder="e.g. Lab Charges"
                                                     className={errClsXs(nameErr)} />
                                                 {nameErr && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                                             </div>
-                                            <select value={fi.feeType}
+                                            <select data-testid={`wizard-course-fee-${cIdx}-${fIdx}-type`}
+                                                value={fi.feeType}
                                                 onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, feeType: e.target.value as FeeItemType })}
                                                 className={inpXs}>
                                                 {FEE_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
                                             </select>
-                                            <select value={fi.frequency}
+                                            <select data-testid={`wizard-course-fee-${cIdx}-${fIdx}-frequency`}
+                                                value={fi.frequency}
                                                 onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, frequency: e.target.value as FeeFrequency })}
                                                 className={inpXs}>
                                                 {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                                             </select>
                                             <div>
-                                                <input type="number" value={fi.amount} min={0}
+                                                <input data-testid={`wizard-course-fee-${cIdx}-${fIdx}-amount`}
+                                                    type="number" value={fi.amount} min={0}
                                                     onChange={e => patchFeeItem(cIdx, fIdx, { ...fi, amount: e.target.value })}
                                                     placeholder="0"
                                                     className={errClsXs(amtErr)} />
@@ -713,7 +753,7 @@ const GlobalFeeStep: React.FC<{
                     <Landmark size={24} className="mx-auto text-slate-300 mb-3" />
                     <p className="text-sm font-bold text-slate-500 mb-1">No global fees yet</p>
                     <p className="text-xs text-slate-400 mb-4">Skip this step — you can configure school-wide fees later from the Fees hub.</p>
-                    <button onClick={add}
+                    <button data-testid="wizard-add-global-fee" onClick={add}
                         className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors mx-auto">
                         <Plus size={14} /> Add Global Fee Item
                     </button>
@@ -743,26 +783,31 @@ const GlobalFeeStep: React.FC<{
                         const amtErr  = showErrors && (gi.amount === '' || Number(gi.amount) < 0);
                         return (
                             <div key={i} className="grid gap-2 items-start"
+                                data-testid={`wizard-global-fee-${i}`}
                                 style={{ gridTemplateColumns: '2fr 1fr 1fr 110px 32px' }}>
                                 <div>
-                                    <input value={gi.name}
+                                    <input data-testid={`wizard-global-fee-${i}-name`}
+                                        value={gi.name}
                                         onChange={e => patch(i, { ...gi, name: e.target.value })}
                                         placeholder="e.g. Development Fee"
                                         className={errClsXs(nameErr)} />
                                     {nameErr && <p className="text-[10px] text-red-500 mt-0.5">Required</p>}
                                 </div>
-                                <select value={gi.feeType}
+                                <select data-testid={`wizard-global-fee-${i}-type`}
+                                    value={gi.feeType}
                                     onChange={e => patch(i, { ...gi, feeType: e.target.value as FeeItemType })}
                                     className={inpXs}>
                                     {FEE_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
                                 </select>
-                                <select value={gi.frequency}
+                                <select data-testid={`wizard-global-fee-${i}-frequency`}
+                                    value={gi.frequency}
                                     onChange={e => patch(i, { ...gi, frequency: e.target.value as FeeFrequency })}
                                     className={inpXs}>
                                     {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{FEE_FREQ_LABELS[f.value]}</option>)}
                                 </select>
                                 <div>
-                                    <input type="number" value={gi.amount} min={0}
+                                    <input data-testid={`wizard-global-fee-${i}-amount`}
+                                        type="number" value={gi.amount} min={0}
                                         onChange={e => patch(i, { ...gi, amount: e.target.value })}
                                         placeholder="0"
                                         className={errClsXs(amtErr)} />
@@ -777,7 +822,7 @@ const GlobalFeeStep: React.FC<{
                     })}
                 </div>
             </div>
-            <button onClick={add}
+            <button data-testid="wizard-add-global-fee" onClick={add}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-emerald-600 border border-dashed border-emerald-300 rounded-xl hover:bg-emerald-50 transition-colors">
                 <Plus size={14} /> Add Another Global Fee
             </button>
@@ -803,7 +848,7 @@ const TransportStep: React.FC<{
                 </div>
                 <p className="text-sm font-bold text-slate-700 mb-1">No transport zones yet</p>
                 <p className="text-xs text-slate-400 mb-5">Set up transport zones for school bus fee collection. Can be configured later.</p>
-                <button onClick={add}
+                <button data-testid="wizard-add-zone" onClick={add}
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">
                     <Plus size={14} /> Add Transport Zone
                 </button>
@@ -815,15 +860,18 @@ const TransportStep: React.FC<{
         <div className="space-y-3 max-w-2xl">
             {zones.map((z, i) => (
                 <div key={i} className="grid gap-3 items-end bg-slate-50 border border-slate-200 rounded-2xl p-4"
+                    data-testid={`wizard-zone-${i}`}
                     style={{ gridTemplateColumns: '1fr 1fr auto' }}>
                     <div>
                         <label className={lbl}>Zone Name <span className="text-red-400">*</span></label>
-                        <input value={z.name} onChange={e => set(i, { ...z, name: e.target.value })}
+                        <input data-testid={`wizard-zone-${i}-name`}
+                            value={z.name} onChange={e => set(i, { ...z, name: e.target.value })}
                             placeholder="e.g. North Zone" className={inp} />
                     </div>
                     <div>
                         <label className={lbl}>Monthly Fee (₹) <span className="text-red-400">*</span></label>
-                        <input type="number" value={z.price} min={0}
+                        <input data-testid={`wizard-zone-${i}-price`}
+                            type="number" value={z.price} min={0}
                             onChange={e => set(i, { ...z, price: e.target.value })}
                             placeholder="500" className={inp} />
                     </div>
@@ -833,7 +881,7 @@ const TransportStep: React.FC<{
                     </button>
                 </div>
             ))}
-            <button onClick={add}
+            <button data-testid="wizard-add-zone" onClick={add}
                 className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Another Zone
             </button>
@@ -859,7 +907,7 @@ const LibraryStep: React.FC<{
                 </div>
                 <p className="text-sm font-bold text-slate-700 mb-1">No library books yet</p>
                 <p className="text-xs text-slate-400 mb-5">Seed the library with books for students to browse and borrow. Can be added later.</p>
-                <button onClick={add}
+                <button data-testid="wizard-add-book" onClick={add}
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">
                     <Plus size={14} /> Add Book
                 </button>
@@ -870,7 +918,8 @@ const LibraryStep: React.FC<{
     return (
         <div className="space-y-4 max-w-2xl">
             {books.map((b, i) => (
-                <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-4"
+                    data-testid={`wizard-book-${i}`}>
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Book {i + 1}</p>
                         <button onClick={() => remove(i)}
@@ -881,29 +930,33 @@ const LibraryStep: React.FC<{
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className={lbl}>Title <span className="text-red-400">*</span></label>
-                            <input value={b.title} onChange={e => set(i, { ...b, title: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-title`}
+                                value={b.title} onChange={e => set(i, { ...b, title: e.target.value })}
                                 placeholder="Book title" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Author <span className="text-red-400">*</span></label>
-                            <input value={b.author} onChange={e => set(i, { ...b, author: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-author`}
+                                value={b.author} onChange={e => set(i, { ...b, author: e.target.value })}
                                 placeholder="Author name" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Genre</label>
-                            <input value={b.genre} onChange={e => set(i, { ...b, genre: e.target.value })}
+                            <input data-testid={`wizard-book-${i}-genre`}
+                                value={b.genre} onChange={e => set(i, { ...b, genre: e.target.value })}
                                 placeholder="Fiction, Science…" className={inp} />
                         </div>
                         <div>
                             <label className={lbl}>Total Copies</label>
-                            <input type="number" value={b.totalCopies} min={1}
+                            <input data-testid={`wizard-book-${i}-copies`}
+                                type="number" value={b.totalCopies} min={1}
                                 onChange={e => set(i, { ...b, totalCopies: e.target.value })}
                                 placeholder="5" className={inp} />
                         </div>
                     </div>
                 </div>
             ))}
-            <button onClick={add}
+            <button data-testid="wizard-add-book" onClick={add}
                 className="w-full py-3 text-sm font-bold text-emerald-600 border-2 border-dashed border-emerald-200 rounded-2xl hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Another Book
             </button>
@@ -943,13 +996,14 @@ const NoticeBoardStep: React.FC<{
 
 const ReviewStep: React.FC<{
     state: WizardState;
+    session: { id: string; name: string; startDate: string; endDate: string } | null;
     log: LogEntry[];
     submitting: boolean;
     error: string | null;
     done: boolean;
     onSubmit: () => void;
     onRetry: () => void;
-}> = ({ state, log, submitting, error, done, onSubmit, onRetry }) => {
+}> = ({ state, session, log, submitting, error, done, onSubmit, onRetry }) => {
     const totalClasses  = state.classes.length;
     const totalSections = state.classes.reduce((s, c) => s + c.sections.length, 0);
     const totalCourses  = state.classes.reduce((s, c) => s + c.courses.length, 0);
@@ -1041,8 +1095,12 @@ const ReviewStep: React.FC<{
                         <CalendarDays size={13} className="text-emerald-600" />
                         <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Academic Session</p>
                     </div>
-                    <p className="text-base font-black text-emerald-900">{state.session.name}</p>
-                    <p className="text-xs text-emerald-600 mt-1">{state.session.startDate} → {state.session.endDate}</p>
+                    <p className="text-base font-black text-emerald-900">{session?.name ?? '—'}</p>
+                    <p className="text-xs text-emerald-600 mt-1">
+                        {session?.startDate ? new Date(session.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                        {' → '}
+                        {session?.endDate ? new Date(session.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </p>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
@@ -1098,7 +1156,10 @@ const ReviewStep: React.FC<{
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
 const OnboardingWizard: React.FC = () => {
-    const { refetch, forceComplete } = useOnboarding();
+    const { refetch, forceComplete, status } = useOnboarding();
+    // Session comes from the tenant's active subscription — no more manual
+    // create. If null, step 1 shows a "contact platform admin" empty state.
+    const onboardingSession = status?.session ?? null;
     const queryClient = useQueryClient();
 
     const [step, setStep]             = useState(1);
@@ -1137,11 +1198,13 @@ const OnboardingWizard: React.FC = () => {
     // ── Validation ─────────────────────────────────────────────────────────────
 
     const canProceed = (): boolean => {
-        const { session, config, classes, globalFeeItems, zones, books } = state;
+        const { config, classes, globalFeeItems, zones, books } = state;
         switch (step) {
             case 1:
-                return !!(session.name.trim() && session.startDate && session.endDate
-                    && new Date(session.endDate) > new Date(session.startDate));
+                // Step 1 is now the read-only current-session card. We can
+                // only proceed if the tenant is actually subscribed to a
+                // session (checked via onboarding context).
+                return !!onboardingSession;
             case 2:
                 return !!config.schoolName.trim();
             case 3:
@@ -1173,13 +1236,10 @@ const OnboardingWizard: React.FC = () => {
     };
 
     const stepError = (): string | null => {
-        const { session, config, classes, globalFeeItems, zones, books } = state;
+        const { config, classes, globalFeeItems, zones, books } = state;
         switch (step) {
             case 1:
-                if (!session.name.trim())  return 'Session name is required.';
-                if (!session.startDate)    return 'Start date is required.';
-                if (!session.endDate)      return 'End date is required.';
-                if (new Date(session.endDate) <= new Date(session.startDate)) return 'End date must be after start date.';
+                if (!onboardingSession) return 'Your school is not subscribed to any session. Contact your EduPilots administrator.';
                 return null;
             case 2:
                 if (!config.schoolName.trim()) return 'School name is required.';
@@ -1254,7 +1314,7 @@ const OnboardingWizard: React.FC = () => {
         setSubmitError(null);
         setSubmitting(true);
 
-        const { session, config, classes, globalFeeItems, zones, books, boardName, boardDesc } = state;
+        const { config, classes, globalFeeItems, zones, books, boardName, boardDesc } = state;
 
         try {
             // 0 ── School profile / tenant config
@@ -1282,17 +1342,14 @@ const OnboardingWizard: React.FC = () => {
             });
             updateLog(idx, 'done');
 
-            // 1 ── Academic session
-            idx = addLog(`Creating academic session "${session.name}"…`);
-            const sessionRes = await api.createSession({
-                name:      session.name.trim(),
-                slug:      slugify(session.name.trim()),
-                startDate: session.startDate,
-                endDate:   session.endDate,
-                ...(session.description.trim() ? { description: session.description.trim() } : {}),
-            });
-            const sessionId: string = sessionRes.session?.id;
-            if (!sessionId) throw new Error('Session creation did not return an ID.');
+            // 1 ── Academic session — use the tenant's active subscription
+            //      session. Management can't create sessions (they're global,
+            //      provisioned by EduPilots) so we just plug the id through.
+            if (!onboardingSession) {
+                throw new Error('No active session available. Contact your EduPilots administrator.');
+            }
+            const sessionId: string = onboardingSession.id;
+            idx = addLog(`Setting up "${onboardingSession.name}"…`);
             updateLog(idx, 'done');
 
             // 2 ── Classes → sections → subjects → courses
@@ -1566,7 +1623,7 @@ const OnboardingWizard: React.FC = () => {
                         </div>
                     )}
 
-                    {step === 1 && <SessionStep data={state.session} onChange={setSession} showErrors={showErrors} />}
+                    {step === 1 && <SessionStep session={onboardingSession} />}
                     {step === 2 && (
                         <SettingsStep
                             data={state.config}
@@ -1603,7 +1660,8 @@ const OnboardingWizard: React.FC = () => {
                     )}
                     {step === 10 && (
                         <ReviewStep
-                            state={state} log={submitLog} submitting={submitting}
+                            state={state} session={onboardingSession}
+                            log={submitLog} submitting={submitting}
                             error={submitError} done={done}
                             onSubmit={handleSubmit} onRetry={handleRetry}
                         />

@@ -278,27 +278,27 @@ createSession = async (body: {
     return response.data;
 };
 
-// Update Session
-updateSession = async (id: string, body: {
-    slug?: string; name?: string; startDate?: string; endDate?: string;
-    acceptAdmission?: boolean;
-}) => {
-    const response = await apiClient.put(`/management/session/${id}`, body);
-    return response.data;
+// Sessions are shared across every tenant on the platform. The session
+// record itself (name, slug, dates) is superadmin-managed — so edit / delete
+// / create stay as read-only stubs on the management side.
+updateSession = async (_id: string, _body: unknown) => {
+    throw new Error("Sessions are shared and read-only for management. Contact your EduPilots administrator.");
+};
+deleteSession = async (_id: string) => {
+    throw new Error("Sessions are shared and read-only for management. Contact your EduPilots administrator.");
 };
 
-// Delete Session
-deleteSession = async (id: string) => {
-    const response = await apiClient.delete(`/management/session/${id}`);
-    return response.data;
-};
-
-// ── Session End Workflow ───────────────────────────────────────────────
+// End-of-session lifecycle IS per-tenant: each school independently ends
+// its participation. Backend flips the tenant's subscription row through
+// ACTIVE → ENDING → ENDED. See Routes/Management/Session.ts.
 initiateEndSession = async (id: string) => {
     const response = await apiClient.post(`/management/session/${id}/initiate-end`);
-    return response.data;
+    return response.data as {
+        message: string;
+        sessionId: string;
+        studentsToDecide: number;
+    };
 };
-
 cancelEndSession = async (id: string) => {
     const response = await apiClient.post(`/management/session/${id}/cancel-end`);
     return response.data;
@@ -316,7 +316,12 @@ getEndSessionProgress = async (id: string) => {
 
 endSession = async (id: string) => {
     const response = await apiClient.post(`/management/session/${id}/end`);
-    return response.data;
+    return response.data as {
+        message: string;
+        sessionId: string;
+        promoted: number;
+        heldBack: number;
+    };
 };
 
 // Per-section review (acknowledgement is purely UI-side, no DB).
@@ -1051,7 +1056,16 @@ createStudent = async (data: {
         const res = await apiClient.patch("/management/fees/invoices/mark-overdue");
         return res.data;
     };
-    getFeeSummary = async (params?: { month?: number; year?: number }) => {
+    getFeeSummary = async (params?: {
+        month?: number;
+        year?: number;
+        sessionId?: string;
+        classId?: string;
+        courseId?: string;
+        sectionId?: string;
+        status?: string;
+        invoiceType?: string;
+    }) => {
         const res = await apiClient.get("/management/fees/summary", { params });
         return res.data;
     };
@@ -1063,14 +1077,31 @@ createStudent = async (data: {
         return res.data as { structures: Array<{ id: string; name: string; sessionId: string; sessionName: string; isActive: boolean; itemCount: number; createdAt: string }> };
     };
 
-    createFeeStructure = async (data: { sessionId: string; name: string; description?: string; isActive: boolean }) => {
+    createFeeStructure = async (data: {
+        sessionId: string; name: string; description?: string; isActive: boolean;
+        lateFeeEnabled?: boolean; lateFeeGraceDays?: number;
+        lateFeeFlatAmount?: number; lateFeePercent?: number;
+        lateFeeMaxAmount?: number; lateFeeCompound?: boolean;
+    }) => {
         const res = await apiClient.post('/management/fees/structures', data);
         return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean } };
     };
 
     getFeeStructureById = async (id: string) => {
         const res = await apiClient.get(`/management/fees/structures/${id}`);
-        return res.data as { structure: { id: string; name: string; sessionId: string; isActive: boolean; items: FeeStructureItem[] } };
+        return res.data as {
+            structure: {
+                id: string; name: string; sessionId: string; isActive: boolean;
+                description?: string | null;
+                lateFeeEnabled?: boolean;
+                lateFeeGraceDays?: number;
+                lateFeeFlatAmount?: number;
+                lateFeePercent?: number;
+                lateFeeMaxAmount?: number;
+                lateFeeCompound?: boolean;
+                items: FeeStructureItem[];
+            };
+        };
     };
 
     createFeeStructureItem = async (structureId: string, data: {
@@ -1094,7 +1125,12 @@ createStudent = async (data: {
         return res.data;
     };
 
-    updateFeeStructure = async (structureId: string, data: { name?: string; description?: string; isActive?: boolean }) => {
+    updateFeeStructure = async (structureId: string, data: {
+        name?: string; description?: string; isActive?: boolean;
+        lateFeeEnabled?: boolean; lateFeeGraceDays?: number;
+        lateFeeFlatAmount?: number; lateFeePercent?: number;
+        lateFeeMaxAmount?: number; lateFeeCompound?: boolean;
+    }) => {
         const res = await apiClient.patch(`/management/fees/structures/${structureId}`, data);
         return res.data as { structure: { id: string; name: string; isActive: boolean } };
     };
@@ -1406,16 +1442,19 @@ createStudent = async (data: {
     // Onboarding
     getOnboardingStatus = async (): Promise<{
         isComplete: boolean;
+        session: { id: string; name: string; slug: string; startDate: string; endDate: string } | null;
         steps: {
-            session:          { complete: boolean; count: number };
-            classAndSection:  { complete: boolean; classCount: number; sectionCount: number };
-            subjectAndCourse: { complete: boolean; subjectCount: number; courseCount: number };
-            teacher:          { complete: boolean; count: number };
-            principal:        { complete: boolean; count: number };
-            fees:             { complete: boolean; courseFeeCount: number; feeStructureCount: number };
-            transport:        { complete: boolean; count: number };
-            noticeBoard:      { complete: boolean; count: number };
+            schoolProfile: { complete: boolean; required: boolean; detail: string | null };
+            classes:       { complete: boolean; required: boolean; count: number };
+            sections:      { complete: boolean; required: boolean; count: number };
+            subjects:      { complete: boolean; required: boolean; count: number };
+            courses:       { complete: boolean; required: boolean; count: number };
+            feeStructure:  { complete: boolean; required: boolean; count: number };
+            transport:     { complete: boolean; required: boolean; count: number };
+            library:       { complete: boolean; required: boolean; count: number };
+            noticeBoard:   { complete: boolean; required: boolean; count: number };
         };
+        progress: { completed: number; total: number; percent: number };
     }> => {
         const res = await apiClient.get('/management/onboarding/status');
         return res.data;
@@ -1456,6 +1495,21 @@ createStudent = async (data: {
 
     updateStaffPermissions = async (id: string, permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>) => {
         const res = await apiClient.put(`/management/staff/${id}/permissions`, { permissions });
+        return res.data;
+    };
+
+    /**
+     * Returns which modules the tenant has subscribed to. The staff-editor
+     * UI uses this to render subscription badges on the permission grid, so
+     * admins see which grants will actually take effect right now vs. which
+     * are dormant (awaiting a module subscription).
+     */
+    getStaffAllowedModules = async (): Promise<{
+        all: string[];
+        enabled: string[];
+        alwaysOn: string[];
+    }> => {
+        const res = await apiClient.get('/management/staff/allowed-modules');
         return res.data;
     };
 
@@ -1668,50 +1722,66 @@ createStudent = async (data: {
     };
 
     // ── Platform bills (management → platform) ──────────────────────────────
-    getPlatformBills = async (status?: string) => {
-        const res = await apiClient.get("/management/platform-bills", {
-            params: status ? { status } : {},
-        });
-        return res.data as {
-            summary: { total: number; pendingAmount: number; paidAmount: number };
-            bills: Array<{
+    getPlatformBills = async () => {
+        const res = await apiClient.get("/management/platform-bills");
+        return res.data.data as {
+            rows: Array<{
+                source: "SUBSCRIPTION" | "EMAIL";
                 id: string;
-                source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE";
-                label: string;
+                cycleId: string | null;
+                title: string;
                 amount: number;
                 status: string;
+                dueDate: string | null;
                 paidAt: string | null;
-                createdAt: string;
-                extra?: Record<string, unknown>;
+                paidVia: string | null;
+                invoiceNumber: string;
+                lineItems: unknown;
+                isOverdue: boolean;
             }>;
+            totals: { pendingCount: number; overdueCount: number; pendingAmountINR: number };
+            activeCycle: {
+                id: string;
+                cycleNumber: number;
+                startDate: string;
+                endDate: string;
+                installments: number;
+                seatsSnapshot: number;
+                totalINR: number;
+                paidINR: number;
+                status: string;
+                discountPercent: number;
+            } | null;
         };
     };
 
-    createPlatformBillBulkOrder = async (items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>) => {
-        const res = await apiClient.post("/management/platform-bills/pay-multiple/create-order", { items });
+    getPlatformBillsOverdueSummary = async () => {
+        const res = await apiClient.get("/management/platform-bills/overdue-summary");
+        return res.data.data as {
+            count: number;
+            totalAmountINR: number;
+            subscription: Array<{ id: string; invoiceNumber: string; amount: number; dueDate: string }>;
+            email: Array<{ id: string; invoiceNumber: string; amount: number; periodEnd: string }>;
+        };
+    };
+
+    createPlatformBillOrder = async (invoiceId: string) => {
+        const res = await apiClient.post(`/management/platform-bills/${invoiceId}/create-order`);
         return res.data as {
             orderId: string;
-            amount: number;
-            currency: string;
-            keyId: string | null;
-            billsCount: number;
-            totalAmount: number;
-            items: Array<{ source: string; id: string; amount: number; label: string }>;
+            keyId: string;
+            amountINR: number;
+            invoiceNumber: string;
         };
     };
 
-    verifyPlatformBillBulkOrder = async (payload: {
+    verifyPlatformBillOrder = async (invoiceId: string, payload: {
         razorpayOrderId: string;
         razorpayPaymentId: string;
         razorpaySignature: string;
-        items: Array<{ source: "ADMISSION_CHARGE" | "EMAIL_BILL" | "SAAS_INVOICE"; id: string }>;
     }) => {
-        const res = await apiClient.post("/management/platform-bills/pay-multiple/verify", payload);
-        return res.data as {
-            message: string;
-            count: number;
-            items: Array<{ source: string; id: string; amount: number; label: string }>;
-        };
+        const res = await apiClient.post(`/management/platform-bills/${invoiceId}/verify`, payload);
+        return res.data;
     };
 
     // ── Bulk fee invoice payment (school-side, tenant Razorpay) ─────────────
@@ -1776,6 +1846,414 @@ createStudent = async (data: {
             failed: number;
             recipientCount: number;
             reasons?: string[];
+        };
+    };
+
+    // ─── SPORTS ──────────────────────────────────────────────────────────────
+    listSports = async () => {
+        const res = await apiClient.get("/management/sports/sports");
+        return res.data.data as Array<{ id: string; name: string; slug: string; category: string; description: string | null; isActive: boolean }>;
+    };
+    createSport = async (payload: { name: string; category?: string; description?: string }) => {
+        const res = await apiClient.post("/management/sports/sports", payload);
+        return res.data.data;
+    };
+    updateSport = async (id: string, payload: Partial<{ name: string; category: string; description: string }>) => {
+        const res = await apiClient.patch(`/management/sports/sports/${id}`, payload);
+        return res.data.data;
+    };
+    deleteSport = async (id: string) => {
+        const res = await apiClient.delete(`/management/sports/sports/${id}`);
+        return res.data.data;
+    };
+    listSportsEvents = async (filters: { sessionId?: string; sportId?: string; status?: string } = {}) => {
+        const res = await apiClient.get("/management/sports/events", { params: filters });
+        return res.data.data as Array<any>;
+    };
+    getSportsEvent = async (id: string) => {
+        const res = await apiClient.get(`/management/sports/events/${id}`);
+        return res.data.data;
+    };
+    createSportsEvent = async (payload: any) => {
+        const res = await apiClient.post("/management/sports/events", payload);
+        return res.data.data;
+    };
+    updateSportsEvent = async (id: string, payload: any) => {
+        const res = await apiClient.patch(`/management/sports/events/${id}`, payload);
+        return res.data.data;
+    };
+    publishSportsEvent = async (id: string) => {
+        const res = await apiClient.post(`/management/sports/events/${id}/publish`);
+        return res.data.data;
+    };
+    openSportsEnrollment = async (id: string) => {
+        const res = await apiClient.post(`/management/sports/events/${id}/open-enrollment`);
+        return res.data.data;
+    };
+    closeSportsEnrollment = async (id: string) => {
+        const res = await apiClient.post(`/management/sports/events/${id}/close-enrollment`);
+        return res.data.data;
+    };
+    completeSportsEvent = async (id: string) => {
+        const res = await apiClient.post(`/management/sports/events/${id}/complete`);
+        return res.data.data;
+    };
+    cancelSportsEvent = async (id: string, reason?: string) => {
+        const res = await apiClient.delete(`/management/sports/events/${id}`, { data: { reason } });
+        return res.data.data;
+    };
+    addSportsCoach = async (eventId: string, payload: { teacherId: string; role?: "HEAD" | "ASSISTANT" }) => {
+        const res = await apiClient.post(`/management/sports/events/${eventId}/coaches`, payload);
+        return res.data.data;
+    };
+    removeSportsCoach = async (eventId: string, coachId: string) => {
+        const res = await apiClient.delete(`/management/sports/events/${eventId}/coaches/${coachId}`);
+        return res.data.data;
+    };
+    listSportsEnrollments = async (eventId: string, status?: string) => {
+        const res = await apiClient.get(`/management/sports/events/${eventId}/enrollments`, { params: { status } });
+        return res.data.data as Array<any>;
+    };
+    decideSportsEnrollment = async (enrollmentId: string, decision: "ACCEPT" | "REJECT" | "WAITLIST", rejectionReason?: string) => {
+        const res = await apiClient.patch(`/management/sports/enrollments/${enrollmentId}/decide`, { decision, rejectionReason });
+        return res.data.data;
+    };
+    getStudentSportsProfile = async (studentId: string) => {
+        const res = await apiClient.get(`/management/sports/students/${studentId}/sports-profile`);
+        return res.data.data;
+    };
+    updateStudentSportsProfile = async (studentId: string, payload: any) => {
+        const res = await apiClient.put(`/management/sports/students/${studentId}/sports-profile`, payload);
+        return res.data.data;
+    };
+    listSportsIncidents = async (eventId: string) => {
+        const res = await apiClient.get(`/management/sports/events/${eventId}/incidents`);
+        return res.data.data as Array<any>;
+    };
+    createSportsIncident = async (eventId: string, payload: any) => {
+        const res = await apiClient.post(`/management/sports/events/${eventId}/incidents`, payload);
+        return res.data.data;
+    };
+    listSportsAchievements = async (eventId: string) => {
+        const res = await apiClient.get(`/management/sports/events/${eventId}/achievements`);
+        return res.data.data as Array<any>;
+    };
+    createSportsAchievement = async (eventId: string, payload: any) => {
+        const res = await apiClient.post(`/management/sports/events/${eventId}/achievements`, payload);
+        return res.data.data;
+    };
+    getSportsAttendanceSummary = async (eventId: string, from?: string, to?: string) => {
+        const res = await apiClient.get(`/management/sports/events/${eventId}/attendance-summary`, { params: { from, to } });
+        return res.data.data as Array<any>;
+    };
+
+    // ── Jobs ─────────────────────────────────────────────────────────────
+    /**
+     * Trigger the monthly attendance-report job for this tenant. If month/year
+     * are omitted, the backend defaults to the month just ended. Returns the
+     * full run summary (studentsProcessed, emailsSent, emailsFailed, per-tenant
+     * breakdown). ATTENDANCE module must be enabled.
+     */
+    runAttendanceReportJob = async (payload?: { month?: number; year?: number }) => {
+        const res = await apiClient.post('/management/jobs/attendance-report/run', payload ?? {});
+        return res.data as {
+            success: boolean;
+            message: string;
+            result: {
+                period: { monthLabel: string; periodStart: string; periodEnd: string; month: number; year: number };
+                tenantsProcessed: number;
+                studentsProcessed: number;
+                emailsSent: number;
+                emailsFailed: number;
+                errors: number;
+                startedAt: string;
+                finishedAt: string;
+            };
+        };
+    };
+
+    /**
+     * Trigger the overdue late-fee sweep for this tenant. Flips PENDING → OVERDUE
+     * and idempotently issues one LATE_FEE invoice per (parent, delinquent month),
+     * capped at `maxPeriodsPerParent` (default 12). Gated on the FINANCE module.
+     */
+    runLateFeeSweepJob = async (payload?: { maxPeriodsPerParent?: number }) => {
+        const res = await apiClient.post('/management/jobs/late-fee-sweep/run', payload ?? {});
+        return res.data as {
+            success: boolean;
+            message: string;
+            result: {
+                tenantsProcessed: number;
+                overdueMarked: number;
+                lateFeesIssued: number;
+                totalLateFeeINR: number;
+                parentsProcessed: number;
+                parentsSkipped: number;
+                errors: number;
+                startedAt: string;
+                finishedAt: string;
+            };
+        };
+    };
+
+    /** Fetch late-fee sweep job run history for this tenant. */
+    getLateFeeSweepJobRuns = async (limit = 20) => {
+        const res = await apiClient.get('/management/jobs/late-fee-sweep/runs', { params: { limit } });
+        return res.data.data as Array<{
+            id: string;
+            jobName: string;
+            status: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+            startedAt: string;
+            finishedAt: string | null;
+            triggeredBy: string | null;
+            tenantId: string | null;
+            error: string | null;
+            summary: any;
+            tenantSlice: null | {
+                tenantId: string; tenantName: string;
+                status: 'SWEPT' | 'ERROR';
+                overdueMarked: number;
+                lateFeesIssued: number;
+                totalLateFeeINR: number;
+                parentsProcessed: number;
+                parentsSkipped: number;
+                error?: string;
+            };
+        }>;
+    };
+
+    /** Fetch attendance-report job run history for this tenant. */
+    getAttendanceReportJobRuns = async (limit = 20) => {
+        const res = await apiClient.get('/management/jobs/attendance-report/runs', { params: { limit } });
+        return res.data.data as Array<{
+            id: string;
+            jobName: string;
+            status: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
+            startedAt: string;
+            finishedAt: string | null;
+            triggeredBy: string | null;
+            tenantId: string | null;
+            error: string | null;
+            summary: any;
+            /** This tenant's slice of a multi-tenant scheduled run (null for tenant-scoped runs). */
+            tenantSlice: null | {
+                tenantId: string; tenantName: string;
+                status: 'SENT' | 'SKIPPED_MODULE_DISABLED' | 'SKIPPED_NO_STUDENTS' | 'ERROR';
+                studentsProcessed: number;
+                emailsSent: number;
+                emailsFailed: number;
+                error?: string;
+            };
+        }>;
+    };
+
+    // ── Inventory ─────────────────────────────────────────────────────────────
+    listInventoryItems = async (params: {
+        search?: string;
+        category?: string;
+        unit?: string;
+        active?: 'true' | 'false' | 'all';
+        lowStock?: 'true';
+    } = {}) => {
+        const res = await apiClient.get('/management/inventory/items', { params });
+        return res.data as {
+            success: true;
+            items: Array<{
+                id: string;
+                name: string;
+                sku: string | null;
+                category: string;
+                unit: string;
+                currentStock: number;
+                reorderLevel: number;
+                unitCost: number | null;
+                stockValue: number;
+                description: string | null;
+                storageLocation: string | null;
+                isActive: boolean;
+                lowStock: boolean;
+                createdAt: string;
+                updatedAt: string;
+            }>;
+        };
+    };
+
+    getInventoryItem = async (id: string) => {
+        const res = await apiClient.get(`/management/inventory/items/${id}`);
+        return res.data as {
+            success: true;
+            item: {
+                id: string; name: string; sku: string | null; category: string; unit: string;
+                currentStock: number; reorderLevel: number; unitCost: number | null;
+                stockValue: number; description: string | null; storageLocation: string | null;
+                isActive: boolean; lowStock: boolean;
+                createdAt: string; updatedAt: string;
+            };
+            transactions: Array<{
+                id: string; type: string; quantity: number; balanceAfter: number;
+                unitCost: number | null; totalCost: number | null;
+                deltaDirection: "INCREASE" | "DECREASE" | null;
+                supplier: string | null; invoiceRef: string | null; purchasedAt: string | null;
+                consumerType: string | null; consumerName: string | null; consumerLabel: string | null;
+                notes: string | null; performedByName: string | null; performedAt: string;
+            }>;
+            consumers: Array<{ key: string; type: string; label: string; totalQty: number; txnCount: number }>;
+            suppliers: Array<{ supplier: string; totalQty: number; totalSpend: number; txnCount: number; lastPurchasedAt: string | null }>;
+            totals: { procured: number; consumed: number; spend: number; txnCount: number };
+        };
+    };
+
+    createInventoryItem = async (data: {
+        name: string;
+        sku?: string;
+        category?: string;
+        unit?: string;
+        reorderLevel?: number;
+        unitCost?: number;
+        description?: string;
+        storageLocation?: string;
+        openingStock?: number;
+    }) => {
+        const res = await apiClient.post('/management/inventory/items', data);
+        return res.data;
+    };
+
+    updateInventoryItem = async (id: string, data: Partial<{
+        name: string;
+        sku: string | null;
+        category: string;
+        unit: string;
+        reorderLevel: number;
+        unitCost: number | null;
+        description: string | null;
+        storageLocation: string | null;
+        isActive: boolean;
+    }>) => {
+        const res = await apiClient.patch(`/management/inventory/items/${id}`, data);
+        return res.data;
+    };
+
+    deactivateInventoryItem = async (id: string) => {
+        const res = await apiClient.delete(`/management/inventory/items/${id}`);
+        return res.data;
+    };
+
+    procureInventoryItem = async (id: string, data: {
+        quantity: number;
+        unitCost?: number;
+        supplier?: string;
+        invoiceRef?: string;
+        purchasedAt?: string;
+        notes?: string;
+    }) => {
+        const res = await apiClient.post(`/management/inventory/items/${id}/procure`, data);
+        return res.data;
+    };
+
+    consumeInventoryItem = async (id: string, data: {
+        quantity: number;
+        consumerType: 'SCHOOL' | 'CLASS' | 'SECTION' | 'STUDENT' | 'TEACHER' | 'STAFF' | 'OTHER';
+        consumerClassId?: string;
+        consumerSectionId?: string;
+        consumerStudentId?: string;
+        consumerTeacherId?: string;
+        consumerStaffId?: string;
+        consumerLabel?: string;
+        notes?: string;
+    }) => {
+        const res = await apiClient.post(`/management/inventory/items/${id}/consume`, data);
+        return res.data;
+    };
+
+    adjustInventoryItem = async (id: string, data: {
+        newStock: number;
+        notes?: string;
+    }) => {
+        const res = await apiClient.post(`/management/inventory/items/${id}/adjust`, data);
+        return res.data;
+    };
+
+    listInventoryTransactions = async (params: {
+        itemId?: string;
+        type?: string;
+        consumerType?: string;
+        classId?: string;
+        sectionId?: string;
+        studentId?: string;
+        teacherId?: string;
+        fromDate?: string;
+        toDate?: string;
+        limit?: number;
+    } = {}) => {
+        const res = await apiClient.get('/management/inventory/transactions', { params });
+        return res.data as {
+            success: true;
+            transactions: Array<{
+                id: string;
+                itemId: string;
+                itemName: string;
+                itemUnit: string;
+                type: string;
+                quantity: number;
+                balanceAfter: number;
+                unitCost: number | null;
+                totalCost: number | null;
+                deltaDirection: 'INCREASE' | 'DECREASE' | null;
+                supplier: string | null;
+                invoiceRef: string | null;
+                purchasedAt: string | null;
+                consumerType: string | null;
+                consumerName: string | null;
+                consumerLabel: string | null;
+                notes: string | null;
+                performedBy: string | null;
+                performedByName: string | null;
+                performedAt: string;
+            }>;
+        };
+    };
+
+    getInventorySummary = async () => {
+        const res = await apiClient.get('/management/inventory/summary');
+        return res.data as {
+            success: true;
+            summary: {
+                totals: {
+                    items: number;
+                    activeItems: number;
+                    stockValue: number;
+                    lowStockCount: number;
+                };
+                movement: {
+                    thisMonth: { procured: number; consumed: number; procuredSpend: number; totalTxns: number };
+                    lastMonth: { procured: number; consumed: number; procuredSpend: number };
+                    deltas: { procuredPct: number | null; consumedPct: number | null; procuredSpendPct: number | null };
+                };
+                lowStock: Array<{
+                    id: string; name: string; unit: string; category: string;
+                    currentStock: number; reorderLevel: number;
+                }>;
+                byCategory: Array<{
+                    category: string; itemCount: number; totalStock: number; stockValue: number;
+                }>;
+                topConsumingClasses: Array<{
+                    classId: string; className: string; txnCount: number; totalUnits: number;
+                }>;
+                recentActivity: Array<{
+                    id: string; itemId: string; itemName: string;
+                    type: string; quantity: number; balanceAfter: number;
+                    unitCost: number | null; totalCost: number | null;
+                    performedAt: string;
+                }>;
+            };
+        };
+    };
+
+    listInventoryConsumers = async (type: string, search?: string) => {
+        const res = await apiClient.get('/management/inventory/consumers', { params: { type, search } });
+        return res.data as {
+            success: true;
+            options: Array<{ id: string; label: string }>;
         };
     };
 }

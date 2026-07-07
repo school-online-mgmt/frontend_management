@@ -5,7 +5,7 @@ import {
     Shield, Search, GraduationCap, UserPlus, Trash2, Pencil, ShieldCheck,
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
-    TrendingUp, Activity,
+    TrendingUp, Activity, Info, Bus, Trophy, Sparkles, Package,
 } from 'lucide-react';
 import api from '../../api/api';
 import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
@@ -28,20 +28,68 @@ interface Teacher {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'];
+/**
+ * "No-permission-grid" roles. ADMIN and PRINCIPAL are full-write; DIRECTOR is
+ * read-only across every module. In all three cases the per-module grid is
+ * meaningless so we hide it and send an empty permission array.
+ */
+const NO_GRID_ROLES = ['ADMIN', 'PRINCIPAL', 'DIRECTOR'];
+function needsPermissionGrid(role: string | null | undefined) {
+    return !NO_GRID_ROLES.includes(role ?? '');
+}
+/** Truly full-access — ADMIN and PRINCIPAL. DIRECTOR is read-only. */
+function isFullWriteAccess(role: string | null | undefined) {
+    return role === 'ADMIN' || role === 'PRINCIPAL';
+}
+/** Kept for backwards-compatible callsites in this file. */
 function isFullAccess(role: string | null | undefined) {
-    return FULL_ACCESS_ROLES.includes(role ?? '');
+    return NO_GRID_ROLES.includes(role ?? '');
 }
 
-const MODULE_META: Record<AppModule, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-    PEOPLE:        { label: 'People',        icon: Users,          color: 'text-blue-600',   bg: 'bg-blue-50'   },
-    TEACHERS:      { label: 'Teachers',      icon: UserCog,        color: 'text-violet-600', bg: 'bg-violet-50' },
-    ACADEMICS:     { label: 'Academics',     icon: GraduationCap,  color: 'text-emerald-600',bg: 'bg-emerald-50'},
-    STUDIES:       { label: 'Studies',       icon: BookMarked,     color: 'text-amber-600',  bg: 'bg-amber-50'  },
-    ATTENDANCE:    { label: 'Attendance',    icon: ClipboardCheck, color: 'text-cyan-600',   bg: 'bg-cyan-50'   },
-    LIBRARY:       { label: 'Library',       icon: Library,        color: 'text-pink-600',   bg: 'bg-pink-50'   },
-    COMMUNICATION: { label: 'Communication', icon: MessageSquare,  color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    FINANCE:       { label: 'Finance',       icon: Wallet,         color: 'text-orange-600', bg: 'bg-orange-50' },
+/** Modules bundled with every school by default (kept in sync with backend). */
+const ALWAYS_ON_MODULES: readonly AppModule[] = ['PEOPLE', 'TEACHERS', 'ACADEMICS'];
+
+const MODULE_META: Record<AppModule, {
+    label: string;
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+    desc: string;
+    pages: string[];
+}> = {
+    PEOPLE:        { label: 'People',        icon: Users,          color: 'text-blue-600',    bg: 'bg-blue-50',
+        desc: 'Applicants, students, staff directory.',
+        pages: ['Applicants', 'Students', 'Staff accounts'] },
+    TEACHERS:      { label: 'Teachers',      icon: UserCog,        color: 'text-violet-600',  bg: 'bg-violet-50',
+        desc: 'Teacher roster, assignments.',
+        pages: ['Teachers', 'Assignments'] },
+    ACADEMICS:     { label: 'Academics',     icon: GraduationCap,  color: 'text-emerald-600', bg: 'bg-emerald-50',
+        desc: 'Sessions, classes, courses, subjects.',
+        pages: ['Sessions', 'Classes', 'Courses', 'Subjects'] },
+    STUDIES:       { label: 'Studies',       icon: BookMarked,     color: 'text-amber-600',   bg: 'bg-amber-50',
+        desc: 'Exams, marks, performance reports.',
+        pages: ['Exams', 'Performance'] },
+    ATTENDANCE:    { label: 'Attendance',    icon: ClipboardCheck, color: 'text-cyan-600',    bg: 'bg-cyan-50',
+        desc: 'Student & teacher attendance, leaves.',
+        pages: ['Student attendance', 'Teacher attendance', 'Leaves'] },
+    LIBRARY:       { label: 'Library',       icon: Library,        color: 'text-pink-600',    bg: 'bg-pink-50',
+        desc: 'Book catalogue, issues, returns.',
+        pages: ['Library'] },
+    COMMUNICATION: { label: 'Communication', icon: MessageSquare,  color: 'text-indigo-600',  bg: 'bg-indigo-50',
+        desc: 'Notice board, email blasts, calendar.',
+        pages: ['Notice board', 'Email blast', 'Calendar'] },
+    FINANCE:       { label: 'Finance',       icon: Wallet,         color: 'text-orange-600',  bg: 'bg-orange-50',
+        desc: 'Fee structures, invoices, payments.',
+        pages: ['Fee management'] },
+    TRANSPORT:     { label: 'Transport',     icon: Bus,            color: 'text-teal-600',    bg: 'bg-teal-50',
+        desc: 'Vehicles, routes, transport fees.',
+        pages: ['Transport'] },
+    SPORTS:        { label: 'Sports',        icon: Trophy,         color: 'text-yellow-600',  bg: 'bg-yellow-50',
+        desc: 'Sports events, coaches, enrolments.',
+        pages: ['Sports'] },
+    INVENTORY:     { label: 'Inventory',     icon: Package,        color: 'text-lime-600',    bg: 'bg-lime-50',
+        desc: 'Item master, procurement, consumption ledger.',
+        pages: ['Inventory'] },
 };
 
 const ROLE_CARDS = [
@@ -122,7 +170,11 @@ const PermissionGrid: React.FC<{
     permissions: Permission[];
     onChange: (p: Permission[]) => void;
     readOnly?: boolean;
-}> = ({ permissions, onChange, readOnly }) => {
+    /** Modules the tenant has actually subscribed to. If undefined we treat every module as enabled (loading state). */
+    enabledModules?: readonly string[];
+    /** Optional "same as" prefill dropdown. */
+    copyFromOptions?: Array<{ id: string; label: string; permissions: Permission[] }>;
+}> = ({ permissions, onChange, readOnly, enabledModules, copyFromOptions }) => {
     const getLevel = (mod: AppModule): Level => {
         const p = permissions.find(p => p.module === mod);
         return p ? p.level : 'NONE';
@@ -132,25 +184,68 @@ const PermissionGrid: React.FC<{
         onChange(level === 'NONE' ? filtered : [...filtered, { module: mod, level: level as 'READ' | 'ADMIN' }]);
     };
 
+    const isEnabled = (mod: AppModule): boolean => {
+        if (!enabledModules) return true;
+        return enabledModules.includes(mod);
+    };
+
     const granted = permissions.length;
     const adminCount = permissions.filter(p => p.level === 'ADMIN').length;
+    const dormantCount = permissions.filter(p => !isEnabled(p.module as AppModule)).length;
+
+    // Group into "Always on" and "Optional" so the picker mirrors the same
+    // concept the superadmin module screen uses. Always-on modules are the
+    // "bundled" ones (PEOPLE, TEACHERS, ACADEMICS) which are baseline for
+    // every school and can't be disabled at the tenant level.
+    //
+    // Defensive filter: exclude any module that doesn't have MODULE_META so a
+    // stale bundle or a mis-synced constant can't crash the picker with a
+    // "Cannot read properties of undefined (reading 'icon')" runtime error.
+    const alwaysOn = ALL_MODULES.filter(m => ALWAYS_ON_MODULES.includes(m) && MODULE_META[m]);
+    const optional = ALL_MODULES.filter(m => !ALWAYS_ON_MODULES.includes(m) && MODULE_META[m]);
+
+    // Actions bar helpers
+    const applyAll = (level: Exclude<Level, 'NONE'>, scope: 'enabled' | 'all') => {
+        const targets = ALL_MODULES.filter(m => scope === 'all' || isEnabled(m));
+        onChange(targets.map(m => ({ module: m, level })));
+    };
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {/* Quick-set bar */}
             {!readOnly && (
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11px] text-slate-400 mr-auto">
-                        {granted === 0 ? 'No access' : `${granted} module${granted !== 1 ? 's' : ''} granted`}
+                        {granted === 0 ? 'No modules granted' : `${granted} granted`}
                         {adminCount > 0 && ` · ${adminCount} admin`}
+                        {dormantCount > 0 && (
+                            <span className="text-amber-600 ml-1">· {dormantCount} dormant</span>
+                        )}
                     </span>
-                    <button type="button" onClick={() => onChange(ALL_MODULES.map(m => ({ module: m, level: 'READ' as const })))}
+                    {copyFromOptions && copyFromOptions.length > 0 && (
+                        <select
+                            defaultValue=""
+                            onChange={(e) => {
+                                const opt = copyFromOptions.find(o => o.id === e.target.value);
+                                if (opt) onChange(opt.permissions.map(p => ({ ...p })));
+                                e.target.value = '';
+                            }}
+                            className="text-[11px] font-semibold text-slate-600 border border-slate-200 rounded-lg px-2 py-1 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                            title="Copy permissions from another staff member"
+                        >
+                            <option value="">Copy from…</option>
+                            {copyFromOptions.map(o => (
+                                <option key={o.id} value={o.id}>{o.label}</option>
+                            ))}
+                        </select>
+                    )}
+                    <button type="button" onClick={() => applyAll('READ', 'enabled')}
                         className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 px-2.5 py-1 rounded-lg hover:bg-sky-50 transition-colors">
-                        Read All
+                        Read all
                     </button>
-                    <button type="button" onClick={() => onChange(ALL_MODULES.map(m => ({ module: m, level: 'ADMIN' as const })))}
+                    <button type="button" onClick={() => applyAll('ADMIN', 'enabled')}
                         className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-colors">
-                        Admin All
+                        Admin all
                     </button>
                     <button type="button" onClick={() => onChange([])}
                         className="text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors">
@@ -159,32 +254,81 @@ const PermissionGrid: React.FC<{
                 </div>
             )}
 
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-                {/* Column headers */}
-                <div className="grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-slate-50 border-b border-slate-200 gap-4">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Module</span>
-                    <div className="flex gap-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <span className="min-w-[46px] text-center">None</span>
-                        <span className="min-w-[46px] text-center">Read</span>
-                        <span className="min-w-[46px] text-center">Admin</span>
-                    </div>
-                </div>
+            <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                <PermissionGridSection
+                    title="Always on"
+                    subtitle="Bundled with every school"
+                    modules={alwaysOn}
+                    getLevel={getLevel} setLevel={setLevel}
+                    isEnabled={isEnabled}
+                    readOnly={readOnly}
+                />
+                <PermissionGridSection
+                    title="Optional"
+                    subtitle="Requires school subscription"
+                    modules={optional}
+                    getLevel={getLevel} setLevel={setLevel}
+                    isEnabled={isEnabled}
+                    readOnly={readOnly}
+                    firstRowDivided
+                />
+            </div>
 
-                {ALL_MODULES.map((mod, idx) => {
-                    const meta = MODULE_META[mod];
-                    const Icon = meta.icon;
-                    const level = getLevel(mod);
-                    return (
-                        <div key={mod}
-                            className={`grid grid-cols-[1fr_auto] items-center px-4 py-3 gap-4 transition-colors
-                                ${level !== 'NONE' ? 'bg-white' : 'bg-white hover:bg-slate-50/60'}
-                                ${idx < ALL_MODULES.length - 1 ? 'border-b border-slate-100' : ''}`}
-                        >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
-                                    <Icon size={13} className={meta.color} />
-                                </div>
-                                <span className={`text-sm font-semibold ${level !== 'NONE' ? 'text-slate-800' : 'text-slate-500'}`}>
+            {dormantCount > 0 && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/70 px-3.5 py-2.5">
+                    <Info size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                        {dormantCount} permission{dormantCount !== 1 ? 's are' : ' is'} for {dormantCount !== 1 ? 'modules' : 'a module'} the school hasn't subscribed to yet.
+                        {' '}They'll activate automatically when your super-admin enables the module.
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+/** Section within PermissionGrid — one for "Always on", one for "Optional". */
+const PermissionGridSection: React.FC<{
+    title: string;
+    subtitle: string;
+    modules: readonly AppModule[];
+    getLevel: (m: AppModule) => Level;
+    setLevel: (m: AppModule, l: Level) => void;
+    isEnabled: (m: AppModule) => boolean;
+    readOnly?: boolean;
+    firstRowDivided?: boolean;
+}> = ({ title, subtitle, modules, getLevel, setLevel, isEnabled, readOnly, firstRowDivided }) => (
+    <>
+        <div className={`grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-slate-50 gap-4 ${firstRowDivided ? 'border-t' : ''} border-b border-slate-200`}>
+            <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{title}</span>
+                <span className="text-[10px] text-slate-400 ml-2">— {subtitle}</span>
+            </div>
+            <div className="flex gap-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="min-w-[46px] text-center">None</span>
+                <span className="min-w-[46px] text-center">Read</span>
+                <span className="min-w-[46px] text-center">Admin</span>
+            </div>
+        </div>
+        {modules.map((mod, idx) => {
+            const meta = MODULE_META[mod];
+            if (!meta) return null;
+            const Icon = meta.icon;
+            const level = getLevel(mod);
+            const enabled = isEnabled(mod);
+            return (
+                <div key={mod}
+                    className={`grid grid-cols-[1fr_auto] items-center px-4 py-3 gap-4 transition-colors
+                        ${level !== 'NONE' ? 'bg-white' : 'bg-white hover:bg-slate-50/60'}
+                        ${idx < modules.length - 1 ? 'border-b border-slate-100' : ''}`}
+                >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${meta.bg} ${!enabled ? 'opacity-60' : ''}`}>
+                            <Icon size={14} className={meta.color} />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-sm font-semibold ${level !== 'NONE' ? 'text-slate-800' : 'text-slate-600'}`}>
                                     {meta.label}
                                 </span>
                                 {level === 'ADMIN' && (
@@ -197,20 +341,26 @@ const PermissionGrid: React.FC<{
                                         <BarChart3 size={9} /> Read
                                     </span>
                                 )}
+                                {!enabled && (
+                                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                        <Info size={9} /> Not subscribed
+                                    </span>
+                                )}
                             </div>
-                            <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} />
+                            <p className="text-[11px] text-slate-400 leading-tight mt-0.5 line-clamp-1">{meta.desc}</p>
                         </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
+                    </div>
+                    <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} />
+                </div>
+            );
+        })}
+    </>
+);
 
 // ── Role Card Picker ──────────────────────────────────────────────────────────
 
 const RolePicker: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {ROLE_CARDS.map(r => {
             const Icon = r.icon;
             const active = value === r.value;
@@ -253,7 +403,11 @@ const RoleBadge: React.FC<{ role: string | null }> = ({ role }) => {
 
 // ── Permission Summary Chips ──────────────────────────────────────────────────
 
-const PermSummary: React.FC<{ permissions: Permission[] | null; role: string | null }> = ({ permissions, role }) => {
+const PermSummary: React.FC<{
+    permissions: Permission[] | null;
+    role: string | null;
+    enabledModules?: readonly string[];
+}> = ({ permissions, role, enabledModules }) => {
     if (role === 'DIRECTOR') {
         return (
             <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
@@ -271,27 +425,49 @@ const PermSummary: React.FC<{ permissions: Permission[] | null; role: string | n
     if (!permissions || permissions.length === 0) {
         return <span className="text-[11px] text-slate-400 italic">No module access</span>;
     }
-    const shown = permissions.slice(0, 3);
-    const rest  = permissions.length - 3;
+    // Sort so ADMIN grants come first (they're higher-privilege signal).
+    const sorted = [...permissions].sort((a, b) =>
+        a.level === b.level ? 0 : a.level === 'ADMIN' ? -1 : 1,
+    );
+    // Drop entries for modules we don't have metadata for so the render can't
+    // hit an undefined access at the icon lookup.
+    const knownSorted = sorted.filter(p => !!MODULE_META[p.module as AppModule]);
+    const shown = knownSorted.slice(0, 3);
+    const rest  = knownSorted.length - 3;
+    const dormantCount = enabledModules
+        ? permissions.filter(p => !enabledModules.includes(p.module)).length
+        : 0;
     return (
         <div className="flex flex-wrap items-center gap-1">
             {shown.map(p => {
                 const meta = MODULE_META[p.module as AppModule];
                 if (!meta) return null;
                 const Icon = meta.icon;
+                const dormant = enabledModules && !enabledModules.includes(p.module);
+                const chipCls = dormant
+                    ? 'bg-slate-50 text-slate-500 border-slate-200 opacity-70'
+                    : p.level === 'ADMIN'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-sky-50 text-sky-700 border-sky-200';
                 return (
                     <span key={p.module}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border
-                            ${p.level === 'ADMIN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+                        title={dormant ? `${meta.label} — school not subscribed` : `${meta.label} — ${p.level === 'ADMIN' ? 'Admin' : 'Read'}`}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${chipCls}`}>
                         <Icon size={9} />
                         {meta.label}
-                        <span className={`opacity-60`}>{p.level === 'ADMIN' ? '·A' : '·R'}</span>
+                        <span className="opacity-60">{p.level === 'ADMIN' ? '·A' : '·R'}</span>
                     </span>
                 );
             })}
             {rest > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
                     +{rest} more
+                </span>
+            )}
+            {dormantCount > 0 && (
+                <span title={`${dormantCount} permission${dormantCount !== 1 ? 's' : ''} awaiting module subscription`}
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <Info size={9} /> {dormantCount} dormant
                 </span>
             )}
         </div>
@@ -303,11 +479,14 @@ const PermSummary: React.FC<{ permissions: Permission[] | null; role: string | n
 interface DrawerProps {
     initial?: StaffMember | null;
     currentUserId?: string;
+    enabledModules?: readonly string[];
+    /** Other staff to seed "copy access from" — excludes `initial` when editing. */
+    copyFromOptions?: Array<{ id: string; label: string; permissions: Permission[] }>;
     onSave: (data: any) => Promise<void>;
     onClose: () => void;
 }
 
-const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
+const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromOptions, onSave, onClose }) => {
     const isEdit = !!initial;
     const [firstName, setFirstName] = useState(initial?.firstName ?? '');
     const [lastName,  setLastName]  = useState(initial?.lastName  ?? '');
@@ -321,6 +500,24 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
     );
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+
+    // Effective access: what pages this staff will actually see, given both
+    // per-user grants AND per-tenant module subscriptions. Recompute on any
+    // change so admins can watch the preview update as they toggle levels.
+    const effectiveAccess = useMemo(() => {
+        if (isFullWriteAccess(role)) {
+            return { label: 'Full portal access', modules: [...ALL_MODULES] as string[], readOnly: false };
+        }
+        if (role === 'DIRECTOR') {
+            return { label: 'Read-only across every module', modules: [...ALL_MODULES] as string[], readOnly: true };
+        }
+        // Staff — intersection of grants and enabled modules.
+        const enabled = enabledModules ? new Set(enabledModules) : null;
+        const modules = perms
+            .filter(p => !enabled || enabled.has(p.module))
+            .map(p => p.module);
+        return { label: modules.length === 0 ? 'No modules yet' : `${modules.length} module${modules.length !== 1 ? 's' : ''}`, modules, readOnly: false };
+    }, [role, perms, enabledModules]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -430,20 +627,59 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
                         </div>
 
                         {/* Module Access */}
-                        {!isFullAccess(role) && role !== 'DIRECTOR' ? (
+                        {needsPermissionGrid(role) ? (
                             <div>
                                 <div className="flex items-center gap-2 mb-3">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Module Access</p>
-                                    <span className="text-[10px] text-slate-400">— controls which sections this staff can access</span>
+                                    <span className="text-[10px] text-slate-400">— what this staff can see and do</span>
                                 </div>
-                                <PermissionGrid permissions={perms} onChange={setPerms} />
+                                <PermissionGrid
+                                    permissions={perms}
+                                    onChange={setPerms}
+                                    enabledModules={enabledModules}
+                                    copyFromOptions={copyFromOptions}
+                                />
+
+                                {/* Effective access preview */}
+                                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3.5 py-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Sparkles size={13} className="text-indigo-600" />
+                                        <p className="text-xs font-bold text-indigo-900">Effective access</p>
+                                        <span className="text-[10px] font-semibold text-indigo-600 bg-white/60 border border-indigo-100 px-1.5 py-0.5 rounded-full">
+                                            {effectiveAccess.label}
+                                        </span>
+                                    </div>
+                                    {effectiveAccess.modules.filter(m => MODULE_META[m as AppModule]).length === 0 ? (
+                                        <p className="text-[11px] text-indigo-700/80 italic">
+                                            No pages will be visible. Grant at least one module above.
+                                        </p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {effectiveAccess.modules.map(m => {
+                                                const meta = MODULE_META[m as AppModule];
+                                                if (!meta) return null;
+                                                const Icon = meta.icon;
+                                                const grant = perms.find(p => p.module === m);
+                                                return (
+                                                    <span key={m} className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-900 bg-white border border-indigo-100 px-2 py-0.5 rounded-full"
+                                                          title={meta.pages.join(' · ')}>
+                                                        <Icon size={10} className={meta.color} />
+                                                        {meta.label}
+                                                        {grant?.level === 'ADMIN' && <span className="text-emerald-600">·A</span>}
+                                                        {grant?.level === 'READ' && <span className="text-sky-600">·R</span>}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ) : role === 'DIRECTOR' ? (
                             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
                                 <Crown size={16} className="text-amber-500 shrink-0 mt-0.5" />
                                 <div>
                                     <p className="text-sm font-bold text-amber-800">Director has read-only access</p>
-                                    <p className="text-xs text-amber-700 mt-0.5">This role can view all modules but cannot make changes. No per-module configuration is needed.</p>
+                                    <p className="text-xs text-amber-700 mt-0.5">This role can view every module but cannot make changes. No per-module configuration is needed.</p>
                                 </div>
                             </div>
                         ) : (
@@ -451,7 +687,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
                                 <ShieldCheck size={16} className="text-emerald-500 shrink-0 mt-0.5" />
                                 <div>
                                     <p className="text-sm font-bold text-emerald-800">{role} has full access</p>
-                                    <p className="text-xs text-emerald-600 mt-0.5">This role can access all modules without restrictions. No per-module configuration is needed.</p>
+                                    <p className="text-xs text-emerald-600 mt-0.5">This role can access every module without restrictions. No per-module configuration is needed.</p>
                                 </div>
                             </div>
                         )}
@@ -479,9 +715,11 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, onSave, onClose }) => {
 
 const PermDrawer: React.FC<{
     staff: StaffMember;
+    enabledModules?: readonly string[];
+    copyFromOptions?: Array<{ id: string; label: string; permissions: Permission[] }>;
     onSave: (perms: Permission[]) => Promise<void>;
     onClose: () => void;
-}> = ({ staff, onSave, onClose }) => {
+}> = ({ staff, enabledModules, copyFromOptions, onSave, onClose }) => {
     const [perms, setPerms] = useState<Permission[]>(staff.permissions ?? []);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
@@ -527,7 +765,12 @@ const PermDrawer: React.FC<{
                                     <AlertTriangle size={15} className="shrink-0" /> {err}
                                 </div>
                             )}
-                            <PermissionGrid permissions={perms} onChange={setPerms} />
+                            <PermissionGrid
+                                permissions={perms}
+                                onChange={setPerms}
+                                enabledModules={enabledModules}
+                                copyFromOptions={copyFromOptions}
+                            />
                         </>
                     )}
                 </div>
@@ -692,9 +935,18 @@ const StaffHome: React.FC = () => {
         queryFn: () => api.getTeachers(),
         select: (d: any) => Array.isArray(d) ? d : (d?.teachers ?? []),
     });
+    // Tenant's module subscription state — feeds the "Not subscribed" badge
+    // in the permission grid so admins know which grants are dormant.
+    const allowedModulesQuery = useQuery({
+        queryKey: ["staff", "allowed-modules"],
+        queryFn: () => api.getStaffAllowedModules(),
+        // Modules rarely change; keep the response fresh for a few minutes.
+        staleTime: 5 * 60 * 1000,
+    });
 
     const staffList: StaffMember[] = staffQuery.data ?? [];
     const teachers:  Teacher[]     = teachersQuery.data ?? [];
+    const enabledModules: readonly string[] | undefined = allowedModulesQuery.data?.enabled;
     const loading = staffQuery.isLoading || teachersQuery.isLoading;
 
     useEffect(() => {
@@ -830,6 +1082,18 @@ const StaffHome: React.FC = () => {
 
     // ── Render ─────────────────────────────────────────────────────────────
 
+    // Build "copy from" options — only staff members that actually have a
+    // custom permission grid (i.e. not full-access roles). Exclude the person
+    // being edited so they don't appear in their own dropdown.
+    const buildCopyFrom = (excludeId?: string) =>
+        staffList
+            .filter(u => needsPermissionGrid(u.role) && u.id !== excludeId && (u.permissions?.length ?? 0) > 0)
+            .map(u => ({
+                id: u.id,
+                label: `${u.firstName} ${u.lastName} · ${u.permissions?.length ?? 0} module${(u.permissions?.length ?? 0) !== 1 ? 's' : ''}`,
+                permissions: u.permissions ?? [],
+            }));
+
     return (
         <div className="min-h-full bg-slate-50 pb-20">
             {/* Drawers & Modals */}
@@ -837,6 +1101,8 @@ const StaffHome: React.FC = () => {
                 <StaffDrawer
                     initial={editTarget}
                     currentUserId={currentUserId ?? undefined}
+                    enabledModules={enabledModules}
+                    copyFromOptions={buildCopyFrom(editTarget?.id)}
                     onSave={editTarget ? handleEdit : handleCreate}
                     onClose={() => { setShowCreate(false); setEditTarget(null); }}
                 />
@@ -844,6 +1110,8 @@ const StaffHome: React.FC = () => {
             {permTarget && (
                 <PermDrawer
                     staff={permTarget}
+                    enabledModules={enabledModules}
+                    copyFromOptions={buildCopyFrom(permTarget.id)}
                     onSave={(perms) => handlePermsSave(permTarget.id, perms)}
                     onClose={() => setPermTarget(null)}
                 />
@@ -1123,7 +1391,7 @@ const StaffHome: React.FC = () => {
 
                                             {/* Module Access */}
                                             <div className="min-w-0">
-                                                <PermSummary permissions={user.permissions} role={user.role} />
+                                                <PermSummary permissions={user.permissions} role={user.role} enabledModules={enabledModules} />
                                             </div>
 
                                             {/* Actions — bigger tap targets on mobile */}

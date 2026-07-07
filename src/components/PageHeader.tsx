@@ -21,6 +21,7 @@ export const MODULE_THEMES = {
     leave:         "from-slate-700 via-slate-800 to-slate-900",
     admin:         "from-violet-700 via-purple-700 to-fuchsia-700",
     assignment:    "from-rose-600 via-pink-600 to-fuchsia-600",
+    sports:        "from-green-600 via-emerald-600 to-lime-600",
 } as const;
 
 interface PageHeaderProps {

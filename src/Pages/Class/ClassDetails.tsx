@@ -43,7 +43,7 @@ const ClassDetails = () => {
     const totalStudents = classData.sections?.reduce((s: number, sec: any) => s + (sec.studentCount ?? 0), 0) ?? 0;
 
     return (
-        <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-6">
+        <div className="p-2 max-w-7xl mx-auto space-y-6">
             {toast && (
                 <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>{toast.text}</div>
             )}
@@ -193,7 +193,7 @@ const ClassDetails = () => {
             <SessionStudentsTable
                 filterClassId={classId}
                 title={`Students in ${classData.name}`}
-                subtitle="Pick a session to see who's enrolled — click any row to open the student profile."
+                subtitle="Click any row to open the student profile."
                 accent="indigo"
             />
 

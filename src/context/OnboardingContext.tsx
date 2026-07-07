@@ -2,50 +2,55 @@ import React, { createContext, useContext, useCallback, useEffect, useRef, useSt
 import { useAuthContext } from './AuthContext';
 import api from '../api/api';
 
-// Kept for backward-compat but no longer populated — wizard replaces the checklist flow
-export type OnboardingSteps = Awaited<ReturnType<typeof api.getOnboardingStatus>>['steps'];
+export type OnboardingStatus = Awaited<ReturnType<typeof api.getOnboardingStatus>>;
 
 interface OnboardingContextValue {
-    isComplete: boolean | null;   // null = loading, false = wizard needed, true = portal open
-    steps: OnboardingSteps | null;
+    /** null while loading, then `isComplete` from the backend. */
+    isComplete: boolean | null;
+    /** Full status snapshot from the backend — session + per-step readiness. */
+    status: OnboardingStatus | null;
     refetch: () => Promise<void>;
-    /** Force-complete the onboarding gate (called after wizard submission) */
+    /** Force the gate open (called after the wizard submits successfully). */
     forceComplete: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue>({
     isComplete: null,
-    steps: null,
+    status: null,
     refetch: async () => {},
     forceComplete: () => {},
 });
 
-/** Returns true if any session covers today's date */
-function hasActiveSession(sessions: Array<{ startDate: string; endDate: string }>): boolean {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0); // noon to avoid timezone edge cases
-    return sessions.some(s => {
-        const start = new Date(s.startDate);
-        const end   = new Date(s.endDate);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-        return today >= start && today <= end;
-    });
-}
-
+/**
+ * The onboarding gate.
+ *
+ * The management portal isn't fully usable until the school has (a) defined
+ * its identity (tenant_config.schoolName) and (b) set up class structure,
+ * courses, subjects, and a fee structure for its currently active subscription
+ * session. The wizard walks through those in order.
+ *
+ * Optional modules — transport, library, notice board — are also surfaced
+ * inside `status.steps` for the wizard to show as "you can also…" tiles, but
+ * they don't gate access.
+ */
 export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated } = useAuthContext();
     const [isComplete, setIsComplete] = useState<boolean | null>(null);
+    const [status, setStatus] = useState<OnboardingStatus | null>(null);
     const inProgressRef = useRef(false);
 
     const refetch = useCallback(async () => {
         if (inProgressRef.current) return;
         inProgressRef.current = true;
         try {
-            const sessions = await api.getSessions();
-            const active = Array.isArray(sessions) && hasActiveSession(sessions);
-            setIsComplete(active);
+            const s = await api.getOnboardingStatus();
+            setStatus(s);
+            setIsComplete(s.isComplete);
         } catch {
+            // If the endpoint fails outright, treat as incomplete rather than
+            // trapping the user in a blank shell — the wizard's own error
+            // states surface actionable messages.
+            setStatus(null);
             setIsComplete(false);
         } finally {
             inProgressRef.current = false;
@@ -60,12 +65,13 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (isAuthenticated === true) {
             refetch();
         } else if (isAuthenticated === false) {
+            setStatus(null);
             setIsComplete(null);
         }
     }, [isAuthenticated, refetch]);
 
     return (
-        <OnboardingContext.Provider value={{ isComplete, steps: null, refetch, forceComplete }}>
+        <OnboardingContext.Provider value={{ isComplete, status, refetch, forceComplete }}>
             {children}
         </OnboardingContext.Provider>
     );

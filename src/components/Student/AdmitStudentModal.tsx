@@ -36,7 +36,18 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
             setForm(prev => ({ ...prev, admissionId: data.admissionId }));
         }).catch(() => {});
         api.getSessions().then((data: any) => {
-            setSessions(Array.isArray(data) ? data : []);
+            // Only offer sessions this school can actually admit into:
+            //   - not finalised (status !== 'ENDED')
+            //   - accepting admissions (acceptAdmission is true)
+            // A session in ENDING is intentionally excluded — teachers are
+            // making promotion decisions and no fresh admits should land there.
+            const list: any[] = Array.isArray(data) ? data : [];
+            const admissible = list.filter(s =>
+                s.status !== "ENDED" &&
+                s.status !== "ENDING" &&
+                s.acceptAdmission === true,
+            );
+            setSessions(admissible);
         }).catch(() => setSessions([]));
         api.getTransportZones().then((data: any) => {
             setTransportZones(Array.isArray(data) ? data : data?.zones ?? []);
@@ -141,11 +152,19 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Session <span className="text-red-500">*</span></label>
                                 <select data-testid="admit-session-select" name="sessionId" value={form.sessionId} onChange={handleChange} required
-                                    disabled={!!preselectedSessionId}
+                                    disabled={!!preselectedSessionId || sessions.length === 0}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed bg-white">
-                                    <option value="">Select Session</option>
+                                    <option value="">
+                                        {sessions.length === 0 ? "No open session — enable admissions first" : "Select Session"}
+                                    </option>
                                     {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
+                                {sessions.length === 0 && (
+                                    <p className="mt-1 text-[11px] text-amber-700 flex items-center gap-1">
+                                        <AlertCircle size={11} />
+                                        Open admissions on a session from the Sessions page.
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Class <span className="text-red-500">*</span></label>

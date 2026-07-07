@@ -7,7 +7,7 @@ import {
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff, Send,
+  KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -17,6 +17,7 @@ import TopbarClock from "./common/TopbarClock";
 import api from "../api/api";
 import DesktopOnlyGate from "./DesktopOnlyGate";
 import PageFooter from "./PageFooter";
+import OverdueBillsBanner from "./OverdueBillsBanner";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
 // module: matches AppModule enum. null = always visible (no permission needed)
@@ -94,6 +95,24 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Sports",
+    icon: Trophy,
+    collapsible: true,
+    module: "SPORTS" as const,
+    items: [
+      { path: "/sports", label: "Sports", icon: Trophy },
+    ],
+  },
+  {
+    label: "Inventory",
+    icon: Package,
+    collapsible: true,
+    module: "INVENTORY" as const,
+    items: [
+      { path: "/inventory", label: "Inventory", icon: Package },
+    ],
+  },
+  {
     label: "Communication",
     icon: MessageSquare,
     collapsible: true,
@@ -122,6 +141,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/account",         label: "My Account",     icon: School },
       { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
+      { path: "/jobs",            label: "Scheduled Jobs", icon: Zap },
       { path: "/support",         label: "Support Center", icon: MessageSquare },
     ],
   },
@@ -233,7 +253,7 @@ const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { hasModule } = useAuthContext();
+  const { canUseModule } = useAuthContext();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -376,7 +396,7 @@ const Layout = () => {
     const hideAccount = role === 'PRINCIPAL' || role === 'DIRECTOR';
     const visibleSections = NAV_SECTIONS.filter(s => {
       if (s.label === 'Account' && hideAccount) return false;
-      return s.module === null || hasModule(s.module);
+      return s.module === null || canUseModule(s.module);
     });
 
     return (
@@ -661,6 +681,7 @@ const Layout = () => {
             short pages instead of floating mid-screen. */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-100">
           <div className="min-h-full flex flex-col">
+            <OverdueBillsBanner />
             <div className="flex-1 flex flex-col">
               <Outlet />
             </div>
