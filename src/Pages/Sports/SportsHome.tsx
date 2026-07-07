@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Trophy, Plus, RefreshCcw, Calendar, MapPin, Users, X } from "lucide-react";
+import { Trophy, Plus, Calendar, MapPin, Users, X } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";

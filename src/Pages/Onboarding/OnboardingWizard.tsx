@@ -1188,9 +1188,6 @@ const OnboardingWizard: React.FC = () => {
     const [done,        setDone]        = useState(false);
 
     // ── State helpers ──────────────────────────────────────────────────────────
-
-    const setSession  = (f: keyof SessionInput, v: string) =>
-        setState(p => ({ ...p, session: { ...p.session, [f]: v } }));
     const updateClass = (ci: number, cls: ClassInput) =>
         setState(p => { const classes = [...p.classes]; classes[ci] = cls; return { ...p, classes }; });
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));

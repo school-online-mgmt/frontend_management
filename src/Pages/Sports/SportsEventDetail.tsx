@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-    Trophy, ArrowLeft, Users, Calendar, MapPin, ShieldCheck, Megaphone, X,
+    Trophy, ArrowLeft, Users, Calendar, MapPin, ShieldCheck, X,
     CheckCircle, XCircle, Clock, Award, AlertTriangle, UserPlus,
 } from "lucide-react";
 import api from "../../api/api";
