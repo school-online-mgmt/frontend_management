@@ -222,7 +222,7 @@ const ExamHome = () => {
             {/* Top section (modal, message, filters) keeps a max-width
                 container so the controls stay readable; the TabbedSection
                 below escapes that wrapper to span the full page width. */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-4 space-y-4">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
                 {isCreateOpen && (
                     <CreateExamModal onClose={() => setIsCreateOpen(false)} onRefresh={fetchOverview}
                         setMessage={setMessage} setMessageType={setMessageType} />

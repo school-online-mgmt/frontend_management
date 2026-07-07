@@ -85,7 +85,7 @@ const ClassHome = () => {
                     </button>
                 }
             />
-            <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
 
             {!selectedSessionId ? (
                 <EmptySessionState entityPlural="classes" />

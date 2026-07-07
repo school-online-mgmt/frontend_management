@@ -251,7 +251,7 @@ const PerformancePage: React.FC = () => {
                 }}
                 refreshing={loading}
             />
-            <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-5">
 
             {/* Refinement filters (term / class / section / student) — session
                 lives in the header. */}

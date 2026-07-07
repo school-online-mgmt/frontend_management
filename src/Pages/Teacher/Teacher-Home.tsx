@@ -401,7 +401,7 @@ const TeacherHome = () => {
       >
         {/* ─────────────── TEACHERS TAB ─────────────────────────────────── */}
         <TabPanel tabKey="teachers">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard icon={Users}     label="Total Teachers" value={stats.total}    bg="bg-indigo-50"  iconColor="text-indigo-600" />
               <StatCard icon={UserCheck} label="Active"         value={stats.active}   bg="bg-emerald-50" iconColor="text-emerald-600"
@@ -651,7 +651,7 @@ const TeacherHome = () => {
 
         {/* ─────────────── APPLICATIONS TAB ─────────────────────────────── */}
         <TabPanel tabKey="applications">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
             {/* App stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard icon={FileText}    label="Total"       value={appCounts.total}       bg="bg-slate-100"   iconColor="text-slate-500" />

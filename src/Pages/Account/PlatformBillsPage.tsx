@@ -123,7 +123,7 @@ const PlatformBillsPage = () => {
     const { rows, totals, activeCycle } = query.data;
 
     return (
-        <div className="space-y-6 p-6 max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-6">
             <PageHeader
                 icon={Receipt}
                 title="Platform Bills"

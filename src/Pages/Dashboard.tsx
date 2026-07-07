@@ -243,7 +243,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="p-3 md:p-4 space-y-4 max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
 
       {/* ── Hero Welcome ─────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 rounded-2xl p-4 md:p-5 relative overflow-hidden">

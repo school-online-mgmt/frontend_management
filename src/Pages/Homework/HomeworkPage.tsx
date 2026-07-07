@@ -65,7 +65,7 @@ const HomeworkPage = () => {
             <PageHeader icon={BookMarked} title="Homework" gradient={MODULE_THEMES.assignment}
                 subtitle="School-wide oversight of homework — teachers assign & grade in their portal." onRefresh={load} refreshing={loading} />
 
-            <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6 pb-16 space-y-5">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-5">
                 {/* Insight tiles */}
                 {s && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

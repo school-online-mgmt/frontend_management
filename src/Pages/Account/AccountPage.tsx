@@ -657,7 +657,7 @@ export default function AccountPage() {
         <>
           {/* Body wrapper — centred max-width for readability. Tabbed
               section below escapes the wrapper to span page-width. */}
-          <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-4">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
             {/* Urgent alert */}
             {urgentAlert && (
               <div className="flex items-start gap-3 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
@@ -744,7 +744,7 @@ export default function AccountPage() {
             idPrefix="account"
             ariaLabel="Account settings sections"
             theme="violet"
-            flushPanel
+            densePanel
             value={activeTab}
             onChange={(k) => setActiveTab(k as Tab)}
             tabs={TABS.filter(t => !t.adminOnly || isAdmin).map(t => ({

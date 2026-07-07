@@ -544,7 +544,7 @@ const AssignmentsPage = () => {
         <div className="p-6 max-w-6xl mx-auto"><EmptySessionState entityPlural="staff assignments" /></div>
       ) : (<>
 
-      <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6 pb-4 space-y-5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-5">
         {/* Coverage meters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <CoverageMeter icon={School}        label="Class teachers"   assigned={classAssigned}   total={classes.length}     color="bg-indigo-500" tint="bg-indigo-50" tintText="text-indigo-600" />

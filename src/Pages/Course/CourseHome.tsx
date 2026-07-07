@@ -72,7 +72,7 @@ const CourseHome = () => {
                 }
             />
 
-            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
 
                 {/* Empty gate */}
                 {!selectedSessionId && !sessionsLoading && (

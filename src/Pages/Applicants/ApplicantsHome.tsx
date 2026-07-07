@@ -254,7 +254,7 @@ const ApplicantsHome: React.FC = () => {
         refreshing={loading}
       />
 
-      <div className="max-w-7xl mx-auto p-2 space-y-1.5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-2.5">
 
         {/* Page-level summary stats. */}
         {selectedSessionId && applicants.length > 0 && (
