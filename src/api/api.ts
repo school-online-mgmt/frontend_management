@@ -2328,6 +2328,15 @@ createStudent = async (data: {
         const res = await apiClient.get('/management/timetable/conflicts', { params: sessionId ? { sessionId } : undefined });
         return res.data as { conflictCount: number; conflicts: any[] };
     };
+    // Bell schedule (period start/end times) — same across all classes/sections.
+    getTimetablePeriodConfig = async (sessionId: string) => {
+        const res = await apiClient.get('/management/timetable/period-config', { params: { sessionId } });
+        return res.data as { slots: Array<{ periodNumber: number; startTime: string; endTime: string; label: string | null; isBreak: boolean }> };
+    };
+    saveTimetablePeriodConfig = async (sessionId: string, slots: Array<{ periodNumber: number; startTime: string; endTime: string; label?: string | null; isBreak?: boolean }>) => {
+        const res = await apiClient.put('/management/timetable/period-config', { sessionId, slots });
+        return res.data as { message: string; count: number };
+    };
 
     // ── Documents & Certificates (under People) ───────────────────────────────
     getCertificateCatalogue = async () => {
@@ -2364,6 +2373,40 @@ createStudent = async (data: {
     };
     verifyStudentUpload = async (id: string, action: 'VERIFY' | 'REJECT', reason?: string) => {
         const res = await apiClient.patch(`/management/documents/uploads/${id}/verify`, { action, ...(reason ? { reason } : {}) });
+        return res.data;
+    };
+
+    // ── Teacher documents & certificates (mirror of the student set) ──────────
+    getTeacherCertificates = async (params?: { status?: string; teacherId?: string }) => {
+        const res = await apiClient.get('/management/teacher-documents/certificates', { params });
+        return res.data as { count: number; certificates: any[] };
+    };
+    getTeacherCertificatePrefill = async (id: string) => {
+        const res = await apiClient.get(`/management/teacher-documents/certificates/${id}/prefill`);
+        return res.data as { certType: string; fields: any[]; prefill: any; defaultExpiryDate: string; infinityDate: string };
+    };
+    publishTeacherCertificate = async (id: string, data: { fields: Record<string, any>; expiryDate: string; issueDate?: string }) => {
+        const res = await apiClient.post(`/management/teacher-documents/certificates/${id}/publish`, data);
+        return res.data;
+    };
+    rejectTeacherCertificate = async (id: string, reason: string) => {
+        const res = await apiClient.post(`/management/teacher-documents/certificates/${id}/reject`, { reason });
+        return res.data;
+    };
+    downloadTeacherCertificate = async (id: string) => {
+        const res = await apiClient.get(`/management/teacher-documents/certificates/${id}/download`);
+        return res.data as { url: string; fileName: string };
+    };
+    getTeacherUploads = async (params?: { status?: string; teacherId?: string }) => {
+        const res = await apiClient.get('/management/teacher-documents/uploads', { params });
+        return res.data as { count: number; uploads: any[] };
+    };
+    viewTeacherUpload = async (id: string) => {
+        const res = await apiClient.get(`/management/teacher-documents/uploads/${id}/view`);
+        return res.data as { url: string; fileName: string };
+    };
+    verifyTeacherUpload = async (id: string, action: 'VERIFY' | 'REJECT', reason?: string) => {
+        const res = await apiClient.patch(`/management/teacher-documents/uploads/${id}/verify`, { action, ...(reason ? { reason } : {}) });
         return res.data;
     };
 }

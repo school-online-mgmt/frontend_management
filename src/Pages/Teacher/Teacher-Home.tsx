@@ -6,10 +6,11 @@ import {
   GraduationCap, Filter, X, CheckCircle2, XCircle,
   Loader2, UserPlus, BarChart3, UserCheck, UserX,
   Briefcase, AlignJustify, Mail, MapPin, FileText,
-  Clock, CheckCheck, Ban, Star, MessageSquare,
+  Clock, CheckCheck, Ban, Star, MessageSquare, Calculator,
 } from "lucide-react";
 import api from "../../api/api";
 import CreateTeacher from "../../components/CreateTeacher";
+import TeacherCalculatorModal from "../../components/Teacher/TeacherCalculatorModal";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import type { Teacher, TeacherApplication } from "../../api/types";
@@ -274,6 +275,7 @@ const TeacherHome = () => {
 
   /* ── Teachers state ── */
   const [isModalOpen, setIsModalOpen]   = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [genderFilter, setGenderFilter] = useState("");
@@ -380,13 +382,23 @@ const TeacherHome = () => {
         refreshing={isLoading || appsLoading}
         primaryActions={
           activeTab === 'teachers' ? (
-            <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
-              <UserPlus size={14} /> Add Teacher
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button data-testid="staffing-calculator-btn" onClick={() => setShowCalculator(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm">
+                <Calculator size={14} /> Staffing Calculator
+              </button>
+              <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm">
+                <UserPlus size={14} /> Add Teacher
+              </button>
+            </div>
           ) : undefined
         }
       />
+
+      {showCalculator && (
+        <TeacherCalculatorModal currentTeachers={stats.total ?? teachers.length} onClose={() => setShowCalculator(false)} />
+      )}
 
       <TabbedSection
         idPrefix="teacher"

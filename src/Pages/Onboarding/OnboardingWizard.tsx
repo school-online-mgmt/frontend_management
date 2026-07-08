@@ -481,6 +481,24 @@ const baseName = (className: string, full: string): string =>
     full.startsWith(`${className} : `) ? full.slice(`${className} : `.length) : full;
 const prefixed = (className: string, name: string): string => `${className} : ${name}`;
 
+// Small inline "type a name + Add" control used for custom subjects/courses.
+const CustomAddInput: React.FC<{ placeholder: string; testId: string; onAdd: (v: string) => void }> = ({ placeholder, testId, onAdd }) => {
+    const [val, setVal] = useState('');
+    const submit = () => { if (val.trim()) { onAdd(val); setVal(''); } };
+    return (
+        <div className="flex gap-2 mt-2">
+            <input data-testid={testId} value={val} onChange={e => setVal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+                placeholder={placeholder}
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <button type="button" data-testid={`${testId}-btn`} onClick={submit} disabled={!val.trim()}
+                className="px-3 py-2 text-xs font-bold text-emerald-600 border border-dashed border-emerald-300 rounded-xl hover:bg-emerald-50 disabled:opacity-40 inline-flex items-center gap-1.5">
+                <Plus size={13} /> Add
+            </button>
+        </div>
+    );
+};
+
 const CoursesStep: React.FC<{
     classes: ClassInput[];
     update: (classes: ClassInput[]) => void;
@@ -540,8 +558,28 @@ const CoursesStep: React.FC<{
         patchClass({ ...cls, courses });
     };
 
+    // Add a custom subject (beyond the defaults) — stored class-prefixed.
+    const addCustomSubject = (rawName: string) => {
+        const base = rawName.trim();
+        if (!base) return;
+        const full = prefixed(cls.name, base);
+        if (cls.subjects.some(s => s.name.toLowerCase() === full.toLowerCase())) return;
+        patchClass({ ...cls, subjects: [...cls.subjects, { name: full, bookName: `${base} — Textbook`, type: 'core' }] });
+    };
+    // Add a custom (empty) course the management then assigns subjects to.
+    const addCustomCourse = (rawName: string) => {
+        const base = rawName.trim();
+        if (!base) return;
+        const courseName = prefixed(cls.name, base);
+        if (cls.courses.some(c => c.name.toLowerCase() === courseName.toLowerCase())) return;
+        patchClass({ ...cls, courses: [...cls.courses, { name: courseName, description: `${base} course for ${cls.name}`, subjectIndices: [], feeItems: [] }] });
+    };
+
     const selectedSubjectBases = new Set(cls?.subjects.map(s => baseName(cls.name, s.name)) ?? []);
     const addedCourseNames = new Set(cls?.courses.map(c => c.name) ?? []);
+    // Custom subjects = those the class has that aren't in the defaults catalogue.
+    const defaultBaseNames = new Set(def?.subjects.map(s => s.name) ?? []);
+    const customSubjects = cls?.subjects.filter(s => !defaultBaseNames.has(baseName(cls.name, s.name))) ?? [];
 
     if (!cls) return <div className="text-sm text-slate-400">Add classes in the previous step first.</div>;
 
@@ -587,17 +625,30 @@ const CoursesStep: React.FC<{
                         })}
                     </div>
                 ) : (
-                    <p className="text-xs text-slate-400 italic">No default subjects for this class — add courses below.</p>
+                    <p className="text-xs text-slate-400 italic">No default subjects for this class — add your own below.</p>
                 )}
+                {/* Custom subjects (chips) already added */}
+                {customSubjects.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {customSubjects.map(s => (
+                            <button key={s.name} type="button" onClick={() => toggleSubject(baseName(cls.name, s.name), s.bookName, s.type)}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold border bg-emerald-600 text-white border-emerald-600 shadow-sm">
+                                <Check size={11} className="inline mr-1 -mt-0.5" />{baseName(cls.name, s.name)}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {/* Add a custom subject */}
+                <CustomAddInput placeholder="Add a custom subject…" testId="wizard-custom-subject" onAdd={addCustomSubject} />
                 {showErrors && cls.subjects.length === 0 && <p className="text-xs text-red-500 mt-2">Add at least one subject.</p>}
             </div>
 
             <div className="border-t border-slate-100" />
 
             {/* Suggested course presets */}
-            {def && def.courses.length > 0 && (
-                <div>
-                    <p className={lbl + ' mb-2'}>Add a course / stream <span className="text-slate-400 font-normal normal-case">(one class can have several)</span></p>
+            <div>
+                <p className={lbl + ' mb-2'}>Add a course / stream <span className="text-slate-400 font-normal normal-case">(one class can have several)</span></p>
+                {def && def.courses.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {def.courses.map(c => {
                             const added = addedCourseNames.has(prefixed(cls.name, c.name));
@@ -613,8 +664,9 @@ const CoursesStep: React.FC<{
                             );
                         })}
                     </div>
-                </div>
-            )}
+                )}
+                <CustomAddInput placeholder="Add a custom course / stream…" testId="wizard-custom-course" onAdd={addCustomCourse} />
+            </div>
 
             {/* Added courses */}
             <div className="space-y-3">

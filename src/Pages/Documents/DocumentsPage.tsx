@@ -20,9 +20,35 @@ const DOC_STATUS: Record<string, { bg: string; text: string; label: string }> = 
 const humanType = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 const openUrl = (url: string) => window.open(url, "_blank", "noopener");
 
+type Subject = "students" | "teachers";
+// The name to show for a certificate/upload row, whichever subject it is.
+const rowName = (r: any): string => r.teacherName ?? [r.firstName, r.lastName].filter(Boolean).join(" ");
+
+// Maps the active subject to its API method set so the page/modals stay generic.
+const docApi = (subject: Subject) => subject === "teachers" ? {
+    getCertificates: api.getTeacherCertificates,
+    getPrefill: api.getTeacherCertificatePrefill,
+    publish: api.publishTeacherCertificate,
+    rejectCert: api.rejectTeacherCertificate,
+    download: api.downloadTeacherCertificate,
+    getUploads: api.getTeacherUploads,
+    viewUpload: api.viewTeacherUpload,
+    verifyUpload: api.verifyTeacherUpload,
+} : {
+    getCertificates: api.getCertificates,
+    getPrefill: api.getCertificatePrefill,
+    publish: api.publishCertificate,
+    rejectCert: api.rejectCertificate,
+    download: api.downloadCertificate,
+    getUploads: api.getStudentUploads,
+    viewUpload: api.viewStudentUpload,
+    verifyUpload: api.verifyStudentUpload,
+};
+
 /* ── Issue / publish modal ─────────────────────────────────────────────────── */
-const IssueModal = ({ cert, onClose, onDone }: { cert: any; onClose: () => void; onDone: () => void }) => {
+const IssueModal = ({ cert, subject, onClose, onDone }: { cert: any; subject: Subject; onClose: () => void; onDone: () => void }) => {
     const { addToast } = useToast();
+    const A = docApi(subject);
     const [loading, setLoading] = useState(true);
     const [fields, setFields] = useState<any[]>([]);
     const [values, setValues] = useState<Record<string, any>>({});
@@ -33,7 +59,7 @@ const IssueModal = ({ cert, onClose, onDone }: { cert: any; onClose: () => void;
     const [error, setError] = useState("");
 
     useEffect(() => {
-        api.getCertificatePrefill(cert.id).then(r => {
+        A.getPrefill(cert.id).then(r => {
             setFields(r.fields ?? []);
             setPrefill(r.prefill);
             setExpiryDate(r.defaultExpiryDate);
@@ -49,36 +75,39 @@ const IssueModal = ({ cert, onClose, onDone }: { cert: any; onClose: () => void;
         if (!expiryDate) { setError("Expiry date is required."); return; }
         setSaving(true); setError("");
         try {
-            await api.publishCertificate(cert.id, { fields: values, expiryDate });
+            await A.publish(cert.id, { fields: values, expiryDate });
             addToast("Certificate published.", "success");
             onDone();
         } catch (e: any) { setError(e?.response?.data?.message ?? "Failed to publish."); setSaving(false); }
     };
 
+    // Auto-fill summary: students carry a `student`, teachers a `teacher`.
     const s = prefill?.student;
+    const tch = prefill?.teacher;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                     <div><h3 className="text-sm font-bold text-slate-800">Issue {humanType(cert.certType)}</h3>
-                        <p className="text-[11px] text-slate-500">{cert.firstName} {cert.lastName}</p></div>
+                        <p className="text-[11px] text-slate-500">{rowName(cert)}</p></div>
                     <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
                 </div>
                 {loading ? <div className="flex justify-center py-16"><Loader2 size={22} className="animate-spin text-slate-400" /></div> : (
                     <div className="p-5 space-y-3.5 overflow-y-auto">
                         {/* Auto-populated summary */}
-                        {s && (
+                        {(s || tch) && (
                             <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-600">
                                 <p className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Auto-filled from records</p>
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                                    <span>Name: <b>{s.fullName}</b></span>
-                                    {s.admissionId && <span>Adm: <b>{s.admissionId}</b></span>}
-                                    {s.className && <span>Class: <b>{s.className}{s.sectionName ? `-${s.sectionName}` : ""}</b></span>}
-                                    {s.sessionName && <span>Session: <b>{s.sessionName}</b></span>}
+                                    <span>Name: <b>{(s ?? tch).fullName}</b></span>
+                                    {s?.admissionId && <span>Adm: <b>{s.admissionId}</b></span>}
+                                    {s?.className && <span>Class: <b>{s.className}{s.sectionName ? `-${s.sectionName}` : ""}</b></span>}
+                                    {s?.sessionName && <span>Session: <b>{s.sessionName}</b></span>}
+                                    {tch?.qualification && <span>Qualification: <b>{tch.qualification}</b></span>}
                                 </div>
                             </div>
                         )}
-                        {cert.requestNote && <p className="text-[11px] text-slate-500 italic">Student note: "{cert.requestNote}"</p>}
+                        {cert.requestNote && <p className="text-[11px] text-slate-500 italic">Note: "{cert.requestNote}"</p>}
 
                         {fields.map(f => (
                             <div key={f.name}>
@@ -147,40 +176,43 @@ const RejectModal = ({ title, onClose, onConfirm }: { title: string; onClose: ()
 /* ── Main page ─────────────────────────────────────────────────────────────── */
 const DocumentsPage = () => {
     const { addToast } = useToast();
+    const [subject, setSubject] = useState<Subject>("students");
     const [tab, setTab] = useState<"certificates" | "uploads">("certificates");
     const [certs, setCerts] = useState<any[]>([]);
     const [uploads, setUploads] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [issuing, setIssuing] = useState<any>(null);
     const [rejecting, setRejecting] = useState<{ kind: "cert" | "upload"; id: string } | null>(null);
+    const A = docApi(subject);
 
     const load = useCallback(() => {
         setLoading(true);
-        Promise.allSettled([api.getCertificates(), api.getStudentUploads()])
+        const api2 = docApi(subject);
+        Promise.allSettled([api2.getCertificates(), api2.getUploads()])
             .then(([c, u]) => {
                 setCerts(c.status === "fulfilled" ? c.value.certificates ?? [] : []);
                 setUploads(u.status === "fulfilled" ? u.value.uploads ?? [] : []);
             }).finally(() => setLoading(false));
-    }, []);
+    }, [subject]);
     useEffect(() => { load(); }, [load]);
 
     const download = async (id: string) => {
-        try { const r = await api.downloadCertificate(id); openUrl(r.url); }
+        try { const r = await A.download(id); openUrl(r.url); }
         catch (e: any) { addToast(e?.response?.data?.message ?? "Download failed", "error"); }
     };
     const viewUpload = async (id: string) => {
-        try { const r = await api.viewStudentUpload(id); openUrl(r.url); }
+        try { const r = await A.viewUpload(id); openUrl(r.url); }
         catch (e: any) { addToast(e?.response?.data?.message ?? "Failed", "error"); }
     };
     const verify = async (id: string) => {
-        try { await api.verifyStudentUpload(id, "VERIFY"); addToast("Document verified.", "success"); load(); }
+        try { await A.verifyUpload(id, "VERIFY"); addToast("Document verified.", "success"); load(); }
         catch (e: any) { addToast(e?.response?.data?.message ?? "Failed", "error"); }
     };
     const doReject = async (reason: string) => {
         if (!rejecting) return;
         try {
-            if (rejecting.kind === "cert") await api.rejectCertificate(rejecting.id, reason);
-            else await api.verifyStudentUpload(rejecting.id, "REJECT", reason);
+            if (rejecting.kind === "cert") await A.rejectCert(rejecting.id, reason);
+            else await A.verifyUpload(rejecting.id, "REJECT", reason);
             addToast("Rejected.", "success"); setRejecting(null); load();
         } catch (e: any) { addToast(e?.response?.data?.message ?? "Failed", "error"); }
     };
@@ -190,15 +222,21 @@ const DocumentsPage = () => {
 
     return (
         <div className="min-h-full bg-slate-50">
-            {issuing && <IssueModal cert={issuing} onClose={() => setIssuing(null)} onDone={() => { setIssuing(null); load(); }} />}
+            {issuing && <IssueModal cert={issuing} subject={subject} onClose={() => setIssuing(null)} onDone={() => { setIssuing(null); load(); }} />}
             {rejecting && <RejectModal title={rejecting.kind === "cert" ? "Reject request" : "Reject document"} onClose={() => setRejecting(null)} onConfirm={doReject} />}
 
             <PageHeader icon={FileText} title="Documents & Certificates" gradient={MODULE_THEMES.people}
-                subtitle="Issue school certificates and verify student-uploaded documents." onRefresh={load} refreshing={loading} />
+                subtitle="Issue certificates and verify uploaded documents for students and teachers." onRefresh={load} refreshing={loading} />
 
             <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
-                {/* Tabs */}
+                {/* Subject switch — students vs teachers */}
                 <div className="inline-flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                    <button onClick={() => setSubject("students")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${subject === "students" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-700"}`}>Students</button>
+                    <button onClick={() => setSubject("teachers")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${subject === "teachers" ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-700"}`}>Teachers</button>
+                </div>
+
+                {/* Tabs */}
+                <div className="inline-flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm ml-2">
                     <button onClick={() => setTab("certificates")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "certificates" ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>
                         Certificates {pendingCerts > 0 && <span className="ml-1 text-[10px] bg-amber-400 text-amber-900 px-1.5 rounded-full">{pendingCerts}</span>}
                     </button>
@@ -220,7 +258,7 @@ const DocumentsPage = () => {
                                         <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0"><FileText size={15} className="text-indigo-500" /></div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-slate-800 truncate">{humanType(c.certType)}</p>
-                                            <p className="text-[11px] text-slate-500 truncate">{c.firstName} {c.lastName}{c.certificateNumber && ` · ${c.certificateNumber}`}{c.expiryDate && c.status === "PUBLISHED" && ` · exp ${c.expiryDate}`}</p>
+                                            <p className="text-[11px] text-slate-500 truncate">{rowName(c)}{c.certificateNumber && ` · ${c.certificateNumber}`}{c.expiryDate && c.status === "PUBLISHED" && ` · exp ${c.expiryDate}`}</p>
                                             {c.status === "REJECTED" && c.rejectedReason && <p className="text-[11px] text-rose-600">Rejected: {c.rejectedReason}</p>}
                                         </div>
                                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${st.bg} ${st.text} shrink-0`}><StIcon size={10} /> {st.label}</span>
@@ -237,7 +275,7 @@ const DocumentsPage = () => {
                         </div>
                     )
                 ) : (
-                    uploads.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No student documents uploaded yet.</div>
+                    uploads.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No {subject === "teachers" ? "teacher" : "student"} documents uploaded yet.</div>
                     : (
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
                             {uploads.map(u => {
@@ -247,7 +285,7 @@ const DocumentsPage = () => {
                                         <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0"><ShieldCheck size={15} className="text-violet-500" /></div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-slate-800 truncate">{u.customTitle || humanType(u.docType)}</p>
-                                            <p className="text-[11px] text-slate-500 truncate">{u.firstName} {u.lastName}{u.fileName && ` · ${u.fileName}`}</p>
+                                            <p className="text-[11px] text-slate-500 truncate">{rowName(u)}{u.fileName && ` · ${u.fileName}`}</p>
                                             {u.status === "REJECTED" && u.rejectedReason && <p className="text-[11px] text-rose-600">Rejected: {u.rejectedReason}</p>}
                                         </div>
                                         <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${st.bg} ${st.text} shrink-0`}>{st.label}</span>
