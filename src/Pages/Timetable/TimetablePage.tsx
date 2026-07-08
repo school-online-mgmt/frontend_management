@@ -36,17 +36,22 @@ interface Entry {
 }
 interface Section { id: string; name: string; slug?: string }
 interface ClassRow { id: string; name: string; sections: Section[] }
+interface PeriodSlot { periodNumber: number; startTime: string; endTime: string; label: string | null; isBreak: boolean }
 
 /* ── Cell editor modal ─────────────────────────────────────────────────────── */
-const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, onClose, onDone }: {
+const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, periodConfig, onClose, onDone }: {
     ctx: { dayOfWeek: number; periodNumber: number; entry?: Entry };
     subjects: any[]; teachers: any[]; sessionId: string; sectionId: string; classId?: string;
+    periodConfig: PeriodSlot[];
     onClose: () => void; onDone: () => void;
 }) => {
     const e = ctx.entry;
-    const [type, setType] = useState(e?.type ?? "CLASS");
-    const [startTime, setStartTime] = useState(e?.startTime ?? "08:00");
-    const [endTime, setEndTime] = useState(e?.endTime ?? "08:45");
+    // For a NEW period, prefill start/end (and break type) from the saved bell
+    // schedule for this period number — times are the same for every section.
+    const slot = !e ? periodConfig.find(s => s.periodNumber === ctx.periodNumber) : undefined;
+    const [type, setType] = useState(e?.type ?? (slot?.isBreak ? "BREAK" : "CLASS"));
+    const [startTime, setStartTime] = useState(e?.startTime ?? slot?.startTime ?? "08:00");
+    const [endTime, setEndTime] = useState(e?.endTime ?? slot?.endTime ?? "08:45");
     const [subjectId, setSubjectId] = useState(e?.subjectId ?? "");
     const [teacherId, setTeacherId] = useState(e?.teacherId ?? "");
     const [room, setRoom] = useState(e?.room ?? "");
@@ -116,6 +121,7 @@ const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, onC
                             <input type="time" value={endTime} onChange={ev => setEndTime(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                         </div>
                     </div>
+                    {slot && <p className="text-[11px] text-slate-400 -mt-1.5">Prefilled from the bell schedule (Config tab). Edit if this period differs.</p>}
                     {type === "CLASS" && (
                         <>
                             <div>
@@ -155,6 +161,87 @@ const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, onC
     );
 };
 
+/* ── Period bell-schedule config tab ───────────────────────────────────────── */
+const addMinutes = (hhmm: string, mins: number): string => {
+    const [h, m] = hhmm.split(":").map(Number);
+    const total = (h * 60 + m + mins + 1440) % 1440;
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
+const PeriodConfigTab = ({ sessionId, initial, onSaved }: {
+    sessionId: string; initial: PeriodSlot[]; onSaved: (slots: PeriodSlot[]) => void;
+}) => {
+    const { addToast } = useToast();
+    const [slots, setSlots] = useState<PeriodSlot[]>(initial.length ? initial : [
+        { periodNumber: 1, startTime: "08:00", endTime: "08:45", label: null, isBreak: false },
+    ]);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const patch = (i: number, p: Partial<PeriodSlot>) => setSlots(s => s.map((x, idx) => idx === i ? { ...x, ...p } : x));
+    const remove = (i: number) => setSlots(s => s.filter((_, idx) => idx !== i).map((x, idx) => ({ ...x, periodNumber: idx + 1 })));
+    const add = () => setSlots(s => {
+        const last = s[s.length - 1];
+        const start = last ? last.endTime : "08:00";
+        return [...s, { periodNumber: s.length + 1, startTime: start, endTime: addMinutes(start, 45), label: null, isBreak: false }];
+    });
+
+    const save = async () => {
+        for (const s of slots) if (s.endTime <= s.startTime) { setError(`Period ${s.periodNumber}: end time must be after start time.`); return; }
+        setSaving(true); setError("");
+        try {
+            await api.saveTimetablePeriodConfig(sessionId, slots.map(s => ({ periodNumber: s.periodNumber, startTime: s.startTime, endTime: s.endTime, label: s.label || null, isBreak: s.isBreak })));
+            addToast("Bell schedule saved.", "success");
+            onSaved(slots);
+        } catch (err: any) { setError(err?.response?.data?.message ?? "Failed to save."); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 max-w-3xl">
+            <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center shrink-0"><Clock size={16} className="text-sky-500" /></div>
+                <div>
+                    <p className="text-sm font-bold text-slate-800">Bell Schedule</p>
+                    <p className="text-xs text-slate-500">Set each period's start & end time once — these apply to <b>every class and section</b>. The add-period popup prefills these times.</p>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="grid gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1"
+                    style={{ gridTemplateColumns: "48px 1fr 1fr 1.4fr 92px 32px" }}>
+                    <span>Period</span><span>Start</span><span>End</span><span>Label</span><span>Break</span><span />
+                </div>
+                {slots.map((s, i) => (
+                    <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: "48px 1fr 1fr 1.4fr 92px 32px" }}>
+                        <span className="text-xs font-bold text-slate-600">P{s.periodNumber}</span>
+                        <input type="time" value={s.startTime} onChange={e => patch(i, { startTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
+                        <input type="time" value={s.endTime} onChange={e => patch(i, { endTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
+                        <input value={s.label ?? ""} onChange={e => patch(i, { label: e.target.value })} placeholder={s.isBreak ? "e.g. Lunch" : "optional"} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
+                        <button onClick={() => patch(i, { isBreak: !s.isBreak })}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition ${s.isBreak ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-slate-200 text-slate-500"}`}>
+                            {s.isBreak ? "Break" : "Class"}
+                        </button>
+                        <button onClick={() => remove(i)} disabled={slots.length <= 1}
+                            className="w-8 h-8 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg disabled:opacity-30"><Trash2 size={13} /></button>
+                    </div>
+                ))}
+            </div>
+
+            {error && <div className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700"><AlertTriangle size={13} className="shrink-0" />{error}</div>}
+
+            <div className="flex items-center gap-2 mt-4">
+                <button onClick={add} disabled={slots.length >= 20}
+                    className="px-3 py-2 text-xs font-bold text-sky-600 border border-dashed border-sky-300 rounded-lg hover:bg-sky-50 disabled:opacity-40 inline-flex items-center gap-1.5"><Plus size={13} /> Add Period</button>
+                <button onClick={save} disabled={saving}
+                    className="ml-auto px-4 py-2 text-xs font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 inline-flex items-center gap-1.5">
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save Schedule
+                </button>
+            </div>
+        </div>
+    );
+};
+
 /* ── Main page ─────────────────────────────────────────────────────────────── */
 const TimetablePage = () => {
     const sessionId = useSessionId();
@@ -167,6 +254,8 @@ const TimetablePage = () => {
     const [loading, setLoading] = useState(false);
     const [conflicts, setConflicts] = useState(0);
     const [modal, setModal] = useState<{ dayOfWeek: number; periodNumber: number; entry?: Entry } | null>(null);
+    const [tab, setTab] = useState<"grid" | "config">("grid");
+    const [periodConfig, setPeriodConfig] = useState<PeriodSlot[]>([]);
 
     const selectedSection = useMemo(() => {
         for (const c of classes) { const s = c.sections.find(x => x.id === sectionId); if (s) return { section: s, cls: c }; }
@@ -186,6 +275,7 @@ const TimetablePage = () => {
                 setConflicts(cf.status === "fulfilled" ? (cf.value.conflictCount ?? 0) : 0);
                 if (!sectionId && cls[0]?.sections[0]) setSectionId(cls[0].sections[0].id);
             });
+        api.getTimetablePeriodConfig(sessionId).then(r => setPeriodConfig(r.slots ?? [])).catch(() => {});
     }, [sessionId]);  // eslint-disable-line react-hooks/exhaustive-deps
 
     const loadGrid = useCallback(async () => {
@@ -211,7 +301,7 @@ const TimetablePage = () => {
         <div className="min-h-full bg-slate-50">
             {modal && selectedSection && (
                 <CellModal ctx={modal} subjects={subjects} teachers={teachers}
-                    sessionId={sessionId} sectionId={sectionId} classId={selectedSection.cls.id}
+                    sessionId={sessionId} sectionId={sectionId} classId={selectedSection.cls.id} periodConfig={periodConfig}
                     onClose={() => setModal(null)} onDone={() => { setModal(null); loadGrid(); api.getTimetableConflicts(sessionId).then(c => setConflicts(c.conflictCount ?? 0)); }} />
             )}
 
@@ -219,6 +309,16 @@ const TimetablePage = () => {
                 subtitle="Build the weekly class timetable. Teachers & students can view any section." onRefresh={loadGrid} refreshing={loading} />
 
             <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
+                {/* Tabs */}
+                <div className="inline-flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                    <button onClick={() => setTab("grid")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "grid" ? "bg-sky-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>Timetable</button>
+                    <button onClick={() => setTab("config")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "config" ? "bg-sky-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>Config</button>
+                </div>
+
+                {tab === "config" ? (
+                    <PeriodConfigTab sessionId={sessionId} initial={periodConfig} onSaved={setPeriodConfig} />
+                ) : (
+                <>
                 {/* Section selector + conflict banner */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="relative">
@@ -291,6 +391,8 @@ const TimetablePage = () => {
                             </tbody>
                         </table>
                     </div>
+                )}
+                </>
                 )}
             </div>
         </div>
