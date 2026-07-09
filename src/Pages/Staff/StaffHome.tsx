@@ -6,8 +6,10 @@ import {
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
     TrendingUp, Activity, Info, Bus, Trophy, Sparkles, Package, CalendarDays,
+    ChevronLeft, Plus,
 } from 'lucide-react';
 import api from '../../api/api';
+import type { StaffRoleDef } from '../../api/api';
 import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { useToast } from '../../context/ToastContext';
 import { useAuthContext, ALL_MODULES, type AppModule } from '../../context/AuthContext';
@@ -16,10 +18,12 @@ import { useAuthContext, ALL_MODULES, type AppModule } from '../../context/AuthC
 
 type Level = 'NONE' | 'READ' | 'ADMIN';
 interface Permission { module: string; level: 'READ' | 'ADMIN' }
+interface AssignedRole { type: string; key: string; name: string }
 interface StaffMember {
     id: string; firstName: string; middleName?: string; lastName: string;
     phone: string; email: string; role: string | null; createdAt: string;
     permissions: Permission[] | null;
+    roles?: AssignedRole[];
 }
 interface Teacher {
     id: string; name: string; gender: string; age: number;
@@ -151,17 +155,20 @@ const LEVEL_CONFIG = {
     ADMIN: { label: 'Admin', active: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/50', idle: 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'},
 };
 
-const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOnly?: boolean }> = ({ level, onChange, readOnly }) => (
+const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOnly?: boolean; minRead?: boolean }> = ({ level, onChange, readOnly, minRead }) => (
     <div className="flex rounded-lg overflow-hidden border border-slate-200 shrink-0">
         {(['NONE', 'READ', 'ADMIN'] as Level[]).map(l => {
             const cfg = LEVEL_CONFIG[l];
+            // minRead = always-on module: READ is the floor, so NONE is locked.
+            const locked = readOnly || (minRead && l === 'NONE');
             return (
                 <button
                     key={l}
                     type="button"
-                    disabled={readOnly}
+                    disabled={locked}
                     onClick={() => onChange(l)}
-                    className={`px-3 py-1.5 text-[11px] font-bold transition-all min-w-[46px] ${level === l ? cfg.active : cfg.idle} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={minRead && l === 'NONE' ? 'People, Teachers & Academics are always at least Read' : undefined}
+                    className={`px-3 py-1.5 text-[11px] font-bold transition-all min-w-[46px] ${level === l ? cfg.active : cfg.idle} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                     {cfg.label}
                 </button>
@@ -181,13 +188,23 @@ const PermissionGrid: React.FC<{
     /** Optional "same as" prefill dropdown. */
     copyFromOptions?: Array<{ id: string; label: string; permissions: Permission[] }>;
 }> = ({ permissions, onChange, readOnly, enabledModules, copyFromOptions }) => {
+    // People/Teachers/Academics can never drop below READ (product rule).
+    const ensureFloor = (perms: Permission[]): Permission[] => {
+        const map = new Map(perms.map(p => [p.module, p.level] as const));
+        for (const m of ALWAYS_ON_MODULES) if (!map.has(m)) map.set(m, 'READ');
+        return [...map.entries()].map(([module, level]) => ({ module, level: level as 'READ' | 'ADMIN' }));
+    };
+    const emit = (perms: Permission[]) => onChange(ensureFloor(perms));
+
     const getLevel = (mod: AppModule): Level => {
         const p = permissions.find(p => p.module === mod);
         return p ? p.level : 'NONE';
     };
     const setLevel = (mod: AppModule, level: Level) => {
+        // Guard the floor: an always-on module can't be set to NONE.
+        if (level === 'NONE' && ALWAYS_ON_MODULES.includes(mod)) return;
         const filtered = permissions.filter(p => p.module !== mod);
-        onChange(level === 'NONE' ? filtered : [...filtered, { module: mod, level: level as 'READ' | 'ADMIN' }]);
+        emit(level === 'NONE' ? filtered : [...filtered, { module: mod, level: level as 'READ' | 'ADMIN' }]);
     };
 
     const isEnabled = (mod: AppModule): boolean => {
@@ -213,7 +230,7 @@ const PermissionGrid: React.FC<{
     // Actions bar helpers
     const applyAll = (level: Exclude<Level, 'NONE'>, scope: 'enabled' | 'all') => {
         const targets = ALL_MODULES.filter(m => scope === 'all' || isEnabled(m));
-        onChange(targets.map(m => ({ module: m, level })));
+        emit(targets.map(m => ({ module: m, level })));
     };
 
     return (
@@ -253,8 +270,9 @@ const PermissionGrid: React.FC<{
                         className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-colors">
                         Admin all
                     </button>
-                    <button type="button" onClick={() => onChange([])}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                    <button type="button" onClick={() => emit([])}
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                        title="Clears optional modules; People/Teachers/Academics stay at Read">
                         Clear
                     </button>
                 </div>
@@ -263,11 +281,12 @@ const PermissionGrid: React.FC<{
             <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
                 <PermissionGridSection
                     title="Always on"
-                    subtitle="Bundled with every school"
+                    subtitle="Bundled with every school · minimum Read"
                     modules={alwaysOn}
                     getLevel={getLevel} setLevel={setLevel}
                     isEnabled={isEnabled}
                     readOnly={readOnly}
+                    minRead
                 />
                 <PermissionGridSection
                     title="Optional"
@@ -303,7 +322,8 @@ const PermissionGridSection: React.FC<{
     isEnabled: (m: AppModule) => boolean;
     readOnly?: boolean;
     firstRowDivided?: boolean;
-}> = ({ title, subtitle, modules, getLevel, setLevel, isEnabled, readOnly, firstRowDivided }) => (
+    minRead?: boolean;
+}> = ({ title, subtitle, modules, getLevel, setLevel, isEnabled, readOnly, firstRowDivided, minRead }) => (
     <>
         <div className={`grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-slate-50 gap-4 ${firstRowDivided ? 'border-t' : ''} border-b border-slate-200`}>
             <div>
@@ -356,7 +376,7 @@ const PermissionGridSection: React.FC<{
                             <p className="text-[11px] text-slate-400 leading-tight mt-0.5 line-clamp-1">{meta.desc}</p>
                         </div>
                     </div>
-                    <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} />
+                    <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} minRead={minRead} />
                 </div>
             );
         })}
@@ -395,6 +415,55 @@ const RolePicker: React.FC<{ value: string; onChange: (v: string) => void }> = (
         })}
     </div>
 );
+
+// ── Role (job-title) selector — built-in + school-defined presets ─────────────
+
+const roleId = (r: { type: string; key: string }) => `${r.type}:${r.key}`;
+
+const RoleSelector: React.FC<{
+    builtIn: StaffRoleDef[];
+    custom: StaffRoleDef[];
+    selected: Array<{ type: string; key: string }>;
+    onToggle: (role: StaffRoleDef) => void;
+    onManage: () => void;
+}> = ({ builtIn, custom, selected, onToggle, onManage }) => {
+    const selectedSet = new Set(selected.map(roleId));
+    const Chip: React.FC<{ role: StaffRoleDef }> = ({ role }) => {
+        const active = selectedSet.has(roleId(role));
+        const adminMods = role.permissions.filter(p => p.level === 'ADMIN').length;
+        return (
+            <button type="button" onClick={() => onToggle(role)} title={role.description}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    active ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+                }`}>
+                {active ? <CheckCircle2 size={13} /> : <Shield size={12} className="opacity-60" />}
+                {role.name}
+                {adminMods > 0 && <span className={`text-[9px] font-bold px-1 rounded ${active ? 'bg-white/20' : 'bg-emerald-50 text-emerald-600'}`}>{adminMods}★</span>}
+            </button>
+        );
+    };
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-500">Pick one or more roles — their access is merged into the grid below (strongest wins). You can fine-tune afterward.</p>
+                <button type="button" onClick={onManage} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 whitespace-nowrap flex items-center gap-1">
+                    <Settings size={11} /> Manage roles
+                </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {builtIn.map(r => <Chip key={roleId(r)} role={r} />)}
+            </div>
+            {custom.length > 0 && (
+                <>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-1">Your school's roles</p>
+                    <div className="flex flex-wrap gap-2">
+                        {custom.map(r => <Chip key={roleId(r)} role={r} />)}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
 
 // ── Role Badge ────────────────────────────────────────────────────────────────
 
@@ -501,11 +570,46 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
     const [role,      setRole]      = useState(initial?.role      ?? 'MANAGEMENT_STAFF');
     const [password,  setPassword]  = useState('');
     const [showPass,  setShowPass]  = useState(false);
-    const [perms, setPerms] = useState<Permission[]>(() =>
-        initial?.permissions ?? []
+    // New staff start at the read floor (People/Teachers/Academics = READ).
+    const [perms, setPerms] = useState<Permission[]>(() => {
+        const base = initial?.permissions ?? [];
+        const map = new Map(base.map(p => [p.module, p.level] as const));
+        for (const m of ALWAYS_ON_MODULES) if (!map.has(m)) map.set(m, 'READ');
+        return [...map.entries()].map(([module, level]) => ({ module, level: level as 'READ' | 'ADMIN' }));
+    });
+    const [selectedRoles, setSelectedRoles] = useState<Array<{ type: string; key: string }>>(
+        () => (initial?.roles ?? []).map(r => ({ type: r.type, key: r.key }))
     );
+    const [showRoleManager, setShowRoleManager] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+
+    const rolesQuery = useQuery({ queryKey: ['staff', 'roles'], queryFn: () => api.getStaffRoles() });
+    const builtIn = rolesQuery.data?.builtIn ?? [];
+    const custom  = rolesQuery.data?.custom ?? [];
+
+    // Toggle a role: selecting merges its permissions into the grid (strongest
+    // wins, floor preserved); deselecting just drops the tag — the grid keeps
+    // whatever it holds so manual edits are never lost.
+    const toggleRole = (roleDef: StaffRoleDef) => {
+        const id = `${roleDef.type}:${roleDef.key}`;
+        const isOn = selectedRoles.some(r => `${r.type}:${r.key}` === id);
+        if (isOn) {
+            setSelectedRoles(prev => prev.filter(r => `${r.type}:${r.key}` !== id));
+        } else {
+            setSelectedRoles(prev => [...prev, { type: roleDef.type, key: roleDef.key }]);
+            setPerms(prev => {
+                const map = new Map(prev.map(p => [p.module, p.level] as const));
+                const rank = { READ: 1, ADMIN: 2 } as const;
+                for (const p of roleDef.permissions) {
+                    const cur = map.get(p.module);
+                    if (!cur || rank[p.level as 'READ' | 'ADMIN'] > rank[cur as 'READ' | 'ADMIN']) map.set(p.module, p.level as 'READ' | 'ADMIN');
+                }
+                for (const m of ALWAYS_ON_MODULES) if (!map.has(m)) map.set(m, 'READ');
+                return [...map.entries()].map(([module, level]) => ({ module, level: level as 'READ' | 'ADMIN' }));
+            });
+        }
+    };
 
     // Effective access: what pages this staff will actually see, given both
     // per-user grants AND per-tenant module subscriptions. Recompute on any
@@ -533,6 +637,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                 firstName, lastName, phone, email, role,
                 ...(password ? { password } : {}),
                 permissions: isFullAccess(role) ? [] : perms,
+                roles: isFullAccess(role) ? [] : selectedRoles.map(r => ({ type: r.type as 'BUILTIN' | 'CUSTOM', key: r.key })),
             });
         } catch (e: any) {
             setErr(e?.response?.data?.message ?? 'Failed to save. Please try again.');
@@ -632,12 +737,25 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                             <RolePicker value={role} onChange={setRole} />
                         </div>
 
+                        {/* Job roles (presets) */}
+                        {needsPermissionGrid(role) && (
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Job Roles</p>
+                                    <span className="text-[10px] text-slate-400">— optional presets</span>
+                                </div>
+                                {rolesQuery.isLoading
+                                    ? <p className="text-xs text-slate-400">Loading roles…</p>
+                                    : <RoleSelector builtIn={builtIn} custom={custom} selected={selectedRoles} onToggle={toggleRole} onManage={() => setShowRoleManager(true)} />}
+                            </div>
+                        )}
+
                         {/* Module Access */}
                         {needsPermissionGrid(role) ? (
                             <div>
                                 <div className="flex items-center gap-2 mb-3">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Module Access</p>
-                                    <span className="text-[10px] text-slate-400">— what this staff can see and do</span>
+                                    <span className="text-[10px] text-slate-400">— fine-tune anything</span>
                                 </div>
                                 <PermissionGrid
                                     permissions={perms}
@@ -712,6 +830,117 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                         </button>
                     </div>
                 </form>
+            </div>
+
+            {showRoleManager && (
+                <RoleManager
+                    custom={custom}
+                    enabledModules={enabledModules}
+                    onClose={() => setShowRoleManager(false)}
+                    onChanged={() => rolesQuery.refetch()}
+                />
+            )}
+        </div>
+    );
+};
+
+// ── Role Manager (school-defined role CRUD) ───────────────────────────────────
+
+const RoleManager: React.FC<{
+    custom: StaffRoleDef[];
+    enabledModules?: readonly string[];
+    onClose: () => void;
+    onChanged: () => void;
+}> = ({ custom, enabledModules, onClose, onChanged }) => {
+    const { addToast } = useToast();
+    const [editing, setEditing] = useState<StaffRoleDef | null>(null);
+    const [mode, setMode] = useState<'list' | 'form'>('list');
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [perms, setPerms] = useState<Permission[]>([]);
+    const [busy, setBusy] = useState(false);
+
+    const startNew = () => { setEditing(null); setName(''); setDescription(''); setPerms([]); setMode('form'); };
+    const startEdit = (r: StaffRoleDef) => {
+        setEditing(r); setName(r.name); setDescription(r.description);
+        setPerms(r.permissions.map(p => ({ module: p.module, level: p.level }))); setMode('form');
+    };
+
+    const save = async () => {
+        if (name.trim().length < 2) { addToast('Role name is too short.', 'error'); return; }
+        setBusy(true);
+        try {
+            if (editing) await api.updateStaffRole(editing.key, { name, description, permissions: perms });
+            else await api.createStaffRole({ name, description, permissions: perms });
+            addToast(editing ? 'Role updated.' : 'Role created.', 'success');
+            onChanged(); setMode('list');
+        } catch (e: any) {
+            addToast(e?.response?.data?.message ?? 'Could not save role.', 'error');
+        } finally { setBusy(false); }
+    };
+    const remove = async (r: StaffRoleDef) => {
+        setBusy(true);
+        try { await api.deleteStaffRole(r.key); addToast('Role deleted.', 'success'); onChanged(); }
+        catch (e: any) { addToast(e?.response?.data?.message ?? 'Could not delete role.', 'error'); }
+        finally { setBusy(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        {mode === 'form' && <button onClick={() => setMode('list')} className="text-slate-400 hover:text-slate-600"><ChevronLeft size={16} /></button>}
+                        <h3 className="text-sm font-bold text-slate-800">{mode === 'list' ? "Your school's roles" : editing ? 'Edit role' : 'New role'}</h3>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><X size={16} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5">
+                    {mode === 'list' ? (
+                        <div className="space-y-2">
+                            <button onClick={startNew} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100">
+                                <Plus size={14} /> Create a role
+                            </button>
+                            {custom.length === 0 && <p className="text-xs text-slate-400 text-center py-6">No custom roles yet. Built-in roles are always available.</p>}
+                            {custom.map(r => (
+                                <div key={r.key} className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-slate-800">{r.name}</p>
+                                        <p className="text-[11px] text-slate-400 truncate">{r.description || `${r.permissions.length} module grant(s)`}</p>
+                                    </div>
+                                    <button onClick={() => startEdit(r)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Pencil size={13} /></button>
+                                    <button disabled={busy} onClick={() => remove(r)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={13} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Role name <span className="text-red-400">*</span></label>
+                                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lab Assistant" className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
+                                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="What this role does" className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Access</label>
+                                <PermissionGrid permissions={perms} onChange={setPerms} enabledModules={enabledModules} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {mode === 'form' && (
+                    <div className="px-5 py-4 border-t border-slate-100 flex gap-2">
+                        <button onClick={() => setMode('list')} className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Back</button>
+                        <button onClick={save} disabled={busy} className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                            {busy && <Loader2 size={14} className="animate-spin" />} {editing ? 'Save role' : 'Create role'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -978,9 +1207,10 @@ const StaffHome: React.FC = () => {
     const handleEdit = async (data: any) => {
         if (!editTarget) return;
         await api.updateStaff(editTarget.id, data);
-        // Also update permissions in the same call
+        // Also update permissions + role assignments in the same flow.
         if (!isFullAccess(data.role)) {
             await api.updateStaffPermissions(editTarget.id, data.permissions ?? []);
+            await api.updateStaffRoles(editTarget.id, data.roles ?? [], false);
         }
         addToast('Staff member updated.', 'success');
         setEditTarget(null);
@@ -1390,9 +1620,18 @@ const StaffHome: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Role */}
-                                            <div>
+                                            {/* Role + assigned job roles */}
+                                            <div className="flex flex-wrap items-center gap-1">
                                                 <RoleBadge role={user.role} />
+                                                {(user.roles ?? []).slice(0, 3).map(r => (
+                                                    <span key={`${r.type}:${r.key}`} title={r.name}
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                        {r.name}
+                                                    </span>
+                                                ))}
+                                                {(user.roles?.length ?? 0) > 3 && (
+                                                    <span className="text-[10px] font-semibold text-slate-400">+{(user.roles!.length - 3)}</span>
+                                                )}
                                             </div>
 
                                             {/* Module Access */}
