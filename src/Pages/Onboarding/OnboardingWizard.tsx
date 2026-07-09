@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     School, CalendarDays, Layers, BookOpen, Bus, Library,
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
-    ChevronRight, ArrowRight, Check, X, Sparkles, Receipt, Landmark, Settings,
+    ChevronRight, ArrowRight, Check, X, Sparkles, Receipt, Landmark, Settings, Save,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../api/api';
+import { useToast } from '../../context/ToastContext';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { SESSIONS_QUERY_KEY } from '../../context/SessionContext';
 
@@ -1347,8 +1348,13 @@ const OnboardingWizard: React.FC = () => {
     const onboardingSession = status?.session ?? null;
     const queryClient = useQueryClient();
 
+    const { addToast } = useToast();
     const [step, setStep]             = useState(1);
     const [showErrors, setShowErrors] = useState(false);
+    const [savingDraft, setSavingDraft] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+    const [loadingDraft, setLoadingDraft] = useState(true);
+    const hydratedRef = useRef(false);
 
     const [state, setState] = useState<WizardState>({
         session:        { name: defaultSessionName, startDate: '', endDate: '', description: '' },
@@ -1369,6 +1375,31 @@ const OnboardingWizard: React.FC = () => {
         appDevFeeAmount: '',
     });
 
+    // Hydrate from a saved draft on load, so the user resumes exactly where they
+    // left off (across logins). Runs once; the prefill effects below guard on
+    // empty values so they never clobber restored data.
+    useEffect(() => {
+        let cancelled = false;
+        api.getOnboardingDraft()
+            .then(({ draft }) => {
+                if (cancelled) return;
+                if (draft?.data && typeof draft.data === 'object' && Object.keys(draft.data).length > 0) {
+                    setState(p => ({ ...p, ...draft.data }));
+                    if (draft.currentStep >= 1) setStep(draft.currentStep);
+                    if (draft.updatedAt) setLastSavedAt(draft.updatedAt);
+                }
+            })
+            .catch(() => { /* no draft / offline — start fresh */ })
+            .finally(() => {
+                if (cancelled) return;
+                setLoadingDraft(false);
+                // Allow auto-save only AFTER the draft has loaded, so we never
+                // overwrite a saved draft with the empty default state.
+                hydratedRef.current = true;
+            });
+        return () => { cancelled = true; };
+    }, []);
+
     // Pre-fill the School Name from the tenant's registered name (set by the
     // platform at onboarding) — or an already-saved profile — the moment the
     // onboarding status resolves. Never clobbers a value the user has typed.
@@ -1385,6 +1416,37 @@ const OnboardingWizard: React.FC = () => {
     const [submitting,  setSubmitting]  = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [done,        setDone]        = useState(false);
+
+    // ── Draft persistence ──────────────────────────────────────────────────────
+    // Explicit save (Save / Save & Next) — toggles the button + toasts.
+    const saveDraft = async (stepToSave: number, opts?: { silent?: boolean }): Promise<boolean> => {
+        setSavingDraft(true);
+        try {
+            await api.saveOnboardingDraft(state, stepToSave);
+            setLastSavedAt(new Date().toISOString());
+            if (!opts?.silent) addToast('Progress saved — you can safely leave and resume later.', 'success');
+            return true;
+        } catch {
+            addToast('Could not save progress. Please try again.', 'error');
+            return false;
+        } finally {
+            setSavingDraft(false);
+        }
+    };
+
+    // Debounced AUTO-SAVE — persists on every change/step so nothing is ever
+    // lost (even if the user hits Back or navigates away). Silent: no toast, no
+    // button spinner. Only runs after the draft has hydrated and while the
+    // wizard is still active (not submitting / not done).
+    useEffect(() => {
+        if (!hydratedRef.current || submitting || done) return;
+        const t = setTimeout(() => {
+            api.saveOnboardingDraft(state, step)
+                .then(() => setLastSavedAt(new Date().toISOString()))
+                .catch(() => { /* transient — the next change or explicit Save will retry */ });
+        }, 900);
+        return () => clearTimeout(t);
+    }, [state, step, submitting, done]);
 
     // ── State helpers ──────────────────────────────────────────────────────────
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));
@@ -1721,6 +1783,9 @@ const OnboardingWizard: React.FC = () => {
             }
 
             setDone(true);
+            // Onboarding is complete — clear the saved draft so it can't
+            // resurface if the school is ever reset and re-onboarded.
+            api.saveOnboardingDraft({}, 1).catch(() => {});
             // The wizard just bulk-created sessions / classes / teachers /
             // fees / etc. None of that data is in any React Query cache
             // yet (the queries were created before the wizard ran). Wipe
@@ -1765,6 +1830,17 @@ const OnboardingWizard: React.FC = () => {
         (step === 8 && state.books.length === 0) ||
         (step === 9 && !state.boardName.trim())
     );
+
+    // Gate the first paint until the saved draft resolves — avoids a flash of
+    // step 1 before jumping to where the user left off.
+    if (loadingDraft) {
+        return (
+            <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-3" data-testid="onboarding-wizard-loading">
+                <Loader2 size={26} className="text-emerald-500 animate-spin" />
+                <p className="text-sm text-slate-400">Loading your onboarding progress…</p>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-white flex overflow-hidden" data-testid="onboarding-wizard" data-current-step={step}>
@@ -1920,13 +1996,24 @@ const OnboardingWizard: React.FC = () => {
                 {/* Navigation footer */}
                 {!done && (
                     <div className="px-8 py-4 border-t border-slate-100 bg-white shrink-0 flex items-center justify-between gap-4">
-                        <button
-                            data-testid="wizard-back-btn"
-                            disabled={step === 1 || submitting}
-                            onClick={() => { setShowErrors(false); setStep(s => s - 1); }}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                            <ChevronRight size={15} className="rotate-180" /> Back
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                data-testid="wizard-back-btn"
+                                disabled={step === 1 || submitting || savingDraft}
+                                onClick={() => { setShowErrors(false); setStep(s => s - 1); }}
+                                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                <ChevronRight size={15} className="rotate-180" /> Back
+                            </button>
+                            {savingDraft ? (
+                                <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+                                    <Loader2 size={11} className="animate-spin" /> Saving…
+                                </span>
+                            ) : lastSavedAt ? (
+                                <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-emerald-600" title="Your progress is saved automatically">
+                                    <Check size={11} /> All changes saved · {new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            ) : null}
+                        </div>
 
                         <div className="flex items-center gap-3">
                             {!canProceed() && step < 10 && showErrors && (
@@ -1934,14 +2021,31 @@ const OnboardingWizard: React.FC = () => {
                                     Please fix the errors above to continue.
                                 </p>
                             )}
+                            {/* Save — persist progress and stay on this step. */}
                             {step < 10 && (
-                                <button data-testid="wizard-next-btn" data-skip={optionalEmpty ? "true" : "false"} onClick={goNext}
-                                    className={`flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-colors shadow-sm
+                                <button
+                                    data-testid="wizard-save-btn"
+                                    disabled={savingDraft || submitting}
+                                    onClick={() => saveDraft(step)}
+                                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-xl hover:bg-emerald-100 disabled:opacity-50 transition-colors">
+                                    {savingDraft ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save
+                                </button>
+                            )}
+                            {/* Save & Next — persist, then advance (validates first). */}
+                            {step < 10 && (
+                                <button data-testid="wizard-next-btn" data-skip={optionalEmpty ? "true" : "false"}
+                                    disabled={savingDraft || submitting}
+                                    onClick={async () => {
+                                        if (!canProceed()) { setShowErrors(true); return; }
+                                        const ok = await saveDraft(step + 1, { silent: true });
+                                        if (ok) goNext();
+                                    }}
+                                    className={`flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-colors shadow-sm disabled:opacity-50
                                         ${optionalEmpty
                                             ? 'bg-slate-400 hover:bg-slate-500 shadow-slate-200'
                                             : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
                                         }`}>
-                                    {optionalEmpty ? 'Skip – Add Later' : 'Next'}
+                                    {optionalEmpty ? 'Save & Skip' : 'Save & Next'}
                                     <ChevronRight size={15} />
                                 </button>
                             )}
