@@ -44,6 +44,15 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export interface StaffRoleDef {
+  type: 'BUILTIN' | 'CUSTOM';
+  key: string;
+  name: string;
+  description: string;
+  permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
+}
+
 class API {
   // --- Authentication APIs ---
   login = async (phone: string, password: string) => {
@@ -1499,6 +1508,7 @@ createStudent = async (data: {
         id: string; firstName: string; middleName?: string; lastName: string;
         phone: string; email: string; role: string | null; createdAt: string;
         permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> | null;
+        roles?: Array<{ type: string; key: string; name: string }>;
     }> }> => {
         const res = await apiClient.get('/management/staff');
         return res.data;
@@ -1507,9 +1517,37 @@ createStudent = async (data: {
     createStaff = async (data: {
         firstName: string; lastName: string; phone: string; email: string;
         password: string; role?: string;
+        roles?: Array<{ type: 'BUILTIN' | 'CUSTOM'; key: string }>;
         permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
     }) => {
         const res = await apiClient.post('/management/staff', data);
+        return res.data;
+    };
+
+    // ── Staff role catalogue (built-in + school-defined) ──────────────────────
+    getStaffRoles = async (): Promise<{
+        builtIn: StaffRoleDef[];
+        custom: StaffRoleDef[];
+        modules: string[];
+        alwaysOn: string[];
+    }> => {
+        const res = await apiClient.get('/management/staff/roles');
+        return res.data;
+    };
+    createStaffRole = async (data: { name: string; description?: string; permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> }) => {
+        const res = await apiClient.post('/management/staff/roles', data);
+        return res.data;
+    };
+    updateStaffRole = async (roleId: string, data: { name?: string; description?: string; permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }> }) => {
+        const res = await apiClient.patch(`/management/staff/roles/${roleId}`, data);
+        return res.data;
+    };
+    deleteStaffRole = async (roleId: string) => {
+        const res = await apiClient.delete(`/management/staff/roles/${roleId}`);
+        return res.data;
+    };
+    updateStaffRoles = async (id: string, roles: Array<{ type: 'BUILTIN' | 'CUSTOM'; key: string }>, applyPermissions = false) => {
+        const res = await apiClient.put(`/management/staff/${id}/roles`, { roles, applyPermissions });
         return res.data;
     };
 
