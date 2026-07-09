@@ -1502,6 +1502,16 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Onboarding wizard draft — save/resume progress across logins.
+    getOnboardingDraft = async (): Promise<{ draft: { data: any; currentStep: number; updatedAt: string } | null }> => {
+        const res = await apiClient.get('/management/onboarding/draft');
+        return res.data;
+    };
+    saveOnboardingDraft = async (data: any, currentStep: number) => {
+        const res = await apiClient.put('/management/onboarding/draft', { data, currentStep });
+        return res.data;
+    };
+
     // ── Staff Management ──────────────────────────────────────────────────────
 
     getStaff = async (): Promise<{ staff: Array<{

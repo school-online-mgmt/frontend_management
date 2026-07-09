@@ -649,9 +649,9 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
     const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-end">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
-            <div className="relative bg-white w-full max-w-lg flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+            <div className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600">
                     <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
@@ -667,8 +667,10 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                 </div>
 
                 {/* Body */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                    <div className="px-6 py-6 space-y-6">
+                <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+                        {/* Left column — identity, role & job roles */}
+                        <div className="overflow-y-auto px-6 py-6 space-y-6 md:border-r border-slate-100">
                         {err && (
                             <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
                                 <AlertTriangle size={15} className="shrink-0" /> {err}
@@ -749,7 +751,10 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                                     : <RoleSelector builtIn={builtIn} custom={custom} selected={selectedRoles} onToggle={toggleRole} onManage={() => setShowRoleManager(true)} />}
                             </div>
                         )}
+                        </div>{/* /left column */}
 
+                        {/* Right column — module access */}
+                        <div className="overflow-y-auto px-6 py-6 space-y-6 bg-slate-50/40">
                         {/* Module Access */}
                         {needsPermissionGrid(role) ? (
                             <div>
@@ -815,10 +820,11 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                                 </div>
                             </div>
                         )}
-                    </div>
+                        </div>{/* /right column */}
+                    </div>{/* /two-column grid */}
 
                     {/* Footer */}
-                    <div className="px-6 pb-6 pt-2 flex gap-3 shrink-0">
+                    <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
                         <button type="button" onClick={onClose}
                             className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
                             Cancel
