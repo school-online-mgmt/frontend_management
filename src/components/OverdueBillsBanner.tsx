@@ -19,16 +19,19 @@ const OverdueBillsBanner = () => {
     const { isAuthenticated, user } = useAuthContext();
     const [dismissed, setDismissed] = useState(() => sessionStorage.getItem("overdueBannerDismissed") === "1");
 
-    // Only management users see this; skip API call when logged out.
+    // Platform bills are ADMIN-only — only the school's single admin sees this
+    // alert and can view/pay the bills.
+    const isAdmin = user?.role === "ADMIN";
+
     const q = useQuery({
         queryKey: ["platform-bills-overdue"],
         queryFn: () => api.getPlatformBillsOverdueSummary(),
-        enabled: !!isAuthenticated && !!user,
+        enabled: !!isAuthenticated && !!user && isAdmin,
         refetchInterval: 5 * 60 * 1000,
         staleTime: 60 * 1000,
     });
 
-    if (!isAuthenticated || dismissed || !q.data || q.data.count === 0) return null;
+    if (!isAuthenticated || !isAdmin || dismissed || !q.data || q.data.count === 0) return null;
 
     const dismiss = () => {
         sessionStorage.setItem("overdueBannerDismissed", "1");
@@ -43,7 +46,7 @@ const OverdueBillsBanner = () => {
                     <p className="text-sm text-rose-900">
                         <strong>{q.data.count} platform {q.data.count === 1 ? "invoice is" : "invoices are"} overdue</strong>
                         <span className="text-rose-700"> — ₹{q.data.totalAmountINR.toLocaleString("en-IN")} outstanding.</span>
-                        <Link to="/account/platform-bills" className="ml-2 underline font-semibold hover:text-rose-950">
+                        <Link to="/platform-bills" className="ml-2 underline font-semibold hover:text-rose-950">
                             View &amp; pay
                         </Link>
                     </p>
