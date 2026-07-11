@@ -65,8 +65,23 @@ const Login: React.FC = () => {
         ? await api.superAdminLogin(email.trim().toLowerCase(), password)
         : await api.login(phone, password);
       if (res.user?.id) {
-        // Set auth state immediately from the login response so navigation works
-        // even if the follow-up checkAuth call takes time
+        // CONFIRM the auth cookie actually works before treating login as done.
+        // The login response body can succeed while the Set-Cookie is dropped
+        // (blocked third-party cookies, http-vs-https, cross-site SameSite) — in
+        // which case the first real data call would 401 and bounce back to
+        // /login, showing a confusing "Welcome … but stuck on login". verifyAuth
+        // reads the cookie, so its success means the session is truly established.
+        try {
+          await api.checkAuth();
+        } catch {
+          addToast(
+            'Signed in, but your session could not be established. Please enable cookies for this site (avoid incognito / blocked third-party cookies) and try again.',
+            'error',
+          );
+          setIsLoading(false);
+          return;
+        }
+
         loginDirect({
           id: res.user.id,
           firstName: res.user.firstName,
