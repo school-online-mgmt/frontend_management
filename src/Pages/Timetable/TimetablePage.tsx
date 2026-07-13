@@ -287,11 +287,14 @@ const TimetablePage = () => {
     }, [sectionId, sessionId, addToast]);
     useEffect(() => { loadGrid(); }, [loadGrid]);
 
-    // Period rows = union of period numbers present, min 8 rows so empty grids are usable.
-    const periodRows = useMemo(() => {
-        const max = Math.max(8, ...entries.map(e => e.periodNumber));
-        return Array.from({ length: max }, (_, i) => i + 1);
-    }, [entries]);
+    // The grid STRUCTURE is driven by the saved bell schedule (Config tab):
+    // the number of periods, their timings, and which rows are breaks all come
+    // from periodConfig. The school must create the config before it can assign
+    // anything — with no config there is no grid to fill in.
+    const periodRows = useMemo(
+        () => [...periodConfig].sort((a, b) => a.periodNumber - b.periodNumber),
+        [periodConfig],
+    );
 
     const cellAt = (day: number, period: number) => entries.find(e => e.dayOfWeek === day && e.periodNumber === period);
 
@@ -317,6 +320,21 @@ const TimetablePage = () => {
 
                 {tab === "config" ? (
                     <PeriodConfigTab sessionId={sessionId} initial={periodConfig} onSaved={setPeriodConfig} />
+                ) : periodConfig.length === 0 ? (
+                    /* Config-first gate: no bell schedule → nothing can be assigned yet. */
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center max-w-2xl mx-auto">
+                        <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center mx-auto mb-4"><Clock size={24} className="text-sky-500" /></div>
+                        <p className="text-base font-bold text-slate-800">Set up the period configuration first</p>
+                        <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
+                            The timetable grid is built from your bell schedule — the number of periods,
+                            their start &amp; end times, and the breaks. Create it once, then assign
+                            subjects and teachers to each period.
+                        </p>
+                        <button onClick={() => setTab("config")}
+                            className="mt-5 px-5 py-2.5 text-sm font-bold text-white bg-sky-600 rounded-xl hover:bg-sky-700 inline-flex items-center gap-2">
+                            <Clock size={15} /> Configure periods
+                        </button>
+                    </div>
                 ) : (
                 <>
                 {/* Section selector + conflict banner */}
@@ -350,14 +368,36 @@ const TimetablePage = () => {
                         <table className="w-full border-collapse min-w-[720px]">
                             <thead>
                                 <tr className="bg-slate-50">
-                                    <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-2.5 text-left w-16">Period</th>
+                                    <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-2.5 text-left w-28">Period</th>
                                     {DAYS.map(d => <th key={d.n} className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-2 py-2.5 text-center">{d.label}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
-                                {periodRows.map(p => (
+                                {periodRows.map(slot => {
+                                    const p = slot.periodNumber;
+                                    // Break periods are school-wide recesses — one full-width band
+                                    // straight from the config, not assignable per-section cells.
+                                    if (slot.isBreak) {
+                                        return (
+                                            <tr key={p} className="border-t border-slate-100">
+                                                <td className="px-3 py-2 align-top">
+                                                    <p className="text-xs font-bold text-amber-600">P{p}</p>
+                                                    <p className="text-[10px] text-slate-400">{slot.startTime}–{slot.endTime}</p>
+                                                </td>
+                                                <td colSpan={DAYS.length} className="p-1">
+                                                    <div className="w-full min-h-[48px] rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center gap-2 text-xs font-bold text-amber-700">
+                                                        <Clock size={12} /> {slot.label || "Break"} · {slot.startTime}–{slot.endTime}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+                                    return (
                                     <tr key={p} className="border-t border-slate-100">
-                                        <td className="px-3 py-2 text-xs font-bold text-slate-500 align-top">P{p}</td>
+                                        <td className="px-3 py-2 align-top">
+                                            <p className="text-xs font-bold text-slate-500">P{p}{slot.label ? ` · ${slot.label}` : ""}</p>
+                                            <p className="text-[10px] text-slate-400">{slot.startTime}–{slot.endTime}</p>
+                                        </td>
                                         {DAYS.map(d => {
                                             const c = cellAt(d.n, p);
                                             const st = c ? TYPE_STYLE[c.type] ?? TYPE_STYLE.CLASS : null;
@@ -387,7 +427,8 @@ const TimetablePage = () => {
                                             );
                                         })}
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
