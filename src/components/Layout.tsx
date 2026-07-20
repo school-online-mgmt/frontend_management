@@ -7,7 +7,8 @@ import {
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
-  KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText,
+  KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
+  UtensilsCrossed,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -32,7 +33,7 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "People",
+    label: "Students",
     icon: Users,
     collapsible: true,
     module: "PEOPLE" as const,
@@ -40,17 +41,19 @@ const NAV_SECTIONS = [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
       { path: "/students-home", label: "Students", icon: Users },
       { path: "/documents", label: "Documents", icon: FileText },
-      { path: "/staff", label: "Staff Accounts", icon: Settings },
     ],
   },
   {
-    label: "Teachers",
+    label: "Teachers & Staff",
     icon: UserCog,
     collapsible: true,
     module: "TEACHERS" as const,
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
+      { path: "/teacher-onboarding", label: "Onboard Teacher", icon: UserPlus },
       { path: "/assignments", label: "Assignments", icon: ClipboardList },
+      { path: "/staff", label: "Staff Accounts", icon: Settings },
+      { path: "/hr", label: "Salaries & Payroll", icon: Wallet },
     ],
   },
   {
@@ -137,6 +140,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/notices",       label: "Notice Board",  icon: Megaphone },
       { path: "/communication", label: "Email Blast",   icon: Send },
+      { path: "/publications",  label: "School Documents", icon: ScrollText },
       { path: "/calendar",      label: "Calendar",      icon: Calendar },
     ],
   },
@@ -147,7 +151,24 @@ const NAV_SECTIONS = [
     module: "FINANCE" as const,
     items: [
       { path: "/fees", label: "Fee Management", icon: CreditCard },
+    ],
+  },
+  {
+    label: "Transport",
+    icon: Bus,
+    collapsible: true,
+    module: "TRANSPORT" as const,
+    items: [
       { path: "/transport", label: "Transport", icon: Bus },
+    ],
+  },
+  {
+    label: "Pantry",
+    icon: UtensilsCrossed,
+    collapsible: true,
+    module: "PANTRY" as const,
+    items: [
+      { path: "/pantry", label: "Pantry & Canteen", icon: UtensilsCrossed },
     ],
   },
   {
