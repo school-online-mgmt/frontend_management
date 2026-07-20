@@ -470,13 +470,6 @@ const ClassesStep: React.FC<{
 };
 
 // ─── Step 3: Courses & Subjects ───────────────────────────────────────────────
-
-// A grade default, from the backend catalogue.
-type GradeDefault = {
-    grade: string; sectionCode: string;
-    subjects: { name: string; bookName: string; type: 'core' | 'elective' }[];
-    courses: { name: string; description: string; subjects: string[] }[];
-};
 // Strip the "Class N : " prefix to get the base subject/course name.
 const baseName = (className: string, full: string): string =>
     full.startsWith(`${className} : `) ? full.slice(`${className} : `.length) : full;
@@ -504,12 +497,10 @@ const CoursesStep: React.FC<{
     classes: ClassInput[];
     update: (classes: ClassInput[]) => void;
     showErrors: boolean;
-    defaults: GradeDefault[];
-}> = ({ classes, update, showErrors, defaults }) => {
+}> = ({ classes, update, showErrors }) => {
     const [activeTab, setActiveTab] = useState(0);
     const ci = Math.min(activeTab, classes.length - 1);
     const cls = classes[ci];
-    const def = defaults.find(d => d.grade === cls?.name);
 
     const patchClass = (newCls: ClassInput) => {
         const next = [...classes]; next[ci] = newCls; update(next);
@@ -532,24 +523,6 @@ const CoursesStep: React.FC<{
         }
     };
 
-    // Add a default course preset: ensure its subjects exist, then create the
-    // course selecting exactly those subjects.
-    const addCoursePreset = (preset: { name: string; description: string; subjects: string[] }) => {
-        const courseName = prefixed(cls.name, preset.name);
-        if (cls.courses.some(c => c.name === courseName)) return;
-        let subjects = [...cls.subjects];
-        for (const base of preset.subjects) {
-            const full = prefixed(cls.name, base);
-            if (!subjects.some(s => s.name === full)) {
-                const d = def?.subjects.find(s => s.name === base);
-                subjects.push({ name: full, bookName: d?.bookName ?? `${base} — Textbook`, type: d?.type ?? 'core' });
-            }
-        }
-        const subjectIndices = preset.subjects
-            .map(base => subjects.findIndex(s => s.name === prefixed(cls.name, base)))
-            .filter(i => i >= 0);
-        patchClass({ ...cls, subjects, courses: [...cls.courses, { name: courseName, description: preset.description, subjectIndices, feeItems: [] }] });
-    };
     const removeCourse = (cIdx: number) => patchClass({ ...cls, courses: cls.courses.filter((_, i) => i !== cIdx) });
     const toggleCourseSubject = (cIdx: number, si: number) => {
         const course = cls.courses[cIdx];
@@ -559,7 +532,7 @@ const CoursesStep: React.FC<{
         patchClass({ ...cls, courses });
     };
 
-    // Add a custom subject (beyond the defaults) — stored class-prefixed.
+    // Add a subject — stored class-prefixed.
     const addCustomSubject = (rawName: string) => {
         const base = rawName.trim();
         if (!base) return;
@@ -576,11 +549,6 @@ const CoursesStep: React.FC<{
         patchClass({ ...cls, courses: [...cls.courses, { name: courseName, description: `${base} course for ${cls.name}`, subjectIndices: [], feeItems: [] }] });
     };
 
-    const selectedSubjectBases = new Set(cls?.subjects.map(s => baseName(cls.name, s.name)) ?? []);
-    const addedCourseNames = new Set(cls?.courses.map(c => c.name) ?? []);
-    // Custom subjects = those the class has that aren't in the defaults catalogue.
-    const defaultBaseNames = new Set(def?.subjects.map(s => s.name) ?? []);
-    const customSubjects = cls?.subjects.filter(s => !defaultBaseNames.has(baseName(cls.name, s.name))) ?? [];
 
     if (!cls) return <div className="text-sm text-slate-400">Add classes in the previous step first.</div>;
 
@@ -605,68 +573,40 @@ const CoursesStep: React.FC<{
                 Click to add. Then add one or more courses/streams.
             </p>
 
-            {/* Suggested subjects (click chips) */}
+            {/* Subjects — entered manually. The school decides its own curriculum;
+                nothing is pre-populated from a catalogue. */}
             <div>
                 <p className={lbl + ' mb-2'}>Subjects for {cls.name} <span className="text-red-400">*</span></p>
-                {def ? (
+                {cls.subjects.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                        {def.subjects.map(s => {
-                            const on = selectedSubjectBases.has(s.name);
-                            return (
-                                <button key={s.name} type="button"
-                                    data-testid={`wizard-subject-chip-${s.name}`} data-selected={on ? 'true' : 'false'}
-                                    onClick={() => toggleSubject(s.name, s.bookName, s.type)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                        on ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
-                                    }`}>
-                                    {on && <Check size={11} className="inline mr-1 -mt-0.5" />}{s.name}
-                                    <span className="ml-1 opacity-50 font-normal">{s.type === 'elective' ? '· elective' : ''}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <p className="text-xs text-slate-400 italic">No default subjects for this class — add your own below.</p>
-                )}
-                {/* Custom subjects (chips) already added */}
-                {customSubjects.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {customSubjects.map(s => (
-                            <button key={s.name} type="button" onClick={() => toggleSubject(baseName(cls.name, s.name), s.bookName, s.type)}
+                        {cls.subjects.map(s => (
+                            <button key={s.name} type="button"
+                                data-testid={`wizard-subject-chip-${baseName(cls.name, s.name)}`} data-selected="true"
+                                onClick={() => toggleSubject(baseName(cls.name, s.name), s.bookName, s.type)}
+                                title="Remove this subject"
                                 className="px-3 py-1.5 rounded-xl text-xs font-bold border bg-emerald-600 text-white border-emerald-600 shadow-sm">
                                 <Check size={11} className="inline mr-1 -mt-0.5" />{baseName(cls.name, s.name)}
                             </button>
                         ))}
                     </div>
+                ) : (
+                    <p className="text-xs text-slate-400 italic">No subjects yet — add each subject for this class below.</p>
                 )}
-                {/* Add a custom subject */}
-                <CustomAddInput placeholder="Add a custom subject…" testId="wizard-custom-subject" onAdd={addCustomSubject} />
+                {/* Add a subject */}
+                <CustomAddInput placeholder="Add a subject…" testId="wizard-custom-subject" onAdd={addCustomSubject} />
                 {showErrors && cls.subjects.length === 0 && <p className="text-xs text-red-500 mt-2">Add at least one subject.</p>}
             </div>
 
             <div className="border-t border-slate-100" />
 
-            {/* Suggested course presets */}
+            {/* Courses / streams — entered manually, like subjects. Nothing is
+                pre-populated; the school defines its own streams. */}
             <div>
                 <p className={lbl + ' mb-2'}>Add a course / stream <span className="text-slate-400 font-normal normal-case">(one class can have several)</span></p>
-                {def && def.courses.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {def.courses.map(c => {
-                            const added = addedCourseNames.has(prefixed(cls.name, c.name));
-                            return (
-                                <button key={c.name} type="button" disabled={added}
-                                    data-testid={`wizard-course-preset-${c.name}`}
-                                    onClick={() => addCoursePreset(c)} title={c.description}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                        added ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'
-                                    }`}>
-                                    {added ? <Check size={11} className="inline mr-1 -mt-0.5" /> : <Plus size={11} className="inline mr-1 -mt-0.5" />}{c.name}
-                                </button>
-                            );
-                        })}
-                    </div>
+                {cls.courses.length === 0 && (
+                    <p className="text-xs text-slate-400 italic mb-2">No courses yet — add each course/stream for this class below.</p>
                 )}
-                <CustomAddInput placeholder="Add a custom course / stream…" testId="wizard-custom-course" onAdd={addCustomCourse} />
+                <CustomAddInput placeholder="Add a course / stream…" testId="wizard-custom-course" onAdd={addCustomCourse} />
             </div>
 
             {/* Added courses */}
@@ -1450,13 +1390,9 @@ const OnboardingWizard: React.FC = () => {
 
     // ── State helpers ──────────────────────────────────────────────────────────
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));
-
-    // Default class → subjects/courses catalogue (drives click-to-add).
-    const [classDefaults, setClassDefaults] = useState<GradeDefault[]>([]);
     // Recommended annual App Development Fee (platform module cost × 12) + breakdown.
     const [appFee, setAppFee] = useState<{ annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null>(null);
     useEffect(() => {
-        api.getClassDefaults().then(r => setClassDefaults(r.grades as GradeDefault[])).catch(() => {});
         api.getAppDevFee().then(r => {
             setAppFee(r);
             // Prefill the editable amount once (management can still override it).
@@ -1958,7 +1894,7 @@ const OnboardingWizard: React.FC = () => {
                             showErrors={showErrors}
                         />
                     )}
-                    {step === 4 && <CoursesStep classes={state.classes} update={setClasses} showErrors={showErrors} defaults={classDefaults} />}
+                    {step === 4 && <CoursesStep classes={state.classes} update={setClasses} showErrors={showErrors} />}
                     {step === 5 && <CourseFeeStep classes={state.classes} update={setClasses} showErrors={showErrors} />}
                     {step === 6 && (
                         <GlobalFeeStep
