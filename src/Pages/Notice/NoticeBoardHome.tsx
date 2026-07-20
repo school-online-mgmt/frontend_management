@@ -100,13 +100,13 @@ const CreateBoardModal = ({
                     {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Board Name <span className="text-red-500">*</span></label>
-                        <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                        <input data-testid="notice-board-name-input" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
                             placeholder="e.g. General Announcements, Class 10 Board..."
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                        <textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                        <textarea data-testid="notice-board-description-input" value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))}
                             rows={2} placeholder="Optional description..."
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none" />
                     </div>
@@ -116,7 +116,7 @@ const CreateBoardModal = ({
                             {Object.entries(VIS_CONFIG).map(([k, v]) => {
                                 const Icon = v.icon;
                                 return (
-                                    <button key={k} type="button"
+                                    <button key={k} type="button" data-testid={`notice-board-visibility-${k}-btn`} data-selected={form.visibility === k}
                                         onClick={() => setForm(f => ({...f, visibility: k, classId: "", sectionId: ""}))}
                                         className={`flex flex-col items-center gap-1 py-3 rounded-lg border-2 text-xs font-medium transition-all ${form.visibility === k ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
                                         <Icon size={18} />
@@ -129,7 +129,7 @@ const CreateBoardModal = ({
                     {(form.visibility === "CLASS" || form.visibility === "SECTION") && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Class <span className="text-red-500">*</span></label>
-                            <select value={form.classId} onChange={e => setForm(f => ({...f, classId: e.target.value, sectionId: ""}))}
+                            <select data-testid="notice-board-class-select" value={form.classId} onChange={e => setForm(f => ({...f, classId: e.target.value, sectionId: ""}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 <option value="">Select class...</option>
                                 {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -139,7 +139,7 @@ const CreateBoardModal = ({
                     {form.visibility === "SECTION" && form.classId && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Section <span className="text-red-500">*</span></label>
-                            <select value={form.sectionId} onChange={e => setForm(f => ({...f, sectionId: e.target.value}))}
+                            <select data-testid="notice-board-section-select" value={form.sectionId} onChange={e => setForm(f => ({...f, sectionId: e.target.value}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 <option value="">Select section...</option>
                                 {sections.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -148,7 +148,7 @@ const CreateBoardModal = ({
                     )}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Approver <span className="text-slate-400 font-normal">(optional)</span></label>
-                        <select value={form.approverId} onChange={e => setForm(f => ({...f, approverId: e.target.value}))}
+                        <select data-testid="notice-board-approver-select" value={form.approverId} onChange={e => setForm(f => ({...f, approverId: e.target.value}))}
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                             <option value="">Principal approves only</option>
                             {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -160,7 +160,7 @@ const CreateBoardModal = ({
                             className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={saving}
+                        <button type="submit" data-testid="notice-board-submit-btn" disabled={saving}
                             className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                             {saving ? "Creating…" : "Create Board"}
