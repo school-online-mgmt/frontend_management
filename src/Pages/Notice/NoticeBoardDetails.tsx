@@ -118,26 +118,26 @@ const NoticeModal = ({
                     {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Title <span className="text-red-500">*</span></label>
-                        <input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))}
+                        <input data-testid="notice-title-input" value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))}
                             placeholder="Notice title…"
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Body <span className="text-red-500">*</span></label>
-                        <textarea value={form.body} onChange={e => setForm(f => ({...f, body: e.target.value}))}
+                        <textarea data-testid="notice-body-input" value={form.body} onChange={e => setForm(f => ({...f, body: e.target.value}))}
                             rows={5} placeholder="Write the full notice content here…"
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Start Date/Time <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.startDateTime}
+                            <input data-testid="notice-start-datetime-input" type="datetime-local" value={form.startDateTime}
                                 onChange={e => setForm(f => ({...f, startDateTime: e.target.value}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">End Date/Time <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.endDateTime}
+                            <input data-testid="notice-end-datetime-input" type="datetime-local" value={form.endDateTime}
                                 onChange={e => setForm(f => ({...f, endDateTime: e.target.value}))}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" />
                         </div>
@@ -168,7 +168,7 @@ const NoticeModal = ({
                     <div className="flex gap-3 pt-2">
                         <button data-testid="notice-close-btn-2" type="button" onClick={onClose}
                             className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium">Cancel</button>
-                        <button type="submit" disabled={saving}
+                        <button type="submit" data-testid="notice-submit-btn" disabled={saving}
                             className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
                             {saving ? <Loader2 size={14} className="animate-spin" /> : null}
                             {saving ? "Saving…" : editNotice ? "Save Changes" : "Create Notice"}
@@ -210,7 +210,7 @@ const NoticeCard = ({
 }: any) => {
     const pc = PRIORITY_CONFIG[notice.priority] ?? PRIORITY_CONFIG.NORMAL;
     return (
-        <div className={`bg-white rounded-xl border p-5 transition-all hover:shadow-sm
+        <div data-testid="notice-row" data-id={notice.id} data-title={notice.title} data-status={notice.status} className={`bg-white rounded-xl border p-5 transition-all hover:shadow-sm
             ${notice.status === "PENDING_APPROVAL" ? "border-amber-200 bg-amber-50/30" : "border-slate-100"}`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">

@@ -348,7 +348,7 @@ const NoticeBoardHome = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filtered.map(board => (
-                        <div key={board.id}
+                        <div key={board.id} data-testid="notice-board-row" data-id={board.id} data-board-name={board.name} data-visibility={board.visibility}
                             onClick={() => navigate(`/notices/${board.id}`)}
                             className="group bg-white rounded-2xl border border-slate-100 p-5 hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer">
                             <div className="flex items-start justify-between mb-3">
