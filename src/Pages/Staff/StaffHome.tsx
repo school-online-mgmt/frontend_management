@@ -1605,6 +1605,10 @@ const StaffHome: React.FC = () => {
 
                                     return (
                                         <div key={user.id}
+                                            data-testid="staff-row"
+                                            data-id={user.id}
+                                            data-role={user.role}
+                                            data-name={fullName}
                                             className="grid grid-cols-[2fr_1fr_2fr_auto] gap-2 sm:gap-3 items-center px-3 sm:px-4 py-3 sm:py-2.5 hover:bg-slate-50/60 transition-colors">
                                             {/* Member — bigger text on mobile */}
                                             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
