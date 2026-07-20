@@ -68,6 +68,7 @@ const SportsHome = () => {
                                 }
                                 setShowEventModal(true);
                             }}
+                            data-testid="sports-create-event-open-btn"
                             className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 text-sm"
                         >
                             <Plus size={16} /> Create Event
@@ -82,6 +83,10 @@ const SportsHome = () => {
                             {(eventsQuery.data ?? []).map((e: any) => (
                                 <button
                                     key={e.id}
+                                    data-testid="sports-event-row"
+                                    data-id={e.id}
+                                    data-status={e.status}
+                                    data-event-name={e.name}
                                     onClick={() => nav(`/sports/events/${e.id}`)}
                                     className="text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-400 hover:shadow-md transition"
                                 >
@@ -119,7 +124,7 @@ const SportsHome = () => {
                     <div className="mb-4 flex justify-between items-center">
                         <h3 className="text-lg font-semibold">Sports Catalog</h3>
                         <button
-                            onClick={() => setShowSportModal(true)}
+                            data-testid="sports-add-sport-open-btn" onClick={() => setShowSportModal(true)}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 text-sm"
                         >
                             <Plus size={16} /> Add Sport
@@ -191,11 +196,11 @@ const SportModal = ({ onClose, onCreated, onError }: { onClose: () => void; onCr
                 </div>
                 <div>
                     <label className="text-xs text-slate-600 block mb-1">Name *</label>
-                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Football" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <input data-testid="sports-name-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Football" className="w-full px-3 py-2 border rounded-lg text-sm" />
                 </div>
                 <div>
                     <label className="text-xs text-slate-600 block mb-1">Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <select data-testid="sports-category-select" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
                         {["TEAM", "INDIVIDUAL", "COMBAT", "AQUATIC", "ATHLETICS", "OTHER"].map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
@@ -205,7 +210,7 @@ const SportModal = ({ onClose, onCreated, onError }: { onClose: () => void; onCr
                 </div>
                 <div className="flex gap-2 justify-end">
                     <button onClick={onClose} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-                    <button onClick={submit} disabled={!name || busy} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
+                    <button data-testid="sports-add-sport-submit-btn" onClick={submit} disabled={!name || busy} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
                 </div>
             </div>
         </div>
@@ -308,20 +313,20 @@ const EventModal = ({ sports, onClose, onCreated, onError }: { sports: any[]; on
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <Field label="Sport *">
-                        <select value={form.sportId} onChange={(e) => setForm({ ...form, sportId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <select data-testid="sports-event-sport-select" value={form.sportId} onChange={(e) => setForm({ ...form, sportId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
                             <option value="">Select a sport</option>
                             {sports.filter((s) => s.isActive).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </Field>
                     <Field label="Session *">
-                        <select value={form.sessionId} onChange={(e) => setForm({ ...form, sessionId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <select data-testid="sports-event-session-select" value={form.sessionId} onChange={(e) => setForm({ ...form, sessionId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
                             <option value="">Select session</option>
                             {sessionList.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </Field>
                 </div>
                 <Field label="Event Name *">
-                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="U-14 Summer Football Camp" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                    <input data-testid="sports-event-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="U-14 Summer Football Camp" className="w-full px-3 py-2 border rounded-lg text-sm" />
                 </Field>
                 <Field label="Description">
                     <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={2} />
@@ -333,16 +338,16 @@ const EventModal = ({ sports, onClose, onCreated, onError }: { sports: any[]; on
                         </select>
                     </Field>
                     <Field label="Venue">
-                        <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        <input data-testid="sports-event-venue-input" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </Field>
                     <Field label="Start Date *">
-                        <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        <input data-testid="sports-event-start-date-input" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </Field>
                     <Field label="End Date *">
-                        <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        <input data-testid="sports-event-end-date-input" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </Field>
                     <Field label="Capacity">
-                        <input type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        <input data-testid="sports-event-capacity-input" type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </Field>
                     <Field label="Fee (₹)">
                         <input type="number" min={0} value={form.feeAmount} onChange={(e) => setForm({ ...form, feeAmount: Number(e.target.value) })} className="w-full px-3 py-2 border rounded-lg text-sm" />
@@ -393,7 +398,7 @@ const EventModal = ({ sports, onClose, onCreated, onError }: { sports: any[]; on
                 </label>
                 <div className="flex gap-2 justify-end pt-2">
                     <button onClick={onClose} className="px-4 py-2 text-sm border rounded-lg">Cancel</button>
-                    <button onClick={submit} disabled={busy} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg disabled:opacity-50">{busy ? "Creating…" : "Create Event"}</button>
+                    <button data-testid="sports-create-event-submit-btn" onClick={submit} disabled={busy} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg disabled:opacity-50">{busy ? "Creating…" : "Create Event"}</button>
                 </div>
             </div>
         </div>
