@@ -358,7 +358,7 @@ const EventModal = ({ sports, onClose, onCreated, onError }: { sports: any[]; on
                         </select>
                     </Field>
                     <Field label="Head Coach *">
-                        <select value={form.headCoachTeacherId} onChange={(e) => setForm({ ...form, headCoachTeacherId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <select data-testid="sports-event-head-coach-select" value={form.headCoachTeacherId} onChange={(e) => setForm({ ...form, headCoachTeacherId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
                             <option value="">Select a teacher</option>
                             {teacherList.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
