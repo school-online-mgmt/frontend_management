@@ -801,7 +801,7 @@ const ArchivedList: React.FC<{
       {expanded && (
         <div className="border-t border-slate-100 divide-y divide-slate-100">
           {sessions.map(s => (
-            <div key={s.id} className="px-5 py-3 flex items-center justify-between gap-3">
+            <div key={s.id} data-testid="session-row" data-session-id={s.id} data-session-name={s.name} className="px-5 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
                   <Lock size={13} />

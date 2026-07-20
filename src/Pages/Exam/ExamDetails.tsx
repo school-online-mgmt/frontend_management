@@ -1071,7 +1071,7 @@ const ExamDetails = () => {
                                 </thead>
                                 <tbody>
                                     {examResults.map((r: any) => (
-                                        <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
+                                        <tr key={r.id} data-testid="exam-row" data-id={r.id} className="border-b last:border-0 hover:bg-slate-50">
                                             <td className="px-5 py-3 font-medium text-slate-800">
                                                 {r.studentName || `${r.student?.firstName ?? ""} ${r.student?.lastName ?? ""}`.trim() || "—"}
                                             </td>

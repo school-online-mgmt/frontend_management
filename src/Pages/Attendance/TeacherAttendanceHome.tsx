@@ -533,7 +533,7 @@ function ViewTab() {
                                 {filtered.map((r,i)=>{
                                     const sc=SC[r.status as SK]||SC.PRESENT;
                                     return(
-                                        <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                                        <tr key={r.id} data-testid="attendance-row" data-id={r.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                                             <td className="px-5 py-2.5 text-[10px] text-slate-300 font-mono">{i+1}</td>
                                             <td className="px-5 py-2.5 text-sm font-medium text-slate-700">{r.teacherName}</td>
                                             <td className="px-5 py-2.5 text-xs text-slate-500 font-mono">{r.teacherPhone||"—"}</td>

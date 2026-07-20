@@ -320,7 +320,7 @@ export default function CommunicationPage() {
 
           {/* Preview result */}
           {preview && (
-            <div className={`rounded-xl p-3 border ${preview.count > 0 ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+            <div data-testid="communication-preview-count" data-count={preview.count} className={`rounded-xl p-3 border ${preview.count > 0 ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
               <p className={`text-xs font-bold inline-flex items-center gap-1.5 ${preview.count > 0 ? "text-emerald-800" : "text-amber-800"}`}>
                 {preview.count > 0 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                 {preview.count} {preview.count === 1 ? "recipient" : "recipients"}

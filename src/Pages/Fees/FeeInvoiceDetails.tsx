@@ -238,7 +238,7 @@ ${payments.length > 0 ? `
                             <tbody className="divide-y divide-slate-50">
                                 {items.map(it => (
                                     it.itemType === 'PLATFORM_FEE' ? (
-                                        <tr key={it.id} className="bg-violet-50/40">
+                                        <tr key={it.id} data-testid="fees-row" data-id={it.id} className="bg-violet-50/40">
                                             <td className="px-3 py-2.5">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-violet-800">{it.description}</span>
@@ -254,7 +254,7 @@ ${payments.length > 0 ? `
                                             <td className="px-3 py-2.5 text-right font-bold text-violet-700">{fmt(it.amount)}</td>
                                         </tr>
                                     ) : (
-                                        <tr key={it.id}><td className="px-3 py-2.5 font-medium text-slate-700">{it.description}</td><td className="px-3 py-2.5"><span className="text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">{it.itemType.replaceAll('_', ' ')}</span></td><td className="px-3 py-2.5 text-right font-semibold text-slate-800">{fmt(it.amount)}</td></tr>
+                                        <tr key={it.id} data-testid="fees-row" data-id={it.id}><td className="px-3 py-2.5 font-medium text-slate-700">{it.description}</td><td className="px-3 py-2.5"><span className="text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">{it.itemType.replaceAll('_', ' ')}</span></td><td className="px-3 py-2.5 text-right font-semibold text-slate-800">{fmt(it.amount)}</td></tr>
                                     )
                                 ))}
                                 <tr className="bg-slate-50 font-bold border-t border-slate-200"><td colSpan={2} className="px-3 py-2.5">Total</td><td className="px-3 py-2.5 text-right">{fmt(invoice.totalAmount)}</td></tr>
@@ -274,7 +274,7 @@ ${payments.length > 0 ? `
                                 <thead><tr className="bg-slate-50">{['Date','Mode','Reference','Received By','Amount'].map(h => <th key={h} className="px-3 py-2 text-left text-xs text-slate-500 uppercase">{h}</th>)}</tr></thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {payments.map(p => (
-                                        <tr key={p.id}>
+                                        <tr key={p.id} data-testid="fees-row" data-id={p.id}>
                                             <td className="px-3 py-2.5">{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
                                             <td className="px-3 py-2.5"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.paymentMode}</span></td>
                                             <td className="px-3 py-2.5 text-slate-500">{p.referenceNo || '—'}</td>

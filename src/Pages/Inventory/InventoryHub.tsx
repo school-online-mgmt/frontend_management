@@ -1442,7 +1442,7 @@ function ItemsTab({ onOpenItem, onOpenModal, itemsCount }: {
                                         </td></tr>
                                     ) : (
                                         items.map(item => (
-                                            <tr key={item.id}
+                                            <tr key={item.id} data-testid="inventory-row" data-id={item.id}
                                                 onClick={() => onOpenItem(item.id)}
                                                 className={`hover:bg-slate-50 transition-colors cursor-pointer ${!item.isActive ? "opacity-60" : ""}`}>
                                                 <td className="px-4 py-3">
@@ -1724,7 +1724,7 @@ function TransactionsTab() {
                                         r.type === "OPENING" ? "+" : "−";
                                     const isNeg = signed === "−";
                                     return (
-                                        <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                                        <tr key={r.id} data-testid="inventory-row" data-id={r.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3 text-[11px] text-slate-500 whitespace-nowrap">
                                                 {fmtDateTime(r.performedAt)}
                                             </td>

@@ -103,8 +103,7 @@ const SectionHome = () => {
 
                                     sections.map((section: any) => (
 
-                                        <tr
-                                            key={section.id}
+                                        <tr key={section.id} data-testid="section-row" data-id={section.id}
                                             onClick={() => navigate(`/section/${section.id}`)}
                                             className="hover:bg-slate-50 cursor-pointer transition"
                                         >

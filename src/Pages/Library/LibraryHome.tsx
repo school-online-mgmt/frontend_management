@@ -263,7 +263,7 @@ const LibraryHome = () => {
                 }}
                 refreshing={isLoading}
                 primaryActions={
-                    <button onClick={() => setShowAddModal(true)}
+                    <button data-testid="library-add-book-open-btn" onClick={() => setShowAddModal(true)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
                         <Plus size={15} /> Add Book
                     </button>
@@ -430,7 +430,7 @@ const LibraryHome = () => {
                             ) : issues.map((issue) => {
                                 const overdueDays = daysOverdue(issue.dueDate);
                                 return (
-                                    <tr key={issue.id} className="hover:bg-slate-50">
+                                    <tr key={issue.id} data-testid="library-row" data-id={issue.id} className="hover:bg-slate-50">
                                         <td className="p-4">
                                             <p className="font-medium">{issue.bookTitle}</p>
                                             <p className="text-slate-400 text-xs">{issue.bookAuthor}</p>
@@ -508,7 +508,7 @@ const LibraryHome = () => {
                             {requests.length === 0 ? (
                                 <tr><td colSpan={5} className="p-12 text-center text-slate-400">No requests found</td></tr>
                             ) : requests.map((req) => (
-                                <tr key={req.id} className="hover:bg-slate-50">
+                                <tr key={req.id} data-testid="library-row" data-id={req.id} className="hover:bg-slate-50">
                                     <td className="p-4">
                                         <p className="font-medium">{req.bookTitle}</p>
                                         <p className="text-slate-400 text-xs">{req.bookAuthor}</p>
@@ -609,7 +609,7 @@ const LibraryHome = () => {
                                 const newDue = new Date(currentDue);
                                 newDue.setDate(newDue.getDate() + 21);
                                 return (
-                                    <tr key={renewal.id} className="hover:bg-slate-50">
+                                    <tr key={renewal.id} data-testid="library-row" data-id={renewal.id} className="hover:bg-slate-50">
                                         <td className="p-4">
                                             <p className="font-medium">{renewal.bookTitle}</p>
                                             <p className="text-slate-400 text-xs">{renewal.bookAuthor}</p>
@@ -826,15 +826,15 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <label className="text-xs font-semibold text-slate-600 block mb-1">Title *</label>
-                            <input value={form.title} onChange={(e) => set("title", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="Book title" />
+                            <input data-testid="library-book-title-input" value={form.title} onChange={(e) => set("title", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="Book title" />
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 block mb-1">Author *</label>
-                            <input value={form.author} onChange={(e) => set("author", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="Author name" />
+                            <input data-testid="library-book-author-input" value={form.author} onChange={(e) => set("author", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="Author name" />
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 block mb-1">ISBN</label>
-                            <input value={form.isbn} onChange={(e) => set("isbn", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="978-..." />
+                            <input data-testid="library-book-isbn-input" value={form.isbn} onChange={(e) => set("isbn", e.target.value)} className="w-full border rounded-lg p-2 text-sm" placeholder="978-..." />
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 block mb-1">Publisher</label>
@@ -857,7 +857,7 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600 block mb-1">Total Copies</label>
-                            <input type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                            <input data-testid="library-book-copies-input" type="number" min="1" value={form.totalCopies} onChange={(e) => set("totalCopies", e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
                         </div>
                         <div className="col-span-2">
                             <label className="text-xs font-semibold text-slate-600 block mb-1">Description</label>
@@ -888,7 +888,7 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                 </div>
                 <div className="p-6 border-t flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2 border rounded-xl text-sm">Cancel</button>
-                    <button onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700">
+                    <button data-testid="library-add-book-submit-btn" onClick={handleSubmit} disabled={isSubmitting} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700">
                         {isSubmitting ? "Adding…" : "Add Book"}
                     </button>
                 </div>

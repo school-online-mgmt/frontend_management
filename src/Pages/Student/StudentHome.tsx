@@ -197,7 +197,7 @@ const StudentHome = () => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {students.map((student: any) => (
-                                            <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                                            <tr key={student.id} data-testid="student-row" data-id={student.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
