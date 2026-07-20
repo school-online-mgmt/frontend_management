@@ -494,7 +494,11 @@ const ApplicantsHome: React.FC = () => {
                     const color = avatarColor(applicant.firstName);
                     const isPending = applicant.status === 'APPLIED';
                     return (
-                      <tr key={applicant.id} onClick={() => navigate(`/applicant/${applicant.id}`)}
+                      <tr key={applicant.id} data-testid="applicants-row" data-id={applicant.id} onClick={() => navigate(`/applicant/${applicant.id}`)}
+                        data-testid="applicant-row"
+                        data-applicant-id={applicant.id}
+                        data-applicant-name={`${applicant.firstName} ${applicant.lastName}`}
+                        data-status={applicant.status}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group">
 
                         {/* Applicant — bigger text on mobile for readability */}

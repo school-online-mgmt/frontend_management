@@ -422,8 +422,7 @@ const ReleaseTable = ({
             </thead>
             <tbody className="divide-y divide-slate-50">
                 {rows.map((r) => (
-                    <tr
-                        key={r.id}
+                    <tr key={r.id} data-testid="exam-row" data-id={r.id}
                         className={`hover:bg-slate-50 transition ${muted ? "opacity-70" : ""}`}
                     >
                         <td className="px-3 py-3 font-medium text-slate-800">

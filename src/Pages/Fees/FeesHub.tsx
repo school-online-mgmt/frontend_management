@@ -2109,7 +2109,7 @@ function ExtraChargesTab() {
                     <tbody className="divide-y divide-slate-50">
                         {charges.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No charges or fines for the selected period</td></tr>}
                         {charges.map(c => (
-                            <tr key={c.id} className="hover:bg-slate-50">
+                            <tr key={c.id} data-testid="fees-row" data-id={c.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 font-medium">{c.studentFirstName} {c.studentLastName}</td>
                                 <td className="px-4 py-3"><span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">{c.type.replaceAll('_', ' ')}</span></td>
                                 <td className="px-4 py-3 text-slate-500">{c.description || '—'}</td>

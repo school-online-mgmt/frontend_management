@@ -117,7 +117,7 @@ function DashboardTab() {
                                         {(d?.zoneStats ?? []).map((z: any, i: number) => {
                                             const p = pct(z.collectedAmount, z.monthlyDemand);
                                             return (
-                                                <tr key={z.zoneId} className="hover:bg-slate-50/60 transition-colors">
+                                                <tr key={z.zoneId} data-testid="transport-zone-dashboard-row" data-zone-id={z.zoneId} data-zone-name={z.zoneName} className="hover:bg-slate-50/60 transition-colors">
                                                     <td className="px-6 py-3.5">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white shrink-0
@@ -335,7 +335,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {filtered.map((s: any) => (
-                                    <tr key={s.academicId} className={`transition-colors ${successId === s.academicId ? "bg-emerald-50/40" : "hover:bg-slate-50/60"}`}>
+                                    <tr key={s.academicId} data-testid="transport-student-row" data-academic-id={s.academicId} data-student-name={`${s.firstName} ${s.lastName}`} data-opted={s.transportOpted ? "true" : "false"} className={`transition-colors ${successId === s.academicId ? "bg-emerald-50/40" : "hover:bg-slate-50/60"}`}>
                                         <td className="px-6 py-3.5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[10px] font-black shrink-0">
@@ -376,6 +376,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                                                         {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name} — {fmt(z.price)}/mo</option>)}
                                                     </select>
                                                     <button
+                                                        data-testid="transport-assign-confirm-btn"
                                                         onClick={() => updateMut.mutate({ academicId: s.academicId, transportOpted: !!assignZoneId, transportZoneId: assignZoneId || null })}
                                                         disabled={updateMut.isPending}
                                                         className="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1">
@@ -385,7 +386,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                                                     <button data-testid="transport-assigning-btn" onClick={() => setAssigning(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg border border-slate-200"><X size={12} /></button>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => { setAssigning(s.academicId); setAssignZoneId(s.transportZoneId ?? ""); }}
+                                                <button data-testid={`transport-assign-open-btn-${s.academicId}`} onClick={() => { setAssigning(s.academicId); setAssignZoneId(s.transportZoneId ?? ""); }}
                                                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors">
                                                     <Pencil size={11} />Assign Zone
                                                 </button>
@@ -475,7 +476,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                     </select>
                     <span className="text-xs text-slate-400">{buses.length} vehicle{buses.length !== 1 ? "s" : ""}</span>
                 </div>
-                <button onClick={() => { resetForm(); setShowForm(true); }}
+                <button data-testid="transport-add-zone-open-btn" onClick={() => { resetForm(); setShowForm(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-colors">
                     <Plus size={14} />Add Vehicle
                 </button>
@@ -772,7 +773,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
                                         </div>
                                     </div>
                                     <div className="flex gap-1 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => startEdit(z)} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-slate-100"><Pencil size={12} /></button>
+                                        <button data-testid={`transport-zone-edit-btn-${z.id}`} onClick={() => startEdit(z)} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-slate-100"><Pencil size={12} /></button>
                                         <button onClick={() => confirmDialog({ title: "Delete Zone", message: `Delete zone "${z.name}"? Any students assigned to this zone will be unassigned.`, confirmText: "Delete", onConfirm: async () => { deleteMut.mutate(z.id); } })}
                                             className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 border border-slate-100"><Trash2 size={12} /></button>
                                     </div>

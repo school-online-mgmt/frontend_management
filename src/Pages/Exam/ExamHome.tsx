@@ -634,7 +634,7 @@ const ExamHome = () => {
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-50">
                                                             {termExams.map(exam => (
-                                                                <tr key={exam.id} onClick={() => navigate(`/exam/${exam.id}`)}
+                                                                <tr key={exam.id} data-testid="exam-row" data-id={exam.id} onClick={() => navigate(`/exam/${exam.id}`)}
                                                                     data-testid="exam-row"
                                                                     data-exam-id={exam.id}
                                                                     data-exam-name={exam.examName}

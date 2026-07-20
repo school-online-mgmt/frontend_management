@@ -254,7 +254,7 @@ const BookDetailsPage = () => {
                                 const todayStr = new Date().toISOString().split("T")[0];
                                 const isOverdue = issue.isOverdue ?? (issue.status !== "RETURNED" && issue.status !== "LOST" && (issue.status === "OVERDUE" || issue.dueDate < todayStr));
                                 return (
-                                    <tr key={issue.id} className="hover:bg-slate-50">
+                                    <tr key={issue.id} data-testid="library-row" data-id={issue.id} className="hover:bg-slate-50">
                                         <td className="p-4">
                                             <p className="font-medium">{issue.studentName}</p>
                                             <p className="text-xs text-slate-400">{issue.studentPhone}</p>
@@ -305,7 +305,7 @@ const BookDetailsPage = () => {
                         </thead>
                         <tbody className="divide-y">
                             {issueHistory.map((issue) => (
-                                <tr key={issue.id}>
+                                <tr key={issue.id} data-testid="library-row" data-id={issue.id}>
                                     <td className="p-4 font-medium">{issue.studentName}</td>
                                     <td className="p-4 text-slate-500">{issue.issueDate}</td>
                                     <td className="p-4 text-slate-500">{issue.dueDate}</td>
