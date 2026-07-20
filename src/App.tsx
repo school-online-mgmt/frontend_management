@@ -41,6 +41,7 @@ import SessionsPage from "./Pages/Sessions/SessionsPage.tsx";
 import AccountPage from "./Pages/Account/AccountPage.tsx";
 import PlatformBillsPage from "./Pages/Account/PlatformBillsPage.tsx";
 import CommunicationPage from "./Pages/Communication/CommunicationPage.tsx";
+import PublicationsPage from "./Pages/Communication/PublicationsPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
@@ -50,6 +51,9 @@ import InventoryHub from "./Pages/Inventory/InventoryHub.tsx";
 import HomeworkPage from "./Pages/Homework/HomeworkPage.tsx";
 import DocumentsPage from "./Pages/Documents/DocumentsPage.tsx";
 import TimetablePage from "./Pages/Timetable/TimetablePage.tsx";
+import PayrollHub from "./Pages/HR/PayrollHub.tsx";
+import PantryHub from "./Pages/Pantry/PantryHub.tsx";
+import TeacherOnboardingWizard from "./Pages/Teacher/TeacherOnboardingWizard.tsx";
 import ModuleGate from "./components/ModuleGate.tsx";
 import AdminRoute from "./components/AdminRoute.tsx";
 
@@ -122,6 +126,7 @@ function App() {
               <Route path="/events" element={<Navigate to="/calendar" replace />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/communication" element={<CommunicationPage />} />
+              <Route path="/publications" element={<PublicationsPage />} />
             </Route>
 
             {/* FINANCE — fees & invoices */}
@@ -152,6 +157,9 @@ function App() {
             {/* INVENTORY — item master, procurement, consumption ledger */}
             <Route element={<ModuleGate module="INVENTORY" />}>
               <Route path="/inventory" element={<InventoryHub />} />
+              <Route path="/hr" element={<PayrollHub />} />
+              <Route path="/pantry" element={<PantryHub />} />
+              <Route path="/teacher-onboarding" element={<TeacherOnboardingWizard />} />
             </Route>
 
             {/* HOMEWORK — school-wide oversight */}

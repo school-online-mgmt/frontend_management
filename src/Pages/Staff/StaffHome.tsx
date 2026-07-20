@@ -100,6 +100,9 @@ const MODULE_META: Record<AppModule, {
     TIMETABLE:     { label: 'Timetable',     icon: CalendarDays,   color: 'text-sky-600',     bg: 'bg-sky-50',
         desc: 'Build the weekly class timetable.',
         pages: ['Timetable'] },
+    PANTRY:        { label: 'Pantry',        icon: CalendarDays,   color: 'text-emerald-600', bg: 'bg-emerald-50',
+        desc: 'Cashless canteen — wallets, POS sales, menu and insights.',
+        pages: ['Pantry & Canteen'] },
 };
 
 const ROLE_CARDS = [

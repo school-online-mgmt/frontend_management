@@ -2457,5 +2457,240 @@ createStudent = async (data: {
         const res = await apiClient.patch(`/management/teacher-documents/uploads/${id}/verify`, { action, ...(reason ? { reason } : {}) });
         return res.data;
     };
+
+    // ── HR & Payroll ──────────────────────────────────────────────────────────
+    listHrStaff = async () => {
+        const res = await apiClient.get('/management/hr/staff');
+        return res.data as { staff: HrStaffRow[] };
+    };
+    getHrStaff = async (staffType: string, staffId: string) => {
+        const res = await apiClient.get(`/management/hr/staff/${staffType}/${staffId}`);
+        return res.data as { identity: HrStaffIdentity; profile: HrProfile | null; salary: HrSalary | null };
+    };
+    saveHrProfile = async (staffType: string, staffId: string, data: Partial<HrProfile>) => {
+        const res = await apiClient.put(`/management/hr/staff/${staffType}/${staffId}/profile`, data);
+        return res.data as { message: string; profile: HrProfile };
+    };
+    saveHrSalary = async (staffType: string, staffId: string, data: { basicSalary: number; effectiveFrom: string; components: HrComponent[] }) => {
+        const res = await apiClient.put(`/management/hr/staff/${staffType}/${staffId}/salary`, data);
+        return res.data as { message: string; structureId: string; preview: ComputedPayslip };
+    };
+    listPayrollRuns = async () => {
+        const res = await apiClient.get('/management/hr/payroll/runs');
+        return res.data as { runs: PayrollRun[] };
+    };
+    generatePayrollRun = async (month: number, year: number) => {
+        const res = await apiClient.post('/management/hr/payroll/runs', { month, year });
+        return res.data as { message: string; runId: string; created: number; skipped: number; totalNet: number };
+    };
+    getPayrollRun = async (runId: string) => {
+        const res = await apiClient.get(`/management/hr/payroll/runs/${runId}`);
+        return res.data as { run: PayrollRun; payslips: Payslip[] };
+    };
+    finalizePayrollRun = async (runId: string) => {
+        const res = await apiClient.post(`/management/hr/payroll/runs/${runId}/finalize`);
+        return res.data as { message: string; run: PayrollRun };
+    };
+    getPayslip = async (payslipId: string) => {
+        const res = await apiClient.get(`/management/hr/payslips/${payslipId}`);
+        return res.data as { payslip: Payslip; payments: SalaryPayment[] };
+    };
+    recordSalaryPayment = async (payslipId: string, data: { amount: number; method: string; paidAt: string; reference?: string; notes?: string }) => {
+        const res = await apiClient.post(`/management/hr/payslips/${payslipId}/payments`, data);
+        return res.data as { message: string; paidAmount: number; status: string };
+    };
+    payslipPdfUrl = (payslipId: string) => `${apiClient.defaults.baseURL}/management/hr/payslips/${payslipId}/pdf`;
+    cancelPayrollRun = async (runId: string) => {
+        const res = await apiClient.post(`/management/hr/payroll/runs/${runId}/cancel`);
+        return res.data as { message: string; status: string };
+    };
+    cancelPayslip = async (payslipId: string) => {
+        const res = await apiClient.post(`/management/hr/payslips/${payslipId}/cancel`);
+        return res.data as { message: string; status: string };
+    };
+
+    // ── School documents / publications (authoring) ─────────────────────────
+    listPublications = async () => {
+        const res = await apiClient.get('/management/publications');
+        return res.data as { documents: ManagedPublication[] };
+    };
+    getPublication = async (id: string) => {
+        const res = await apiClient.get(`/management/publications/${id}`);
+        return res.data as { document: ManagedPublication };
+    };
+    createPublication = async (data: { title: string; category?: string; audience?: string; visibility?: string; summary?: string | null; content?: string | null }) => {
+        const res = await apiClient.post('/management/publications', data);
+        return res.data as { message: string; document: ManagedPublication };
+    };
+    updatePublication = async (id: string, data: Partial<{ title: string; category: string; audience: string; visibility: string; summary: string | null; content: string }>) => {
+        const res = await apiClient.patch(`/management/publications/${id}`, data);
+        return res.data as { message: string; document: ManagedPublication };
+    };
+    publishPublication = async (id: string) => {
+        const res = await apiClient.post(`/management/publications/${id}/publish`);
+        return res.data as { message: string; document: ManagedPublication };
+    };
+    unpublishPublication = async (id: string) => {
+        const res = await apiClient.post(`/management/publications/${id}/unpublish`);
+        return res.data as { message: string; document: ManagedPublication };
+    };
+    deletePublication = async (id: string) => {
+        const res = await apiClient.delete(`/management/publications/${id}`);
+        return res.data as { message: string };
+    };
+    seedPublications = async () => {
+        const res = await apiClient.post('/management/publications/seed');
+        return res.data as { message: string; created: number };
+    };
+    getPublicationAcks = async (id: string) => {
+        const res = await apiClient.get(`/management/publications/${id}/acknowledgements`);
+        return res.data as PublicationAckStats;
+    };
+
+    // ── Pantry ─────────────────────────────────────────────────────────────────
+    listPantryItems = async () => {
+        const res = await apiClient.get('/management/pantry/items');
+        return res.data as { items: PantryItem[] };
+    };
+    createPantryItem = async (data: Partial<PantryItem> & { name: string; price: number }) => {
+        const res = await apiClient.post('/management/pantry/items', data);
+        return res.data as { message: string; item: PantryItem };
+    };
+    updatePantryItem = async (id: string, data: Partial<PantryItem>) => {
+        const res = await apiClient.patch(`/management/pantry/items/${id}`, data);
+        return res.data as { message: string; item: PantryItem };
+    };
+    deletePantryItem = async (id: string) => {
+        const res = await apiClient.delete(`/management/pantry/items/${id}`);
+        return res.data as { message: string };
+    };
+    restockPantryItem = async (id: string, quantity: number) => {
+        const res = await apiClient.post(`/management/pantry/items/${id}/restock`, { quantity });
+        return res.data as { message: string; item: PantryItem };
+    };
+    searchPantryHolders = async (q: string) => {
+        const res = await apiClient.get('/management/pantry/holders', { params: { q } });
+        return res.data as { holders: { userType: 'STUDENT' | 'TEACHER'; userId: string; name: string }[] };
+    };
+    listPantryWallets = async (q?: string) => {
+        const res = await apiClient.get('/management/pantry/wallets', { params: q ? { q } : {} });
+        return res.data as { wallets: PantryWalletRow[] };
+    };
+    getPantryWalletDetail = async (userType: string, userId: string) => {
+        const res = await apiClient.get(`/management/pantry/wallets/${userType}/${userId}`);
+        return res.data as { wallet: PantryWalletRow; transactions: PantryLedgerRow[]; spentToday: number };
+    };
+    pantryOfflineTopup = async (userType: string, userId: string, data: { amount: number; reference?: string; notes?: string }) => {
+        const res = await apiClient.post(`/management/pantry/wallets/${userType}/${userId}/topup`, data);
+        return res.data as { message: string; balance: number };
+    };
+    pantryAdjustWallet = async (userType: string, userId: string, data: { direction: 'CREDIT' | 'DEBIT'; amount: number; notes: string }) => {
+        const res = await apiClient.post(`/management/pantry/wallets/${userType}/${userId}/adjust`, data);
+        return res.data as { message: string; balance: number };
+    };
+    pantryPatchWallet = async (userType: string, userId: string, data: { dailyLimit?: number | null; isActive?: boolean }) => {
+        const res = await apiClient.patch(`/management/pantry/wallets/${userType}/${userId}`, data);
+        return res.data as { message: string; wallet: PantryWalletRow };
+    };
+    pantryPosSale = async (data: {
+        items: { itemId: string; quantity: number }[];
+        paymentMethod: 'WALLET' | 'CASH';
+        userType?: string | null; userId?: string | null; notes?: string | null;
+    }) => {
+        const res = await apiClient.post('/management/pantry/pos/sale', data);
+        return res.data as { message: string; order: PantryOrderRow };
+    };
+    listPantryOrders = async (filters: { status?: string; channel?: string; date?: string } = {}) => {
+        const res = await apiClient.get('/management/pantry/orders', { params: filters });
+        return res.data as { orders: PantryOrderRow[] };
+    };
+    getPantryOrder = async (id: string) => {
+        const res = await apiClient.get(`/management/pantry/orders/${id}`);
+        return res.data as { order: PantryOrderRow; items: PantryOrderLineRow[] };
+    };
+    pantryOrderReady = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/ready`)).data as { message: string; order: PantryOrderRow };
+    pantryOrderCollect = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/collect`)).data as { message: string; order: PantryOrderRow };
+    pantryOrderCancel = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/cancel`)).data as { message: string; status: string; refunded: number };
+    pantryOrderRefund = async (id: string, notes?: string) => (await apiClient.post(`/management/pantry/orders/${id}/refund`, { notes })).data as { message: string; status: string; refunded: number };
+    getPantryInsights = async (from?: string, to?: string) => {
+        const res = await apiClient.get('/management/pantry/insights', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } });
+        return res.data as PantryInsights;
+    };
 }
 export default new API();
+
+// ── Pantry types ──────────────────────────────────────────────────────────────
+export interface PantryItem {
+    id: string; name: string; category: string; description: string | null;
+    price: number; isVeg: boolean | null; isAvailable: boolean;
+    stockCount: number | null; lowStockThreshold: number | null;
+}
+export interface PantryWalletRow {
+    id: string; userType: 'STUDENT' | 'TEACHER'; userId: string;
+    balance: number; dailyLimit: number | null; isActive: boolean;
+    holderName?: string;
+}
+export interface PantryLedgerRow {
+    id: string; type: 'CREDIT' | 'DEBIT';
+    source: 'ONLINE_TOPUP' | 'OFFLINE_TOPUP' | 'PURCHASE' | 'REFUND' | 'ADJUSTMENT';
+    amount: number; balanceAfter: number; reference: string | null; notes: string | null; createdAt: string;
+}
+export interface PantryOrderRow {
+    id: string; channel: 'POS' | 'SELF';
+    status: 'PLACED' | 'READY' | 'COLLECTED' | 'CANCELLED' | 'REFUNDED';
+    userType: 'STUDENT' | 'TEACHER' | null; userName: string | null;
+    paymentMethod: 'WALLET' | 'CASH'; totalAmount: number; itemCount: number; createdAt: string;
+}
+export interface PantryOrderLineRow {
+    id: string; nameSnapshot: string; priceSnapshot: number; quantity: number; lineTotal: number;
+}
+export interface PantryInsights {
+    period: { from: string; to: string };
+    totals: { orders: number; grossRevenue: number; reversed: number };
+    byMethod: { method: string; orders: number; revenue: number }[];
+    byChannel: { channel: string; orders: number; revenue: number }[];
+    topItems: { name: string; quantity: number; revenue: number }[];
+    walletLiability: number;
+    topUps: { online: number; offline: number };
+    lowStock: { id: string; name: string; stockCount: number | null; lowStockThreshold: number | null }[];
+}
+
+// ── School documents / publications types ────────────────────────────────────
+export interface ManagedPublication {
+    id: string; slug: string; title: string; category: string;
+    audience: 'STUDENT' | 'TEACHER' | 'BOTH'; visibility: 'PUBLIC' | 'PRIVATE';
+    summary: string | null; content: string; version: number;
+    status: 'DRAFT' | 'PUBLISHED';
+    publishedByName: string | null; publishedAt: string | null;
+    acknowledgementCount?: number;
+    createdAt: string; updatedAt: string;
+}
+export interface PublicationAckStats {
+    document: { id: string; title: string; version: number; visibility: string; audience: string; status: string };
+    expectedCount: number; acknowledgedCount: number; pendingCount: number;
+    acknowledgements: { userType: string; userId: string; userName: string | null; version: number; acknowledgedAt: string }[];
+}
+
+// ── HR & Payroll types ────────────────────────────────────────────────────────
+export type StaffType = 'TEACHER' | 'MANAGEMENT';
+export interface HrStaffIdentity { staffType: StaffType; staffId: string; name: string; email: string | null; phone: string | null; }
+export interface HrProfile {
+    id?: string; employeeCode?: string | null; designation?: string | null; department?: string | null;
+    joiningDate?: string | null; employmentType?: string; employmentStatus?: string;
+    bankAccountName?: string | null; bankAccountNumber?: string | null; bankIfsc?: string | null;
+    bankName?: string | null; panNumber?: string | null; notes?: string | null;
+}
+export interface HrComponent { type: 'EARNING' | 'DEDUCTION'; label: string; calc: 'FIXED' | 'PERCENT_OF_BASIC'; value: number; }
+export interface HrSalary { structure: { id: string; basicSalary: number; effectiveFrom: string }; components: (HrComponent & { id: string })[]; }
+export interface HrStaffRow extends HrStaffIdentity {
+    profile: (HrProfile & { employmentStatus: string; employmentType: string }) | null;
+    hasSalary: boolean; basicSalary: number | null;
+}
+export interface ComputedPayslip { basicSalary: number; grossEarnings: number; totalDeductions: number; netPay: number; breakdown: { type: string; label: string; amount: number }[]; }
+export interface PayrollRun { id: string; periodMonth: number; periodYear: number; status: string; totalNet: number; payslipCount: number; finalizedAt: string | null; createdAt: string; }
+export interface Payslip {
+    id: string; staffName: string; staffType: StaffType; periodMonth: number; periodYear: number;
+    basicSalary: number; grossEarnings: number; totalDeductions: number; netPay: number; paidAmount: number;
+    status: string; breakdown: { type: string; label: string; amount: number }[];
+}
+export interface SalaryPayment { id: string; amount: number; method: string; paidAt: string; reference: string | null; notes: string | null; }
