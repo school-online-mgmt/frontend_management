@@ -331,7 +331,7 @@ const CoverageMeter = ({ icon: Icon, label, assigned, total, color, tint, tintTe
 
 /* ── Teacher Chips ─────────────────────────────────────────────────────────── */
 const AssignedChip = ({ teacher, onReassign, variant }: { teacher: TeacherRef; onReassign?: () => void; variant?: "incharge" }) => (
-  <button onClick={onReassign} disabled={!onReassign}
+  <button data-testid="assigned-chip" data-teacher-name={teacher?.name} data-variant={variant ?? "default"} onClick={onReassign} disabled={!onReassign}
     className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 max-w-[200px] transition-all
       ${variant === "incharge"
         ? "bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100"
