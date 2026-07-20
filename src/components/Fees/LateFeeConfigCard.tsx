@@ -126,7 +126,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                     </div>
                 </div>
                 <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
-                    <input type="checkbox" checked={form.enabled} onChange={(e) => update('enabled', e.target.checked)} className="sr-only peer" />
+                    <input data-testid="late-fee-config-card-update-checkbox" type="checkbox" checked={form.enabled} onChange={(e) => update('enabled', e.target.checked)} className="sr-only peer" />
                     <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-amber-500 relative transition-colors">
                         <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${form.enabled ? 'translate-x-5' : ''}`} />
                     </div>
@@ -157,7 +157,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                         <Field icon={<Clock size={14} className="text-slate-400" />} label="Grace period"
                             help="Days after due date before an invoice becomes late-fee eligible.">
                             <div className="relative">
-                                <input type="number" min={0} max={90} value={form.graceDays}
+                                <input data-testid="late-fee-config-card-update-input" type="number" min={0} max={90} value={form.graceDays}
                                     onChange={(e) => update('graceDays', Number(e.target.value))}
                                     className="w-full border border-slate-200 rounded-lg pl-3 pr-10 py-2 text-sm focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">days</span>
@@ -167,7 +167,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                             help="Base rupee amount charged per delinquent month.">
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
-                                <input type="number" min={0} value={form.flatAmount}
+                                <input data-testid="late-fee-config-card-update-input-2" type="number" min={0} value={form.flatAmount}
                                     onChange={(e) => update('flatAmount', Number(e.target.value))}
                                     className="w-full border border-slate-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
                             </div>
@@ -175,7 +175,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                         <Field icon={<Percent size={14} className="text-slate-400" />} label="Percent of overdue"
                             help="Additional charge = % of parent invoice's total.">
                             <div className="relative">
-                                <input type="number" min={0} max={100} value={form.percent}
+                                <input data-testid="late-fee-config-card-update-input-3" type="number" min={0} max={100} value={form.percent}
                                     onChange={(e) => update('percent', Number(e.target.value))}
                                     className="w-full border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">%</span>
@@ -185,7 +185,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                             help="Late fee for one month never exceeds this. 0 = uncapped.">
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
-                                <input type="number" min={0} value={form.maxAmount}
+                                <input data-testid="late-fee-config-card-update-input-4" type="number" min={0} value={form.maxAmount}
                                     onChange={(e) => update('maxAmount', Number(e.target.value))}
                                     className="w-full border border-slate-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
                             </div>
@@ -194,7 +194,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
 
                     {/* ── Live preview: per-month + cumulative (collapsible) ── */}
                     <div className="border border-amber-100 rounded-xl overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50/50">
-                        <button type="button" onClick={() => setPreviewOpen(v => !v)}
+                        <button data-testid="late-fee-config-card-preview-open-btn" type="button" onClick={() => setPreviewOpen(v => !v)}
                             aria-expanded={previewOpen}
                             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-amber-100/40 transition-colors text-left">
                             <Zap size={13} className="text-amber-600 shrink-0" />
@@ -237,7 +237,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                 <p className="text-[10px] text-slate-400">
                     Changes apply from the next sweep. Already-issued late fees stay untouched.
                 </p>
-                <button onClick={save} disabled={saving || !dirty}
+                <button data-testid="late-fee-config-card-save-btn" onClick={save} disabled={saving || !dirty}
                     className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
                     <Save size={14} />
                     {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}

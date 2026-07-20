@@ -74,7 +74,7 @@ function TicketList({ onSelect, onCreate }: { onSelect: (t: Ticket) => void; onC
           <h2 className="text-base font-bold text-slate-900">My Support Tickets</h2>
           <p className="text-sm text-slate-500 mt-0.5">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''} total</p>
         </div>
-        <button onClick={onCreate}
+        <button data-testid="support-create-btn" onClick={onCreate}
           className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
           <Plus size={16} /> New Ticket
         </button>
@@ -90,7 +90,7 @@ function TicketList({ onSelect, onCreate }: { onSelect: (t: Ticket) => void; onC
           { key: "resolved", label: "Resolved" },
           { key: "closed", label: "Closed" },
         ].map(({ key, label }) => (
-          <button key={key} onClick={() => setFilter(key)}
+          <button data-testid="support-filter-btn" key={key} onClick={() => setFilter(key)}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors
               ${filter === key ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:text-slate-700 bg-white border border-slate-200'}`}>
             {label}
@@ -108,7 +108,7 @@ function TicketList({ onSelect, onCreate }: { onSelect: (t: Ticket) => void; onC
           <p className="font-medium">{filter === 'all' ? 'No tickets yet' : `No ${filter} tickets`}</p>
           {filter === 'all' && <p className="text-sm mt-1 mb-4">Create a ticket if you need help from our team</p>}
           {filter === 'all' && (
-            <button onClick={onCreate} className="px-4 py-2 bg-violet-600 text-white text-sm font-bold rounded-xl">
+            <button data-testid="support-create-btn-2" onClick={onCreate} className="px-4 py-2 bg-violet-600 text-white text-sm font-bold rounded-xl">
               Create First Ticket
             </button>
           )}
@@ -119,7 +119,7 @@ function TicketList({ onSelect, onCreate }: { onSelect: (t: Ticket) => void; onC
             const st = STATUS_MAP[ticket.status] ?? STATUS_MAP.open;
             const pr = PRIORITY_MAP[ticket.priority] ?? PRIORITY_MAP.medium;
             return (
-              <button key={ticket.id} onClick={() => onSelect(ticket)}
+              <button data-testid="support-select-btn" key={ticket.id} onClick={() => onSelect(ticket)}
                 className="w-full text-left bg-white border border-slate-200 hover:border-violet-200 hover:shadow-sm rounded-2xl px-5 py-4 transition-all group">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -168,7 +168,7 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors">
+      <button data-testid="support-back-btn" onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors">
         <ArrowLeft size={15} /> Back to Tickets
       </button>
       <h2 className="text-base font-bold text-slate-900 mb-5">Create Support Ticket</h2>
@@ -177,7 +177,7 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Type</label>
-            <select value={type} onChange={e => setType(e.target.value)}
+            <select data-testid="support-type-select" value={type} onChange={e => setType(e.target.value)}
               className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30 bg-white">
               <option value="support">Support</option>
               <option value="bug">Bug Report</option>
@@ -187,7 +187,7 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)}
+            <select data-testid="support-category-select" value={category} onChange={e => setCategory(e.target.value)}
               className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30 bg-white">
               <option value="general">General</option>
               <option value="technical">Technical</option>
@@ -198,7 +198,7 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Priority</label>
-            <select value={priority} onChange={e => setPriority(e.target.value)}
+            <select data-testid="support-priority-select" value={priority} onChange={e => setPriority(e.target.value)}
               className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30 bg-white">
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -210,14 +210,14 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
 
         <div>
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Subject *</label>
-          <input type="text" value={subject} onChange={e => setSubject(e.target.value)} required
+          <input data-testid="support-subject-input" type="text" value={subject} onChange={e => setSubject(e.target.value)} required
             placeholder="Brief summary of your issue..."
             className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
         </div>
 
         <div>
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Description *</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} required rows={6}
+          <textarea data-testid="support-description-input" value={description} onChange={e => setDescription(e.target.value)} required rows={6}
             placeholder="Describe your issue in detail. Include steps to reproduce if it's a bug..."
             className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30 resize-none" />
         </div>
@@ -225,7 +225,7 @@ function CreateTicketForm({ onBack, onCreated }: { onBack: () => void; onCreated
         {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
 
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onBack}
+          <button data-testid="support-back-btn-2" type="button" onClick={onBack}
             className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
             Cancel
           </button>
@@ -281,7 +281,7 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-5 transition-colors">
+      <button data-testid="support-back-btn-3" onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-5 transition-colors">
         <ArrowLeft size={15} /> Back to Tickets
       </button>
 
@@ -301,7 +301,7 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
             </p>
           </div>
           {canReply && (
-            <button onClick={closeTicket} disabled={closing}
+            <button data-testid="support-close-ticket-btn" onClick={closeTicket} disabled={closing}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shrink-0">
               <CheckCircle2 size={13} /> {closing ? "Closing..." : "Close Ticket"}
             </button>
@@ -340,7 +340,7 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
       {/* Reply box */}
       {canReply ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <textarea
+          <textarea data-testid="support-reply-input"
             value={reply}
             onChange={e => setReply(e.target.value)}
             rows={4}
@@ -348,7 +348,7 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
             className="w-full px-3.5 py-3 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-400/30 mb-3"
           />
           <div className="flex justify-end">
-            <button onClick={sendReply} disabled={!reply.trim() || sending}
+            <button data-testid="support-send-reply-btn" onClick={sendReply} disabled={!reply.trim() || sending}
               className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50">
               <Send size={15} /> {sending ? "Sending..." : "Send Reply"}
             </button>
@@ -356,7 +356,7 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
         </div>
       ) : (
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center text-sm text-slate-400">
-          This ticket is closed. <button onClick={onBack} className="text-violet-600 hover:underline">Create a new ticket</button> if you need further help.
+          This ticket is closed. <button data-testid="support-back-btn-4" onClick={onBack} className="text-violet-600 hover:underline">Create a new ticket</button> if you need further help.
         </div>
       )}
     </div>
@@ -402,7 +402,7 @@ function FeatureRequestsView() {
           <h2 className="text-base font-bold text-slate-900">Feature Requests</h2>
           <p className="text-sm text-slate-500 mt-0.5">Suggest improvements to make EduPilots better for your school</p>
         </div>
-        <button onClick={() => setShowForm(true)}
+        <button data-testid="support-show-form-btn" onClick={() => setShowForm(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
           <Plus size={16} /> Request Feature
         </button>
@@ -419,12 +419,12 @@ function FeatureRequestsView() {
         <div className="bg-white rounded-2xl border border-violet-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-slate-900">New Feature Request</h3>
-            <button onClick={() => setShowForm(false)}><X size={16} className="text-slate-400" /></button>
+            <button data-testid="support-show-form-btn-2" onClick={() => setShowForm(false)}><X size={16} className="text-slate-400" /></button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Category</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}
+              <select data-testid="support-category-select-2" value={category} onChange={e => setCategory(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400/30">
                 <option value="general">General</option>
                 <option value="ui">UI / Experience</option>
@@ -436,19 +436,19 @@ function FeatureRequestsView() {
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Feature Title *</label>
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} required
+              <input data-testid="support-title-input" type="text" value={title} onChange={e => setTitle(e.target.value)} required
                 placeholder="Brief title of the feature..."
                 className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Description *</label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} required rows={4}
+              <textarea data-testid="support-description-input-2" value={description} onChange={e => setDescription(e.target.value)} required rows={4}
                 placeholder="Describe the feature and how it would help your school..."
                 className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400/30 resize-none" />
             </div>
             {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setShowForm(false)}
+              <button data-testid="support-show-form-btn-3" type="button" onClick={() => setShowForm(false)}
                 className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancel</button>
               <button type="submit" disabled={submitting}
                 className="flex-1 py-2.5 text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-50">

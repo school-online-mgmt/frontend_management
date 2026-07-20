@@ -97,7 +97,7 @@ const PageHeader = ({
                 {/* Back + title block */}
                 <div className="flex items-center gap-2 min-w-0 sm:flex-1">
                     {showBack && (
-                        <button
+                        <button data-testid="page-header-back-btn"
                             type="button"
                             onClick={handleBack}
                             aria-label="Go back"
@@ -126,7 +126,7 @@ const PageHeader = ({
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 sm:ml-auto">
                         {primaryActions ?? actions}
                         {onRefresh && (
-                            <button
+                            <button data-testid="page-header-refresh-btn"
                                 type="button"
                                 onClick={onRefresh}
                                 disabled={refreshing}

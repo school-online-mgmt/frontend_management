@@ -189,32 +189,32 @@ const SubjectDetailsPage = () => {
                     <div className="bg-white w-full max-w-lg rounded-2xl p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-bold text-slate-900">Edit Subject</h3>
-                            <button onClick={() => setIsEditOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition"><X size={18} /></button>
+                            <button data-testid="subject-is-edit-open-btn" onClick={() => setIsEditOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition"><X size={18} /></button>
                         </div>
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Subject Name</label>
-                                <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                <input data-testid="subject-name-input" className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                                     placeholder="Name" value={editData.name}
                                     onChange={e => setEditData({ ...editData, name: e.target.value })} />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Slug</label>
-                                    <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                    <input data-testid="subject-slug-input" className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                                         placeholder="slug" value={editData.slug}
                                         onChange={e => setEditData({ ...editData, slug: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Book Name</label>
-                                    <input className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                    <input data-testid="subject-book-name-input" className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                                         placeholder="Book Name" value={editData.bookName}
                                         onChange={e => setEditData({ ...editData, bookName: e.target.value })} />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Session</label>
-                                <select className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                <select data-testid="subject-session-id-select" className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                                     value={editData.sessionId}
                                     onChange={e => setEditData({ ...editData, sessionId: e.target.value })}>
                                     <option value="" disabled>Select a Session</option>
@@ -225,7 +225,7 @@ const SubjectDetailsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setIsEditOpen(false)}
+                            <button data-testid="subject-is-edit-open-btn-2" onClick={() => setIsEditOpen(false)}
                                 className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition text-sm">
                                 Cancel
                             </button>
@@ -242,7 +242,7 @@ const SubjectDetailsPage = () => {
 
             {/* ── Hero Header ───────────────────────────────────────────── */}
             <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 px-6 lg:px-10 pt-8 pb-10">
-                <button onClick={() => navigate(-1)}
+                <button data-testid="subject-navigate-btn" onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-emerald-100 hover:text-white transition text-sm font-medium mb-6">
                     <ArrowLeft size={16} /> Back
                 </button>
@@ -271,11 +271,11 @@ const SubjectDetailsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => setIsEditOpen(true)}
+                        <button data-testid="subject-is-edit-open-btn-3" onClick={() => setIsEditOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
                             <Pencil size={14} /> Edit
                         </button>
-                        <button onClick={() => setIsConfirmOpen(true)}
+                        <button data-testid="subject-is-confirm-open-btn" onClick={() => setIsConfirmOpen(true)}
                             disabled={isUsedInCourses || deleteSubjectMutation.isPending}
                             title={isUsedInCourses ? 'Subject is in use' : 'Delete subject'}
                             className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-300/30 text-red-100 text-sm font-semibold rounded-xl hover:bg-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm">
@@ -348,7 +348,7 @@ const SubjectDetailsPage = () => {
                                 <p className="text-xs text-slate-400">{inchargeTeacher.qualification || 'Teacher'}{inchargeTeacher.phone ? ` · ${inchargeTeacher.phone}` : ''}</p>
                             </div>
                             <span className="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 rounded-lg font-medium">Incharge</span>
-                            <button onClick={() => navigate(`/teacher/${inchargeTeacher.id}`)}
+                            <button data-testid="subject-navigate-btn-2" onClick={() => navigate(`/teacher/${inchargeTeacher.id}`)}
                                 className="p-2 text-slate-300 group-hover:text-violet-500 rounded-lg hover:bg-violet-50 transition-colors">
                                 <ChevronRight size={16} />
                             </button>
@@ -380,7 +380,7 @@ const SubjectDetailsPage = () => {
                                 <UserX size={24} className="text-amber-400" />
                             </div>
                             <p className="font-semibold text-slate-700">No teachers assigned yet</p>
-                            <p className="text-sm text-slate-400 mt-1">Assign teachers to this subject from the <button onClick={() => navigate('/assignments')} className="text-emerald-600 hover:underline font-medium">Assignments page</button>.</p>
+                            <p className="text-sm text-slate-400 mt-1">Assign teachers to this subject from the <button data-testid="subject-navigate-btn-3" onClick={() => navigate('/assignments')} className="text-emerald-600 hover:underline font-medium">Assignments page</button>.</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-50">
@@ -407,7 +407,7 @@ const SubjectDetailsPage = () => {
                                                 ))}
                                             </div>
                                         )}
-                                        <button onClick={() => navigate(`/teacher/${t.id}`)}
+                                        <button data-testid="subject-navigate-btn-4" onClick={() => navigate(`/teacher/${t.id}`)}
                                             className="p-2 text-slate-300 group-hover:text-emerald-500 rounded-lg hover:bg-emerald-50 transition-colors">
                                             <ChevronRight size={16} />
                                         </button>
@@ -440,7 +440,7 @@ const SubjectDetailsPage = () => {
                     ) : (
                         <div className="divide-y divide-slate-50">
                             {subject.courseSubjects?.map((cs: any) => (
-                                <button key={cs.course.id}
+                                <button data-testid="subject-navigate-btn-5" key={cs.course.id}
                                     onClick={() => navigate(`/course/${cs.course.id}`)}
                                     className="w-full flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors group text-left">
                                     <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">

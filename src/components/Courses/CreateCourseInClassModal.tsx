@@ -106,7 +106,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                             <p className="text-white/70 text-xs">Class: <span className="font-semibold">{className}</span></p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/20 transition">
+                    <button data-testid="create-course-in-class-modal-close-btn" onClick={onClose} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/20 transition">
                         <X size={18} />
                     </button>
                 </div>

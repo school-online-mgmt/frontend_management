@@ -185,7 +185,7 @@ ${payments.length > 0 ? `
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"><ArrowLeft size={18}/></button>
+                    <button data-testid="fees-navigate-btn" onClick={() => navigate(-1)} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"><ArrowLeft size={18}/></button>
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold text-slate-900">{invoice.invoiceNo}</h1>
@@ -206,7 +206,7 @@ ${payments.length > 0 ? `
                 </div>
                 <div className="flex items-center gap-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColor[invoice.status]}`}>{invoice.status.replaceAll('_', ' ')}</span>
-                    <button onClick={printInvoice} className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50">
+                    <button data-testid="fees-print-invoice-btn" onClick={printInvoice} className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50">
                         <Printer size={15}/> Print / PDF
                     </button>
                 </div>
@@ -303,7 +303,7 @@ ${payments.length > 0 ? `
                     {/* Record Payment */}
                     {canPay && (
                         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                            <button onClick={() => setShowPayment(v => !v)} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 font-semibold">
+                            <button data-testid="fees-show-payment-btn" onClick={() => setShowPayment(v => !v)} className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 font-semibold">
                                 <CreditCard size={16}/> Record Payment
                             </button>
                             {showPayment && (
@@ -336,7 +336,7 @@ ${payments.length > 0 ? `
                             <button onClick={() => { setShowCancel(true); setShowWaive(false); }} className="w-full py-2 border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50">Cancel Invoice</button>
                             {(showWaive || showCancel) && (
                                 <div className="mt-2 space-y-2">
-                                    <input value={actionRemarks} onChange={e => setActionRemarks(e.target.value)} placeholder="Reason (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+                                    <input data-testid="fees-action-remarks-input" value={actionRemarks} onChange={e => setActionRemarks(e.target.value)} placeholder="Reason (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
                                     <div className="flex gap-2">
                                         <button onClick={showWaive ? waive : cancel} className="flex-1 py-2 bg-slate-800 text-white rounded-lg text-sm">Confirm</button>
                                         <button onClick={() => { setShowWaive(false); setShowCancel(false); }} className="flex-1 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>

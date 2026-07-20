@@ -42,14 +42,14 @@ const ResetPasswordDialog: React.FC<{
               <p className="text-xs text-slate-500 font-medium">For {studentName}</p>
             </div>
           </div>
-          <button onClick={onCancel} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={18} /></button>
+          <button data-testid="students-cancel-btn" onClick={onCancel} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={18} /></button>
         </div>
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">New Password</label>
             <div className="relative">
-              <input
+              <input data-testid="students-password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -57,13 +57,13 @@ const ResetPasswordDialog: React.FC<{
                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
                 required
               />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+              <button data-testid="students-show-password-btn" type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
+            <button data-testid="students-cancel-btn-2" type="button" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
             <button type="submit" disabled={isSubmitting || password.length < 8} className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition disabled:opacity-50 flex items-center justify-center gap-2">
               {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
               {isSubmitting ? 'Resetting...' : 'Reset Password'}
@@ -150,7 +150,7 @@ const StudentDetails: React.FC = () => {
         <p className="text-slate-500 text-sm mt-1">{loadError ? "Please check your connection and try again." : "The student may have been removed."}</p>
         <div className="flex items-center justify-center gap-3 mt-4">
           {loadError && <button onClick={() => { setLoadError(false); fetchStudent(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Try Again</button>}
-          <button onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition">Go Back</button>
+          <button data-testid="students-navigate-btn" onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition">Go Back</button>
         </div>
       </div>
     </div>
@@ -187,7 +187,7 @@ const StudentDetails: React.FC = () => {
       {/* Hero Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors text-sm font-bold mb-8 group w-fit">
+          <button data-testid="students-navigate-btn-2" onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors text-sm font-bold mb-8 group w-fit">
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back to Students
           </button>
 
@@ -217,11 +217,11 @@ const StudentDetails: React.FC = () => {
 
             <div className="flex flex-col gap-3">
               {student.status !== 'ACTIVE' && (
-                <button onClick={() => setShowAdmitModal(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+                <button data-testid="students-show-admit-modal-btn" onClick={() => setShowAdmitModal(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
                   <UserPlus size={16} /> Admit Student
                 </button>
               )}
-              <button onClick={() => setShowResetPassword(true)} className="px-8 py-3.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-2xl font-black text-sm hover:bg-amber-100 transition flex items-center justify-center gap-2">
+              <button data-testid="students-show-reset-password-btn" onClick={() => setShowResetPassword(true)} className="px-8 py-3.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-2xl font-black text-sm hover:bg-amber-100 transition flex items-center justify-center gap-2">
                 <KeyRound size={16} /> Reset Password
               </button>
             </div>
@@ -307,7 +307,7 @@ const StudentDetails: React.FC = () => {
             <div className="bg-slate-900 rounded-2xl p-6 text-white">
               <h3 className="font-black mb-2 flex items-center gap-2"><KeyRound size={16} className="text-amber-400" /> Student Portal Access</h3>
               <p className="text-slate-400 text-sm leading-relaxed mb-5">Students log in with their registered email and the password set during admission.</p>
-              <button onClick={() => setShowResetPassword(true)} className="w-full py-2.5 bg-amber-400/20 hover:bg-amber-400/30 transition rounded-xl text-xs font-black uppercase tracking-widest text-amber-300 border border-amber-400/20 flex items-center justify-center gap-2">
+              <button data-testid="students-show-reset-password-btn-2" onClick={() => setShowResetPassword(true)} className="w-full py-2.5 bg-amber-400/20 hover:bg-amber-400/30 transition rounded-xl text-xs font-black uppercase tracking-widest text-amber-300 border border-amber-400/20 flex items-center justify-center gap-2">
                 <KeyRound size={13} /> Reset Portal Password
               </button>
             </div>

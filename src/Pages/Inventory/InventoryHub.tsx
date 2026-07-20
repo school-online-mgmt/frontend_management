@@ -153,7 +153,7 @@ function ModalShell({
                 <div className={`px-6 py-4 border-b border-slate-100 bg-gradient-to-r ${accentClasses[accent]} text-white shrink-0 relative`}>
                     <h2 className="text-lg font-bold pr-8">{title}</h2>
                     {subtitle && <p className="text-xs opacity-90 mt-0.5 pr-8 truncate">{subtitle}</p>}
-                    <button onClick={onClose} aria-label="Close"
+                    <button data-testid="inventory-close-btn" onClick={onClose} aria-label="Close"
                         className="absolute right-4 top-4 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
                         <X size={16} />
                     </button>
@@ -236,11 +236,11 @@ function ItemFormModal({ mode, item, template, onClose, onSuccess }: {
             onClose={onClose}
             footer={
                 <div className="flex gap-2">
-                    <button onClick={onClose}
+                    <button data-testid="inventory-close-btn-2" onClick={onClose}
                         className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100">
                         Cancel
                     </button>
-                    <button onClick={submit} disabled={saving}
+                    <button data-testid="inventory-submit-btn" onClick={submit} disabled={saving}
                         className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-lime-600 to-emerald-600 rounded-xl hover:from-lime-700 hover:to-emerald-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
                         {saving && <Loader2 size={14} className="animate-spin" />}
                         {mode === "create" ? "Add Item" : "Save Changes"}
@@ -251,31 +251,31 @@ function ItemFormModal({ mode, item, template, onClose, onSuccess }: {
             <div className="space-y-4">
                 <div>
                     <label className={labelCls}>Item Name *</label>
-                    <input className={inputCls} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                    <input data-testid="inventory-name-input" className={inputCls} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                         placeholder="e.g. A4 printing paper (500 sheets)" autoFocus />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className={labelCls}>SKU / Code</label>
-                        <input className={inputCls} value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })}
+                        <input data-testid="inventory-sku-input" className={inputCls} value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })}
                             placeholder="Optional" />
                     </div>
                     <div>
                         <label className={labelCls}>Storage Location</label>
-                        <input className={inputCls} value={form.storageLocation} onChange={e => setForm({ ...form, storageLocation: e.target.value })}
+                        <input data-testid="inventory-storage-location-input" className={inputCls} value={form.storageLocation} onChange={e => setForm({ ...form, storageLocation: e.target.value })}
                             placeholder="e.g. Store room A" />
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className={labelCls}>Category</label>
-                        <select className={inputCls} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                        <select data-testid="inventory-category-select" className={inputCls} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
                             {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className={labelCls}>Unit</label>
-                        <select className={inputCls} value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
+                        <select data-testid="inventory-unit-select" className={inputCls} value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
                             {UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                         </select>
                     </div>
@@ -283,13 +283,13 @@ function ItemFormModal({ mode, item, template, onClose, onSuccess }: {
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className={labelCls}>Reorder Level</label>
-                        <input type="number" min="0" step="any" className={inputCls}
+                        <input data-testid="inventory-reorder-level-input" type="number" min="0" step="any" className={inputCls}
                             value={form.reorderLevel} onChange={e => setForm({ ...form, reorderLevel: e.target.value })} />
                         <p className="text-[10px] text-slate-500 mt-1">Alert triggers at or below this quantity.</p>
                     </div>
                     <div>
                         <label className={labelCls}>Unit Cost (₹)</label>
-                        <input type="number" min="0" step="any" className={inputCls}
+                        <input data-testid="inventory-unit-cost-input" type="number" min="0" step="any" className={inputCls}
                             value={form.unitCost} onChange={e => setForm({ ...form, unitCost: e.target.value })}
                             placeholder="Optional" />
                     </div>
@@ -297,7 +297,7 @@ function ItemFormModal({ mode, item, template, onClose, onSuccess }: {
                 {mode === "create" && (
                     <div>
                         <label className={labelCls}>Opening Stock</label>
-                        <input type="number" min="0" step="any" className={inputCls}
+                        <input data-testid="inventory-opening-stock-input" type="number" min="0" step="any" className={inputCls}
                             value={form.openingStock} onChange={e => setForm({ ...form, openingStock: e.target.value })}
                             placeholder="Leave blank if starting empty" />
                         <p className="text-[10px] text-slate-500 mt-1">Creates an opening-balance entry in the ledger.</p>
@@ -305,7 +305,7 @@ function ItemFormModal({ mode, item, template, onClose, onSuccess }: {
                 )}
                 <div>
                     <label className={labelCls}>Description</label>
-                    <textarea className={inputCls} rows={2}
+                    <textarea data-testid="inventory-description-input" className={inputCls} rows={2}
                         value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
                         placeholder="Notes about specifications, brand preferences…" />
                 </div>
@@ -364,9 +364,9 @@ function ProcureModal({ item, onClose, onSuccess }: {
             accent="emerald"
             footer={
                 <div className="flex gap-2">
-                    <button onClick={onClose}
+                    <button data-testid="inventory-close-btn-3" onClick={onClose}
                         className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100">Cancel</button>
-                    <button onClick={submit} disabled={saving}
+                    <button data-testid="inventory-submit-btn-2" onClick={submit} disabled={saving}
                         className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
                         {saving && <Loader2 size={14} className="animate-spin" />}
                         Record Procurement
@@ -379,7 +379,7 @@ function ProcureModal({ item, onClose, onSuccess }: {
                     <div>
                         <label className={labelCls}>Quantity *</label>
                         <div className="relative">
-                            <input type="number" min="0" step="any" className={inputCls}
+                            <input data-testid="inventory-quantity-input" type="number" min="0" step="any" className={inputCls}
                                 value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} autoFocus />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400 pointer-events-none">
                                 {item.unit.toLowerCase()}
@@ -388,7 +388,7 @@ function ProcureModal({ item, onClose, onSuccess }: {
                     </div>
                     <div>
                         <label className={labelCls}>Unit Cost (₹)</label>
-                        <input type="number" min="0" step="any" className={inputCls}
+                        <input data-testid="inventory-unit-cost-input-2" type="number" min="0" step="any" className={inputCls}
                             value={form.unitCost} onChange={e => setForm({ ...form, unitCost: e.target.value })}
                             placeholder="Optional" />
                     </div>
@@ -402,22 +402,22 @@ function ProcureModal({ item, onClose, onSuccess }: {
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className={labelCls}>Supplier</label>
-                        <input className={inputCls} value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })}
+                        <input data-testid="inventory-supplier-input" className={inputCls} value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })}
                             placeholder="Vendor name" />
                     </div>
                     <div>
                         <label className={labelCls}>Invoice / Bill Ref.</label>
-                        <input className={inputCls} value={form.invoiceRef} onChange={e => setForm({ ...form, invoiceRef: e.target.value })} />
+                        <input data-testid="inventory-invoice-ref-input" className={inputCls} value={form.invoiceRef} onChange={e => setForm({ ...form, invoiceRef: e.target.value })} />
                     </div>
                 </div>
                 <div>
                     <label className={labelCls}>Purchased On</label>
-                    <input type="date" className={inputCls}
+                    <input data-testid="inventory-purchased-at-input" type="date" className={inputCls}
                         value={form.purchasedAt} onChange={e => setForm({ ...form, purchasedAt: e.target.value })} />
                 </div>
                 <div>
                     <label className={labelCls}>Notes</label>
-                    <textarea className={inputCls} rows={2}
+                    <textarea data-testid="inventory-notes-input" className={inputCls} rows={2}
                         value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
                         placeholder="Optional context…" />
                 </div>
@@ -494,9 +494,9 @@ function ConsumeModal({ item, onClose, onSuccess }: {
             accent="rose"
             footer={
                 <div className="flex gap-2">
-                    <button onClick={onClose}
+                    <button data-testid="inventory-close-btn-4" onClick={onClose}
                         className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100">Cancel</button>
-                    <button onClick={submit} disabled={saving}
+                    <button data-testid="inventory-submit-btn-3" onClick={submit} disabled={saving}
                         className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-rose-600 to-pink-600 rounded-xl hover:from-rose-700 hover:to-pink-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
                         {saving && <Loader2 size={14} className="animate-spin" />}
                         Issue Stock
@@ -512,7 +512,7 @@ function ConsumeModal({ item, onClose, onSuccess }: {
                             const active = form.consumerType === c.value;
                             const Icon = c.icon;
                             return (
-                                <button key={c.value} type="button"
+                                <button data-testid="inventory-form-btn" key={c.value} type="button"
                                     onClick={() => setForm({ ...form, consumerType: c.value as any, consumerId: "", consumerLabel: "" })}
                                     className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg text-[10px] font-semibold transition-all border ${
                                         active
@@ -536,7 +536,7 @@ function ConsumeModal({ item, onClose, onSuccess }: {
                 {form.consumerType === "OTHER" && (
                     <div>
                         <label className={labelCls}>Consumer label *</label>
-                        <input className={inputCls} value={form.consumerLabel}
+                        <input data-testid="inventory-consumer-label-input" className={inputCls} value={form.consumerLabel}
                             onChange={e => setForm({ ...form, consumerLabel: e.target.value })}
                             placeholder="e.g. Sports day event, guest visit" />
                     </div>

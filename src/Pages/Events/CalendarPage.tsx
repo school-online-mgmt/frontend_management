@@ -213,7 +213,7 @@ const CalendarPage = () => {
                 refreshing={loading}
                 primaryActions={
                     <>
-                        <button onClick={toggleAllEvents}
+                        <button data-testid="events-toggle-all-events-btn" onClick={toggleAllEvents}
                             className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold border transition backdrop-blur-sm shrink-0 ${
                                 showAllEvents
                                     ? "bg-white text-violet-700 border-white"
@@ -254,12 +254,12 @@ const CalendarPage = () => {
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input
+                                    <input data-testid="events-title-input"
                                         type="text" placeholder="Event Title" value={formData.title}
                                         onChange={e => setFormData({ ...formData, title: e.target.value })}
                                         className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
-                                    <select
+                                    <select data-testid="events-type-select"
                                         value={formData.type}
                                         onChange={e => setFormData({ ...formData, type: e.target.value })}
                                         className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +267,7 @@ const CalendarPage = () => {
                                         {eventTypes.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                 </div>
-                                <textarea
+                                <textarea data-testid="events-description-input"
                                     placeholder="Description (optional)" value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2}
@@ -275,14 +275,14 @@ const CalendarPage = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-xs font-medium text-slate-500 mb-1 block">Start Date</label>
-                                        <input type="date" value={formData.date}
+                                        <input data-testid="events-date-input" type="date" value={formData.date}
                                             onChange={e => setFormData({ ...formData, date: e.target.value })}
                                             className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-slate-500 mb-1 block">End Date (optional)</label>
-                                        <input type="date" value={formData.endDate}
+                                        <input data-testid="events-end-date-input" type="date" value={formData.endDate}
                                             onChange={e => setFormData({ ...formData, endDate: e.target.value })}
                                             className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
@@ -318,7 +318,7 @@ const CalendarPage = () => {
                         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-slate-900">All School Events</h3>
-                                <button onClick={() => setShowAllEvents(false)} className="p-1 rounded hover:bg-slate-100"><X size={20} /></button>
+                                <button data-testid="events-show-all-events-btn" onClick={() => setShowAllEvents(false)} className="p-1 rounded hover:bg-slate-100"><X size={20} /></button>
                             </div>
                             {allEventsLoading ? (
                                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-slate-400" size={32} /></div>
@@ -344,11 +344,11 @@ const CalendarPage = () => {
                                                 </p>
                                                 {!ev.isExam && (
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => openEditForm(ev)}
+                                                        <button data-testid="events-open-edit-form-btn" onClick={() => openEditForm(ev)}
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-xs font-medium">
                                                             <Edit2 size={14} /> Edit
                                                         </button>
-                                                        <button onClick={() => handleDelete(ev.id, ev.title)}
+                                                        <button data-testid="events-delete-btn" onClick={() => handleDelete(ev.id, ev.title)}
                                                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-xs font-medium">
                                                             <Trash2 size={14} /> Delete
                                                         </button>
@@ -373,9 +373,9 @@ const CalendarPage = () => {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-slate-900">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
                             <div className="flex gap-1">
-                                <button onClick={previousMonth} disabled={!canGoPrev()} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"><ChevronLeft size={20} /></button>
-                                <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">Today</button>
-                                <button onClick={nextMonth} disabled={!canGoNext()} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"><ChevronRight size={20} /></button>
+                                <button data-testid="events-previous-month-btn" onClick={previousMonth} disabled={!canGoPrev()} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"><ChevronLeft size={20} /></button>
+                                <button data-testid="events-current-date-btn" onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">Today</button>
+                                <button data-testid="events-next-month-btn" onClick={nextMonth} disabled={!canGoNext()} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 transition"><ChevronRight size={20} /></button>
                             </div>
                         </div>
 
@@ -397,7 +397,7 @@ const CalendarPage = () => {
                                     const isToday = new Date().toISOString().split("T")[0] === ds;
                                     const dots = dayEvts.slice(0, 3).map(e => (eventTypeConfig[e.type] ?? eventTypeConfig.OTHER).dotColor);
                                     return (
-                                        <button
+                                        <button data-testid="events-selected-date-btn"
                                             key={day}
                                             onClick={() => setSelectedDate(isSelected ? null : ds)}
                                             className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm font-medium transition-all
@@ -439,7 +439,7 @@ const CalendarPage = () => {
                                     : "Select a date"}
                             </h3>
                             {selectedDate && (
-                                <button
+                                <button data-testid="events-open-create-form-btn"
                                     onClick={() => openCreateForm(selectedDate)}
                                     title="Add event on this date"
                                     className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
@@ -473,11 +473,11 @@ const CalendarPage = () => {
                                             {/* Edit / Delete for non-exam events */}
                                             {!ev.isExam && (
                                                 <div className="flex gap-2 mt-2 ml-7">
-                                                    <button onClick={() => openEditForm(ev)}
+                                                    <button data-testid="events-open-edit-form-btn-2" onClick={() => openEditForm(ev)}
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-blue-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Edit2 size={12} /> Edit
                                                     </button>
-                                                    <button onClick={() => handleDelete(ev.id, ev.title)}
+                                                    <button data-testid="events-delete-btn-2" onClick={() => handleDelete(ev.id, ev.title)}
                                                         className="flex items-center gap-1 px-2 py-1 bg-white/70 text-red-600 rounded hover:bg-white transition text-xs font-medium">
                                                         <Trash2 size={12} /> Delete
                                                     </button>

@@ -90,7 +90,7 @@ const IssueModal = ({ cert, subject, onClose, onDone }: { cert: any; subject: Su
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                     <div><h3 className="text-sm font-bold text-slate-800">Issue {humanType(cert.certType)}</h3>
                         <p className="text-[11px] text-slate-500">{rowName(cert)}</p></div>
-                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
+                    <button data-testid="documents-close-btn" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
                 </div>
                 {loading ? <div className="flex justify-center py-16"><Loader2 size={22} className="animate-spin text-slate-400" /></div> : (
                     <div className="p-5 space-y-3.5 overflow-y-auto">
@@ -133,8 +133,8 @@ const IssueModal = ({ cert, subject, onClose, onDone }: { cert: any; subject: Su
                         <div>
                             <label className="text-xs font-semibold text-slate-600">Expiry date <span className="text-rose-500">*</span></label>
                             <div className="flex items-center gap-2 mt-1">
-                                <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                                <button type="button" onClick={() => setExpiryDate(infinityDate)}
+                                <input data-testid="documents-expiry-date-input" type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                                <button data-testid="documents-expiry-date-btn" type="button" onClick={() => setExpiryDate(infinityDate)}
                                     className="px-3 py-2 text-[11px] font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 whitespace-nowrap">No expiry</button>
                             </div>
                             <p className="text-[10px] text-slate-400 mt-1">Defaults to the current session end. "No expiry" sets it to 31 Dec 2100.</p>
@@ -144,8 +144,8 @@ const IssueModal = ({ cert, subject, onClose, onDone }: { cert: any; subject: Su
                     </div>
                 )}
                 <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
-                    <button onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-                    <button onClick={publish} disabled={saving || loading} className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1.5">
+                    <button data-testid="documents-close-btn-2" onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                    <button data-testid="documents-publish-btn" onClick={publish} disabled={saving || loading} className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1.5">
                         {saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Publish PDF
                     </button>
                 </div>
@@ -162,9 +162,9 @@ const RejectModal = ({ title, onClose, onConfirm }: { title: string; onClose: ()
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
                 <h3 className="text-sm font-bold text-slate-800">{title}</h3>
                 <p className="text-xs text-slate-500 mt-1">Provide a reason (shown to the student).</p>
-                <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Reason…" className="mt-2 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" />
+                <textarea data-testid="documents-reason-input" value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Reason…" className="mt-2 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" />
                 <div className="flex justify-end gap-2 mt-3">
-                    <button onClick={onClose} className="px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                    <button data-testid="documents-close-btn-3" onClick={onClose} className="px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
                     <button onClick={() => reason.trim().length >= 3 && onConfirm(reason.trim())} disabled={reason.trim().length < 3}
                         className="px-3 py-2 text-xs font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50">Reject</button>
                 </div>

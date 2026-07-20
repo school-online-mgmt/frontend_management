@@ -87,7 +87,7 @@ export function DataTable<T extends { id?: string | number }>(
                 <div className="flex items-center gap-2">
                   {column.label}
                   {column.sortable && (
-                    <button
+                    <button data-testid="data-table-sort-btn"
                       onClick={() => handleSort(column.key)}
                       className="hover:text-slate-900 transition-colors"
                     >
@@ -158,7 +158,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, defaultTab, onChange }) => {
       <div className="border-b border-slate-200 overflow-x-auto">
         <div className="flex gap-0">
           {tabs.map((tab) => (
-            <button
+            <button data-testid="data-table-tab-change-btn"
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`px-6 py-4 border-b-2 font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
@@ -211,7 +211,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         Showing {startItem} to {endItem} of {totalItems} results
       </p>
       <div className="flex items-center gap-2">
-        <button
+        <button data-testid="data-table-page-change-btn"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -224,7 +224,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           return (
             <React.Fragment key={page}>
               {showEllipsis && <span className="px-2 text-slate-400">...</span>}
-              <button
+              <button data-testid="data-table-page-change-btn-2"
                 onClick={() => onPageChange(page)}
                 className={`px-3 py-2 rounded-lg transition-colors ${
                   currentPage === page

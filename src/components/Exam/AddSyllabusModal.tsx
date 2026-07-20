@@ -46,15 +46,15 @@ const AddSyllabusModal = ({
 
                 <h2 className="text-lg font-bold">Add / Update Syllabus</h2>
 
-                <textarea
+                <textarea data-testid="add-syllabus-modal-syllabus-input"
                     value={syllabus}
                     onChange={(e) => setSyllabus(e.target.value)}
                     className="w-full border p-2 rounded-lg"
                 />
 
                 <div className="flex justify-end gap-3">
-                    <button onClick={onClose}>Cancel</button>
-                    <button
+                    <button data-testid="add-syllabus-modal-close-btn" onClick={onClose}>Cancel</button>
+                    <button data-testid="add-syllabus-modal-submit-btn"
                         onClick={handleSubmit}
                         disabled={loading}
                         className="bg-emerald-600 text-white px-4 py-2 rounded-lg"

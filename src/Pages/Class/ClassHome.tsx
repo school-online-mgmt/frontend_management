@@ -111,7 +111,7 @@ const ClassHome = () => {
             {/* Search */}
             <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
+                <input data-testid="class-search-term-input"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     placeholder="Search by class name or slug..."
@@ -128,7 +128,7 @@ const ClassHome = () => {
                 <div className="text-center py-20">
                     <School size={40} className="mx-auto text-slate-300 mb-3" />
                     <p className="text-slate-500 font-medium">{searchTerm ? "No classes match your search" : "No classes yet"}</p>
-                    {!searchTerm && <button onClick={() => setShowCreateModal(true)} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold">Create First Class</button>}
+                    {!searchTerm && <button data-testid="class-show-create-modal-btn" onClick={() => setShowCreateModal(true)} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold">Create First Class</button>}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

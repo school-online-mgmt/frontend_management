@@ -58,7 +58,7 @@ function Toast({ t, clear }: { t:{type:string;msg:string}|null; clear:()=>void }
             }`}>
             {t.type==="success" ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
             <span>{t.msg}</span>
-            <button onClick={clear} className="ml-auto opacity-60 hover:opacity-100"><X size={13}/></button>
+            <button data-testid="attendance-clear-btn" onClick={clear} className="ml-auto opacity-60 hover:opacity-100"><X size={13}/></button>
         </motion.div>
     );
 }
@@ -201,7 +201,7 @@ function MarkTab() {
                         {sectionOptions.length === 0 ? (
                             <p className="text-sm text-slate-400 py-2">No active sections found</p>
                         ) : (
-                            <select value={selSection} onChange={e => setSelSection(e.target.value)}
+                            <select data-testid="attendance-sel-section-select" value={selSection} onChange={e => setSelSection(e.target.value)}
                                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
                                 <option value="">— Select Section —</option>
                                 {sectionOptions.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -210,7 +210,7 @@ function MarkTab() {
                     </div>
                     <div>
                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Date</label>
-                        <input type="date" value={selDate} max={TODAY}
+                        <input data-testid="attendance-sel-date-input" type="date" value={selDate} max={TODAY}
                             onChange={e => setSelDate(e.target.value)}
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none"/>
                         <p className="text-[10px] text-slate-400 mt-1">{dateLabel}</p>
@@ -244,16 +244,16 @@ function MarkTab() {
                             <span className="text-red-600">{sum.a}A</span><span className="text-slate-300">·</span>
                             <span className="text-amber-600">{sum.l}L</span>
                         </div>
-                        <div className="flex items-center gap-1.5 ml-auto">
+                        <div data-testid="attendance-summary" data-present={sum.p} data-absent={sum.a} data-late={sum.l} data-total={sum.t} className="flex items-center gap-1.5 ml-auto">
                             {(["PRESENT","ABSENT","LATE"] as SK[]).map(s => (
-                                <button key={s} onClick={() => setAll(s)}
+                                <button key={s} data-testid={`attendance-mark-all-${s.toLowerCase()}-btn`} onClick={() => setAll(s)}
                                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border hover:opacity-80 transition-opacity ${SC[s].bg} ${SC[s].text} ${SC[s].border}`}>
                                     All {s[0]+s.slice(1).toLowerCase()}
                                 </button>
                             ))}
                             <div className="relative ml-1">
                                 <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-                                <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
+                                <input data-testid="attendance-search-input" type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
                                     className="pl-7 pr-3 py-1.5 text-[11px] rounded-lg border border-slate-200 w-28 focus:ring-2 focus:ring-emerald-400 outline-none"/>
                             </div>
                         </div>
@@ -264,7 +264,7 @@ function MarkTab() {
                             const cur = statuses[s.studentId]||"PRESENT";
                             const sc  = SC[cur as SK]||SC.PRESENT;
                             return (
-                                <div key={s.studentId} className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50/50 transition-colors">
+                                <div key={s.studentId} data-testid="attendance-student-row" data-student-id={s.studentId} data-student-name={`${s.firstName} ${s.lastName}`} data-status={cur} className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50/50 transition-colors">
                                     <span className="text-[11px] text-slate-300 w-5 shrink-0 font-mono">{i+1}</span>
                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${sc.bg} ${sc.text}`}>
                                         {s.firstName[0]}{s.lastName[0]}
@@ -277,7 +277,7 @@ function MarkTab() {
                                         {(["PRESENT","ABSENT","LATE"] as SK[]).map(st => {
                                             const c = SC[st]; const sel = cur===st;
                                             return (
-                                                <button key={st} onClick={() => setStatuses(p=>({...p,[s.studentId]:st}))}
+                                                <button key={st} data-testid={`attendance-status-${st.toLowerCase()}-${s.studentId}`} data-selected={sel ? "true" : "false"} onClick={() => setStatuses(p=>({...p,[s.studentId]:st}))}
                                                     className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                                                         sel ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
                                                     }`}>
@@ -298,7 +298,7 @@ function MarkTab() {
                             </div>
                             <span className="text-[11px] text-slate-500 font-medium">{sum.t>0?`${Math.round(((sum.p+sum.l)/sum.t)*100)}% present`:"—"}</span>
                         </div>
-                        <button onClick={submit} disabled={submitting}
+                        <button data-testid="attendance-submit-btn" onClick={submit} disabled={submitting}
                             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 shadow-md shadow-emerald-200 active:scale-95 transition-all">
                             {submitting?<Loader2 size={14} className="animate-spin"/>:<CheckCircle2 size={14}/>}
                             {submitting?"Saving…":marked?"Update Attendance":"Submit Attendance"}

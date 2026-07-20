@@ -188,13 +188,13 @@ const SettingsStep: React.FC<{
             </div>
             <div>
                 <label className={lbl}>Tagline <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-                <input value={data.tagline} onChange={e => onChange('tagline', e.target.value)}
+                <input data-testid="onboarding-tagline-input" value={data.tagline} onChange={e => onChange('tagline', e.target.value)}
                     placeholder="e.g. Nurturing minds, Building futures"
                     className={inp} />
             </div>
             <div>
                 <label className={lbl}>About / Bio <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-                <textarea value={data.bio} onChange={e => onChange('bio', e.target.value)}
+                <textarea data-testid="onboarding-bio-input" value={data.bio} onChange={e => onChange('bio', e.target.value)}
                     rows={3} placeholder="Brief description of your school, vision, and values"
                     className={inp + ' resize-none'} />
             </div>
@@ -206,46 +206,46 @@ const SettingsStep: React.FC<{
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={lbl}>Phone</label>
-                    <input value={data.phone} onChange={e => onChange('phone', e.target.value)}
+                    <input data-testid="onboarding-phone-input" value={data.phone} onChange={e => onChange('phone', e.target.value)}
                         placeholder="+91 98765 43210" className={inp} />
                 </div>
                 <div>
                     <label className={lbl}>Email</label>
-                    <input type="email" value={data.email} onChange={e => onChange('email', e.target.value)}
+                    <input data-testid="onboarding-email-input" type="email" value={data.email} onChange={e => onChange('email', e.target.value)}
                         placeholder="info@school.edu.in" className={inp} />
                 </div>
             </div>
             <div>
                 <label className={lbl}>Address</label>
-                <input value={data.address} onChange={e => onChange('address', e.target.value)}
+                <input data-testid="onboarding-address-input" value={data.address} onChange={e => onChange('address', e.target.value)}
                     placeholder="Street / Area" className={inp} />
             </div>
             <div className="grid grid-cols-3 gap-3">
                 <div>
                     <label className={lbl}>City</label>
-                    <input value={data.city} onChange={e => onChange('city', e.target.value)}
+                    <input data-testid="onboarding-city-input" value={data.city} onChange={e => onChange('city', e.target.value)}
                         placeholder="City" className={inp} />
                 </div>
                 <div>
                     <label className={lbl}>State</label>
-                    <input value={data.state} onChange={e => onChange('state', e.target.value)}
+                    <input data-testid="onboarding-state-input" value={data.state} onChange={e => onChange('state', e.target.value)}
                         placeholder="State" className={inp} />
                 </div>
                 <div>
                     <label className={lbl}>Pincode</label>
-                    <input value={data.pincode} onChange={e => onChange('pincode', e.target.value)}
+                    <input data-testid="onboarding-pincode-input" value={data.pincode} onChange={e => onChange('pincode', e.target.value)}
                         placeholder="110001" maxLength={10} className={inp} />
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={lbl}>Website</label>
-                    <input value={data.website} onChange={e => onChange('website', e.target.value)}
+                    <input data-testid="onboarding-website-input" value={data.website} onChange={e => onChange('website', e.target.value)}
                         placeholder="https://school.edu.in" className={inp} />
                 </div>
                 <div>
                     <label className={lbl}>Emergency Contact</label>
-                    <input value={data.emergencyContact} onChange={e => onChange('emergencyContact', e.target.value)}
+                    <input data-testid="onboarding-emergency-contact-input" value={data.emergencyContact} onChange={e => onChange('emergencyContact', e.target.value)}
                         placeholder="+91 98000 00000" className={inp} />
                 </div>
             </div>
@@ -257,26 +257,26 @@ const SettingsStep: React.FC<{
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={lbl}>Principal / Head Name</label>
-                    <input value={data.principalName} onChange={e => onChange('principalName', e.target.value)}
+                    <input data-testid="onboarding-principal-name-input" value={data.principalName} onChange={e => onChange('principalName', e.target.value)}
                         placeholder="Dr. Anita Sharma" className={inp} />
                 </div>
                 <div>
                     <label className={lbl}>Established Year</label>
-                    <input type="number" value={data.establishedYear} onChange={e => onChange('establishedYear', e.target.value)}
+                    <input data-testid="onboarding-established-year-input" type="number" value={data.establishedYear} onChange={e => onChange('establishedYear', e.target.value)}
                         placeholder="1985" min={1800} max={new Date().getFullYear()} className={inp} />
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={lbl}>Board Affiliation</label>
-                    <select value={data.boardAffiliation} onChange={e => onChange('boardAffiliation', e.target.value)}
+                    <select data-testid="onboarding-board-affiliation-select" value={data.boardAffiliation} onChange={e => onChange('boardAffiliation', e.target.value)}
                         className={inp}>
                         {BOARD_OPTIONS.map(b => <option key={b} value={b}>{b || 'Select board…'}</option>)}
                     </select>
                 </div>
                 <div>
                     <label className={lbl}>School Type</label>
-                    <select value={data.schoolType} onChange={e => onChange('schoolType', e.target.value)}
+                    <select data-testid="onboarding-school-type-select" value={data.schoolType} onChange={e => onChange('schoolType', e.target.value)}
                         className={inp}>
                         {SCHOOL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
@@ -287,7 +287,7 @@ const SettingsStep: React.FC<{
         {/* Footer */}
         <div className="pt-2 border-t border-slate-100">
             <label className={lbl}>Footer Text <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-            <input value={data.footerText} onChange={e => onChange('footerText', e.target.value)}
+            <input data-testid="onboarding-footer-text-input" value={data.footerText} onChange={e => onChange('footerText', e.target.value)}
                 placeholder="© 2024 Sunrise Public School. All rights reserved." className={inp} />
         </div>
     </div>
@@ -618,7 +618,7 @@ const CoursesStep: React.FC<{
                                 <p className="text-sm font-black text-slate-800">{course.name}</p>
                                 <p className="text-[11px] text-slate-400">{course.description}</p>
                             </div>
-                            <button onClick={() => removeCourse(cIdx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg shrink-0"><Trash2 size={14} /></button>
+                            <button data-testid="onboarding-remove-course-btn" onClick={() => removeCourse(cIdx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg shrink-0"><Trash2 size={14} /></button>
                         </div>
                         <p className={lbl + ' mb-1.5'}>Subjects in this course <span className="text-red-400">*</span></p>
                         {cls.subjects.length === 0 ? (

@@ -265,7 +265,7 @@ const Dashboard = () => {
               <h1 className="text-white text-xl md:text-2xl font-bold leading-tight truncate">{greeting}, {firstName} <span className="inline-block">👋</span></h1>
               <p className="text-slate-400 text-xs mt-1">{now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
-            <button
+            <button data-testid="dashboard-refresh-all-btn"
               onClick={refreshAll}
               aria-label="Refresh dashboard"
               title="Refresh"
@@ -284,7 +284,7 @@ const Dashboard = () => {
               { icon: Layers,        label: "Classes",    value: classes.length,     color: "text-teal-400",    to: "/class-Home" },
               { icon: BookOpen,      label: "Subjects",   value: subjects.length,    color: "text-emerald-400", to: "/subject-Home" },
             ].map(({ icon: Icon, label, value, color, to }) => (
-              <button
+              <button data-testid="dashboard-navigate-btn"
                 key={label}
                 onClick={() => navigate(to)}
                 className="group flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 hover:bg-white/15 transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"

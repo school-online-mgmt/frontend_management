@@ -38,8 +38,8 @@ const ConfirmStatusDialog: React.FC<ConfirmDialogProps> = ({ isOpen, isActivatin
                     }
                 </p>
                 <div className="flex gap-3">
-                    <button onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
-                    <button onClick={onConfirm} disabled={isSubmitting} className={`flex-1 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2 ${isActivating ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                    <button data-testid="teacher-cancel-btn" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
+                    <button data-testid="teacher-confirm-btn" onClick={onConfirm} disabled={isSubmitting} className={`flex-1 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2 ${isActivating ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
                         {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : isActivating ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}
                         {isSubmitting ? 'Processing...' : isActivating ? 'Activate' : 'Deactivate'}
                     </button>
@@ -81,14 +81,14 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({ isOpen, teach
                             <p className="text-xs text-slate-500 font-medium">For {teacherName}</p>
                         </div>
                     </div>
-                    <button onClick={onCancel} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={18} /></button>
+                    <button data-testid="teacher-cancel-btn-2" onClick={onCancel} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"><X size={18} /></button>
                 </div>
                 {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">{error}</div>}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">New Password</label>
                         <div className="relative">
-                            <input
+                            <input data-testid="teacher-password-input"
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
@@ -96,14 +96,14 @@ const ResetPasswordDialog: React.FC<ResetPasswordDialogProps> = ({ isOpen, teach
                                 className="w-full pr-11 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
                                 required
                             />
-                            <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                            <button data-testid="teacher-show-password-btn" type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
                         <p className="text-xs text-slate-400 mt-1.5">Teacher will use this password on next login.</p>
                     </div>
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
+                        <button data-testid="teacher-cancel-btn-3" type="button" onClick={onCancel} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
                         <button type="submit" disabled={isSubmitting || password.length < 8} className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition disabled:opacity-50 flex items-center justify-center gap-2">
                             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
                             {isSubmitting ? 'Resetting...' : 'Reset Password'}
@@ -155,7 +155,7 @@ const AssignmentRow: React.FC<{ icon: React.ReactNode; primary: string; secondar
                 {secondary && <p className="text-xs text-slate-500 font-medium mt-0.5">{secondary}</p>}
             </div>
         </div>
-        <button onClick={onRemove} disabled={removing} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 hover:border-red-200 transition-all disabled:opacity-50">
+        <button data-testid="teacher-remove-btn" onClick={onRemove} disabled={removing} className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 hover:border-red-200 transition-all disabled:opacity-50">
             {removing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
             Remove
         </button>
@@ -294,7 +294,7 @@ const TeacherDetails = () => {
                     </div>
                     <p className="text-slate-800 font-bold text-lg mb-2">Something went wrong</p>
                     <p className="text-slate-500 text-sm mb-6 leading-relaxed">{error}</p>
-                    <button onClick={fetchTeacherDetails} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">Retry</button>
+                    <button data-testid="teacher-fetch-teacher-details-btn" onClick={fetchTeacherDetails} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">Retry</button>
                 </div>
             </div>
         );
@@ -335,7 +335,7 @@ const TeacherDetails = () => {
             {/* Header / Hero Section */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors text-sm font-bold mb-8 group w-fit">
+                    <button data-testid="teacher-navigate-btn" onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-colors text-sm font-bold mb-8 group w-fit">
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back
                     </button>
 

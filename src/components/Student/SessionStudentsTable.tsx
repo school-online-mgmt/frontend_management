@@ -92,14 +92,14 @@ const SessionStudentsTable: React.FC<Props> = ({
             <div className={`px-5 sm:px-6 py-3.5 bg-gradient-to-r ${a.from} ${a.to} text-white`}>
                 <div className="relative">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
-                    <input
+                    <input data-testid="session-students-table-search-input"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by name, roll, phone…"
                         className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-white/15 border border-white/20 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
                     />
                     {search && (
-                        <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
+                        <button data-testid="session-students-table-search-btn" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
                             <X size={13} />
                         </button>
                     )}

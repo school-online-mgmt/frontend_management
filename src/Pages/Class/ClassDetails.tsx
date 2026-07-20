@@ -71,7 +71,7 @@ const ClassDetails = () => {
             />
 
             {/* Back */}
-            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium">
+            <button data-testid="class-navigate-btn" onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium">
                 <ArrowLeft size={18} /> Back
             </button>
 
@@ -103,7 +103,7 @@ const ClassDetails = () => {
                         >
                             <Bell size={14} /> Notice Boards
                         </button>
-                        <button onClick={fetchClass} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition">
+                        <button data-testid="class-fetch-class-btn" onClick={fetchClass} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition">
                             <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
                         </button>
                     </div>
@@ -143,7 +143,7 @@ const ClassDetails = () => {
                     <div className="p-10 text-center">
                         <Layers size={32} className="mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-500 font-medium">No sections yet</p>
-                        <button onClick={() => setShowSectionModal(true)} className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm">Add First Section</button>
+                        <button data-testid="class-show-section-modal-btn" onClick={() => setShowSectionModal(true)} className="mt-3 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm">Add First Section</button>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-50">

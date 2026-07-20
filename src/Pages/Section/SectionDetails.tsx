@@ -75,7 +75,7 @@ const SectionDetails = () => {
                     <AlertTriangle className="mx-auto text-amber-500 mb-3" size={36} />
                     <p className="text-slate-700 font-semibold mb-1">Could not load section</p>
                     <p className="text-slate-500 text-sm mb-4">{error}</p>
-                    <button onClick={() => fetchSection()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
+                    <button data-testid="section-fetch-section-btn" onClick={() => fetchSection()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
                         Retry
                     </button>
                 </div>
@@ -92,7 +92,7 @@ const SectionDetails = () => {
     return (
         <div className="p-6 lg:p-10 max-w-5xl mx-auto space-y-6">
             {/* Back */}
-            <button
+            <button data-testid="section-navigate-btn"
                 onClick={() => navigate(-1)}
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm font-medium"
             >
@@ -111,7 +111,7 @@ const SectionDetails = () => {
                             <div className="flex items-center gap-3 mt-1 flex-wrap">
                                 <span className="text-xs font-mono text-slate-400 bg-white px-2 py-0.5 rounded-lg border border-slate-100">#{section.slug}</span>
                                 {section.class && (
-                                    <button
+                                    <button data-testid="section-navigate-btn-2"
                                         onClick={() => navigate(`/class/${section.class.id}`)}
                                         className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition flex items-center gap-1"
                                     >
@@ -131,7 +131,7 @@ const SectionDetails = () => {
                         >
                             <Bell size={14} /> Notice Boards
                         </button>
-                        <button
+                        <button data-testid="section-fetch-section-btn-2"
                             onClick={() => fetchSection(true)}
                             disabled={isRefreshing}
                             className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition disabled:opacity-60"
@@ -176,7 +176,7 @@ const SectionDetails = () => {
                 </div>
 
                 {section.teacher ? (
-                    <button
+                    <button data-testid="section-navigate-btn-3"
                         type="button"
                         className="w-full flex items-center gap-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl cursor-pointer hover:bg-indigo-50 transition text-left"
                         onClick={() => navigate(`/teacher/${section.teacher.id}`)}
@@ -244,7 +244,7 @@ const SectionDetails = () => {
                                     </div>
                                 </div>
                                 {sa.teachers ? (
-                                    <button
+                                    <button data-testid="section-navigate-btn-4"
                                         onClick={() => navigate(`/teacher/${sa.teachers.id}`)}
                                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition"
                                     >
@@ -284,7 +284,7 @@ const SectionDetails = () => {
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-semibold">
                                                 <UserX size={12} /> Unassigned
                                             </span>
-                                            <button
+                                            <button data-testid="section-navigate-btn-5"
                                                 onClick={() => navigate(`/assignments`)}
                                                 className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition"
                                             >

@@ -195,7 +195,7 @@ const ApplicationCard = ({
       </div>
 
       {/* Expand / collapse details */}
-      <button
+      <button data-testid="teacher-expanded-btn"
         onClick={() => setExpanded(v => !v)}
         className="w-full px-5 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
       >
@@ -224,7 +224,7 @@ const ApplicationCard = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5">Internal comments (optional)</label>
-            <textarea
+            <textarea data-testid="teacher-comments-input"
               value={comments}
               onChange={e => setComments(e.target.value)}
               rows={2}
@@ -235,25 +235,25 @@ const ApplicationCard = ({
 
           <div className="flex flex-wrap gap-2">
             {app.status !== 'SHORTLISTED' && app.status !== 'ACCEPTED' && app.status !== 'REJECTED' && (
-              <button onClick={() => act('SHORTLISTED')} disabled={updating}
+              <button data-testid="teacher-act-btn" onClick={() => act('SHORTLISTED')} disabled={updating}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 disabled:opacity-50 transition-colors">
                 <Star size={12} /> Shortlist
               </button>
             )}
             {app.status !== 'ACCEPTED' && (
-              <button onClick={() => act('ACCEPTED')} disabled={updating}
+              <button data-testid="teacher-act-btn-2" onClick={() => act('ACCEPTED')} disabled={updating}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 disabled:opacity-50 transition-colors">
                 <CheckCheck size={12} /> Accept
               </button>
             )}
             {app.status !== 'REJECTED' && (
-              <button onClick={() => act('REJECTED')} disabled={updating}
+              <button data-testid="teacher-act-btn-3" onClick={() => act('REJECTED')} disabled={updating}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors">
                 <Ban size={12} /> Reject
               </button>
             )}
             {app.status !== 'APPLIED' && (
-              <button onClick={() => act('APPLIED')} disabled={updating}
+              <button data-testid="teacher-act-btn-4" onClick={() => act('APPLIED')} disabled={updating}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 disabled:opacity-50 transition-colors">
                 <Clock size={12} /> Reset to Applied
               </button>
@@ -426,7 +426,7 @@ const TeacherHome = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
+                  <input data-testid="teacher-search-input"
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -434,7 +434,7 @@ const TeacherHome = () => {
                     className="w-full pl-10 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-slate-50 placeholder-slate-400"
                   />
                   {search && (
-                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <button data-testid="teacher-search-btn" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       <X size={14} />
                     </button>
                   )}

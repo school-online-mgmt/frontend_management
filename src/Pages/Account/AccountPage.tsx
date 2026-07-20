@@ -332,7 +332,7 @@ function SchoolProfileTab({ user }: { user: any }) {
           <Settings2 size={36} className="text-slate-200 mx-auto mb-3" />
           <p className="text-slate-500 text-sm font-medium">School profile not set up yet.</p>
           {isAdmin && (
-            <button onClick={() => setEditing(true)}
+            <button data-testid="account-editing-btn" onClick={() => setEditing(true)}
               className="mt-4 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors">
               Set Up Profile
             </button>

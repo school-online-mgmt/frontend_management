@@ -79,7 +79,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
               <p className="text-xs text-slate-500">Add a subject to the curriculum</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          <button data-testid="create-subject-close-btn" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -174,7 +174,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
           )}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors" onClick={onClose}>
+            <button data-testid="create-subject-close-btn-2" type="button" className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors" onClick={onClose}>
               Cancel
             </button>
             <button data-testid="subject-submit-btn" type="submit" className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2" disabled={isSubmitting}>

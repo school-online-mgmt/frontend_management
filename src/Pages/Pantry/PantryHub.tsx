@@ -115,7 +115,7 @@ function PosTab() {
             <div className="lg:col-span-2">
                 <div className="relative mb-3">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={itemQuery} onChange={e => setItemQuery(e.target.value)} placeholder="Search items…"
+                    <input data-testid="pantry-item-search" value={itemQuery} onChange={e => setItemQuery(e.target.value)} placeholder="Search items…"
                         className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm" />
                 </div>
                 {itemsQ.isLoading ? (
@@ -129,6 +129,11 @@ function PosTab() {
                             const soldOut = item.stockCount != null && item.stockCount <= 0;
                             return (
                                 <button key={item.id} disabled={soldOut}
+                                    data-testid={`pantry-item-tile-${item.id}`}
+                                    data-item-name={item.name}
+                                    data-price={item.price}
+                                    data-stock={item.stockCount ?? ""}
+                                    data-sold-out={soldOut ? "true" : "false"}
                                     onClick={() => setQty(item.id, qty + 1)}
                                     className={`relative rounded-xl border bg-white p-3 text-left transition-all ${
                                         soldOut ? "opacity-50" : qty > 0 ? "border-emerald-400 ring-1 ring-emerald-200" : "border-slate-200 hover:border-emerald-300"}`}>
@@ -176,11 +181,11 @@ function PosTab() {
 
                 {/* Payment method */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                    <button onClick={() => setMethod("CASH")}
+                    <button data-testid="pantry-method-cash-btn" onClick={() => setMethod("CASH")}
                         className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${method === "CASH" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>
                         <Banknote size={15} /> Cash
                     </button>
-                    <button onClick={() => setMethod("WALLET")}
+                    <button data-testid="pantry-method-wallet-btn" onClick={() => setMethod("WALLET")}
                         className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${method === "WALLET" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>
                         <Wallet size={15} /> Wallet
                     </button>
@@ -201,13 +206,13 @@ function PosTab() {
                         </div>
                     ) : (
                         <div className="relative mt-1">
-                            <input value={buyerQuery} onChange={e => setBuyerQuery(e.target.value)}
+                            <input data-testid="pantry-buyer-search" value={buyerQuery} onChange={e => setBuyerQuery(e.target.value)}
                                 placeholder="Type a name (min 2 letters)…"
                                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                             {buyerMatches.length > 0 && (
                                 <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-52 overflow-y-auto">
                                     {buyerMatches.map(w => (
-                                        <button key={w.id} onClick={() => { setBuyer(w); setBuyerQuery(""); }}
+                                        <button key={w.id} data-testid="pantry-buyer-option" data-holder={w.holderName} data-balance={w.balance} onClick={() => { setBuyer(w); setBuyerQuery(""); }}
                                             className="w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50">
                                             <span className="truncate">{w.holderName}</span>
                                             <span className="text-xs text-slate-400 shrink-0">{w.userType} · {inr(w.balance)}</span>
@@ -227,6 +232,8 @@ function PosTab() {
                 )}
 
                 <button
+                    data-testid="pantry-charge-btn"
+                    data-total={total}
                     disabled={charging || lines.length === 0 || (method === "WALLET" && (!buyer || buyer.balance < total || !buyer.isActive))}
                     onClick={charge}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
@@ -270,7 +277,7 @@ function MenuTab() {
     return (
         <div>
             <div className="flex justify-end mb-3">
-                <button onClick={() => setEditing("new")}
+                <button data-testid="pantry-add-item-btn" onClick={() => setEditing("new")}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
                     <Plus size={15} /> Add item
                 </button>
@@ -296,7 +303,7 @@ function MenuTab() {
                             {items.map(item => {
                                 const low = item.stockCount != null && item.stockCount <= (item.lowStockThreshold ?? 5);
                                 return (
-                                    <tr key={item.id} className="border-b border-slate-50">
+                                    <tr key={item.id} data-testid="pantry-menu-row" data-item-name={item.name} data-price={item.price} data-stock={item.stockCount ?? ""} className="border-b border-slate-50">
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-slate-800 flex items-center gap-1.5">
                                                 {item.isVeg != null && <span className={`h-2 w-2 rounded-full ${item.isVeg ? "bg-emerald-500" : "bg-rose-500"}`} />}
@@ -311,16 +318,16 @@ function MenuTab() {
                                             {low && <AlertTriangle size={12} className="inline ml-1 -mt-0.5" />}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <button onClick={() => toggleAvailable(item)}
+                                            <button data-testid={`pantry-toggle-available-${item.id}`} onClick={() => toggleAvailable(item)}
                                                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${item.isAvailable ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                                                 {item.isAvailable ? "On sale" : "Hidden"}
                                             </button>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-end gap-1">
-                                                <button onClick={() => restock(item)} title="Add stock" className="p-1.5 text-slate-500 hover:text-emerald-700"><PackagePlus size={15} /></button>
-                                                <button onClick={() => setEditing(item)} title="Edit" className="p-1.5 text-slate-500 hover:text-emerald-700"><Pencil size={15} /></button>
-                                                <button onClick={() => remove(item)} title="Delete" className="p-1.5 text-slate-400 hover:text-rose-600"><Trash2 size={15} /></button>
+                                                <button data-testid={`pantry-restock-btn-${item.id}`} onClick={() => restock(item)} title="Add stock" className="p-1.5 text-slate-500 hover:text-emerald-700"><PackagePlus size={15} /></button>
+                                                <button data-testid={`pantry-edit-item-btn-${item.id}`} onClick={() => setEditing(item)} title="Edit" className="p-1.5 text-slate-500 hover:text-emerald-700"><Pencil size={15} /></button>
+                                                <button data-testid={`pantry-delete-item-btn-${item.id}`} onClick={() => remove(item)} title="Delete" className="p-1.5 text-slate-400 hover:text-rose-600"><Trash2 size={15} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -372,7 +379,7 @@ function ItemModal({ item, onClose, onSaved }: { item: PantryItem | null; onClos
             <div className="grid grid-cols-2 gap-3">
                 <label className="block col-span-2">
                     <span className="text-xs font-medium text-slate-600">Name</span>
-                    <input value={name} onChange={e => setName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                    <input data-testid="pantry-item-name-input" value={name} onChange={e => setName(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Category</span>
@@ -382,7 +389,7 @@ function ItemModal({ item, onClose, onSaved }: { item: PantryItem | null; onClos
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Price (₹)</span>
-                    <input type="number" min={1} value={price} onChange={e => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                    <input data-testid="pantry-item-price-input" type="number" min={1} value={price} onChange={e => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                 </label>
                 <label className="block">
@@ -395,18 +402,18 @@ function ItemModal({ item, onClose, onSaved }: { item: PantryItem | null; onClos
                 </label>
                 <label className="block col-span-2">
                     <span className="text-xs font-medium text-slate-600">Description (optional)</span>
-                    <input value={description} onChange={e => setDescription(e.target.value)} maxLength={300}
+                    <input data-testid="pantry-item-description-input" value={description} onChange={e => setDescription(e.target.value)} maxLength={300}
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                 </label>
                 <label className="col-span-2 flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={trackStock} onChange={e => setTrackStock(e.target.checked)} className="rounded border-slate-300" />
+                    <input data-testid="pantry-item-track-stock-checkbox" type="checkbox" checked={trackStock} onChange={e => setTrackStock(e.target.checked)} className="rounded border-slate-300" />
                     Track stock for this item
                 </label>
                 {trackStock && (
                     <>
                         <label className="block">
                             <span className="text-xs font-medium text-slate-600">Stock count</span>
-                            <input type="number" min={0} value={stockCount} onChange={e => setStockCount(e.target.value === "" ? "" : Number(e.target.value))}
+                            <input data-testid="pantry-item-stock-input" type="number" min={0} value={stockCount} onChange={e => setStockCount(e.target.value === "" ? "" : Number(e.target.value))}
                                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                         </label>
                         <label className="block">
@@ -478,7 +485,7 @@ function OrdersTab() {
                         </thead>
                         <tbody>
                             {orders.map(o => (
-                                <tr key={o.id} className="border-b border-slate-50">
+                                <tr key={o.id} data-testid="pantry-order-row" data-order-id={o.id} data-status={o.status} data-total={o.totalAmount} data-customer={o.userName ?? "Walk-in"} data-method={o.paymentMethod} className="border-b border-slate-50">
                                     <td className="px-4 py-3 text-slate-500">{fmtDT(o.createdAt)}</td>
                                     <td className="px-4 py-3 font-medium text-slate-800">{o.userName ?? "Walk-in"}</td>
                                     <td className="px-4 py-3 text-slate-500">{o.channel === "POS" ? "Counter" : "Portal"}</td>
@@ -490,16 +497,16 @@ function OrdersTab() {
                                     <td className="px-4 py-3">
                                         <div className="flex justify-end gap-1">
                                             {o.status === "PLACED" && (
-                                                <button onClick={() => act(() => api.pantryOrderReady(o.id), "Marked ready.")} title="Mark ready" className="p-1.5 text-slate-500 hover:text-blue-600"><PackageCheck size={15} /></button>
+                                                <button onClick={() => act(() => api.pantryOrderReady(o.id), "Marked ready.")} data-testid={`pantry-order-ready-btn-${o.id}`} title="Mark ready" className="p-1.5 text-slate-500 hover:text-blue-600"><PackageCheck size={15} /></button>
                                             )}
                                             {(o.status === "PLACED" || o.status === "READY") && (
                                                 <>
-                                                    <button onClick={() => act(() => api.pantryOrderCollect(o.id), "Order collected.")} title="Mark collected" className="p-1.5 text-slate-500 hover:text-emerald-600"><CheckCircle2 size={15} /></button>
-                                                    <button onClick={() => { if (window.confirm("Cancel this order? Wallet payments are refunded and stock restored.")) act(() => api.pantryOrderCancel(o.id), "Order cancelled."); }} title="Cancel" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
+                                                    <button onClick={() => act(() => api.pantryOrderCollect(o.id), "Order collected.")} data-testid={`pantry-order-collect-btn-${o.id}`} title="Mark collected" className="p-1.5 text-slate-500 hover:text-emerald-600"><CheckCircle2 size={15} /></button>
+                                                    <button onClick={() => { if (window.confirm("Cancel this order? Wallet payments are refunded and stock restored.")) act(() => api.pantryOrderCancel(o.id), "Order cancelled."); }} data-testid={`pantry-order-cancel-btn-${o.id}`} title="Cancel" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
                                                 </>
                                             )}
                                             {o.status === "COLLECTED" && o.paymentMethod === "WALLET" && (
-                                                <button onClick={() => { if (window.confirm("Refund this collected order to the wallet?")) act(() => api.pantryOrderRefund(o.id), "Refunded to wallet."); }} title="Refund" className="p-1.5 text-slate-400 hover:text-rose-600"><RotateCcw size={15} /></button>
+                                                <button onClick={() => { if (window.confirm("Refund this collected order to the wallet?")) act(() => api.pantryOrderRefund(o.id), "Refunded to wallet."); }} data-testid={`pantry-order-refund-btn-${o.id}`} title="Refund" className="p-1.5 text-slate-400 hover:text-rose-600"><RotateCcw size={15} /></button>
                                             )}
                                         </div>
                                     </td>
@@ -529,10 +536,10 @@ function WalletsTab() {
             <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="relative max-w-sm flex-1 min-w-52">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search wallet holders…"
+                    <input data-testid="pantry-wallet-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search wallet holders…"
                         className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm" />
                 </div>
-                <button onClick={() => setCreating(true)}
+                <button data-testid="pantry-new-wallet-btn" onClick={() => setCreating(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
                     <Plus size={15} /> New wallet / first top-up
                 </button>
@@ -560,7 +567,7 @@ function WalletsTab() {
                         </thead>
                         <tbody>
                             {wallets.map(w => (
-                                <tr key={w.id} className="border-b border-slate-50 hover:bg-slate-50/60 cursor-pointer" onClick={() => setTarget(w)}>
+                                <tr key={w.id} data-testid="pantry-wallet-row" data-holder={w.holderName} data-balance={w.balance} data-user-type={w.userType} data-daily-limit={w.dailyLimit ?? ""} data-active={w.isActive ? "true" : "false"} className="border-b border-slate-50 hover:bg-slate-50/60 cursor-pointer" onClick={() => setTarget(w)}>
                                     <td className="px-4 py-3 font-medium text-slate-800">{w.holderName}</td>
                                     <td className="px-4 py-3 text-slate-500">{w.userType}</td>
                                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr(w.balance)}</td>
@@ -734,17 +741,17 @@ function WalletModal({ row, onClose, onChanged }: { row: PantryWalletRow; onClos
                         <Stat label="Daily limit" value={wallet.dailyLimit == null ? "None" : inr(wallet.dailyLimit)} />
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <input type="number" min={1} value={topupAmount} placeholder="Cash top-up ₹"
+                        <input data-testid="pantry-topup-amount-input" type="number" min={1} value={topupAmount} placeholder="Cash top-up ₹"
                             onChange={e => setTopupAmount(e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-36 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                        <button onClick={topup} disabled={busy}
+                        <button data-testid="pantry-topup-submit-btn" onClick={topup} disabled={busy}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">
                             {busy ? <Loader2 size={14} className="animate-spin" /> : <IndianRupee size={14} />} Top up (cash)
                         </button>
-                        <button onClick={() => adjust("CREDIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">+ Adjust</button>
-                        <button onClick={() => adjust("DEBIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">− Adjust</button>
-                        <button onClick={setLimit} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Daily limit…</button>
-                        <button onClick={toggleFreeze}
+                        <button data-testid="pantry-adjust-credit-btn" onClick={() => adjust("CREDIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">+ Adjust</button>
+                        <button data-testid="pantry-adjust-debit-btn" onClick={() => adjust("DEBIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">− Adjust</button>
+                        <button data-testid="pantry-daily-limit-btn" onClick={setLimit} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Daily limit…</button>
+                        <button data-testid="pantry-freeze-toggle-btn" onClick={toggleFreeze}
                             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm ${wallet.isActive ? "border-rose-200 text-rose-600 hover:bg-rose-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
                             <Snowflake size={14} /> {wallet.isActive ? "Freeze" : "Unfreeze"}
                         </button>
@@ -853,10 +860,20 @@ function InsightsTab() {
 function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
-            <div className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-2xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+            {/* role/aria-modal make this a genuine dialog for screen readers, and
+                give automation a way to scope an action to the OPEN modal rather
+                than matching a same-named button on the page behind it. */}
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
+                data-testid="pantry-modal"
+                className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-2xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`}
+                onClick={e => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white">
                     <h3 className="font-semibold text-slate-800">{title}</h3>
-                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+                    <button data-testid="pantry-modal-close-btn" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
                 </div>
                 <div className="p-5">{children}</div>
             </div>
@@ -866,8 +883,8 @@ function Modal({ title, children, onClose, wide }: { title: string; children: Re
 function ModalActions({ onClose, onSave, saving, saveLabel = "Save" }: { onClose: () => void; onSave: () => void; saving: boolean; saveLabel?: string }) {
     return (
         <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
-            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
-            <button onClick={onSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
+            <button data-testid="pantry-modal-cancel-btn" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
+            <button data-testid="pantry-modal-save-btn" onClick={onSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {saveLabel}
             </button>
         </div>

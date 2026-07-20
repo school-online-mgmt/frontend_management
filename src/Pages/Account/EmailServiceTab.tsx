@@ -311,7 +311,7 @@ export default function EmailServiceTab() {
               <label className={lbl}>
                 <Globe size={11} className="inline mr-1" /> Sender domain
               </label>
-              <input
+              <input data-testid="account-email-domain-input"
                 type="text"
                 className={inp}
                 value={emailDomain}
@@ -332,14 +332,14 @@ export default function EmailServiceTab() {
                 )}
               </label>
               <div className="relative">
-                <input
+                <input data-testid="account-email-auth-key-input"
                   type={showAuthKey ? "text" : "password"}
                   className={inp + " pr-9 font-mono"}
                   value={emailAuthKey}
                   onChange={(e) => setEmailAuthKey(e.target.value)}
                   placeholder={settings.hasAuthKey ? "•••••••••• (leave blank to keep)" : "Zoho-enczapikey token"}
                 />
-                <button
+                <button data-testid="account-show-auth-key-btn"
                   type="button"
                   onClick={() => setShowAuthKey(!showAuthKey)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
@@ -355,7 +355,7 @@ export default function EmailServiceTab() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Display from-name (optional)</label>
-            <input
+            <input data-testid="account-from-name-input"
               type="text"
               className={inp}
               value={fromName}
@@ -369,7 +369,7 @@ export default function EmailServiceTab() {
         </div>
 
         <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-          <button
+          <button data-testid="account-save-config-btn"
             type="button"
             disabled={savingConfig}
             onClick={onSaveConfig}
@@ -473,14 +473,14 @@ export default function EmailServiceTab() {
           )}
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <input
+          <input data-testid="account-test-to-input"
             type="email"
             className={inp + " flex-1"}
             value={testTo}
             onChange={(e) => setTestTo(e.target.value)}
             placeholder="recipient@example.com"
           />
-          <button
+          <button data-testid="account-send-test-btn"
             type="button"
             disabled={testing || !enabledOnReady}
             onClick={onSendTest}

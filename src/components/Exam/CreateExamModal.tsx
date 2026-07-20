@@ -135,7 +135,7 @@ const CreateExamModal = ({
                         <h2 className="text-lg font-semibold text-slate-800">Create Exam</h2>
                         <p className="text-xs text-slate-400 mt-0.5">Fill in the details and select subjects</p>
                     </div>
-                    <button
+                    <button data-testid="create-exam-modal-close-btn"
                         onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
                     >
@@ -151,7 +151,7 @@ const CreateExamModal = ({
                         <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
                             Academic Session <span className="text-red-400">*</span>
                         </label>
-                        <select
+                        <select data-testid="create-exam-modal-session-id-select"
                             value={sessionId}
                             onChange={(e) => {
                                 setSessionId(e.target.value);
@@ -175,7 +175,7 @@ const CreateExamModal = ({
                             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
                                 Exam Name <span className="text-red-400">*</span>
                             </label>
-                            <input
+                            <input data-testid="create-exam-modal-exam-name-input"
                                 placeholder="e.g. Mid-Term 2024"
                                 value={examName}
                                 onChange={(e) => setExamName(e.target.value)}
@@ -186,7 +186,7 @@ const CreateExamModal = ({
                             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
                                 Term <span className="text-red-400">*</span>
                             </label>
-                            <select
+                            <select data-testid="create-exam-modal-exam-term-select"
                                 value={examTerm}
                                 onChange={(e) => setExamTerm(e.target.value)}
                                 className="w-full border border-slate-200 bg-slate-50 text-slate-700 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
@@ -204,7 +204,7 @@ const CreateExamModal = ({
                         <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
                             Full Marks <span className="text-red-400">*</span>
                         </label>
-                        <input
+                        <input data-testid="create-exam-modal-full-marks-input"
                             type="number"
                             min={1}
                             placeholder="e.g. 100"
@@ -226,7 +226,7 @@ const CreateExamModal = ({
                         </label>
                         <div className="grid grid-cols-3 gap-2">
                             {(["class", "course", "subject"] as const).map((type) => (
-                                <button
+                                <button data-testid="create-exam-modal-filter-type-btn"
                                     key={type}
                                     onClick={() => setFilterType(type)}
                                     disabled={!sessionId}
@@ -251,7 +251,7 @@ const CreateExamModal = ({
                             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
                                 Select {filterType === "class" ? "Class" : "Course"} <span className="text-red-400">*</span>
                             </label>
-                            <select
+                            <select data-testid="create-exam-modal-selected-filter-value-select"
                                 value={selectedFilterValue}
                                 onChange={(e) => setSelectedFilterValue(e.target.value)}
                                 className="w-full border border-slate-200 bg-slate-50 text-slate-700 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
@@ -285,14 +285,14 @@ const CreateExamModal = ({
                                     )}
                                     {subjects.length > 0 && (
                                         <>
-                                            <button
+                                            <button data-testid="create-exam-modal-select-all-btn"
                                                 onClick={selectAll}
                                                 className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                                             >
                                                 Select all
                                             </button>
                                             {subjectIds.length > 0 && (
-                                                <button
+                                                <button data-testid="create-exam-modal-clear-all-btn"
                                                     onClick={clearAll}
                                                     className="text-xs text-red-400 hover:text-red-600 font-medium"
                                                 >
@@ -307,7 +307,7 @@ const CreateExamModal = ({
                             {/* Search */}
                             {subjects.length > 4 && (
                                 <div className="px-3 pt-2.5 pb-1">
-                                    <input
+                                    <input data-testid="create-exam-modal-subject-search-input"
                                         placeholder="Search subjects..."
                                         value={subjectSearch}
                                         onChange={(e) => setSubjectSearch(e.target.value)}
@@ -325,7 +325,7 @@ const CreateExamModal = ({
                                             className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full"
                                         >
                                             {s.name}
-                                            <button
+                                            <button data-testid={`create-exam-modal-remove-subject-${s.id}`}
                                                 onClick={() => toggleSubject(s.id)}
                                                 className="text-emerald-400 hover:text-emerald-700 leading-none"
                                             >
@@ -354,6 +354,8 @@ const CreateExamModal = ({
                                     unselected.map((s) => (
                                         <div
                                             key={s.id}
+                                            data-testid={`create-exam-modal-add-subject-${s.id}`}
+                                            data-subject-name={s.name}
                                             onClick={() => toggleSubject(s.id)}
                                             className="flex items-center gap-2.5 text-sm text-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 transition group"
                                         >
@@ -384,13 +386,13 @@ const CreateExamModal = ({
                             : "No subjects selected"}
                     </p>
                     <div className="flex gap-2">
-                        <button
+                        <button data-testid="create-exam-modal-close-btn-2"
                             onClick={onClose}
                             className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition"
                         >
                             Cancel
                         </button>
-                        <button
+                        <button data-testid="create-exam-modal-submit-btn"
                             onClick={handleSubmit}
                             disabled={loading}
                             className="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-2"

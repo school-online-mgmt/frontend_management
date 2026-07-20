@@ -48,7 +48,7 @@ const SectionHome = () => {
                 subtitle="Create, view and manage sections"
                 actions={
                     <div className="flex gap-2">
-                        <button onClick={fetchSections} disabled={isLoading}
+                        <button data-testid="section-fetch-sections-btn" onClick={fetchSections} disabled={isLoading}
                             className="px-3 py-2 bg-white/10 border border-white/20 text-white rounded-xl flex items-center gap-2 text-sm hover:bg-white/20 transition backdrop-blur-sm">
                             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
                         </button>

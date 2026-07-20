@@ -253,7 +253,7 @@ function SummaryTab() {
                     )}
                     {loading && <Loader2 size={12} className="text-slate-400 animate-spin ml-1" />}
                     {activeFilters > 0 && (
-                        <button onClick={clearFilters} className="ml-auto text-xs text-slate-400 hover:text-red-500 font-semibold">Clear</button>
+                        <button data-testid="fees-clear-filters-btn" onClick={clearFilters} className="ml-auto text-xs text-slate-400 hover:text-red-500 font-semibold">Clear</button>
                     )}
                 </div>
 
@@ -498,8 +498,12 @@ const MoneyCard: React.FC<{
     progress?: number;
 }> = ({ icon: Icon, label, value, accent, note, progress }) => {
     const cfg = MONEY_ACCENT[accent];
+    // Stable automation hook derived from the label, so adding a card needs no
+    // further wiring. `data-value` carries the raw number so tests assert on
+    // the figure instead of parsing the ₹-formatted, comma-grouped string.
+    const testId = `fees-stat-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     return (
-        <div className={`p-5 rounded-2xl border ${cfg.bg} ${cfg.border} shadow-sm`}>
+        <div data-testid={testId} data-value={value} className={`p-5 rounded-2xl border ${cfg.bg} ${cfg.border} shadow-sm`}>
             <div className="flex items-center gap-2 mb-3">
                 <Icon size={16} className={cfg.icon} />
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${cfg.label}`}>{label}</span>
@@ -1202,11 +1206,11 @@ function FeeStructureTab() {
             <td className="px-4 py-3 font-bold text-emerald-700 text-sm">{fmt(item.amount)}</td>
             <td className="px-4 py-3">
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => startEdit(item)}
+                    <button data-testid={`fees-item-edit-btn-${item.id}`} onClick={() => startEdit(item)}
                         className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors">
                         <Edit3 size={13}/>
                     </button>
-                    <button onClick={() => deleteItem(item)}
+                    <button data-testid={`fees-item-delete-btn-${item.id}`} onClick={() => deleteItem(item)}
                         className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors">
                         <Trash2 size={13}/>
                     </button>
@@ -1247,17 +1251,17 @@ function FeeStructureTab() {
                     <p className="text-slate-700 font-semibold mb-1">No fee structure defined</p>
                     <p className="text-slate-400 text-sm mb-6">Create a fee structure to define tuition, transport, and other charges for this session.</p>
                     {!showCreateStructure ? (
-                        <button onClick={() => setShowCreateStructure(true)}
+                        <button data-testid="fees-create-structure-btn" onClick={() => setShowCreateStructure(true)}
                             className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm">
                             <Plus size={16}/> Create Fee Structure
                         </button>
                     ) : (
                         <div className="max-w-sm mx-auto space-y-3 text-left">
-                            <input value={structureName} onChange={e => setStructureName(e.target.value)}
+                            <input data-testid="fees-structure-name-input" value={structureName} onChange={e => setStructureName(e.target.value)}
                                 placeholder="e.g. Main Fee Structure 2025-26"
                                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none" />
                             <div className="flex gap-2">
-                                <button onClick={handleCreateStructure} disabled={creatingStructure}
+                                <button data-testid="fees-structure-create-btn" onClick={handleCreateStructure} disabled={creatingStructure}
                                     className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
                                     {creatingStructure ? 'Creating…' : 'Create'}
                                 </button>
@@ -1291,12 +1295,12 @@ function FeeStructureTab() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={handleToggleActive}
+                                <button data-testid="fees-structure-toggle-active-btn" onClick={handleToggleActive}
                                     className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                                     {currentStructure.isActive ? <ToggleRight size={14} className="text-emerald-600"/> : <ToggleLeft size={14}/>}
                                     {currentStructure.isActive ? 'Deactivate' : 'Activate'}
                                 </button>
-                                <button onClick={() => { setShowForm(true); setEditingItemId(null); setForm(blankItem()); }}
+                                <button data-testid="fees-add-item-btn" onClick={() => { setShowForm(true); setEditingItemId(null); setForm(blankItem()); }}
                                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors">
                                     <Plus size={15}/> Add Fee Item
                                 </button>
@@ -1341,13 +1345,13 @@ function FeeStructureTab() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="sm:col-span-2 lg:col-span-2">
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Item Name *</label>
-                                    <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                                    <input data-testid="fees-item-name-input" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
                                         placeholder="e.g. Tuition Fee, Library Charges"
                                         className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Amount (₹) *</label>
-                                    <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
+                                    <input data-testid="fees-item-amount-input" type="number" min="0" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
                                         placeholder="0"
                                         className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none" />
                                 </div>
@@ -1404,7 +1408,7 @@ function FeeStructureTab() {
                                 </div>
                             </div>
                             <div className="flex gap-2 pt-4 border-t border-slate-100 mt-5">
-                                <button onClick={saveItem} disabled={saving || !form.name.trim() || !form.amount}
+                                <button data-testid="fees-item-save-btn" onClick={saveItem} disabled={saving || !form.name.trim() || !form.amount}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 shadow-sm transition-colors">
                                     {saving ? <><RefreshCw size={14} className="animate-spin"/>Saving…</> : <><Check size={14}/>{editingItemId ? 'Update Item' : 'Add Item'}</>}
                                 </button>
@@ -1654,7 +1658,7 @@ function PaymentsTab() {
                         <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                 </div>
-                <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
+                <button data-testid="fees-payments-export-btn" onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
                     <Download size={15} />{exporting ? 'Exporting…' : 'Export CSV'}
                 </button>
             </div>
@@ -1693,10 +1697,10 @@ function PaymentsTab() {
                         ) : payments.length === 0 ? (
                             <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">No payment transactions found</td></tr>
                         ) : payments.map(p => (
-                            <tr key={p.id} className="hover:bg-slate-50">
+                            <tr key={p.id} data-testid="fees-payment-row" data-payment-status={p.paymentStatus} className="hover:bg-slate-50">
                                 <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
                                 <td className="px-3 py-3">
-                                    <button onClick={() => navigate(`/fees/invoice/${p.invoiceId}`)} className="font-mono text-xs text-blue-600 hover:underline">
+                                    <button data-testid={`fees-payment-invoice-link-${p.invoiceId}`} onClick={() => navigate(`/fees/invoice/${p.invoiceId}`)} className="font-mono text-xs text-blue-600 hover:underline">
                                         {p.invoiceNo}
                                     </button>
                                 </td>
@@ -1709,7 +1713,7 @@ function PaymentsTab() {
                                 </td>
                                 <td className="px-3 py-3">
                                     {p.paymentMode === 'ONLINE' && p.paymentStatus === 'CAPTURED' && (
-                                        <button onClick={() => handleRefund(p)} disabled={refunding === p.id}
+                                        <button data-testid={`fees-payment-refund-btn-${p.id}`} onClick={() => handleRefund(p)} disabled={refunding === p.id}
                                             className="flex items-center gap-1 px-2.5 py-1 text-xs border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-50">
                                             <RotateCcw size={12} />{refunding === p.id ? 'Processing…' : 'Refund'}
                                         </button>
@@ -1914,11 +1918,11 @@ function ExtraChargesTab() {
                         </select></div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => { setMode('single'); setShowSingleForm(s => !s); }}
+                    <button data-testid="fees-charge-single-btn" onClick={() => { setMode('single'); setShowSingleForm(s => !s); }}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700 shadow-sm">
                         <UserCheck size={15}/> Single Student
                     </button>
-                    <button onClick={() => { setMode('bulk'); setShowBulkForm(s => !s); }}
+                    <button data-testid="fees-charge-bulk-btn" onClick={() => { setMode('bulk'); setShowBulkForm(s => !s); }}
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 shadow-sm">
                         <Users size={15}/> Bulk Apply
                     </button>
@@ -1963,7 +1967,7 @@ function ExtraChargesTab() {
                             </select></div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={saveSingle} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
+                        <button data-testid="fees-charge-save-btn" onClick={saveSingle} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">
                             <Save size={15}/>{saving?'Saving…':'Add Charge'}
                         </button>
                         <button onClick={() => setShowSingleForm(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
@@ -2085,7 +2089,7 @@ function ExtraChargesTab() {
                                     </select></div>
                             </div>
                             <div className="flex gap-2 pt-1">
-                                <button onClick={applyBulk} disabled={bulkApplying}
+                                <button data-testid="fees-charge-bulk-apply-btn" onClick={applyBulk} disabled={bulkApplying}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
                                     <Users size={15}/>{bulkApplying ? 'Applying…' : `Apply to ${selectedStudentIds.size} Students`}
                                 </button>
@@ -2445,7 +2449,17 @@ function InvoicesTab() {
                                 </tr>
                             )}
                             {invoices.map(inv => (
-                                <tr key={inv.id} className="hover:bg-slate-50">
+                                <tr
+                                    key={inv.id}
+                                    data-testid="fees-invoice-row"
+                                    data-invoice-id={inv.id}
+                                    data-invoice-no={inv.invoiceNo}
+                                    data-status={inv.status}
+                                    data-total={inv.totalAmount}
+                                    data-paid={inv.paidAmount}
+                                    data-balance={inv.totalAmount - inv.paidAmount}
+                                    className="hover:bg-slate-50"
+                                >
                                     <td className="px-3 py-3 font-mono text-xs font-bold text-slate-700">{inv.invoiceNo}</td>
                                     <td className="px-3 py-3 font-medium">{inv.studentFirstName} {inv.studentLastName}</td>
                                     <td className="px-3 py-3 text-slate-500">{MONTHS[inv.month-1]} {inv.year}</td>

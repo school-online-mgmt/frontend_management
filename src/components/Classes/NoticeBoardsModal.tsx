@@ -102,7 +102,7 @@ const NoticeBoardsModal = ({ open, onClose, classId, sectionId, scopeLabel }: Pr
                             <p className="text-[11px] text-white/80 truncate">{scopeLabel}</p>
                         </div>
                     </div>
-                    <button
+                    <button data-testid="notice-boards-modal-close-btn"
                         onClick={onClose}
                         aria-label="Close"
                         className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors"
@@ -143,7 +143,7 @@ const NoticeBoardsModal = ({ open, onClose, classId, sectionId, scopeLabel }: Pr
                                 const Icon = cfg.Icon;
                                 return (
                                     <li key={b.id}>
-                                        <button
+                                        <button data-testid="notice-boards-modal-open-btn"
                                             onClick={() => handleOpen(b.id)}
                                             className="w-full text-left rounded-xl border border-slate-200 hover:border-amber-300 hover:shadow-sm bg-white px-4 py-3 transition-all group"
                                         >

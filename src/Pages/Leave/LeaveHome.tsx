@@ -113,7 +113,7 @@ function StudentLeavesTab() {
             {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <FilterBar value={filter} onChange={setFilter} />
-                <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
+                <button data-testid="leave-load-btn" onClick={load} disabled={loading} className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                 </button>
             </div>
@@ -124,7 +124,7 @@ function StudentLeavesTab() {
                         const name = l.student ? `${l.student.firstName} ${l.student.lastName}` : "Unknown";
                         const mgmtApproval = l.approvals?.find((a: any) => a.approverType === "MANAGEMENT" && a.status === "PENDING");
                         return (
-                            <div key={l.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                            <div key={l.id} data-testid="leave-request-card" data-leave-id={l.id} data-status={l.status} data-applicant={name} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                                 <div className="flex items-start gap-4">
                                     <div className={`mt-0.5 p-2 rounded-xl border ${sc.bg} ${sc.border}`}>
                                         <sc.icon size={16} className={sc.text} />
@@ -162,11 +162,11 @@ function StudentLeavesTab() {
                                     </div>
                                     {mgmtApproval && (
                                         <div className="flex gap-2 shrink-0">
-                                            <button onClick={() => respond(mgmtApproval.id, "APPROVED")} disabled={respondingId === mgmtApproval.id}
+                                            <button data-testid="leave-respond-btn" onClick={() => respond(mgmtApproval.id, "APPROVED")} disabled={respondingId === mgmtApproval.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold hover:bg-emerald-100 disabled:opacity-50">
                                                 {respondingId === mgmtApproval.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
                                             </button>
-                                            <button onClick={() => respond(mgmtApproval.id, "REJECTED")} disabled={respondingId === mgmtApproval.id}
+                                            <button data-testid="leave-respond-btn-2" onClick={() => respond(mgmtApproval.id, "REJECTED")} disabled={respondingId === mgmtApproval.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[11px] font-bold hover:bg-red-100 disabled:opacity-50">
                                                 {respondingId === mgmtApproval.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} Reject
                                             </button>
@@ -221,7 +221,7 @@ function TeacherLeavesTab() {
             {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <FilterBar value={filter} onChange={setFilter} />
-                <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
+                <button data-testid="leave-load-btn-2" onClick={load} disabled={loading} className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                 </button>
             </div>
@@ -259,11 +259,11 @@ function TeacherLeavesTab() {
                                     </div>
                                     {l.status === "PENDING" && (
                                         <div className="flex gap-2 shrink-0">
-                                            <button onClick={() => respond(l.id, "APPROVED")} disabled={respondingId === l.id}
+                                            <button data-testid="leave-respond-btn-3" onClick={() => respond(l.id, "APPROVED")} disabled={respondingId === l.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold hover:bg-emerald-100 disabled:opacity-50">
                                                 {respondingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
                                             </button>
-                                            <button onClick={() => respond(l.id, "REJECTED")} disabled={respondingId === l.id}
+                                            <button data-testid="leave-respond-btn-4" onClick={() => respond(l.id, "REJECTED")} disabled={respondingId === l.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[11px] font-bold hover:bg-red-100 disabled:opacity-50">
                                                 {respondingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} Reject
                                             </button>
@@ -289,7 +289,7 @@ function Toast({ toast, onClose }: { toast: { type: string; msg: string }; onClo
         }`}>
             {toast.type === "success" ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
             <span>{toast.msg}</span>
-            <button onClick={onClose} className="ml-auto"><X size={13} /></button>
+            <button data-testid="leave-close-btn" onClick={onClose} className="ml-auto"><X size={13} /></button>
         </div>
     );
 }
@@ -298,7 +298,7 @@ function FilterBar({ value, onChange }: { value: string; onChange: (v: string) =
     return (
         <div className="flex gap-1.5 flex-wrap">
             {STATUS_FILTERS.map(s => (
-                <button key={s} onClick={() => onChange(s)}
+                <button data-testid="leave-change-btn" key={s} onClick={() => onChange(s)}
                     className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                         value === s ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
                     }`}>

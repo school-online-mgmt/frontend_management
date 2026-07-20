@@ -47,7 +47,7 @@ const AddQuestionPaperModal = ({
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-[9999]">
             <div className="bg-white rounded-xl w-[480px] p-6 space-y-4 shadow-2xl">
                 <h2 className="text-lg font-bold text-slate-800">{title}</h2>
-                <textarea
+                <textarea data-testid="add-question-paper-modal-question-paper-input"
                     value={questionPaper}
                     onChange={(e) => setQuestionPaper(e.target.value)}
                     placeholder="Enter the question paper content here (minimum 10 characters)..."
@@ -55,10 +55,10 @@ const AddQuestionPaperModal = ({
                     className="w-full border border-slate-200 p-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
                 <div className="flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg border">
+                    <button data-testid="add-question-paper-modal-close-btn" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg border">
                         Cancel
                     </button>
-                    <button
+                    <button data-testid="add-question-paper-modal-submit-btn"
                         onClick={handleSubmit}
                         disabled={loading}
                         className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium"

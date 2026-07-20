@@ -128,7 +128,7 @@ const AssignModal = ({
                 </p>
               </div>
             </div>
-            <button onClick={onClose}
+            <button data-testid="teacher-close-btn" onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors shrink-0">
               <X size={16} />
             </button>
@@ -169,7 +169,7 @@ const AssignModal = ({
                 className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={handleUnassign} disabled={unassigning}
+              <button data-testid="teacher-unassign-btn" onClick={handleUnassign} disabled={unassigning}
                 className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
                 {unassigning ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
                 {unassigning ? "Removing…" : "Yes, Remove"}
@@ -193,7 +193,7 @@ const AssignModal = ({
                     {currentTeacher.qualification && <span className="text-amber-600 font-normal"> · {currentTeacher.qualification}</span>}
                   </p>
                 </div>
-                <button
+                <button data-testid="teacher-unassign-confirm-btn"
                   onClick={() => setUnassignConfirm(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
                 >
@@ -206,7 +206,7 @@ const AssignModal = ({
             <div className="px-6 pt-4 shrink-0">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
+                <input data-testid="teacher-search-input"
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -215,7 +215,7 @@ const AssignModal = ({
                   className="w-full pl-9 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-slate-50 placeholder-slate-400"
                 />
                 {search && (
-                  <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <button data-testid="teacher-search-btn" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                     <X size={13} />
                   </button>
                 )}

@@ -133,13 +133,13 @@ const TeacherApply = () => {
               <div className="space-y-4">
                 <div>
                   <label className={lbl}>Full Name <span className="text-red-400">*</span></label>
-                  <input value={form.name} onChange={e => set('name', e.target.value)}
+                  <input data-testid="teacher-apply-name-input" value={form.name} onChange={e => set('name', e.target.value)}
                     placeholder="e.g. Anjali Sharma" className={inp} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className={lbl}>Gender <span className="text-red-400">*</span></label>
-                    <select value={form.gender} onChange={e => set('gender', e.target.value)} className={inp}>
+                    <select data-testid="teacher-apply-gender-select" value={form.gender} onChange={e => set('gender', e.target.value)} className={inp}>
                       <option value="">Select gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
@@ -148,7 +148,7 @@ const TeacherApply = () => {
                   </div>
                   <div>
                     <label className={lbl}>Age</label>
-                    <input type="number" value={form.age} min={18} max={70}
+                    <input data-testid="teacher-apply-age-input" type="number" value={form.age} min={18} max={70}
                       onChange={e => set('age', e.target.value)}
                       placeholder="e.g. 28" className={inp} />
                   </div>
@@ -166,18 +166,18 @@ const TeacherApply = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className={lbl}>Highest Qualification <span className="text-red-400">*</span></label>
-                  <input value={form.qualification} onChange={e => set('qualification', e.target.value)}
+                  <input data-testid="teacher-apply-qualification-input" value={form.qualification} onChange={e => set('qualification', e.target.value)}
                     placeholder="e.g. B.Ed, M.Sc Mathematics" className={inp} />
                 </div>
                 <div>
                   <label className={lbl}>Experience (years)</label>
-                  <input type="number" value={form.experienceYears} min={0}
+                  <input data-testid="teacher-apply-experience-years-input" type="number" value={form.experienceYears} min={0}
                     onChange={e => set('experienceYears', e.target.value)}
                     placeholder="e.g. 3" className={inp} />
                 </div>
                 <div>
                   <label className={lbl}>Subjects Interested In</label>
-                  <input value={form.subjectsInterested}
+                  <input data-testid="teacher-apply-subjects-interested-input" value={form.subjectsInterested}
                     onChange={e => set('subjectsInterested', e.target.value)}
                     placeholder="e.g. Maths, Physics" className={inp} />
                 </div>
@@ -197,7 +197,7 @@ const TeacherApply = () => {
                     <label className={lbl}>Phone Number <span className="text-red-400">*</span></label>
                     <div className="relative">
                       <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input value={form.phone} onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      <input data-testid="teacher-apply-phone-input" value={form.phone} onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                         placeholder="10-digit number" className={inp + ' pl-9'} />
                     </div>
                   </div>
@@ -205,7 +205,7 @@ const TeacherApply = () => {
                     <label className={lbl}>Email Address</label>
                     <div className="relative">
                       <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+                      <input data-testid="teacher-apply-email-input" type="email" value={form.email} onChange={e => set('email', e.target.value)}
                         placeholder="your@email.com" className={inp + ' pl-9'} />
                     </div>
                   </div>
@@ -214,7 +214,7 @@ const TeacherApply = () => {
                   <label className={lbl}>Address</label>
                   <div className="relative">
                     <MapPin size={14} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <textarea value={form.address} onChange={e => set('address', e.target.value)}
+                    <textarea data-testid="teacher-apply-address-input" value={form.address} onChange={e => set('address', e.target.value)}
                       rows={2} placeholder="Current residential address"
                       className={inp + ' pl-9 resize-none'} />
                   </div>
@@ -230,7 +230,7 @@ const TeacherApply = () => {
                 <MessageSquare size={15} className="text-violet-500" /> Cover Message
                 <span className="text-xs font-normal text-slate-400 normal-case">(optional)</span>
               </p>
-              <textarea value={form.message} onChange={e => set('message', e.target.value)}
+              <textarea data-testid="teacher-apply-message-input" value={form.message} onChange={e => set('message', e.target.value)}
                 rows={4} placeholder="Introduce yourself, share why you'd like to teach here, or mention anything relevant…"
                 className={inp + ' resize-none'} />
             </div>

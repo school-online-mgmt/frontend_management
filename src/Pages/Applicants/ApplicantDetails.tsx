@@ -74,11 +74,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ type, name, onConfirm, onCa
             : <>You are rejecting the application of <span className="font-semibold text-slate-700">{name}</span>. This cannot be undone.</>}
         </p>
         <div className="flex gap-3">
-          <button onClick={onCancel} disabled={loading}
+          <button data-testid="applicants-cancel-btn" onClick={onCancel} disabled={loading}
             className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50">
             Cancel
           </button>
-          <button onClick={onConfirm} disabled={loading}
+          <button data-testid="applicants-confirm-btn" onClick={onConfirm} disabled={loading}
             className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition disabled:opacity-50 ${isAccept ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
             {loading && <RefreshCcw size={13} className="animate-spin" />}
             {isAccept ? 'Yes, Accept' : 'Yes, Reject'}
@@ -167,10 +167,10 @@ const ApplicantDetails: React.FC = () => {
           <p className="text-slate-700 font-semibold mb-1">Could not load applicant</p>
           <p className="text-slate-500 text-sm mb-4">{error ?? 'Applicant not found.'}</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+            <button data-testid="applicants-navigate-btn" onClick={() => navigate(-1)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
               ← Back
             </button>
-            <button onClick={fetchApplicant} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition">
+            <button data-testid="applicants-fetch-applicant-btn" onClick={fetchApplicant} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition">
               Retry
             </button>
           </div>
@@ -209,7 +209,7 @@ const ApplicantDetails: React.FC = () => {
       {/* Header bar */}
       <div className="bg-white border-b border-slate-200 px-6 lg:px-8 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-          <button onClick={() => navigate(-1)}
+          <button data-testid="applicants-navigate-btn-2" onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
@@ -256,11 +256,11 @@ const ApplicantDetails: React.FC = () => {
             {/* Action buttons */}
             {isPending && (
               <div className="flex gap-3 shrink-0 w-full sm:w-auto">
-                <button onClick={() => setConfirm('reject')}
+                <button data-testid="applicants-confirm-btn-2" onClick={() => setConfirm('reject')}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition">
                   <XCircle size={15} /> Reject
                 </button>
-                <button onClick={() => setConfirm('accept')}
+                <button data-testid="applicants-confirm-btn-3" onClick={() => setConfirm('accept')}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shadow-sm">
                   <CheckCircle2 size={15} /> Accept
                 </button>
@@ -383,11 +383,11 @@ const ApplicantDetails: React.FC = () => {
               Rejecting will permanently close this application.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={() => setConfirm('reject')}
+              <button data-testid="applicants-confirm-btn-4" onClick={() => setConfirm('reject')}
                 className="flex items-center justify-center gap-2 px-5 py-3 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition">
                 <XCircle size={16} /> Reject Application
               </button>
-              <button onClick={() => setConfirm('accept')}
+              <button data-testid="applicants-confirm-btn-5" onClick={() => setConfirm('accept')}
                 className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shadow-sm">
                 <CheckCircle2 size={16} /> Accept Application
               </button>

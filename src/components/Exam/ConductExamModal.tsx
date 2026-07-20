@@ -49,7 +49,7 @@ const ConductExamModal = ({ examId, examName, onClose, onSuccess }: ConductExamM
                         <h2 className="text-2xl font-bold">Conduct Exam</h2>
                         <p className="text-purple-100 text-sm mt-1">{examName}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-purple-600 rounded-lg transition">
+                    <button data-testid="conduct-exam-modal-close-btn" onClick={onClose} className="p-2 hover:bg-purple-600 rounded-lg transition">
                         <X size={24} />
                     </button>
                 </div>
@@ -62,7 +62,7 @@ const ConductExamModal = ({ examId, examName, onClose, onSuccess }: ConductExamM
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
                                     Exam Conducted Date
                                 </label>
-                                <input
+                                <input data-testid="conduct-exam-modal-conducted-date-input"
                                     type="date"
                                     value={conductedDate}
                                     onChange={(e) => setConductedDate(e.target.value)}
@@ -107,7 +107,7 @@ const ConductExamModal = ({ examId, examName, onClose, onSuccess }: ConductExamM
                     >
                         {confirmConducting ? 'Back' : 'Cancel'}
                     </button>
-                    <button
+                    <button data-testid="conduct-exam-modal-conduct-btn"
                         onClick={handleConduct}
                         disabled={conductExamMutation.isPending}
                         className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition font-medium flex items-center gap-2"
