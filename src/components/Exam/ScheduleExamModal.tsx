@@ -52,7 +52,7 @@ const ScheduleExamModal = ({
 
                 <h2 className="text-lg font-bold">Schedule Exam</h2>
 
-                <input
+                <input data-testid="schedule-exam-modal-exam-date-input"
                     type="datetime-local"
                     value={examDate}
                     min={minDate}
@@ -61,9 +61,9 @@ const ScheduleExamModal = ({
                 />
 
                 <div className="flex justify-end gap-3">
-                    <button onClick={onClose}>Cancel</button>
+                    <button data-testid="schedule-exam-modal-close-btn" onClick={onClose}>Cancel</button>
 
-                    <button
+                    <button data-testid="schedule-exam-modal-submit-btn"
                         onClick={handleSubmit}
                         disabled={loading}
                         className="bg-emerald-600 text-white px-4 py-2 rounded-lg"

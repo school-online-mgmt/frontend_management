@@ -280,7 +280,7 @@ const SubjectPage = () => {
             {/* Search */}
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
+              <input data-testid="subject-search-input"
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -288,7 +288,7 @@ const SubjectPage = () => {
                 className="w-full pl-10 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-slate-50 placeholder-slate-400"
               />
               {search && (
-                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <button data-testid="subject-search-btn" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   <X size={14} />
                 </button>
               )}

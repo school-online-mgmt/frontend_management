@@ -277,7 +277,7 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                         <h2 className="text-base font-bold">New Student Admission</h2>
                         <p className="text-indigo-100 text-[11px] mt-0.5">Multi-step admission form — same as the student application process</p>
                     </div>
-                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition">
+                    <button data-testid="new-student-modal-close-btn" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition">
                         <X size={18} />
                     </button>
                 </div>
@@ -335,26 +335,26 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <Field label="First Name" required error={errors.firstName}>
-                                    <input className={inputCls(!!errors.firstName)} value={form.firstName} onChange={set("firstName")} placeholder="e.g. Rahul" />
+                                    <input data-testid="new-student-modal-first-name-input" className={inputCls(!!errors.firstName)} value={form.firstName} onChange={set("firstName")} placeholder="e.g. Rahul" />
                                 </Field>
                                 <Field label="Middle Name" optional>
-                                    <input className={inputCls()} value={form.middleName} onChange={set("middleName")} placeholder="Optional" />
+                                    <input data-testid="new-student-modal-middle-name-input" className={inputCls()} value={form.middleName} onChange={set("middleName")} placeholder="Optional" />
                                 </Field>
                                 <Field label="Last Name" required error={errors.lastName}>
-                                    <input className={inputCls(!!errors.lastName)} value={form.lastName} onChange={set("lastName")} placeholder="e.g. Sharma" />
+                                    <input data-testid="new-student-modal-last-name-input" className={inputCls(!!errors.lastName)} value={form.lastName} onChange={set("lastName")} placeholder="e.g. Sharma" />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Field label="Date of Birth" required error={errors.dateOfBirth}>
-                                    <input type="date" className={inputCls(!!errors.dateOfBirth)} value={form.dateOfBirth} onChange={set("dateOfBirth")} max={new Date().toISOString().split("T")[0]} />
+                                    <input data-testid="new-student-modal-date-of-birth-input" type="date" className={inputCls(!!errors.dateOfBirth)} value={form.dateOfBirth} onChange={set("dateOfBirth")} max={new Date().toISOString().split("T")[0]} />
                                 </Field>
                                 <Field label="Place of Birth" required error={errors.placeOfBirth}>
-                                    <input className={inputCls(!!errors.placeOfBirth)} value={form.placeOfBirth} onChange={set("placeOfBirth")} placeholder="City of birth" />
+                                    <input data-testid="new-student-modal-place-of-birth-input" className={inputCls(!!errors.placeOfBirth)} value={form.placeOfBirth} onChange={set("placeOfBirth")} placeholder="City of birth" />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Field label="Gender" required error={errors.gender}>
-                                    <select className={inputCls(!!errors.gender)} value={form.gender} onChange={set("gender")}>
+                                    <select data-testid="new-student-modal-gender-select" className={inputCls(!!errors.gender)} value={form.gender} onChange={set("gender")}>
                                         <option value="">Select gender</option>
                                         <option>Male</option>
                                         <option>Female</option>
@@ -362,15 +362,15 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                                     </select>
                                 </Field>
                                 <Field label="Nationality" required error={errors.nationality}>
-                                    <input className={inputCls(!!errors.nationality)} value={form.nationality} onChange={set("nationality")} placeholder="e.g. Indian" />
+                                    <input data-testid="new-student-modal-nationality-input" className={inputCls(!!errors.nationality)} value={form.nationality} onChange={set("nationality")} placeholder="e.g. Indian" />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Field label="Religion" optional>
-                                    <input className={inputCls()} value={form.religion} onChange={set("religion")} placeholder="Optional" />
+                                    <input data-testid="new-student-modal-religion-input" className={inputCls()} value={form.religion} onChange={set("religion")} placeholder="Optional" />
                                 </Field>
                                 <Field label="Blood Group" optional>
-                                    <select className={inputCls()} value={form.bloodGroup} onChange={set("bloodGroup")}>
+                                    <select data-testid="new-student-modal-blood-group-select" className={inputCls()} value={form.bloodGroup} onChange={set("bloodGroup")}>
                                         <option value="">Select blood group</option>
                                         {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => <option key={bg}>{bg}</option>)}
                                     </select>
@@ -384,10 +384,10 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Field label="Email Address" required error={errors.email}>
-                                    <input type="email" className={inputCls(!!errors.email)} value={form.email} onChange={set("email")} placeholder="student@example.com" />
+                                    <input data-testid="new-student-modal-email-input" type="email" className={inputCls(!!errors.email)} value={form.email} onChange={set("email")} placeholder="student@example.com" />
                                 </Field>
                                 <Field label="Phone Number" required error={errors.phone}>
-                                    <input className={inputCls(!!errors.phone)} value={form.phone} onChange={setPhone("phone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
+                                    <input data-testid="new-student-modal-phone-input" className={inputCls(!!errors.phone)} value={form.phone} onChange={setPhone("phone")} placeholder="10-digit number" inputMode="numeric" maxLength={10} />
                                 </Field>
                             </div>
                             <Field label="Residential Address" required error={errors.address}>

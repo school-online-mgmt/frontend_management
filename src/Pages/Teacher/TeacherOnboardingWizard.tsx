@@ -140,7 +140,7 @@ export default function TeacherOnboardingWizard() {
                 gradient={MODULE_THEMES.people}
                 showBack
                 primaryActions={
-                    <button onClick={resetDraft} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-white/15 text-white hover:bg-white/25">
+                    <button data-testid="teacher-reset-draft-btn" onClick={resetDraft} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-white/15 text-white hover:bg-white/25">
                         <RotateCcw size={14} /> Reset
                     </button>
                 }
@@ -173,16 +173,16 @@ export default function TeacherOnboardingWizard() {
                     {step === "review" && <ReviewStep state={state} />}
 
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-                        <button onClick={back} disabled={stepIdx === 0 || busy} className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+                        <button data-testid="teacher-back-btn" onClick={back} disabled={stepIdx === 0 || busy} className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
                             <ChevronLeft size={15} /> Back
                         </button>
                         <span className="text-xs text-slate-400 inline-flex items-center gap-1"><Save size={12} /> Draft saved automatically</span>
                         {step === "review" ? (
-                            <button onClick={finish} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+                            <button data-testid="teacher-finish-btn" onClick={finish} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
                                 <CheckCircle2 size={15} /> Finish
                             </button>
                         ) : (
-                            <button onClick={next} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
+                            <button data-testid="teacher-next-btn" onClick={next} disabled={busy} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
                                 {busy ? <Loader2 size={15} className="animate-spin" /> : <ChevronRight size={15} />} Save &amp; Next
                             </button>
                         )}
@@ -197,7 +197,7 @@ export default function TeacherOnboardingWizard() {
 const Input = ({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) => (
     <label className="block">
         <span className="text-xs font-medium text-slate-600">{label}</span>
-        <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        <input data-testid="teacher-value-input" type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
             className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
     </label>
 );
@@ -212,7 +212,7 @@ function IdentityStep({ state, patch }: { state: WizardState; patch: any }) {
                 <Input label="Full name" value={id.name} onChange={v => patch("identity", { name: v })} />
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Gender</span>
-                    <select value={id.gender} onChange={e => patch("identity", { gender: e.target.value })} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
+                    <select data-testid="teacher-gender-select" value={id.gender} onChange={e => patch("identity", { gender: e.target.value })} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
                         {["Male", "Female", "Other"].map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                 </label>
@@ -237,7 +237,7 @@ function EmploymentStep({ state, patch }: { state: WizardState; patch: any }) {
             <Input label="Joining date" type="date" value={e.joiningDate} onChange={v => patch("employment", { joiningDate: v })} />
             <label className="block">
                 <span className="text-xs font-medium text-slate-600">Employment type</span>
-                <select value={e.employmentType} onChange={ev => patch("employment", { employmentType: ev.target.value })} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
+                <select data-testid="teacher-employment-type-select" value={e.employmentType} onChange={ev => patch("employment", { employmentType: ev.target.value })} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
                     {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                 </select>
             </label>
@@ -263,17 +263,17 @@ function SalaryStep({ state, setState }: { state: WizardState; setState: React.D
                 {s.components.map((c, i) => (
                     <div key={i} className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full shrink-0 ${c.type === "EARNING" ? "bg-emerald-500" : "bg-red-500"}`} />
-                        <input value={c.label} placeholder={c.type === "EARNING" ? "e.g. HRA" : "e.g. PF"} onChange={e => upd(i, { label: e.target.value })} className="flex-1 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg" />
-                        <select value={c.calc} onChange={e => upd(i, { calc: e.target.value as any })} className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
+                        <input data-testid="teacher-label-input" value={c.label} placeholder={c.type === "EARNING" ? "e.g. HRA" : "e.g. PF"} onChange={e => upd(i, { label: e.target.value })} className="flex-1 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                        <select data-testid="teacher-calc-select" value={c.calc} onChange={e => upd(i, { calc: e.target.value as any })} className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
                             <option value="FIXED">₹</option><option value="PERCENT_OF_BASIC">% of basic</option>
                         </select>
-                        <input type="number" min={0} value={c.value} onChange={e => upd(i, { value: Number(e.target.value) })} className="w-24 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-right" />
-                        <button onClick={() => rm(i)} className="p-1.5 text-slate-400 hover:text-red-600"><X size={15} /></button>
+                        <input data-testid="teacher-value-input-2" type="number" min={0} value={c.value} onChange={e => upd(i, { value: Number(e.target.value) })} className="w-24 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-right" />
+                        <button data-testid="teacher-rm-btn" onClick={() => rm(i)} className="p-1.5 text-slate-400 hover:text-red-600"><X size={15} /></button>
                     </div>
                 ))}
                 <div className="flex gap-2 pt-1">
-                    <button onClick={() => addComp("EARNING")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50"><Plus size={13} /> Earning</button>
-                    <button onClick={() => addComp("DEDUCTION")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"><Plus size={13} /> Deduction</button>
+                    <button data-testid="teacher-add-comp-btn" onClick={() => addComp("EARNING")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50"><Plus size={13} /> Earning</button>
+                    <button data-testid="teacher-add-comp-btn-2" onClick={() => addComp("DEDUCTION")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"><Plus size={13} /> Deduction</button>
                 </div>
             </div>
             {s.basicSalary !== "" && (

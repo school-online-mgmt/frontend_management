@@ -112,7 +112,7 @@ const NoticeModal = ({
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
                 <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4 flex items-center justify-between shrink-0">
                     <h2 className="text-white font-semibold text-lg">{editNotice ? "Edit Notice" : "Create Notice"}</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
+                    <button data-testid="notice-close-btn" onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
@@ -166,7 +166,7 @@ const NoticeModal = ({
                         </label>
                     )}
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose}
+                        <button data-testid="notice-close-btn-2" type="button" onClick={onClose}
                             className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium">Cancel</button>
                         <button type="submit" disabled={saving}
                             className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
@@ -189,12 +189,12 @@ const RejectModal = ({ open, onClose, onConfirm, saving }: any) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                 <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><XCircle size={20} className="text-red-500" /> Reject Notice</h3>
-                <textarea value={reason} onChange={e => setReason(e.target.value)}
+                <textarea data-testid="notice-reason-input" value={reason} onChange={e => setReason(e.target.value)}
                     rows={3} placeholder="Provide a reason for rejection (required)…"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400" />
                 <div className="flex gap-3 mt-4">
-                    <button onClick={onClose} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm font-medium">Cancel</button>
-                    <button onClick={() => onConfirm(reason)} disabled={!reason.trim() || saving}
+                    <button data-testid="notice-close-btn-3" onClick={onClose} className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm font-medium">Cancel</button>
+                    <button data-testid="notice-confirm-btn" onClick={() => onConfirm(reason)} disabled={!reason.trim() || saving}
                         className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-red-700 flex items-center justify-center gap-2">
                         {saving ? <Loader2 size={14} className="animate-spin" /> : null} Reject
                     </button>
@@ -247,12 +247,12 @@ const NoticeCard = ({
             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100 flex-wrap">
                 {(notice.status === "PENDING_APPROVAL" || notice.status === "DRAFT") && (canApprove || isPrincipal) && (
                     <>
-                        <button onClick={() => onApprove(notice.id)}
+                        <button data-testid="notice-approve-btn" onClick={() => onApprove(notice.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
                             <CheckCircle2 size={13} /> {notice.status === "DRAFT" ? "Publish" : "Approve"}
                         </button>
                         {notice.status === "PENDING_APPROVAL" && (
-                            <button onClick={() => onReject(notice)}
+                            <button data-testid="notice-reject-btn" onClick={() => onReject(notice)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
                                 <XCircle size={13} /> Reject
                             </button>
@@ -260,19 +260,19 @@ const NoticeCard = ({
                     </>
                 )}
                 {notice.status === "APPROVED" && isPrincipal && (
-                    <button onClick={() => onArchive(notice.id)}
+                    <button data-testid="notice-archive-btn" onClick={() => onArchive(notice.id)}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors">
                         <Archive size={13} /> Archive
                     </button>
                 )}
                 {["DRAFT", "REJECTED", "PENDING_APPROVAL"].includes(notice.status) && isPrincipal && (
-                    <button onClick={() => onEdit(notice)}
+                    <button data-testid="notice-edit-btn" onClick={() => onEdit(notice)}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors">
                         <Edit3 size={13} /> Edit
                     </button>
                 )}
                 {isPrincipal && (
-                    <button onClick={() => onDelete(notice.id, notice.title)}
+                    <button data-testid="notice-delete-btn" onClick={() => onDelete(notice.id, notice.title)}
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors ml-auto">
                         <Trash2 size={13} /> Delete
                     </button>
@@ -399,7 +399,7 @@ const NoticeBoardDetails = () => {
     if (error) return (
         <div className="p-6 text-center">
             <p className="text-red-600">{error}</p>
-            <button onClick={() => navigate(-1)} className="mt-3 text-emerald-600 hover:underline text-sm">Back</button>
+            <button data-testid="notice-navigate-btn" onClick={() => navigate(-1)} className="mt-3 text-emerald-600 hover:underline text-sm">Back</button>
         </div>
     );
     if (!board) return null;
@@ -413,7 +413,7 @@ const NoticeBoardDetails = () => {
             {confirmDialog}
             {/* Header */}
             <div className="mb-6">
-                <button onClick={() => navigate(-1)}
+                <button data-testid="notice-navigate-btn-2" onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mb-4 transition-colors">
                     <ArrowLeft size={16} /> Back
                 </button>
@@ -436,7 +436,7 @@ const NoticeBoardDetails = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={load} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                        <button data-testid="notice-load-btn" onClick={load} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                             <RefreshCcw size={16} />
                         </button>
                         {isPrincipal && (
@@ -473,7 +473,7 @@ const NoticeBoardDetails = () => {
                     { key: "DRAFT", label: "Drafts" },
                     { key: "ARCHIVED", label: "Archived" },
                 ].map(tab => (
-                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                    <button data-testid="notice-active-tab-btn" key={tab.key} onClick={() => setActiveTab(tab.key)}
                         className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all
                             ${activeTab === tab.key ? "bg-white shadow-sm text-slate-800" : "text-slate-500 hover:text-slate-700"}`}>
                         {tab.label}
@@ -487,7 +487,7 @@ const NoticeBoardDetails = () => {
                     <Bell size={36} className="mx-auto mb-3 opacity-30" />
                     <p className="font-medium text-slate-500">No notices in this view</p>
                     {isPrincipal && activeTab === "ALL" && (
-                        <button onClick={() => setShowCreate(true)}
+                        <button data-testid="notice-show-create-btn" onClick={() => setShowCreate(true)}
                             className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm hover:bg-emerald-700">
                             Create First Notice
                         </button>

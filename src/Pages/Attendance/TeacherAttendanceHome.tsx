@@ -48,7 +48,7 @@ function Toast({ t, clear }: { t:{type:string;msg:string}|null; clear:()=>void }
             }`}>
             {t.type==="success" ? <CheckCircle2 size={14}/> : <XCircle size={14}/>}
             <span>{t.msg}</span>
-            <button onClick={clear} className="ml-auto opacity-60 hover:opacity-100"><X size={13}/></button>
+            <button data-testid="attendance-clear-btn" onClick={clear} className="ml-auto opacity-60 hover:opacity-100"><X size={13}/></button>
         </motion.div>
     );
 }
@@ -157,7 +157,7 @@ function MarkTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Date</label>
-                        <input type="date" value={selDate} max={TODAY}
+                        <input data-testid="attendance-sel-date-input" type="date" value={selDate} max={TODAY}
                             onChange={e => setSelDate(e.target.value)}
                             className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-violet-500 outline-none"/>
                         <p className="text-[10px] text-slate-400 mt-1">{dateLabel}</p>

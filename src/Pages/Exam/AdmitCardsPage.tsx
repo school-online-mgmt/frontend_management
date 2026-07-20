@@ -156,7 +156,7 @@ export default function AdmitCardsPage() {
                 gradient="from-violet-600 via-indigo-600 to-blue-600"
                 actions={
                     <div className="flex items-center gap-2">
-                        <button
+                        <button data-testid="exam-reload-btn"
                             onClick={reload}
                             disabled={loading}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-1.5"
@@ -165,7 +165,7 @@ export default function AdmitCardsPage() {
                             Refresh
                         </button>
                         {canMutate && (
-                            <button
+                            <button data-testid="exam-open-publish-btn"
                                 onClick={openPublish}
                                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-700 hover:bg-indigo-50 flex items-center gap-1.5 shadow-sm"
                             >
@@ -182,7 +182,7 @@ export default function AdmitCardsPage() {
                     <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                         <AlertTriangle size={16} />
                         <span className="flex-1">{loadError}</span>
-                        <button onClick={reload} className="text-xs font-semibold underline hover:no-underline">
+                        <button data-testid="exam-reload-btn-2" onClick={reload} className="text-xs font-semibold underline hover:no-underline">
                             Retry
                         </button>
                     </div>
@@ -252,7 +252,7 @@ export default function AdmitCardsPage() {
                                     Students with outstanding fees will be blocked automatically.
                                 </p>
                             </div>
-                            <button
+                            <button data-testid="exam-show-publish-btn"
                                 onClick={() => setShowPublish(false)}
                                 disabled={publishing}
                                 className="p-1.5 -mr-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
@@ -264,7 +264,7 @@ export default function AdmitCardsPage() {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Session *</label>
-                                <select
+                                <select data-testid="exam-form-select"
                                     value={form.sessionId}
                                     onChange={(e) => setForm((f) => ({ ...f, sessionId: e.target.value }))}
                                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
@@ -282,7 +282,7 @@ export default function AdmitCardsPage() {
                                 <label className="block text-xs font-medium text-slate-600 mb-1">Exam term *</label>
                                 <div className="flex gap-2">
                                     {TERMS.map((t) => (
-                                        <button
+                                        <button data-testid="exam-form-btn"
                                             key={t.value}
                                             type="button"
                                             onClick={() => setForm((f) => ({ ...f, examTerm: t.value }))}
@@ -302,7 +302,7 @@ export default function AdmitCardsPage() {
                                 <label className="block text-xs font-medium text-slate-600 mb-1">
                                     Exam name <span className="text-slate-400 font-normal">(optional)</span>
                                 </label>
-                                <input
+                                <input data-testid="exam-form-input"
                                     type="text"
                                     value={form.examName}
                                     placeholder="e.g. Mid-Term Examination"
@@ -319,7 +319,7 @@ export default function AdmitCardsPage() {
                                 <label className="block text-xs font-medium text-slate-600 mb-1">
                                     Notes <span className="text-slate-400 font-normal">(optional)</span>
                                 </label>
-                                <textarea
+                                <textarea data-testid="exam-form-input-2"
                                     value={form.notes}
                                     placeholder="Shown to students on their admit-card list"
                                     maxLength={500}
@@ -331,14 +331,14 @@ export default function AdmitCardsPage() {
                         </div>
 
                         <div className="flex justify-end gap-2 pt-2">
-                            <button
+                            <button data-testid="exam-show-publish-btn-2"
                                 onClick={() => setShowPublish(false)}
                                 disabled={publishing}
                                 className="px-4 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
-                            <button
+                            <button data-testid="exam-publish-btn"
                                 onClick={handlePublish}
                                 disabled={publishing || !form.sessionId}
                                 className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 flex items-center gap-2"
@@ -444,7 +444,7 @@ const ReleaseTable = ({
                         </td>
                         <td className="px-3 py-3 text-right">
                             {canMutate && !r.revokedAt && (
-                                <button
+                                <button data-testid="exam-revoke-btn"
                                     onClick={() => onRevoke(r)}
                                     className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg"
                                 >

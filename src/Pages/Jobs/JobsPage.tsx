@@ -108,7 +108,7 @@ const AttendanceReportJobCard: React.FC = () => {
                         <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1.5">
                             Report for
                         </label>
-                        <select value={selectedIdx} onChange={(e) => setSelectedIdx(Number(e.target.value))}
+                        <select data-testid="jobs-selected-idx-select" value={selectedIdx} onChange={(e) => setSelectedIdx(Number(e.target.value))}
                             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-cyan-500/25 focus:border-cyan-400 outline-none">
                             {months.map((m, i) => (
                                 <option key={`${m.month}-${m.year}`} value={i}>
@@ -117,7 +117,7 @@ const AttendanceReportJobCard: React.FC = () => {
                             ))}
                         </select>
                     </div>
-                    <button onClick={runJob} disabled={running}
+                    <button data-testid="jobs-run-job-btn" onClick={runJob} disabled={running}
                         className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-sm">
                         {running ? <><Loader2 size={14} className="animate-spin" /> Sending…</> : <><Play size={14} /> Run Now</>}
                     </button>
@@ -191,7 +191,7 @@ const LateFeeSweepJobCard: React.FC = () => {
             infoNote="Requires the FINANCE module and a fee structure with 'Enable late fees' turned on. Late-fee amount = min(cap, flat + percent% × parent invoice)."
             actionRow={
                 <div className="flex-1 flex justify-end">
-                    <button onClick={runJob} disabled={running}
+                    <button data-testid="jobs-run-job-btn-2" onClick={runJob} disabled={running}
                         className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-sm">
                         {running ? <><Loader2 size={14} className="animate-spin" /> Running…</> : <><Play size={14} /> Run Now</>}
                     </button>
@@ -299,7 +299,7 @@ const JobCard: React.FC<JobCardProps> = ({
             </div>
 
             <div className="border-t border-slate-100">
-                <button onClick={() => setShowHistory(v => !v)}
+                <button data-testid="jobs-show-history-btn" onClick={() => setShowHistory(v => !v)}
                     className="w-full px-5 py-3 flex items-center gap-3 hover:bg-slate-50">
                     <Clock size={14} className="text-slate-500" />
                     <span className="text-sm font-bold text-slate-800 flex-1 text-left">Run history</span>

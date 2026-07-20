@@ -230,7 +230,7 @@ const ChangePasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               <p className="text-xs text-slate-500">Update your account password</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+          <button data-testid="layout-close-btn" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -254,7 +254,7 @@ const ChangePasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               <div key={label}>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>
                 <div className="relative">
-                  <input
+                  <input data-testid="layout-toggle-input"
                     type={show ? "text" : "password"}
                     value={value}
                     onChange={e => setter(e.target.value)}
@@ -270,7 +270,7 @@ const ChangePasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               </div>
             ))}
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={onClose}
+              <button data-testid="layout-close-btn-2" type="button" onClick={onClose}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
                 Cancel
               </button>
@@ -458,7 +458,7 @@ const Layout = () => {
             )}
           </Link>
           {isMobile && (
-            <button onClick={() => setMobileOpen(false)}
+            <button data-testid="layout-mobile-open-btn" onClick={() => setMobileOpen(false)}
               aria-label="Close navigation"
               className="ml-auto w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors active:bg-white/20">
               <X size={20} />

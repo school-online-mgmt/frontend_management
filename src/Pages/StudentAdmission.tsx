@@ -291,7 +291,7 @@ const StudentAdmission = () => {
               <p className="text-sm font-semibold text-red-800">Error</p>
               <p className="text-sm text-red-700 mt-0.5">{error}</p>
             </div>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+            <button data-testid="student-admission-error-btn" onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
               <X size={16} />
             </button>
           </div>
@@ -389,7 +389,7 @@ const StudentAdmission = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-5 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-lg font-bold">Applicant Details</h2>
-              <button onClick={() => setSelectedApplicant(null)} className="p-1 rounded-lg hover:bg-white/10 transition">
+              <button data-testid="student-admission-selected-applicant-btn" onClick={() => setSelectedApplicant(null)} className="p-1 rounded-lg hover:bg-white/10 transition">
                 <X size={20} />
               </button>
             </div>
@@ -420,17 +420,17 @@ const StudentAdmission = () => {
               <div className="flex gap-2 pt-2 border-t border-slate-100">
                 {selectedApplicant.status === "APPLIED" && (
                   <>
-                    <button onClick={() => setShowAdmissionForm(true)}
+                    <button data-testid="student-admission-show-admission-form-btn" onClick={() => setShowAdmissionForm(true)}
                       className="flex-1 bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
                       Create Admission
                     </button>
-                    <button onClick={() => handleRejectApplication(selectedApplicant.id)}
+                    <button data-testid="student-admission-reject-application-btn" onClick={() => handleRejectApplication(selectedApplicant.id)}
                       className="bg-red-50 text-red-600 px-4 py-2.5 rounded-lg hover:bg-red-100 transition text-sm font-medium">
                       Reject
                     </button>
                   </>
                 )}
-                <button onClick={() => setSelectedApplicant(null)}
+                <button data-testid="student-admission-selected-applicant-btn-2" onClick={() => setSelectedApplicant(null)}
                   className="bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg hover:bg-slate-200 transition text-sm font-medium">
                   Close
                 </button>
@@ -449,7 +449,7 @@ const StudentAdmission = () => {
                 <h2 className="text-lg font-bold">Create Admission</h2>
                 <p className="text-emerald-100 text-xs mt-0.5">{selectedApplicant.firstName} {selectedApplicant.lastName}</p>
               </div>
-              <button onClick={() => setShowAdmissionForm(false)} className="p-1 rounded-lg hover:bg-white/10 transition">
+              <button data-testid="student-admission-show-admission-form-btn-2" onClick={() => setShowAdmissionForm(false)} className="p-1 rounded-lg hover:bg-white/10 transition">
                 <X size={20} />
               </button>
             </div>
@@ -519,7 +519,7 @@ const StudentAdmission = () => {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Transport</p>
                 {/* Toggle */}
                 <label className="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors select-none">
-                  <input type="checkbox" checked={admissionData.transportOpted}
+                  <input data-testid="student-admission-admission-data-checkbox" type="checkbox" checked={admissionData.transportOpted}
                     onChange={(e) => setAdmissionData({
                       ...admissionData,
                       transportOpted: e.target.checked,
@@ -550,7 +550,7 @@ const StudentAdmission = () => {
                     ) : (
                       <>
                         {/* Dropdown */}
-                        <select value={admissionData.transportZoneId ?? ""}
+                        <select data-testid="student-admission-admission-data-select" value={admissionData.transportZoneId ?? ""}
                           onChange={(e) => setAdmissionData({ ...admissionData, transportZoneId: e.target.value || undefined })}
                           className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                           <option value="">— Select a transport zone —</option>
@@ -566,7 +566,7 @@ const StudentAdmission = () => {
                           {transportZones.map((zone: any) => {
                             const selected = admissionData.transportZoneId === zone.id;
                             return (
-                              <button key={zone.id} type="button"
+                              <button data-testid="student-admission-admission-data-btn" key={zone.id} type="button"
                                 onClick={() => setAdmissionData({ ...admissionData, transportZoneId: zone.id })}
                                 className={`text-left p-3 rounded-xl border-2 transition-all ${
                                   selected

@@ -173,7 +173,7 @@ const StudentsHome: React.FC = () => {
         onRefresh={fetchStudents}
         refreshing={loading}
         primaryActions={
-          <button onClick={() => setShowNewStudentModal(true)}
+          <button data-testid="students-show-new-student-modal-btn" onClick={() => setShowNewStudentModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
             <UserPlus size={15} /> New Student
           </button>
@@ -323,13 +323,13 @@ const StudentsHome: React.FC = () => {
             {/* Search */}
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
+              <input data-testid="students-search-input"
                 type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, phone, email, or father's name…"
                 className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 placeholder-slate-400"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <button data-testid="students-search-btn" onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   <X size={13} />
                 </button>
               )}
@@ -472,6 +472,10 @@ const StudentsHome: React.FC = () => {
                     const color = avatarColor(student.firstName);
                     return (
                       <tr key={student.id}
+                        data-testid="student-row"
+                        data-student-id={student.id}
+                        data-student-name={`${student.firstName} ${student.lastName}`}
+                        data-status={student.status}
                         onClick={() => navigate(`/student/${student.id}`)}
                         className="hover:bg-slate-50 cursor-pointer transition-colors group"
                       >

@@ -188,10 +188,10 @@ const LibraryHome = () => {
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-base font-bold text-slate-800">Reject Borrow Request</h3>
-                            <button onClick={() => setRejectModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                            <button data-testid="library-reject-modal-btn" onClick={() => setRejectModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                         </div>
                         <p className="text-sm text-slate-500 mb-4">Optionally provide a reason for the student.</p>
-                        <textarea
+                        <textarea data-testid="library-reason-input"
                             value={rejectModal.reason}
                             onChange={e => setRejectModal(m => m ? { ...m, reason: e.target.value } : null)}
                             placeholder="Rejection reason (optional)"
@@ -199,8 +199,8 @@ const LibraryHome = () => {
                             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 resize-none"
                         />
                         <div className="flex gap-3 mt-4">
-                            <button onClick={() => setRejectModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
-                            <button onClick={submitReject} disabled={rejectModal.submitting}
+                            <button data-testid="library-reject-modal-btn-2" onClick={() => setRejectModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button data-testid="library-submit-reject-btn" onClick={submitReject} disabled={rejectModal.submitting}
                                 className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2">
                                 {rejectModal.submitting ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Rejecting…</> : <><XCircle size={15} />Reject</>}
                             </button>
@@ -217,12 +217,12 @@ const LibraryHome = () => {
                             <h3 className="text-base font-bold text-slate-800">
                                 {renewalModal.action === "APPROVED" ? "Approve Renewal" : "Reject Renewal"}
                             </h3>
-                            <button onClick={() => setRenewalModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                            <button data-testid="library-renewal-modal-btn" onClick={() => setRenewalModal(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                         </div>
                         {renewalModal.action === "REJECTED" && (
                             <>
                                 <p className="text-sm text-slate-500 mb-4">Optionally provide remarks for the student.</p>
-                                <textarea
+                                <textarea data-testid="library-remarks-input"
                                     value={renewalModal.remarks}
                                     onChange={e => setRenewalModal(m => m ? { ...m, remarks: e.target.value } : null)}
                                     placeholder="Remarks (optional)"
@@ -235,8 +235,8 @@ const LibraryHome = () => {
                             <p className="text-sm text-slate-500 mb-4">This will extend the book's due date by 21 days from today.</p>
                         )}
                         <div className="flex gap-3 mt-4">
-                            <button onClick={() => setRenewalModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
-                            <button onClick={submitRenewal} disabled={renewalModal.submitting}
+                            <button data-testid="library-renewal-modal-btn-2" onClick={() => setRenewalModal(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">Cancel</button>
+                            <button data-testid="library-submit-renewal-btn" onClick={submitRenewal} disabled={renewalModal.submitting}
                                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 text-white
                                     ${renewalModal.action === "APPROVED" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
                                 {renewalModal.submitting
@@ -315,7 +315,7 @@ const LibraryHome = () => {
                     <div className="flex items-center justify-between p-4 border-b">
                         <div className="relative">
                             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
+                            <input data-testid="library-search-input"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
@@ -323,7 +323,7 @@ const LibraryHome = () => {
                                 className="pl-9 pr-4 py-2 border rounded-lg text-sm w-72"
                             />
                         </div>
-                        <button onClick={fetchBooks} className="p-2 border rounded-lg hover:bg-slate-50">
+                        <button data-testid="library-fetch-books-btn" onClick={fetchBooks} className="p-2 border rounded-lg hover:bg-slate-50">
                             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
                         </button>
                     </div>
@@ -343,7 +343,7 @@ const LibraryHome = () => {
                             {books.length === 0 ? (
                                 <tr><td colSpan={7} className="p-12 text-center text-slate-400">No books found</td></tr>
                             ) : books.map((book) => (
-                                <tr key={book.id} className="hover:bg-slate-50">
+                                <tr key={book.id} data-testid="library-book-row" data-book-id={book.id} data-title={book.title} className="hover:bg-slate-50">
                                     <td className="p-4">
                                         <button
                                             onClick={() => navigate(`/library/books/${book.id}`)}

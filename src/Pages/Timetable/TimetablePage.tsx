@@ -102,23 +102,23 @@ const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, per
                     <h3 className="text-sm font-bold text-slate-800">
                         {e ? "Edit" : "Add"} period · {DAYS.find(d => d.n === ctx.dayOfWeek)?.label} · P{ctx.periodNumber}
                     </h3>
-                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
+                    <button data-testid="timetable-close-btn" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
                 </div>
                 <div className="p-5 space-y-3.5">
                     <div>
                         <label className="text-xs font-semibold text-slate-600">Type</label>
-                        <select value={type} onChange={ev => setType(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+                        <select data-testid="timetable-type-select" value={type} onChange={ev => setType(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
                             {CELL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="text-xs font-semibold text-slate-600">Start</label>
-                            <input type="time" value={startTime} onChange={ev => setStartTime(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                            <input data-testid="timetable-start-time-input" type="time" value={startTime} onChange={ev => setStartTime(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600">End</label>
-                            <input type="time" value={endTime} onChange={ev => setEndTime(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                            <input data-testid="timetable-end-time-input" type="time" value={endTime} onChange={ev => setEndTime(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                         </div>
                     </div>
                     {slot && <p className="text-[11px] text-slate-400 -mt-1.5">Prefilled from the bell schedule (Config tab). Edit if this period differs.</p>}
@@ -126,14 +126,14 @@ const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, per
                         <>
                             <div>
                                 <label className="text-xs font-semibold text-slate-600">Subject</label>
-                                <select value={subjectId} onChange={ev => setSubjectId(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+                                <select data-testid="timetable-subject-id-select" value={subjectId} onChange={ev => setSubjectId(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
                                     <option value="">— Select subject —</option>
                                     {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-slate-600">Teacher</label>
-                                <select value={teacherId} onChange={ev => setTeacherId(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+                                <select data-testid="timetable-teacher-id-select" value={teacherId} onChange={ev => setTeacherId(ev.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
                                     <option value="">— Select teacher —</option>
                                     {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
@@ -143,15 +143,15 @@ const CellModal = ({ ctx, subjects, teachers, sessionId, sectionId, classId, per
                     )}
                     <div>
                         <label className="text-xs font-semibold text-slate-600">Room <span className="text-slate-400 font-normal">(optional)</span></label>
-                        <input value={room} onChange={ev => setRoom(ev.target.value)} placeholder="e.g. Room 12 / Lab 2" className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                        <input data-testid="timetable-room-input" value={room} onChange={ev => setRoom(ev.target.value)} placeholder="e.g. Room 12 / Lab 2" className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                     </div>
                     {error && <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700"><AlertTriangle size={13} className="shrink-0" />{error}</div>}
                 </div>
                 <div className="px-5 py-4 border-t border-slate-100 flex items-center gap-2">
-                    {e && <button onClick={remove} disabled={saving} className="px-3 py-2 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 inline-flex items-center gap-1.5"><Trash2 size={13} /> Remove</button>}
+                    {e && <button data-testid="timetable-remove-btn" onClick={remove} disabled={saving} className="px-3 py-2 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 inline-flex items-center gap-1.5"><Trash2 size={13} /> Remove</button>}
                     <div className="ml-auto flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-                        <button onClick={save} disabled={saving} className="px-4 py-2 text-xs font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 inline-flex items-center gap-1.5">
+                        <button data-testid="timetable-close-btn-2" onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                        <button data-testid="timetable-save-btn" onClick={save} disabled={saving} className="px-4 py-2 text-xs font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 inline-flex items-center gap-1.5">
                             {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
                         </button>
                     </div>
@@ -215,10 +215,10 @@ const PeriodConfigTab = ({ sessionId, initial, onSaved }: {
                 {slots.map((s, i) => (
                     <div key={i} className="grid gap-2 items-center" style={{ gridTemplateColumns: "48px 1fr 1fr 1.4fr 92px 32px" }}>
                         <span className="text-xs font-bold text-slate-600">P{s.periodNumber}</span>
-                        <input type="time" value={s.startTime} onChange={e => patch(i, { startTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
-                        <input type="time" value={s.endTime} onChange={e => patch(i, { endTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
+                        <input data-testid="timetable-start-time-input-2" type="time" value={s.startTime} onChange={e => patch(i, { startTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
+                        <input data-testid="timetable-end-time-input-2" type="time" value={s.endTime} onChange={e => patch(i, { endTime: e.target.value })} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
                         <input value={s.label ?? ""} onChange={e => patch(i, { label: e.target.value })} placeholder={s.isBreak ? "e.g. Lunch" : "optional"} className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm" />
-                        <button onClick={() => patch(i, { isBreak: !s.isBreak })}
+                        <button data-testid="timetable-patch-btn" onClick={() => patch(i, { isBreak: !s.isBreak })}
                             className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition ${s.isBreak ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-slate-200 text-slate-500"}`}>
                             {s.isBreak ? "Break" : "Class"}
                         </button>
@@ -231,9 +231,9 @@ const PeriodConfigTab = ({ sessionId, initial, onSaved }: {
             {error && <div className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700"><AlertTriangle size={13} className="shrink-0" />{error}</div>}
 
             <div className="flex items-center gap-2 mt-4">
-                <button onClick={add} disabled={slots.length >= 20}
+                <button data-testid="timetable-add-btn" onClick={add} disabled={slots.length >= 20}
                     className="px-3 py-2 text-xs font-bold text-sky-600 border border-dashed border-sky-300 rounded-lg hover:bg-sky-50 disabled:opacity-40 inline-flex items-center gap-1.5"><Plus size={13} /> Add Period</button>
-                <button onClick={save} disabled={saving}
+                <button data-testid="timetable-save-btn-2" onClick={save} disabled={saving}
                     className="ml-auto px-4 py-2 text-xs font-bold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 inline-flex items-center gap-1.5">
                     {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save Schedule
                 </button>

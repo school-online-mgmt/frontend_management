@@ -239,7 +239,7 @@ const ExamHome = () => {
                     <div className="flex flex-wrap items-end gap-3">
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class</label>
-                            <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setFilterCourse(""); }}
+                            <select data-testid="exam-filter-class-select" value={filterClass} onChange={e => { setFilterClass(e.target.value); setFilterCourse(""); }}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Classes</option>
                                 {filterOptions.classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -248,7 +248,7 @@ const ExamHome = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course</label>
-                            <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)}
+                            <select data-testid="exam-filter-course-select" value={filterCourse} onChange={e => setFilterCourse(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Courses</option>
                                 {filterOptions.courses?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -257,7 +257,7 @@ const ExamHome = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Subject</label>
-                            <select value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
+                            <select data-testid="exam-filter-subject-select" value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[130px]">
                                 <option value="">All Subjects</option>
                                 {filterOptions.subjects?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -266,7 +266,7 @@ const ExamHome = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Term</label>
-                            <select value={filterTerm} onChange={e => setFilterTerm(e.target.value)}
+                            <select data-testid="exam-filter-term-select" value={filterTerm} onChange={e => setFilterTerm(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[110px]">
                                 <option value="">All Terms</option>
                                 {filterOptions.terms?.map((t: string) => <option key={t} value={t}>{t.replace("TERM", "Term ")}</option>)}
@@ -275,7 +275,7 @@ const ExamHome = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                            <select data-testid="exam-filter-status-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[140px]">
                                 <option value="">All Statuses</option>
                                 {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
@@ -286,14 +286,14 @@ const ExamHome = () => {
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Search</label>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                <input type="text" placeholder="Exam, subject, teacher..."
+                                <input data-testid="exam-search-query-input" type="text" placeholder="Exam, subject, teacher..."
                                     value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                                     className="w-full pl-8 pr-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                             </div>
                         </div>
 
                         {activeFilters > 0 && (
-                            <button onClick={clearFilters}
+                            <button data-testid="exam-clear-filters-btn" onClick={clearFilters}
                                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors self-end">
                                 <X size={12} /> Clear ({activeFilters})
                             </button>
@@ -605,7 +605,7 @@ const ExamHome = () => {
                                     const published = termExams.filter(e => e.status === "PUBLISHED").length;
                                     return (
                                         <div key={term} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                                            <button
+                                            <button data-testid="exam-expanded-terms-btn"
                                                 onClick={() => setExpandedTerms(p => ({ ...p, [term]: !expanded }))}
                                                 className="w-full flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-100 hover:bg-slate-100 transition-colors">
                                                 <div className="flex items-center gap-3">
@@ -635,6 +635,10 @@ const ExamHome = () => {
                                                         <tbody className="divide-y divide-slate-50">
                                                             {termExams.map(exam => (
                                                                 <tr key={exam.id} onClick={() => navigate(`/exam/${exam.id}`)}
+                                                                    data-testid="exam-row"
+                                                                    data-exam-id={exam.id}
+                                                                    data-exam-name={exam.examName}
+                                                                    data-status={exam.status}
                                                                     className="hover:bg-indigo-50/30 cursor-pointer transition-colors">
                                                                     <td className="px-5 py-3.5">
                                                                         <div className="flex items-center gap-3">

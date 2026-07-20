@@ -127,7 +127,7 @@ const CourseDetails = () => {
 
             {/* Header */}
             <div>
-                <button
+                <button data-testid="course-navigate-btn"
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition text-sm font-medium mb-4"
                 >

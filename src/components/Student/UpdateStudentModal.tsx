@@ -75,7 +75,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                         <h2 className="text-xl font-bold text-slate-900">
                             Update Student Details
                         </h2>
-                        <button
+                        <button data-testid="update-student-modal-close-btn"
                             onClick={onClose}
                             className="p-2 hover:bg-slate-100 rounded-lg transition"
                         >
@@ -90,7 +90,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Session
                             </label>
-                            <select
+                            <select data-testid="update-student-modal-change-select"
                                 name="sessionId"
                                 value={formData.sessionId}
                                 onChange={handleChange}
@@ -110,7 +110,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Admission ID
                             </label>
-                            <input
+                            <input data-testid="update-student-modal-change-input"
                                 type="text"
                                 name="admissionId"
                                 value={formData.admissionId}
@@ -124,7 +124,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Roll Number
                             </label>
-                            <input
+                            <input data-testid="update-student-modal-change-input-2"
                                 type="text"
                                 name="rollNo"
                                 value={formData.rollNo}
@@ -138,7 +138,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Class
                             </label>
-                            <select
+                            <select data-testid="update-student-modal-change-select-2"
                                 name="classId"
                                 value={formData.classId}
                                 onChange={handleChange}
@@ -158,7 +158,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Section
                             </label>
-                            <select
+                            <select data-testid="update-student-modal-change-select-3"
                                 name="sectionId"
                                 value={formData.sectionId}
                                 onChange={handleChange}
@@ -178,7 +178,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Course
                             </label>
-                            <select
+                            <select data-testid="update-student-modal-change-select-4"
                                 name="courseId"
                                 value={formData.courseId}
                                 onChange={handleChange}
@@ -195,7 +195,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                         </div>
 
                         <div className="flex items-center">
-                            <input
+                            <input data-testid="update-student-modal-change-checkbox"
                                 type="checkbox"
                                 name="transportOpted"
                                 checked={formData.transportOpted}
@@ -212,7 +212,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
                                     Transport Zone
                                 </label>
-                                <input
+                                <input data-testid="update-student-modal-change-input-3"
                                     type="text"
                                     name="transportZoneId"
                                     value={formData.transportZoneId}
@@ -225,7 +225,7 @@ const UpdateStudentModal = ({ student, onClose, onRefresh }: UpdateStudentModalP
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-                        <button
+                        <button data-testid="update-student-modal-close-btn-2"
                             type="button"
                             onClick={onClose}
                             className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"

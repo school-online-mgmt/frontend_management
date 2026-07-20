@@ -177,7 +177,7 @@ export default function PaymentSettingsTab() {
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
             <label className={lbl}>Key ID</label>
-            <input
+            <input data-testid="account-key-id-input"
               type="text"
               className={inp}
               value={keyId}
@@ -197,14 +197,14 @@ export default function PaymentSettingsTab() {
               )}
             </label>
             <div className="relative">
-              <input
+              <input data-testid="account-key-secret-input"
                 type={showKeySecret ? "text" : "password"}
                 className={inp + " pr-9"}
                 value={keySecret}
                 onChange={(e) => setKeySecret(e.target.value)}
                 placeholder={settings.hasKeySecret ? "•••••••••• (leave blank to keep)" : "Enter secret"}
               />
-              <button
+              <button data-testid="account-show-key-secret-btn"
                 type="button"
                 onClick={() => setShowKeySecret(!showKeySecret)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
@@ -224,14 +224,14 @@ export default function PaymentSettingsTab() {
               )}
             </label>
             <div className="relative">
-              <input
+              <input data-testid="account-webhook-secret-input"
                 type={showWebhookSecret ? "text" : "password"}
                 className={inp + " pr-9"}
                 value={webhookSecret}
                 onChange={(e) => setWebhookSecret(e.target.value)}
                 placeholder={settings.hasWebhookSecret ? "•••••••••• (leave blank to keep)" : "Optional but recommended"}
               />
-              <button
+              <button data-testid="account-show-webhook-secret-btn"
                 type="button"
                 onClick={() => setShowWebhookSecret(!showWebhookSecret)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
@@ -246,7 +246,7 @@ export default function PaymentSettingsTab() {
         </div>
 
         <div className="flex items-center gap-3 mt-6">
-          <button
+          <button data-testid="account-save-btn"
             type="button"
             disabled={saving}
             onClick={onSave}
@@ -283,7 +283,7 @@ export default function PaymentSettingsTab() {
           <code className="text-xs text-slate-700 font-mono truncate flex-1">
             {settings.webhookUrl || "(set APP_BASE_URL in backend env)"}
           </code>
-          <button
+          <button data-testid="account-copy-webhook-btn"
             type="button"
             onClick={copyWebhook}
             disabled={!settings.webhookUrl}

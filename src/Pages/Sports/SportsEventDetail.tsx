@@ -117,7 +117,7 @@ const SportsEventDetail = () => {
 
     return (
         <div className="space-y-6">
-            <button onClick={() => nav("/sports")} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+            <button data-testid="sports-nav-btn" onClick={() => nav("/sports")} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
                 <ArrowLeft size={16} /> Back to Sports
             </button>
             <div className="bg-gradient-to-br from-green-600 via-emerald-600 to-lime-600 rounded-xl p-6 text-white">
@@ -141,18 +141,18 @@ const SportsEventDetail = () => {
                     </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                    {event.status === "DRAFT" && <button onClick={publish} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Publish</button>}
+                    {event.status === "DRAFT" && <button data-testid="sports-publish-btn" onClick={publish} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Publish</button>}
                     {event.enrollmentStatus !== "OPEN" && event.status !== "DRAFT" && event.status !== "CANCELLED" && event.status !== "COMPLETED" && (
-                        <button onClick={openEnr} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Open Enrollment</button>
+                        <button data-testid="sports-open-enr-btn" onClick={openEnr} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Open Enrollment</button>
                     )}
                     {event.enrollmentStatus === "OPEN" && (
-                        <button onClick={closeEnr} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Close Enrollment</button>
+                        <button data-testid="sports-close-enr-btn" onClick={closeEnr} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Close Enrollment</button>
                     )}
                     {event.status !== "COMPLETED" && event.status !== "CANCELLED" && event.status !== "DRAFT" && (
-                        <button onClick={complete} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Mark Complete</button>
+                        <button data-testid="sports-complete-btn" onClick={complete} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-xs">Mark Complete</button>
                     )}
                     {event.status !== "CANCELLED" && event.status !== "COMPLETED" && (
-                        <button onClick={cancel} className="px-3 py-1.5 bg-rose-500/40 hover:bg-rose-500/60 rounded text-xs">Cancel Event</button>
+                        <button data-testid="sports-cancel-btn" onClick={cancel} className="px-3 py-1.5 bg-rose-500/40 hover:bg-rose-500/60 rounded text-xs">Cancel Event</button>
                     )}
                 </div>
             </div>
@@ -220,7 +220,7 @@ const SportsEventDetail = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className={`text-xs px-2 py-1 rounded ${c.role === "HEAD" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{c.role}</span>
-                                    <button onClick={() => removeCoach(c.id)} className="text-rose-600 hover:text-rose-700 text-xs">Remove</button>
+                                    <button data-testid="sports-remove-coach-btn" onClick={() => removeCoach(c.id)} className="text-rose-600 hover:text-rose-700 text-xs">Remove</button>
                                 </div>
                             </div>
                         ))}
@@ -230,7 +230,7 @@ const SportsEventDetail = () => {
                 <TabPanel tabKey="enrollments">
                     <div className="mb-3 flex justify-between items-center">
                         <h3 className="font-semibold">Applications</h3>
-                        <select value={enrollFilter} onChange={(e) => setEnrollFilter(e.target.value)} className="px-3 py-1.5 border rounded-lg text-sm">
+                        <select data-testid="sports-enroll-filter-select" value={enrollFilter} onChange={(e) => setEnrollFilter(e.target.value)} className="px-3 py-1.5 border rounded-lg text-sm">
                             {["APPLIED", "ACCEPTED", "REJECTED", "WAITLISTED", "WITHDRAWN", "COMPLETED"].map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
@@ -249,9 +249,9 @@ const SportsEventDetail = () => {
                                     <StatusPill value={en.status} />
                                     {en.status === "APPLIED" && (
                                         <>
-                                            <button onClick={() => decide(en.id, "ACCEPT")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200" title="Accept"><CheckCircle size={14} /></button>
-                                            <button onClick={() => setRejectModal({ id: en.id, reason: "" })} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200" title="Reject"><XCircle size={14} /></button>
-                                            <button onClick={() => decide(en.id, "WAITLIST")} className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Waitlist"><Clock size={14} /></button>
+                                            <button data-testid="sports-decide-btn" onClick={() => decide(en.id, "ACCEPT")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200" title="Accept"><CheckCircle size={14} /></button>
+                                            <button data-testid="sports-reject-modal-btn" onClick={() => setRejectModal({ id: en.id, reason: "" })} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200" title="Reject"><XCircle size={14} /></button>
+                                            <button data-testid="sports-decide-btn-2" onClick={() => decide(en.id, "WAITLIST")} className="p-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="Waitlist"><Clock size={14} /></button>
                                         </>
                                     )}
                                 </div>
@@ -288,7 +288,7 @@ const SportsEventDetail = () => {
                 <TabPanel tabKey="incidents">
                     <div className="mb-3 flex justify-between">
                         <h3 className="font-semibold">Incidents</h3>
-                        <button onClick={() => setIncidentModal(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs">Report Incident</button>
+                        <button data-testid="sports-incident-modal-btn" onClick={() => setIncidentModal(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs">Report Incident</button>
                     </div>
                     {(incidentsQuery.data ?? []).length === 0 ? <p className="text-slate-500 text-sm">No incidents reported.</p> :
                     <div className="space-y-2">
@@ -308,7 +308,7 @@ const SportsEventDetail = () => {
                 <TabPanel tabKey="achievements">
                     <div className="mb-3 flex justify-between">
                         <h3 className="font-semibold">Achievements & Awards</h3>
-                        <button onClick={() => setAchievementModal(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs">Award Achievement</button>
+                        <button data-testid="sports-achievement-modal-btn" onClick={() => setAchievementModal(true)} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs">Award Achievement</button>
                     </div>
                     {(achievementsQuery.data ?? []).length === 0 ? <p className="text-slate-500 text-sm">No achievements awarded yet.</p> :
                     <div className="space-y-2">
@@ -333,10 +333,10 @@ const SportsEventDetail = () => {
             {rejectModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-                        <div className="flex justify-between"><h3 className="font-semibold">Reject application</h3><button onClick={() => setRejectModal(null)}><X size={20} /></button></div>
-                        <textarea value={rejectModal.reason} onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })} placeholder="Reason (shown to student)" className="w-full border rounded-lg p-2 text-sm" rows={3} />
+                        <div className="flex justify-between"><h3 className="font-semibold">Reject application</h3><button data-testid="sports-reject-modal-btn-2" onClick={() => setRejectModal(null)}><X size={20} /></button></div>
+                        <textarea data-testid="sports-reject-modal-input" value={rejectModal.reason} onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })} placeholder="Reason (shown to student)" className="w-full border rounded-lg p-2 text-sm" rows={3} />
                         <div className="flex gap-2 justify-end">
-                            <button onClick={() => setRejectModal(null)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+                            <button data-testid="sports-reject-modal-btn-3" onClick={() => setRejectModal(null)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
                             <button onClick={() => { decide(rejectModal.id, "REJECT", rejectModal.reason); setRejectModal(null); }} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm">Reject</button>
                         </div>
                     </div>
@@ -365,11 +365,11 @@ const AddCoachInline = ({ teachers, onAdd }: { teachers: any[]; onAdd: (teacherI
     const [role, setRole] = useState<"HEAD" | "ASSISTANT">("ASSISTANT");
     return (
         <div className="flex gap-2">
-            <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className="px-2 py-1 border rounded text-xs">
+            <select data-testid="sports-teacher-id-select" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className="px-2 py-1 border rounded text-xs">
                 <option value="">Select coach</option>
                 {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-            <select value={role} onChange={(e) => setRole(e.target.value as "HEAD" | "ASSISTANT")} className="px-2 py-1 border rounded text-xs">
+            <select data-testid="sports-role-select" value={role} onChange={(e) => setRole(e.target.value as "HEAD" | "ASSISTANT")} className="px-2 py-1 border rounded text-xs">
                 <option value="ASSISTANT">Assistant</option>
                 <option value="HEAD">Head</option>
             </select>
@@ -388,22 +388,22 @@ const IncidentModal = ({ eventId, onClose, onCreated, onError }: { eventId: stri
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-3">
-                <div className="flex justify-between"><h3 className="font-semibold">Report Incident</h3><button onClick={onClose}><X size={20} /></button></div>
+                <div className="flex justify-between"><h3 className="font-semibold">Report Incident</h3><button data-testid="sports-close-btn" onClick={onClose}><X size={20} /></button></div>
                 <Field label="Student">
-                    <select value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })} className="w-full border rounded p-2 text-sm">
+                    <select data-testid="sports-form-select" value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })} className="w-full border rounded p-2 text-sm">
                         <option value="">Select</option>
                         {(enrollmentsQuery.data ?? []).map((en: any) => <option key={en.studentId} value={en.studentId}>{en.studentFirst} {en.studentLast}</option>)}
                     </select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                    <Field label="Date"><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full border rounded p-2 text-sm" /></Field>
-                    <Field label="Severity"><select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })} className="w-full border rounded p-2 text-sm">{["MINOR", "MODERATE", "SEVERE"].map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
+                    <Field label="Date"><input data-testid="sports-form-input" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full border rounded p-2 text-sm" /></Field>
+                    <Field label="Severity"><select data-testid="sports-form-select-2" value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })} className="w-full border rounded p-2 text-sm">{["MINOR", "MODERATE", "SEVERE"].map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
                 </div>
-                <Field label="What happened?"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border rounded p-2 text-sm" rows={3} /></Field>
-                <Field label="Action taken"><textarea value={form.actionTaken} onChange={(e) => setForm({ ...form, actionTaken: e.target.value })} className="w-full border rounded p-2 text-sm" rows={2} /></Field>
+                <Field label="What happened?"><textarea data-testid="sports-form-input-2" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border rounded p-2 text-sm" rows={3} /></Field>
+                <Field label="Action taken"><textarea data-testid="sports-form-input-3" value={form.actionTaken} onChange={(e) => setForm({ ...form, actionTaken: e.target.value })} className="w-full border rounded p-2 text-sm" rows={2} /></Field>
                 <div className="flex gap-2 justify-end">
-                    <button onClick={onClose} className="px-4 py-2 border rounded text-sm">Cancel</button>
-                    <button onClick={submit} className="px-4 py-2 bg-emerald-600 text-white rounded text-sm">Log Incident</button>
+                    <button data-testid="sports-close-btn-2" onClick={onClose} className="px-4 py-2 border rounded text-sm">Cancel</button>
+                    <button data-testid="sports-submit-btn" onClick={submit} className="px-4 py-2 bg-emerald-600 text-white rounded text-sm">Log Incident</button>
                 </div>
             </div>
         </div>
@@ -420,9 +420,9 @@ const AchievementModal = ({ eventId, enrollments, onClose, onCreated, onError }:
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-3">
-                <div className="flex justify-between"><h3 className="font-semibold">Award Achievement</h3><button onClick={onClose}><X size={20} /></button></div>
+                <div className="flex justify-between"><h3 className="font-semibold">Award Achievement</h3><button data-testid="sports-close-btn-3" onClick={onClose}><X size={20} /></button></div>
                 <Field label="Student">
-                    <select value={form.enrollmentId} onChange={(e) => {
+                    <select data-testid="sports-enrollment-id-select" value={form.enrollmentId} onChange={(e) => {
                         const en = enrollments.find((x: any) => x.id === e.target.value);
                         setForm({ ...form, enrollmentId: e.target.value, studentId: en?.studentId ?? "" });
                     }} className="w-full border rounded p-2 text-sm">
@@ -431,13 +431,13 @@ const AchievementModal = ({ eventId, enrollments, onClose, onCreated, onError }:
                     </select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                    <Field label="Type"><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full border rounded p-2 text-sm">{["GOLD", "SILVER", "BRONZE", "PARTICIPATION", "SPECIAL_MENTION"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
-                    <Field label="Title"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Best Striker" className="w-full border rounded p-2 text-sm" /></Field>
+                    <Field label="Type"><select data-testid="sports-form-select-3" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full border rounded p-2 text-sm">{["GOLD", "SILVER", "BRONZE", "PARTICIPATION", "SPECIAL_MENTION"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+                    <Field label="Title"><input data-testid="sports-form-input-4" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Best Striker" className="w-full border rounded p-2 text-sm" /></Field>
                 </div>
-                <Field label="Description"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border rounded p-2 text-sm" rows={2} /></Field>
+                <Field label="Description"><textarea data-testid="sports-form-input-5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full border rounded p-2 text-sm" rows={2} /></Field>
                 <div className="flex gap-2 justify-end">
-                    <button onClick={onClose} className="px-4 py-2 border rounded text-sm">Cancel</button>
-                    <button onClick={submit} className="px-4 py-2 bg-emerald-600 text-white rounded text-sm">Award</button>
+                    <button data-testid="sports-close-btn-4" onClick={onClose} className="px-4 py-2 border rounded text-sm">Cancel</button>
+                    <button data-testid="sports-submit-btn-2" onClick={submit} className="px-4 py-2 bg-emerald-600 text-white rounded text-sm">Award</button>
                 </div>
             </div>
         </div>

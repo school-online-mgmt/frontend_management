@@ -120,7 +120,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, trend }: {
 const FilterBadge = ({ label, onClear }: { label: string; onClear: () => void }) => (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
         {label}
-        <button onClick={onClear} className="hover:bg-indigo-100 rounded p-0.5"><X size={10} /></button>
+        <button data-testid="performance-clear-btn" onClick={onClear} className="hover:bg-indigo-100 rounded p-0.5"><X size={10} /></button>
     </span>
 );
 
@@ -263,7 +263,7 @@ const PerformancePage: React.FC = () => {
                         <span className="ml-1 w-5 h-5 bg-indigo-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center">{activeFilterCount}</span>
                     )}
                     {activeFilterCount > 0 && (
-                        <button onClick={clearAllFilters} className="ml-auto text-xs text-slate-400 hover:text-red-500 font-medium">Clear All</button>
+                        <button data-testid="performance-clear-all-filters-btn" onClick={clearAllFilters} className="ml-auto text-xs text-slate-400 hover:text-red-500 font-medium">Clear All</button>
                     )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -271,12 +271,12 @@ const PerformancePage: React.FC = () => {
                         filter was removed per request — drill-down by class
                         happens via the Class breakdown tab; section filtering
                         is more useful as a refinement and is kept. */}
-                    <select value={term} onChange={e => setTerm(e.target.value)}
+                    <select data-testid="performance-term-select" value={term} onChange={e => setTerm(e.target.value)}
                         className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors font-medium">
                         {TERMS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     {sections.length > 0 && (
-                        <select value={sectionId} onChange={e => setSectionId(e.target.value)}
+                        <select data-testid="performance-section-id-select" value={sectionId} onChange={e => setSectionId(e.target.value)}
                             className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors font-medium">
                             <option value="">All Sections</option>
                             {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -286,7 +286,7 @@ const PerformancePage: React.FC = () => {
                     <div className="relative">
                         <div className="flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus-within:border-indigo-400 focus-within:bg-white transition-colors">
                             <Search size={12} className="text-slate-400" />
-                            <input
+                            <input data-testid="performance-search-student-input"
                                 type="text"
                                 placeholder="Search student…"
                                 value={studentId ? selectedStudentName : studentSearch}
@@ -427,7 +427,7 @@ const PerformancePage: React.FC = () => {
                                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                                     <div className="px-6 py-4 border-b bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between">
                                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Trophy size={16} className="text-amber-500" /> Top Performers</h3>
-                                        <button onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">View All <ChevronRight size={12} /></button>
+                                        <button data-testid="performance-tab-btn" onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">View All <ChevronRight size={12} /></button>
                                     </div>
                                     <div className="divide-y divide-slate-50">
                                         {topPerformers.slice(0, 5).map((tp, i) => (

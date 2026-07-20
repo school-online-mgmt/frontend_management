@@ -96,7 +96,7 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
                         <h2 className="text-2xl font-bold">{examName} - Results</h2>
                         <p className="text-blue-100 text-sm mt-1">Update student marks and remarks</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-blue-600 rounded-lg transition">
+                    <button data-testid="exam-results-modal-close-btn" onClick={onClose} className="p-2 hover:bg-blue-600 rounded-lg transition">
                         <X size={24} />
                     </button>
                 </div>
@@ -134,7 +134,7 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
                                             </td>
                                             <td className="p-4 text-center">
                                                 {editingIds.has(result.id) ? (
-                                                    <input
+                                                    <input data-testid="exam-results-modal-marks-change-input"
                                                         type="number"
                                                         value={marksData[result.id]?.marks || ''}
                                                         onChange={(e) => handleMarksChange(result.id, e.target.value)}
@@ -149,7 +149,7 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
                                             </td>
                                             <td className="p-4">
                                                 {editingIds.has(result.id) ? (
-                                                    <input
+                                                    <input data-testid="exam-results-modal-remarks-change-input"
                                                         type="text"
                                                         value={marksData[result.id]?.remarks || ''}
                                                         onChange={(e) => handleRemarksChange(result.id, e.target.value)}
@@ -165,14 +165,14 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
                                             <td className="p-4 text-center">
                                                 {editingIds.has(result.id) ? (
                                                     <div className="flex gap-2 justify-center">
-                                                        <button
+                                                        <button data-testid="exam-results-modal-edit-cancel-btn"
                                                             onClick={() => handleEditCancel(result.id)}
                                                             className="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition text-sm"
                                                             disabled={updateResultMutation.isPending}
                                                         >
                                                             Cancel
                                                         </button>
-                                                        <button
+                                                        <button data-testid="exam-results-modal-save-marks-btn"
                                                             onClick={() => handleSaveMarks(result)}
                                                             disabled={updateResultMutation.isPending || !marksData[result.id]?.marks}
                                                             className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition text-sm flex items-center gap-1"
@@ -186,7 +186,7 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button
+                                                    <button data-testid="exam-results-modal-edit-start-btn"
                                                         onClick={() => handleEditStart(result)}
                                                         className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm flex items-center gap-1 mx-auto"
                                                     >
@@ -205,7 +205,7 @@ const ExamResultsModal = ({ examId, examName, onClose }: ExamResultsModalProps) 
 
                 {/* Footer */}
                 <div className="border-t p-4 flex justify-end gap-2 sticky bottom-0 bg-white">
-                    <button
+                    <button data-testid="exam-results-modal-close-btn-2"
                         onClick={onClose}
                         className="px-6 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition font-medium"
                     >

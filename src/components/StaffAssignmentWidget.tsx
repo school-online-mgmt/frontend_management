@@ -56,7 +56,7 @@ const AssignModal = ({
             <h3 className="text-sm font-bold text-slate-800">Assign Teacher</h3>
             <p className="text-xs text-slate-500 mt-0.5">{target.label}</p>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><X size={16} /></button>
+          <button data-testid="staff-assignment-widget-close-btn" onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><X size={16} /></button>
         </div>
         <select data-testid="assign-teacher-select" value={selected} onChange={e => setSelected(e.target.value)}
           className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300">
@@ -67,7 +67,7 @@ const AssignModal = ({
         </select>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
-          <button onClick={onClose}
+          <button data-testid="staff-assignment-widget-close-btn-2" onClick={onClose}
             className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
             Cancel
           </button>
@@ -197,7 +197,7 @@ const StaffAssignmentWidget = () => {
               </span>
             )}
           </div>
-          <button onClick={load} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors">
+          <button data-testid="staff-assignment-widget-load-btn" onClick={load} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors">
             <RefreshCw size={13} />
           </button>
         </div>

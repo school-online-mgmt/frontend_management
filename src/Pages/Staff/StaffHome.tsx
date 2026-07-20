@@ -165,7 +165,7 @@ const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOn
             // minRead = always-on module: READ is the floor, so NONE is locked.
             const locked = readOnly || (minRead && l === 'NONE');
             return (
-                <button
+                <button data-testid="staff-change-btn"
                     key={l}
                     type="button"
                     disabled={locked}
@@ -265,15 +265,15 @@ const PermissionGrid: React.FC<{
                             ))}
                         </select>
                     )}
-                    <button type="button" onClick={() => applyAll('READ', 'enabled')}
+                    <button data-testid="staff-apply-all-btn" type="button" onClick={() => applyAll('READ', 'enabled')}
                         className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 px-2.5 py-1 rounded-lg hover:bg-sky-50 transition-colors">
                         Read all
                     </button>
-                    <button type="button" onClick={() => applyAll('ADMIN', 'enabled')}
+                    <button data-testid="staff-apply-all-btn-2" type="button" onClick={() => applyAll('ADMIN', 'enabled')}
                         className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-colors">
                         Admin all
                     </button>
-                    <button type="button" onClick={() => emit([])}
+                    <button data-testid="staff-emit-btn" type="button" onClick={() => emit([])}
                         className="text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors"
                         title="Clears optional modules; People/Teachers/Academics stay at Read">
                         Clear

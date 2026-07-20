@@ -94,7 +94,7 @@ const CreateBoardModal = ({
                         <div className="p-2 bg-emerald-500/20 rounded-lg"><Bell size={18} className="text-emerald-400" /></div>
                         <h2 className="text-white font-semibold text-lg">Create Notice Board</h2>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl leading-none">×</button>
+                    <button data-testid="notice-close-btn" onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-xl leading-none">×</button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
@@ -156,7 +156,7 @@ const CreateBoardModal = ({
                         <p className="text-xs text-slate-400 mt-1">If assigned, the teacher can approve/reject notices on this board.</p>
                     </div>
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose}
+                        <button data-testid="notice-close-btn-2" type="button" onClick={onClose}
                             className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors">
                             Cancel
                         </button>
@@ -251,7 +251,7 @@ const NoticeBoardHome = () => {
                 refreshing={loading}
                 primaryActions={
                     isPrincipal ? (
-                        <button onClick={() => setShowCreate(true)} disabled={!selectedSessionId}
+                        <button data-testid="notice-show-create-btn" onClick={() => setShowCreate(true)} disabled={!selectedSessionId}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm shrink-0">
                             <Plus size={15} /> New Board
                         </button>
@@ -310,13 +310,13 @@ const NoticeBoardHome = () => {
             <div className="flex flex-col sm:flex-row gap-3 mb-5">
                 <div className="relative flex-1">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={search} onChange={e => setSearch(e.target.value)}
+                    <input data-testid="notice-search-input" value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Search boards…"
                         className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div className="flex gap-2">
                     {["ALL", "PUBLIC", "CLASS", "SECTION"].map(v => (
-                        <button key={v} onClick={() => setVisFilter(v)}
+                        <button data-testid="notice-vis-filter-btn" key={v} onClick={() => setVisFilter(v)}
                             className={`px-3 py-2 rounded-xl text-xs font-medium transition-colors ${visFilter === v ? "bg-emerald-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
                             {v === "ALL" ? "All" : v === "PUBLIC" ? "School-Wide" : v === "CLASS" ? "Class" : "Section"}
                         </button>
@@ -332,14 +332,14 @@ const NoticeBoardHome = () => {
             ) : error ? (
                 <div className="text-center py-16">
                     <p className="text-red-600 font-medium">{error}</p>
-                    <button onClick={load} className="mt-3 text-emerald-600 text-sm hover:underline">Retry</button>
+                    <button data-testid="notice-load-btn" onClick={load} className="mt-3 text-emerald-600 text-sm hover:underline">Retry</button>
                 </div>
             ) : filtered.length === 0 ? (
                 <div className="text-center py-24 text-slate-400">
                     <Bell size={40} className="mx-auto mb-3 opacity-30" />
                     <p className="font-medium text-slate-500">{boards.length === 0 ? "No notice boards yet" : "No boards match your filter"}</p>
                     {isPrincipal && boards.length === 0 && (
-                        <button onClick={() => setShowCreate(true)}
+                        <button data-testid="notice-show-create-btn-2" onClick={() => setShowCreate(true)}
                             className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">
                             Create First Board
                         </button>

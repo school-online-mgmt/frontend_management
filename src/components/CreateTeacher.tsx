@@ -46,7 +46,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-50 rounded-full translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative">
-          <button onClick={onClose} className="absolute -top-2 -right-2 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+          <button data-testid="create-teacher-close-btn" onClick={onClose} className="absolute -top-2 -right-2 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
             <X size={20} />
           </button>
 
@@ -163,7 +163,7 @@ const CreateTeacher: React.FC<CreateTeacherProps> = ({ onClose, onRefresh }) => 
             </div>
             
             <div className="flex gap-4 pt-4">
-              <button 
+              <button data-testid="create-teacher-close-btn-2" 
                 type="button" 
                 className="flex-1 py-4 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl font-bold transition-all active:scale-[0.98]" 
                 onClick={onClose}

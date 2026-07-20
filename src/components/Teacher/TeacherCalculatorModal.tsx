@@ -56,7 +56,7 @@ const Field = ({ label, value, onChange, min = 0, max = 999, hint }: {
 }) => (
     <div>
         <label className="text-[11px] font-semibold text-slate-600">{label}</label>
-        <input type="number" min={min} max={max} value={value}
+        <input data-testid="teacher-calculator-modal-value-input" type="number" min={min} max={max} value={value}
             onChange={e => onChange(Math.max(min, Math.min(max, Number(e.target.value) || 0)))}
             className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
         {hint && <p className="text-[10px] text-slate-400 mt-0.5">{hint}</p>}
@@ -122,7 +122,7 @@ const TeacherCalculatorModal = ({ currentTeachers, onClose }: { currentTeachers:
                             <p className="text-[11px] text-slate-500">Minimum teachers to run the school properly</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
+                    <button data-testid="teacher-calculator-modal-close-btn" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"><X size={16} /></button>
                 </div>
 
                 {loading ? (
@@ -203,7 +203,7 @@ const TeacherCalculatorModal = ({ currentTeachers, onClose }: { currentTeachers:
                 )}
 
                 <div className="px-5 py-3.5 border-t border-slate-100 flex justify-end shrink-0">
-                    <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-white bg-violet-600 rounded-lg hover:bg-violet-700 inline-flex items-center gap-1.5"><Users size={13} /> Done</button>
+                    <button data-testid="teacher-calculator-modal-close-btn-2" onClick={onClose} className="px-4 py-2 text-xs font-bold text-white bg-violet-600 rounded-lg hover:bg-violet-700 inline-flex items-center gap-1.5"><Users size={13} /> Done</button>
                 </div>
             </div>
         </div>

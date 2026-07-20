@@ -88,54 +88,54 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium">Session</label>
-                        <select name="sessionId" value={form.sessionId} onChange={handleChange} required className="w-full p-2 border rounded">
+                        <select data-testid="confirm-admission-modal-change-select" name="sessionId" value={form.sessionId} onChange={handleChange} required className="w-full p-2 border rounded">
                             <option value="">Select Session</option>
                             {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Class</label>
-                        <select name="classId" value={form.classId} onChange={handleChange} required className="w-full p-2 border rounded">
+                        <select data-testid="confirm-admission-modal-change-select-2" name="classId" value={form.classId} onChange={handleChange} required className="w-full p-2 border rounded">
                             <option value="">Select Class</option>
                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Section</label>
-                        <select name="sectionId" value={form.sectionId} onChange={handleChange} required className="w-full p-2 border rounded">
+                        <select data-testid="confirm-admission-modal-change-select-3" name="sectionId" value={form.sectionId} onChange={handleChange} required className="w-full p-2 border rounded">
                             <option value="">Select Section</option>
                             {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Course</label>
-                        <select name="courseId" value={form.courseId} onChange={handleChange} required className="w-full p-2 border rounded">
+                        <select data-testid="confirm-admission-modal-change-select-4" name="courseId" value={form.courseId} onChange={handleChange} required className="w-full p-2 border rounded">
                             <option value="">Select Course</option>
                             {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Admission ID</label>
-                        <input type="text" name="admissionId" value={form.admissionId} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
+                        <input data-testid="confirm-admission-modal-change-input" type="text" name="admissionId" value={form.admissionId} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Roll No</label>
-                        <input type="text" name="rollNo" value={form.rollNo} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
+                        <input data-testid="confirm-admission-modal-change-input-2" type="text" name="rollNo" value={form.rollNo} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
                     </div>
                     <div>
                         <label className="block text-sm">
-                            <input type="checkbox" name="transportOpted" checked={form.transportOpted} onChange={handleChange} />
+                            <input data-testid="confirm-admission-modal-change-checkbox" type="checkbox" name="transportOpted" checked={form.transportOpted} onChange={handleChange} />
                             Transport Opted
                         </label>
                     </div>
                     {form.transportOpted && (
                         <div>
                             <label className="block text-sm font-medium">Transport Zone</label>
-                            <input type="text" name="transportZoneId" value={form.transportZoneId} onChange={handleChange} placeholder="Enter zone ID" className="w-full p-2 border rounded" />
+                            <input data-testid="confirm-admission-modal-change-input-3" type="text" name="transportZoneId" value={form.transportZoneId} onChange={handleChange} placeholder="Enter zone ID" className="w-full p-2 border rounded" />
                         </div>
                     )}
                     <div className="flex justify-end gap-3">
-                        <button type="button" onClick={onClose} className="px-4 py-2 border rounded">Cancel</button>
+                        <button data-testid="confirm-admission-modal-close-btn" type="button" onClick={onClose} className="px-4 py-2 border rounded">Cancel</button>
                         <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">
                             {loading ? "Confirming..." : "Confirm Admission"}
                         </button>

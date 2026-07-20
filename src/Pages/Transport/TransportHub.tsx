@@ -279,27 +279,27 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-2 items-center">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={search} onChange={e => setSearch(e.target.value)}
+                    <input data-testid="transport-search-input" value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Search name, phone, admission ID…"
                         className="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 bg-slate-50 focus:bg-white transition-colors" />
                 </div>
-                <select value={sessionId} onChange={e => setSessionId(e.target.value)}
+                <select data-testid="transport-session-id-select" value={sessionId} onChange={e => setSessionId(e.target.value)}
                     className="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:border-indigo-400">
                     <option value="">All Sessions</option>
                     {sessions.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <select value={zoneId} onChange={e => setZoneId(e.target.value)}
+                <select data-testid="transport-zone-id-select" value={zoneId} onChange={e => setZoneId(e.target.value)}
                     className="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:border-indigo-400">
                     <option value="">All Zones</option>
                     {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name}</option>)}
                 </select>
-                <select value={opted} onChange={e => setOpted(e.target.value)}
+                <select data-testid="transport-opted-select" value={opted} onChange={e => setOpted(e.target.value)}
                     className="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:border-indigo-400">
                     <option value="">All Students</option>
                     <option value="true">Transport Opted</option>
                     <option value="false">No Transport</option>
                 </select>
-                <button onClick={() => refetch()} disabled={isFetching}
+                <button data-testid="transport-refetch-btn" onClick={() => refetch()} disabled={isFetching}
                     className="px-3 py-2.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-700 bg-white disabled:opacity-50">
                     <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
                 </button>
@@ -370,7 +370,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                                                 <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold"><CheckCircle size={14} />Updated!</span>
                                             ) : assigning === s.academicId ? (
                                                 <div className="flex items-center gap-2 justify-end flex-wrap">
-                                                    <select value={assignZoneId} onChange={e => setAssignZoneId(e.target.value)}
+                                                    <select data-testid="transport-assign-zone-id-select" value={assignZoneId} onChange={e => setAssignZoneId(e.target.value)}
                                                         className="text-xs border border-indigo-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:border-indigo-400">
                                                         <option value="">Remove Transport</option>
                                                         {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name} — {fmt(z.price)}/mo</option>)}
@@ -382,7 +382,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                                                         {updateMut.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                                                         {assignZoneId ? "Assign" : "Remove"}
                                                     </button>
-                                                    <button onClick={() => setAssigning(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg border border-slate-200"><X size={12} /></button>
+                                                    <button data-testid="transport-assigning-btn" onClick={() => setAssigning(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg border border-slate-200"><X size={12} /></button>
                                                 </div>
                                             ) : (
                                                 <button onClick={() => { setAssigning(s.academicId); setAssignZoneId(s.transportZoneId ?? ""); }}
@@ -468,7 +468,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2 justify-between">
                 <div className="flex items-center gap-2">
-                    <select value={filterZone} onChange={e => setFilterZone(e.target.value)}
+                    <select data-testid="transport-filter-zone-select" value={filterZone} onChange={e => setFilterZone(e.target.value)}
                         className="text-sm border border-slate-200 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:border-indigo-400">
                         <option value="">All Zones</option>
                         {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name}</option>)}
@@ -491,7 +491,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                             </div>
                             <h3 className="text-sm font-bold text-indigo-900">{editId ? "Edit Vehicle Details" : "Register New Vehicle"}</h3>
                         </div>
-                        <button onClick={resetForm} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        <button data-testid="transport-reset-form-btn" onClick={resetForm} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                     </div>
                     <div className="p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

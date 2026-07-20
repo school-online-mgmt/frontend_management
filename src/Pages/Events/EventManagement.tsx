@@ -161,14 +161,14 @@ const EventManagement: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 bg-white rounded-lg border border-slate-200 p-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input
+                                <input data-testid="events-form-data-input"
                                     type="text"
                                     placeholder="Event Title"
                                     value={formData.title}
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <select
+                                <select data-testid="events-form-data-select"
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                     className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -178,7 +178,7 @@ const EventManagement: React.FC = () => {
                                     ))}
                                 </select>
                             </div>
-                            <textarea
+                            <textarea data-testid="events-form-data-input-2"
                                 placeholder="Description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -186,13 +186,13 @@ const EventManagement: React.FC = () => {
                                 rows={3}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input
+                                <input data-testid="events-form-data-input-3"
                                     type="date"
                                     value={formData.date}
                                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                     className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <input
+                                <input data-testid="events-form-data-input-4"
                                     type="date"
                                     value={formData.endDate}
                                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -264,14 +264,14 @@ const EventManagement: React.FC = () => {
                                     {event.endDate && <p>â†’ {new Date(event.endDate).toLocaleDateString("en-IN")}</p>}
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
+                                    <button data-testid="events-edit-btn"
                                         onClick={() => handleEdit(event)}
                                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-sm font-medium"
                                     >
                                         <Edit2 size={16} />
                                         Edit
                                     </button>
-                                    <button
+                                    <button data-testid="events-delete-btn"
                                         onClick={() => handleDelete(event)}
                                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm font-medium"
                                     >

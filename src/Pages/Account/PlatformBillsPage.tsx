@@ -211,7 +211,7 @@ const PlatformBillsPage = () => {
                             return (
                                 <div key={r.id} className={`bg-white border rounded-xl overflow-hidden ${r.isOverdue ? "border-rose-200" : "border-slate-200"}`}>
                                     <div className="p-4 flex items-start gap-3">
-                                        <button onClick={() => setExpanded(isOpen ? null : r.id)}
+                                        <button data-testid="account-expanded-btn" onClick={() => setExpanded(isOpen ? null : r.id)}
                                             className="mt-0.5 w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0"
                                             title={isOpen ? "Hide breakdown" : "Show breakdown"}>
                                             <ChevronDown size={15} className={`transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
@@ -240,7 +240,7 @@ const PlatformBillsPage = () => {
                                                         <IndianRupee size={14} />{r.amount.toLocaleString("en-IN")}
                                                     </div>
                                                     {r.source === "SUBSCRIPTION" && (r.status === "PENDING" || r.status === "OVERDUE") && (
-                                                        <button
+                                                        <button data-testid="account-pay-btn"
                                                             onClick={() => pay(r.id, r.invoiceNumber, r.amount)}
                                                             disabled={paying === r.id}
                                                             className="mt-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded text-xs font-semibold"
@@ -254,7 +254,7 @@ const PlatformBillsPage = () => {
                                                 </div>
                                             </div>
                                             {!isOpen && hasLineItems && (
-                                                <button onClick={() => setExpanded(r.id)} className="text-[11px] text-emerald-600 font-semibold mt-1.5 inline-flex items-center gap-1 hover:underline">
+                                                <button data-testid="account-expanded-btn-2" onClick={() => setExpanded(r.id)} className="text-[11px] text-emerald-600 font-semibold mt-1.5 inline-flex items-center gap-1 hover:underline">
                                                     <Layers size={11} /> View {lineItems.length}-item breakdown
                                                 </button>
                                             )}

@@ -140,11 +140,11 @@ export default function PublicationsPage() {
                 refreshing={isFetching}
                 primaryActions={
                     <div className="flex items-center gap-2">
-                        <button onClick={seed} disabled={seeding}
+                        <button data-testid="communication-seed-btn" onClick={seed} disabled={seeding}
                             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-white/15 text-white hover:bg-white/25 disabled:opacity-60">
                             {seeding ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Add starter catalogue
                         </button>
-                        <button onClick={() => setEditing("new")}
+                        <button data-testid="communication-editing-btn" onClick={() => setEditing("new")}
                             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-white text-orange-600 hover:bg-orange-50 shadow-sm">
                             <Plus size={15} /> New document
                         </button>
@@ -212,7 +212,7 @@ export default function PublicationsPage() {
                             </thead>
                             <tbody>
                                 {filtered.map(doc => (
-                                    <tr key={doc.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                                    <tr key={doc.id} data-testid="publication-row" data-doc-id={doc.id} data-title={doc.title} data-category={doc.category} className="border-b border-slate-50 hover:bg-slate-50/60">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <span className={`shrink-0 inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${catStyle(doc.category)}`}>{doc.category}</span>

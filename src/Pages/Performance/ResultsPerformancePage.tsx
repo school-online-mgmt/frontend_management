@@ -354,7 +354,7 @@ const TermDetailCard = ({ term, onJumpToClass, onJumpToSection }: {
                     <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <School size={12} className="text-indigo-500" /> By Class
                     </h4>
-                    <button onClick={onJumpToClass} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
+                    <button data-testid="performance-jump-to-class-btn" onClick={onJumpToClass} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
                         View all →
                     </button>
                 </div>
@@ -383,7 +383,7 @@ const TermDetailCard = ({ term, onJumpToClass, onJumpToSection }: {
                     <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <Users size={12} className="text-indigo-500" /> By Section
                     </h4>
-                    <button onClick={onJumpToSection} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
+                    <button data-testid="performance-jump-to-section-btn" onClick={onJumpToSection} className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold">
                         View all →
                     </button>
                 </div>
@@ -506,7 +506,7 @@ const ClassExpandableRow = ({ c, expanded, onToggle, onSectionClick }: {
     const passColor = (p: number) => p >= 75 ? "bg-emerald-100 text-emerald-700" : p >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
     return (
         <div className="border-b border-slate-50 last:border-0">
-            <button
+            <button data-testid="performance-toggle-btn"
                 type="button"
                 onClick={onToggle}
                 className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-indigo-50/30 transition-colors text-left"
@@ -716,7 +716,7 @@ const ResultsPerformancePage: React.FC = () => {
                     <div className="flex flex-wrap items-end gap-3">
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Session *</label>
-                            <select value={sessionId} onChange={e => { setSessionId(e.target.value); setClassId(""); setSectionId(""); }}
+                            <select data-testid="performance-session-id-select" value={sessionId} onChange={e => { setSessionId(e.target.value); setClassId(""); setSectionId(""); }}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[170px] font-medium">
                                 {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
@@ -726,7 +726,7 @@ const ResultsPerformancePage: React.FC = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class</label>
-                            <select value={classId} onChange={e => { setClassId(e.target.value); setSectionId(""); }}
+                            <select data-testid="performance-class-id-select" value={classId} onChange={e => { setClassId(e.target.value); setSectionId(""); }}
                                 className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
                                 <option value="">All Classes</option>
                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -736,7 +736,7 @@ const ResultsPerformancePage: React.FC = () => {
                         {sections.length > 0 && (
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Section</label>
-                                <select value={sectionId} onChange={e => setSectionId(e.target.value)}
+                                <select data-testid="performance-section-id-select" value={sectionId} onChange={e => setSectionId(e.target.value)}
                                     className="border border-slate-200 bg-slate-50 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
                                     <option value="">All Sections</option>
                                     {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -764,7 +764,7 @@ const ResultsPerformancePage: React.FC = () => {
                 {/* Tabs */}
                 <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto mb-6">
                     {TABS.map(t => (
-                        <button key={t.key} onClick={() => setTab(t.key)}
+                        <button data-testid="performance-tab-btn" key={t.key} onClick={() => setTab(t.key)}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                                 tab === t.key ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
                             }`}>
@@ -801,7 +801,7 @@ const ResultsPerformancePage: React.FC = () => {
 
                                 {/* Quick Needs Attention callout */}
                                 {attention.length > 0 && (
-                                    <button
+                                    <button data-testid="performance-tab-btn-2"
                                         onClick={() => setTab("students")}
                                         className="w-full text-left bg-gradient-to-r from-rose-50 to-amber-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-4 hover:from-rose-100 hover:to-amber-100 transition group"
                                     >
@@ -867,7 +867,7 @@ const ResultsPerformancePage: React.FC = () => {
                                     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                                         <div className="px-6 py-4 border-b bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Trophy size={15} className="text-amber-500" /> Top Performers</h3>
-                                            <button onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">View All <ChevronRight size={12} /></button>
+                                            <button data-testid="performance-tab-btn-3" onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">View All <ChevronRight size={12} /></button>
                                         </div>
                                         <div className="divide-y divide-slate-50">
                                             {topPerformers.slice(0, 5).map((tp, i) => {
@@ -952,14 +952,14 @@ const ResultsPerformancePage: React.FC = () => {
                                             <p className="text-[11px] text-slate-400 mt-0.5">Click a class row to expand into its sections</p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button
+                                            <button data-testid="performance-expanded-class-ids-btn"
                                                 type="button"
                                                 onClick={() => setExpandedClassIds(new Set(classesWithSections.map(c => c.classId)))}
                                                 className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700">
                                                 Expand all
                                             </button>
                                             <span className="text-slate-300">·</span>
-                                            <button
+                                            <button data-testid="performance-expanded-class-ids-btn-2"
                                                 type="button"
                                                 onClick={() => setExpandedClassIds(new Set())}
                                                 className="text-[11px] font-semibold text-slate-500 hover:text-slate-700">

@@ -163,7 +163,7 @@ const SectionReviewView: React.FC<{
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800">
+        <button data-testid="sessions-back-btn" onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800">
           <ArrowLeft size={16} />
         </button>
         <div>
@@ -196,7 +196,7 @@ const SectionReviewView: React.FC<{
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {(["PROMOTE", "HOLD_BACK"] as Decision[]).map(d => (
-                    <button key={d} onClick={() => setRow(s.academicId, d)}
+                    <button data-testid="sessions-row-btn" key={d} onClick={() => setRow(s.academicId, d)}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-colors ${
                         currentDecision === d
                           ? `${DECISION_CFG[d].cls} ${DECISION_CFG[d].ring} ring-2`
@@ -208,7 +208,7 @@ const SectionReviewView: React.FC<{
                 </div>
               </div>
               {currentDecision === "HOLD_BACK" && (
-                <input value={currentNote}
+                <input data-testid="sessions-row-input" value={currentNote}
                   onChange={(e) => setRow(s.academicId, "HOLD_BACK", e.target.value)}
                   placeholder="Reason (optional but recommended)"
                   className="w-full mt-1 border border-slate-200 rounded-md px-2 py-1 text-xs" />
@@ -225,13 +225,13 @@ const SectionReviewView: React.FC<{
           {allDecided ? <span className="text-emerald-600 font-semibold">All students decided</span> : <span className="text-amber-600 font-semibold">{totals.PENDING} pending</span>}
         </span>
         <div className="flex gap-2">
-          <button onClick={save} disabled={saving || edits.size === 0}
+          <button data-testid="sessions-save-btn" onClick={save} disabled={saving || edits.size === 0}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <CheckCheck size={12} />}
             Save decisions
           </button>
           {allDecided && edits.size === 0 && (
-            <button onClick={() => onAcknowledge()}
+            <button data-testid="sessions-acknowledge-btn" onClick={() => onAcknowledge()}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
               <CheckCircle2 size={12} /> Acknowledge
             </button>
@@ -350,7 +350,7 @@ const EndSessionWorkflow: React.FC<{
           <Info size={12} className="text-amber-600 mt-0.5 shrink-0" />
           <span>Once initiated, new admissions to this session are closed automatically. You can cancel the workflow anytime before finalising.</span>
         </div>
-        <button onClick={() => setConfirmInitiate(true)}
+        <button data-testid="sessions-confirm-initiate-btn" onClick={() => setConfirmInitiate(true)}
           className="mt-4 w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-sm">
           <Play size={14} /> Initiate End of Session
         </button>
@@ -392,7 +392,7 @@ const EndSessionWorkflow: React.FC<{
               <p className="text-[11px] text-slate-500 mt-0.5">Started {fmtDate(session.endInitiatedAt ?? "")}</p>
             </div>
           </div>
-          <button onClick={() => setConfirmCancel(true)}
+          <button data-testid="sessions-confirm-cancel-btn" onClick={() => setConfirmCancel(true)}
             className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1">
             <RotateCcw size={12} /> Cancel workflow
           </button>

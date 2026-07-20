@@ -462,21 +462,21 @@ const ExamDetails = () => {
                             </>
                         )}
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-900">{exam.examName}</h1>
+                    <h1 data-testid="exam-title" data-exam-id={exam.id} data-status={exam.status} className="text-2xl font-bold text-slate-900">{exam.examName}</h1>
                     <div className="mt-2">
                         <StatusBadge status={exam.status} />
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     {isPrincipalOrAdmin && (
-                        <button
+                        <button data-testid="exam-edit-open-btn"
                             onClick={() => setEditOpen(true)}
                             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-sm hover:bg-slate-50 text-slate-600">
                             <Pencil size={14} />Edit
                         </button>
                     )}
                     {isPrincipalOrAdmin && (
-                        <button
+                        <button data-testid="exam-delete-open-btn"
                             onClick={() => setDeleteOpen(true)}
                             className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50">
                             <Trash2 size={14} />Delete
@@ -515,13 +515,13 @@ const ExamDetails = () => {
 
                     {/* Actions */}
                     <div className="flex flex-wrap gap-3">
-                        <button
+                        <button data-testid="exam-syllabus-open-btn"
                             onClick={() => setSyllabusOpen(true)}
                             className="flex items-center gap-1.5 px-4 py-2 border border-slate-300 rounded-xl text-sm text-slate-700 hover:bg-slate-50 font-medium">
                             <BookOpen size={14} />
                             {exam.syllabus ? "Edit Syllabus" : "Add Syllabus"}
                         </button>
-                        <button
+                        <button data-testid="exam-schedule-open-btn"
                             onClick={() => setScheduleOpen(true)}
                             className="flex items-center gap-1.5 px-4 py-2 border border-slate-300 rounded-xl text-sm text-slate-700 hover:bg-slate-50 font-medium">
                             <Calendar size={14} />
@@ -541,7 +541,7 @@ const ExamDetails = () => {
                                     : "Set exam date to publish."}
                             </p>
                         )}
-                        <button
+                        <button data-testid="exam-publish-exam-btn"
                             onClick={handlePublishExam}
                             disabled={!exam.syllabus || !exam.examDate || actionLoading === "publish-exam"}
                             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -572,7 +572,7 @@ const ExamDetails = () => {
                             {exam.syllabus
                                 ? <p className="text-sm text-slate-700 line-clamp-3 leading-relaxed">{exam.syllabus}</p>
                                 : <p className="text-sm text-slate-400 italic">Not set</p>}
-                            <button
+                            <button data-testid="exam-syllabus-open-btn-2"
                                 onClick={() => setSyllabusOpen(true)}
                                 className="text-xs text-emerald-600 hover:text-emerald-700 font-medium mt-1 inline-block">
                                 {exam.syllabus ? "Edit" : "+ Add"}
@@ -585,7 +585,7 @@ const ExamDetails = () => {
                                     {new Date(exam.examDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
                                   </p>
                                 : <p className="text-sm text-slate-400 italic">Not set</p>}
-                            <button
+                            <button data-testid="exam-schedule-open-btn-2"
                                 onClick={() => setScheduleOpen(true)}
                                 className="text-xs text-emerald-600 hover:text-emerald-700 font-medium mt-1 inline-block">
                                 {exam.examDate ? "Edit" : "+ Set Date"}
@@ -605,7 +605,7 @@ const ExamDetails = () => {
                                 ? <p className="text-xs text-emerald-600 mt-0.5 flex items-center gap-1"><CheckCircle2 size={11} />Uploaded</p>
                                 : <p className="text-xs text-slate-400 mt-0.5">Not uploaded yet</p>}
                         </div>
-                        <button
+                        <button data-testid="exam-qp-open-btn"
                             onClick={() => setQpOpen(true)}
                             className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                             {exam.questionPaper ? "Update" : "+ Upload"}
@@ -614,7 +614,7 @@ const ExamDetails = () => {
 
                     {/* Primary CTA */}
                     <div className="pt-2 border-t border-slate-100">
-                        <button
+                        <button data-testid="exam-ready-to-conduct-btn"
                             onClick={handleReadyToConduct}
                             disabled={actionLoading === "ready-conduct"}
                             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors">
@@ -732,7 +732,7 @@ const ExamDetails = () => {
                                 ? <p className="text-xs text-emerald-600 mt-0.5 flex items-center gap-1"><CheckCircle2 size={11} />Uploaded</p>
                                 : <p className="text-xs text-slate-400 mt-0.5">Not uploaded yet</p>}
                         </div>
-                        <button
+                        <button data-testid="exam-qp-open-btn-2"
                             onClick={() => setQpOpen(true)}
                             className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                             {exam.questionPaper ? "Update" : "+ Upload"}
@@ -754,7 +754,7 @@ const ExamDetails = () => {
                                         </span>
                                     </div>
                                 )}
-                                <button
+                                <button data-testid="exam-mark-conducted-btn"
                                     onClick={handleMarkConducted}
                                     disabled={actionLoading === "conduct" || enrolledLoading || (!allMarked && !noneEnrolled)}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -877,7 +877,7 @@ const ExamDetails = () => {
                                     All marks must be entered for present students before publishing results.
                                 </div>
                             )}
-                            <button
+                            <button data-testid="exam-publish-results-btn"
                                 onClick={handlePublishResults}
                                 disabled={!canPublishResults || actionLoading === "publish-results"}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -971,7 +971,7 @@ const ExamDetails = () => {
                         <BookOpen size={16} className="text-slate-400" />Syllabus
                     </h2>
                     {isPrincipalOrAdmin && stage <= 2 && (
-                        <button
+                        <button data-testid="exam-syllabus-open-btn-3"
                             onClick={() => setSyllabusOpen(true)}
                             className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                             {exam.syllabus ? "Edit" : "+ Add"}
@@ -990,7 +990,7 @@ const ExamDetails = () => {
                         <FileText size={16} className="text-slate-400" />Question Paper
                     </h2>
                     {isPrincipalOrAdmin && stage <= 2 && (
-                        <button
+                        <button data-testid="exam-qp-open-btn-3"
                             onClick={() => setQpOpen(true)}
                             className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                             {exam.questionPaper ? "Edit" : "+ Upload"}

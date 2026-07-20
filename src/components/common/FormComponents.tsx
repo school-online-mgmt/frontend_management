@@ -152,7 +152,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
             <div className="text-sm">{children}</div>
           </div>
           {onClose && (
-            <button onClick={onClose} className="flex-shrink-0 opacity-50 hover:opacity-100 transition">
+            <button data-testid="form-components-close-btn" onClick={onClose} className="flex-shrink-0 opacity-50 hover:opacity-100 transition">
               ✕
             </button>
           )}

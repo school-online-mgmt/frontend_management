@@ -96,11 +96,11 @@ const HomeworkPage = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1 max-w-md">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search title, subject, teacher, class…"
+                        <input data-testid="homework-search-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search title, subject, teacher, class…"
                             className="w-full pl-9 pr-9 py-2 border border-slate-200 rounded-xl text-sm bg-white shadow-sm" />
-                        {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={13} /></button>}
+                        {search && <button data-testid="homework-search-btn" onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={13} /></button>}
                     </div>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white shadow-sm">
+                    <select data-testid="homework-status-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white shadow-sm">
                         <option value="">All statuses</option>
                         <option value="PUBLISHED">Published</option>
                         <option value="DRAFT">Draft</option>

@@ -63,14 +63,14 @@ const UpdateExamModal = ({
 
                 <h2 className="text-xl font-bold">Edit Exam</h2>
 
-                <input
+                <input data-testid="update-exam-modal-name-input"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Exam Name"
                     className="w-full border p-2 rounded-lg"
                 />
 
-                <input
+                <input data-testid="update-exam-modal-full-marks-input"
                     type="number"
                     value={fullMarks}
                     onChange={(e) => setFullMarks(Number(e.target.value))}
@@ -78,7 +78,7 @@ const UpdateExamModal = ({
                     className="w-full border p-2 rounded-lg"
                 />
 
-                <select
+                <select data-testid="update-exam-modal-marking-system-select"
                     value={markingSystem}
                     onChange={(e) => setMarkingSystem(e.target.value)}
                     className="w-full border p-2 rounded-lg"
@@ -87,14 +87,14 @@ const UpdateExamModal = ({
                     <option value="GRADE">GRADE</option>
                 </select>
 
-                <input
+                <input data-testid="update-exam-modal-exam-date-input"
                     type="datetime-local"
                     value={examDate}
                     onChange={(e) => setExamDate(e.target.value)}
                     className="w-full border p-2 rounded-lg"
                 />
 
-                <textarea
+                <textarea data-testid="update-exam-modal-syllabus-input"
                     value={syllabus}
                     onChange={(e) => {
                         const value = e.target.value;
@@ -104,7 +104,7 @@ const UpdateExamModal = ({
                     className="w-full border p-2 rounded-lg"
                 />
 
-                <textarea
+                <textarea data-testid="update-exam-modal-question-paper-input"
                     value={questionPaper}
                     onChange={(e) => {
                         const value = e.target.value;
@@ -115,8 +115,8 @@ const UpdateExamModal = ({
                 />
 
                 <div className="flex justify-end gap-3">
-                    <button onClick={onClose}>Cancel</button>
-                    <button
+                    <button data-testid="update-exam-modal-close-btn" onClick={onClose}>Cancel</button>
+                    <button data-testid="update-exam-modal-submit-btn"
                         onClick={handleSubmit}
                         disabled={loading}
                         className="bg-emerald-600 text-white px-4 py-2 rounded-lg"

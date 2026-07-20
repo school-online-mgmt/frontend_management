@@ -25,7 +25,7 @@ const CoursesSection = ({ courses, onCreateCourse }: { courses: any[]; onCreateC
                     Courses
                 </h2>
                 {onCreateCourse && (
-                    <button
+                    <button data-testid="courses-section-create-course-btn"
                         onClick={onCreateCourse}
                         className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg flex items-center gap-2 text-sm"
                     >

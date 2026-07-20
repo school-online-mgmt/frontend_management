@@ -51,7 +51,7 @@ const OverdueBillsBanner = () => {
                         </Link>
                     </p>
                 </div>
-                <button onClick={dismiss} className="text-rose-500 hover:text-rose-700 shrink-0" title="Dismiss">
+                <button data-testid="overdue-bills-banner-dismiss-btn" onClick={dismiss} className="text-rose-500 hover:text-rose-700 shrink-0" title="Dismiss">
                     <X size={16} />
                 </button>
             </div>

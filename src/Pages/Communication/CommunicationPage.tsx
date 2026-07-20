@@ -165,7 +165,7 @@ export default function CommunicationPage() {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
           <div>
             <label className={lbl}>Subject</label>
-            <input
+            <input data-testid="communication-subject-input"
               type="text"
               className={inp}
               value={subject}
@@ -177,7 +177,7 @@ export default function CommunicationPage() {
 
           <div>
             <label className={lbl}>Body</label>
-            <textarea
+            <textarea data-testid="communication-body-input"
               className={inp + " min-h-[200px] font-sans"}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -188,7 +188,7 @@ export default function CommunicationPage() {
           </div>
 
           <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
-            <button
+            <button data-testid="communication-preview-btn"
               type="button"
               disabled={previewing}
               onClick={onPreview}
@@ -197,7 +197,7 @@ export default function CommunicationPage() {
               <Eye size={14} />
               {previewing ? "Calculating…" : "Preview audience"}
             </button>
-            <button
+            <button data-testid="communication-send-btn"
               type="button"
               disabled={sending || !preview}
               onClick={onSend}
@@ -221,7 +221,7 @@ export default function CommunicationPage() {
             <label className={lbl}>Send to</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(["STUDENTS", "TEACHERS", "BOTH"] as const).map((rt) => (
-                <button
+                <button data-testid="communication-recipient-type-btn"
                   key={rt}
                   type="button"
                   onClick={() => setRecipientType(rt)}
@@ -243,7 +243,7 @@ export default function CommunicationPage() {
           {/* Audience type */}
           <div>
             <label className={lbl}>Filter by</label>
-            <select
+            <select data-testid="communication-audience-type-select"
               className={inp}
               value={audienceType}
               onChange={(e) => setAudienceType(e.target.value as AudienceType)}
@@ -300,7 +300,7 @@ export default function CommunicationPage() {
           {audienceType === "INDIVIDUAL" && (
             <div>
               <label className={lbl}>UUIDs (one per line)</label>
-              <textarea
+              <textarea data-testid="communication-00000000-0000-0000-0000-input"
                 className={inp + " min-h-[80px] font-mono text-xs"}
                 placeholder="00000000-0000-0000-0000-000000000000"
                 onChange={(e) => {

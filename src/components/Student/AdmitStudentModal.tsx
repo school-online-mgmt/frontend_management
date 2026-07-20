@@ -132,7 +132,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
                         <h2 className="text-base font-bold">Admit Student</h2>
                         <p className="text-emerald-100 text-xs mt-0.5">{student.firstName} {student.lastName}</p>
                     </div>
-                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition">
+                    <button data-testid="admit-student-modal-close-btn" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition">
                         <X size={18} />
                     </button>
                 </div>
@@ -192,12 +192,12 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Admission ID</label>
-                                <input type="text" name="admissionId" value={form.admissionId} readOnly
+                                <input data-testid="admit-student-modal-admission-id-input" type="text" name="admissionId" value={form.admissionId} readOnly
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Roll Number</label>
-                                <input type="text" name="rollNo" value={form.rollNo} readOnly
+                                <input data-testid="admit-student-modal-roll-no-input" type="text" name="rollNo" value={form.rollNo} readOnly
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                             </div>
                         </div>
@@ -254,7 +254,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
                                             {transportZones.map((zone: any) => {
                                                 const selected = form.transportZoneId === zone.id;
                                                 return (
-                                                    <button key={zone.id} type="button"
+                                                    <button data-testid="admit-student-modal-form-btn" key={zone.id} type="button"
                                                         onClick={() => setForm(prev => ({ ...prev, transportZoneId: zone.id }))}
                                                         className={`text-left p-3 rounded-xl border-2 transition-all ${
                                                             selected
@@ -303,7 +303,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
 
                     {/* Actions */}
                     <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
-                        <button type="button" onClick={onClose}
+                        <button data-testid="admit-student-modal-close-btn-2" type="button" onClick={onClose}
                             className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
                             Cancel
                         </button>

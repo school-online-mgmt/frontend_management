@@ -108,7 +108,7 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                             <p className="text-white/70 text-xs">Fill in all required fields</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/20 transition">
+                    <button data-testid="create-course-close-btn" onClick={onClose} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/20 transition">
                         <X size={18} />
                     </button>
                 </div>
@@ -183,7 +183,7 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                     </div>
 
                     <div className="flex gap-3 pt-1">
-                        <button onClick={onClose} disabled={isSubmitting}
+                        <button data-testid="create-course-close-btn-2" onClick={onClose} disabled={isSubmitting}
                             className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition disabled:opacity-50">
                             Cancel
                         </button>

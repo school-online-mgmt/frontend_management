@@ -172,18 +172,18 @@ const PerformanceDashboard: React.FC = () => {
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">
                 <Filter size={13} className="text-slate-400" />
-                <select value={sessionId} onChange={e => setSessionId(e.target.value)}
+                <select data-testid="exam-session-id-select" value={sessionId} onChange={e => setSessionId(e.target.value)}
                     className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-indigo-400">
                     <option value="">Select Session</option>
                     {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <select value={classId} onChange={e => setClassId(e.target.value)}
+                <select data-testid="exam-class-id-select" value={classId} onChange={e => setClassId(e.target.value)}
                     className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-indigo-400">
                     <option value="">All Classes</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 {sections.length > 0 && (
-                    <select value={sectionId} onChange={e => setSectionId(e.target.value)}
+                    <select data-testid="exam-section-id-select" value={sectionId} onChange={e => setSectionId(e.target.value)}
                         className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-indigo-400">
                         <option value="">All Sections</option>
                         {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -194,7 +194,7 @@ const PerformanceDashboard: React.FC = () => {
             {/* Tabs */}
             <div className="bg-slate-100 p-1 rounded-xl flex gap-0.5 overflow-x-auto">
                 {TABS.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)}
+                    <button data-testid="exam-tab-btn" key={t.key} onClick={() => setTab(t.key)}
                         className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                             tab === t.key ? "bg-white shadow text-slate-900" : "text-slate-500 hover:text-slate-700"
                         }`}>
@@ -266,7 +266,7 @@ const PerformanceDashboard: React.FC = () => {
                                 <div className="bg-white rounded-2xl border overflow-hidden">
                                     <div className="px-5 py-4 border-b bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between">
                                         <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2"><Trophy size={15} className="text-amber-500" /> Top Performers</h3>
-                                        <button onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">View All <ChevronRight size={12} /></button>
+                                        <button data-testid="exam-tab-btn-2" onClick={() => setTab("students")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">View All <ChevronRight size={12} /></button>
                                     </div>
                                     <div className="divide-y divide-slate-50">
                                         {topPerformers.slice(0, 5).map((tp, i) => (

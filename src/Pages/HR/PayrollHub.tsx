@@ -117,6 +117,7 @@ function StaffSalariesTab() {
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
+                        data-testid="hr-staff-search"
                         placeholder="Search staff or designation…"
                         className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
@@ -142,7 +143,7 @@ function StaffSalariesTab() {
                         </thead>
                         <tbody>
                             {rows.map(s => (
-                                <tr key={`${s.staffType}:${s.staffId}`} className="border-b border-slate-50 hover:bg-slate-50/60">
+                                <tr key={`${s.staffType}:${s.staffId}`} data-testid="hr-staff-row" data-staff-name={s.name} data-staff-type={s.staffType} className="border-b border-slate-50 hover:bg-slate-50/60">
                                     <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
                                     <td className="px-4 py-3">
                                         <span className="inline-flex items-center gap-1 text-xs text-slate-600">
@@ -157,10 +158,10 @@ function StaffSalariesTab() {
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex justify-end gap-1.5">
-                                            <button onClick={() => setProfileTarget(s)} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 hover:bg-slate-50">
+                                            <button data-testid="hr-staff-profile-btn" onClick={() => setProfileTarget(s)} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 hover:bg-slate-50">
                                                 <Pencil size={13} /> Profile
                                             </button>
-                                            <button onClick={() => setSalaryTarget(s)} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+                                            <button data-testid="hr-staff-salary-btn" onClick={() => setSalaryTarget(s)} className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
                                                 <Banknote size={13} /> Salary
                                             </button>
                                         </div>
@@ -229,14 +230,14 @@ function ProfileModal({ staff, onClose }: { staff: HrStaffRow; onClose: () => vo
                 {field("Joining date", "joiningDate", "date")}
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Employment type</span>
-                    <select value={form.employmentType} onChange={e => set("employmentType", e.target.value)}
+                    <select data-testid="hr-employment-type-select" value={form.employmentType} onChange={e => set("employmentType", e.target.value)}
                         className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
                         {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                     </select>
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Status</span>
-                    <select value={form.employmentStatus} onChange={e => set("employmentStatus", e.target.value)}
+                    <select data-testid="hr-employment-status-select" value={form.employmentStatus} onChange={e => set("employmentStatus", e.target.value)}
                         className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg">
                         {EMPLOYMENT_STATUSES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                     </select>
@@ -313,12 +314,12 @@ function SalaryModal({ staff, onClose }: { staff: HrStaffRow; onClose: () => voi
                     <div className="grid grid-cols-2 gap-3">
                         <label className="block">
                             <span className="text-xs font-medium text-slate-600">Basic salary (₹ / month)</span>
-                            <input type="number" min={0} value={basic} onChange={e => setBasic(e.target.value === "" ? "" : Number(e.target.value))}
+                            <input data-testid="hr-salary-basic-input" type="number" min={0} value={basic} onChange={e => setBasic(e.target.value === "" ? "" : Number(e.target.value))}
                                 className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500" />
                         </label>
                         <label className="block">
                             <span className="text-xs font-medium text-slate-600">Effective from</span>
-                            <input type="date" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)}
+                            <input data-testid="hr-salary-effective-from-input" type="date" value={effectiveFrom} onChange={e => setEffectiveFrom(e.target.value)}
                                 className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                         </label>
                     </div>
@@ -327,21 +328,21 @@ function SalaryModal({ staff, onClose }: { staff: HrStaffRow; onClose: () => voi
                         {components.map((c, i) => (
                             <div key={i} className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${c.type === "EARNING" ? "bg-emerald-500" : "bg-red-500"}`} />
-                                <input value={c.label} placeholder={c.type === "EARNING" ? "e.g. HRA" : "e.g. PF"} onChange={e => updateComp(i, { label: e.target.value })}
+                                <input data-testid={`hr-salary-component-label-${i}`} value={c.label} placeholder={c.type === "EARNING" ? "e.g. HRA" : "e.g. PF"} onChange={e => updateComp(i, { label: e.target.value })}
                                     className="flex-1 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg" />
                                 <select value={c.calc} onChange={e => updateComp(i, { calc: e.target.value as any })}
                                     className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
                                     <option value="FIXED">₹</option>
                                     <option value="PERCENT_OF_BASIC">% of basic</option>
                                 </select>
-                                <input type="number" min={0} value={c.value} onChange={e => updateComp(i, { value: Number(e.target.value) })}
+                                <input data-testid={`hr-salary-component-value-${i}`} type="number" min={0} value={c.value} onChange={e => updateComp(i, { value: Number(e.target.value) })}
                                     className="w-24 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-right" />
-                                <button onClick={() => removeComp(i)} className="p-1.5 text-slate-400 hover:text-red-600"><X size={15} /></button>
+                                <button data-testid={`hr-salary-component-remove-${i}`} onClick={() => removeComp(i)} className="p-1.5 text-slate-400 hover:text-red-600"><X size={15} /></button>
                             </div>
                         ))}
                         <div className="flex gap-2 pt-1">
-                            <button onClick={() => addComp("EARNING")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50"><Plus size={13} /> Earning</button>
-                            <button onClick={() => addComp("DEDUCTION")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"><Plus size={13} /> Deduction</button>
+                            <button data-testid="hr-salary-add-earning-btn" onClick={() => addComp("EARNING")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50"><Plus size={13} /> Earning</button>
+                            <button data-testid="hr-salary-add-deduction-btn" onClick={() => addComp("DEDUCTION")} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"><Plus size={13} /> Deduction</button>
                         </div>
                     </div>
 
@@ -397,9 +398,9 @@ function PayrollRunsTab() {
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Year</span>
-                    <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="mt-1 block w-28 px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+                    <input data-testid="hr-run-year-input" type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="mt-1 block w-28 px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                 </label>
-                <button onClick={run} disabled={running} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
+                <button data-testid="hr-run-payroll-btn" onClick={run} disabled={running} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
                     {running ? <Loader2 size={15} className="animate-spin" /> : <PlayCircle size={15} />} Run payroll
                 </button>
                 <p className="text-xs text-slate-400 ml-auto">Re-running a period tops up newly-added staff — it never double-pays.</p>
@@ -423,7 +424,7 @@ function PayrollRunsTab() {
                         </thead>
                         <tbody>
                             {(data?.runs ?? []).map((r: PayrollRun) => (
-                                <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 cursor-pointer" onClick={() => setOpenRun(r.id)}>
+                                <tr key={r.id} data-testid="hr-run-row" data-run-id={r.id} data-status={r.status} data-period={`${r.periodMonth + 1}-${r.periodYear}`} data-total-net={r.totalNet} data-payslip-count={r.payslipCount} className="border-b border-slate-50 hover:bg-slate-50/60 cursor-pointer" onClick={() => setOpenRun(r.id)}>
                                     <td className="px-4 py-3 font-medium text-slate-800">{MONTHS[r.periodMonth]} {r.periodYear}</td>
                                     <td className="px-4 py-3"><Pill status={r.status} /></td>
                                     <td className="px-4 py-3 text-right tabular-nums">{r.payslipCount}</td>
@@ -500,11 +501,11 @@ function RunDetailModal({ runId, onClose }: { runId: string; onClose: () => void
                         <span className="text-sm text-slate-500">{run.payslipCount} payslips · net {fmtINR(run.totalNet)}</span>
                         {(run.status === "DRAFT" || run.status === "FINALIZED") && (
                             <div className="ml-auto flex items-center gap-2">
-                                <button onClick={cancelRun} disabled={cancelling} title="Void this run (only while unpaid)" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60">
+                                <button data-testid="hr-run-void-btn" onClick={cancelRun} disabled={cancelling} title="Void this run (only while unpaid)" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60">
                                     {cancelling ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />} Cancel run
                                 </button>
                                 {run.status === "DRAFT" && (
-                                    <button onClick={finalize} disabled={finalizing} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+                                    <button data-testid="hr-run-finalize-btn" onClick={finalize} disabled={finalizing} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
                                         {finalizing ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />} Finalize
                                     </button>
                                 )}
@@ -526,7 +527,7 @@ function RunDetailModal({ runId, onClose }: { runId: string; onClose: () => void
                             </thead>
                             <tbody>
                                 {data.payslips.map(ps => (
-                                    <tr key={ps.id} className="border-b border-slate-50">
+                                    <tr key={ps.id} data-testid="hr-payslip-row" data-payslip-id={ps.id} data-staff-name={ps.staffName} data-net-pay={ps.netPay} data-status={ps.status} className="border-b border-slate-50">
                                         <td className="px-3 py-2 font-medium text-slate-800">{ps.staffName}</td>
                                         <td className="px-3 py-2 text-right tabular-nums">{fmtINR(ps.grossEarnings)}</td>
                                         <td className="px-3 py-2 text-right tabular-nums text-red-600">{fmtINR(ps.totalDeductions)}</td>
@@ -535,12 +536,12 @@ function RunDetailModal({ runId, onClose }: { runId: string; onClose: () => void
                                         <td className="px-3 py-2"><Pill status={ps.status} /></td>
                                         <td className="px-3 py-2">
                                             <div className="flex justify-end gap-1">
-                                                <button onClick={() => window.open(api.payslipPdfUrl(ps.id), "_blank")} title="Download PDF" className="p-1.5 text-slate-500 hover:text-emerald-700"><Download size={15} /></button>
+                                                <button onClick={() => window.open(api.payslipPdfUrl(ps.id), "_blank")} data-testid={`hr-payslip-pdf-btn-${ps.id}`} title="Download PDF" className="p-1.5 text-slate-500 hover:text-emerald-700"><Download size={15} /></button>
                                                 {ps.status !== "PAID" && ps.status !== "CANCELLED" && (
-                                                    <button onClick={() => setPayTarget(ps)} title="Record payment" className="p-1.5 text-slate-500 hover:text-emerald-700"><Receipt size={15} /></button>
+                                                    <button data-testid={`hr-payslip-pay-btn-${ps.id}`} onClick={() => setPayTarget(ps)} title="Record payment" className="p-1.5 text-slate-500 hover:text-emerald-700"><Receipt size={15} /></button>
                                                 )}
                                                 {ps.status === "GENERATED" && ps.paidAmount === 0 && (
-                                                    <button onClick={() => voidPayslip(ps)} title="Void payslip" className="p-1.5 text-slate-400 hover:text-red-600"><Ban size={15} /></button>
+                                                    <button data-testid={`hr-payslip-void-btn-${ps.id}`} onClick={() => voidPayslip(ps)} title="Void payslip" className="p-1.5 text-slate-400 hover:text-red-600"><Ban size={15} /></button>
                                                 )}
                                             </div>
                                         </td>
@@ -584,11 +585,11 @@ function PaymentModal({ payslip, onClose, onDone }: { payslip: Payslip; onClose:
             <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Amount (₹)</span>
-                    <input type="number" min={1} value={amount} onChange={e => setAmount(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+                    <input data-testid="hr-payment-amount-input" type="number" min={1} value={amount} onChange={e => setAmount(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Date</span>
-                    <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+                    <input data-testid="hr-payment-date-input" type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Method</span>
@@ -598,7 +599,7 @@ function PaymentModal({ payslip, onClose, onDone }: { payslip: Payslip; onClose:
                 </label>
                 <label className="block">
                     <span className="text-xs font-medium text-slate-600">Reference (optional)</span>
-                    <input value={reference} onChange={e => setReference(e.target.value)} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
+                    <input data-testid="hr-payment-reference-input" value={reference} onChange={e => setReference(e.target.value)} className="mt-1 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg" />
                 </label>
             </div>
             <ModalActions onClose={onClose} onSave={save} saving={saving} saveLabel="Record payment" />
@@ -610,7 +611,7 @@ function PaymentModal({ payslip, onClose, onDone }: { payslip: Payslip; onClose:
 function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
-            <div className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-3xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label={title} data-testid="hr-modal" className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-3xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white">
                     <h3 className="font-semibold text-slate-800">{title}</h3>
                     <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
@@ -623,8 +624,8 @@ function Modal({ title, children, onClose, wide }: { title: string; children: Re
 function ModalActions({ onClose, onSave, saving, saveLabel = "Save" }: { onClose: () => void; onSave: () => void; saving: boolean; saveLabel?: string }) {
     return (
         <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
-            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
-            <button onClick={onSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
+            <button data-testid="hr-modal-cancel-btn" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-50">Cancel</button>
+            <button data-testid="hr-modal-save-btn" onClick={onSave} disabled={saving} className="inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {saveLabel}
             </button>
         </div>

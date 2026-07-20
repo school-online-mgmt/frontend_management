@@ -70,7 +70,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ type, applicant, onConfirm,
             : <>You are rejecting the application of <span className="font-semibold text-slate-700">{applicant.firstName} {applicant.lastName}</span>. This action cannot be undone.</>}
         </p>
         <div className="flex gap-3">
-          <button onClick={onCancel} disabled={loading}
+          <button data-testid="applicants-cancel-btn" onClick={onCancel} disabled={loading}
             className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50">
             Cancel
           </button>
@@ -379,11 +379,11 @@ const ApplicantsHome: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              <input data-testid="applicants-search-input" type="text" value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, phone, email or father's name…"
                 className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 placeholder-slate-400" />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <button data-testid="applicants-search-btn" onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   <X size={13} />
                 </button>
               )}
