@@ -209,7 +209,7 @@ const PlatformBillsPage = () => {
                             const lineItems = (r.lineItems as any[]) ?? [];
                             const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
                             return (
-                                <div key={r.id} className={`bg-white border rounded-xl overflow-hidden ${r.isOverdue ? "border-rose-200" : "border-slate-200"}`}>
+                                <div key={r.id} data-testid="platform-bill-row" data-id={r.id} data-status={r.status} data-source={r.source} data-amount={r.amount} data-invoice-number={r.invoiceNumber} className={`bg-white border rounded-xl overflow-hidden ${r.isOverdue ? "border-rose-200" : "border-slate-200"}`}>
                                     <div className="p-4 flex items-start gap-3">
                                         <button data-testid="account-expanded-btn" onClick={() => setExpanded(isOpen ? null : r.id)}
                                             className="mt-0.5 w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0"
