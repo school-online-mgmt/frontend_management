@@ -1865,35 +1865,6 @@ createStudent = async (data: {
         return res.data;
     };
 
-    // ── Bulk fee invoice payment (school-side, tenant Razorpay) ─────────────
-    createBulkFeeInvoiceOrder = async (invoiceIds: string[]) => {
-        const res = await apiClient.post("/management/fees/invoices/bulk-pay/create-order", { invoiceIds });
-        return res.data as {
-            orderId: string;
-            amount: number;
-            currency: string;
-            keyId: string;
-            invoiceCount: number;
-            totalAmount: number;
-            items: Array<{ id: string; invoiceNo: string; balance: number; studentId: string }>;
-        };
-    };
-
-    verifyBulkFeeInvoiceOrder = async (payload: {
-        razorpayOrderId: string;
-        razorpayPaymentId: string;
-        razorpaySignature: string;
-        invoiceIds: string[];
-    }) => {
-        const res = await apiClient.post("/management/fees/invoices/bulk-pay/verify", payload);
-        return res.data as {
-            message: string;
-            count: number;
-            totalAmount: number;
-            invoiceIds: string[];
-        };
-    };
-
     // ── Communication broadcast ─────────────────────────────────────────────
     previewEmailBroadcast = async (audience: {
         type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
