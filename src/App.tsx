@@ -53,7 +53,6 @@ import DocumentsPage from "./Pages/Documents/DocumentsPage.tsx";
 import TimetablePage from "./Pages/Timetable/TimetablePage.tsx";
 import PayrollHub from "./Pages/HR/PayrollHub.tsx";
 import PantryHub from "./Pages/Pantry/PantryHub.tsx";
-import TeacherOnboardingWizard from "./Pages/Teacher/TeacherOnboardingWizard.tsx";
 import ModuleGate from "./components/ModuleGate.tsx";
 import AdminRoute from "./components/AdminRoute.tsx";
 
@@ -159,7 +158,6 @@ function App() {
               <Route path="/inventory" element={<InventoryHub />} />
               <Route path="/hr" element={<PayrollHub />} />
               <Route path="/pantry" element={<PantryHub />} />
-              <Route path="/teacher-onboarding" element={<TeacherOnboardingWizard />} />
             </Route>
 
             {/* HOMEWORK — school-wide oversight */}

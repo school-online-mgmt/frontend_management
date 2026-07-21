@@ -9,7 +9,7 @@ import {
   Clock, CheckCheck, Ban, Star, MessageSquare, Calculator,
 } from "lucide-react";
 import api from "../../api/api";
-import CreateTeacher from "../../components/CreateTeacher";
+import TeacherOnboardingModal from "./TeacherOnboardingModal";
 import TeacherCalculatorModal from "../../components/Teacher/TeacherCalculatorModal";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
@@ -370,7 +370,7 @@ const TeacherHome = () => {
   return (
     <div className="min-h-full bg-slate-50">
       {isModalOpen && (
-        <CreateTeacher onClose={() => setIsModalOpen(false)} onRefresh={fetchTeachers} />
+        <TeacherOnboardingModal onClose={() => setIsModalOpen(false)} onDone={fetchTeachers} />
       )}
 
       <PageHeader
@@ -389,7 +389,7 @@ const TeacherHome = () => {
               </button>
               <button data-testid="add-teacher-btn" onClick={() => setIsModalOpen(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm">
-                <UserPlus size={14} /> Add Teacher
+                <UserPlus size={14} /> Onboard Teacher
               </button>
             </div>
           ) : undefined
@@ -561,10 +561,11 @@ const TeacherHome = () => {
                   <button onClick={clearFilters} className="mt-1 text-sm text-emerald-600 hover:underline font-medium">Clear filters</button>
                 ) : (
                   <button
+                    data-testid="add-teacher-empty-btn"
                     onClick={() => setIsModalOpen(true)}
                     className="mt-1 flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition"
                   >
-                    <Plus size={14} /> Add Teacher
+                    <Plus size={14} /> Onboard Teacher
                   </button>
                 )}
               </div>

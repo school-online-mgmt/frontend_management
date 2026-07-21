@@ -6,10 +6,10 @@ import {
     Lock, CheckCircle2, AlertTriangle, UserCog, BookMarked, ClipboardCheck,
     Library, MessageSquare, Wallet, Settings, Crown, BarChart3,
     TrendingUp, Activity, Info, Bus, Trophy, Sparkles, Package, CalendarDays,
-    ChevronLeft, Plus,
+    ChevronLeft, ChevronDown, Plus,
 } from 'lucide-react';
 import api from '../../api/api';
-import type { StaffRoleDef } from '../../api/api';
+import type { StaffRoleDef, HrComponent } from '../../api/api';
 import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { useToast } from '../../context/ToastContext';
 import { useAuthContext, ALL_MODULES, type AppModule } from '../../context/AuthContext';
@@ -587,6 +587,28 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
 
+    // ── Employment & pay, captured at CREATE only ─────────────────────────────
+    // Office staff are payroll staff too — they were the one group who had to be
+    // created here and then hunted down again in HR & Payroll to be paid. On edit
+    // this stays hidden so HR & Payroll remains the single place salary changes.
+    const [hrOpen, setHrOpen] = useState(false);
+    const [hr, setHr] = useState({
+        employeeCode: '', designation: '', department: '',
+        joiningDate: new Date().toISOString().slice(0, 10),
+        employmentType: 'FULL_TIME',
+        basicSalary: '' as string,
+        components: [] as HrComponent[],
+    });
+    const hrPreview = useMemo(() => {
+        const basic = Number(hr.basicSalary) || 0;
+        let gross = basic, deductions = 0;
+        for (const c of hr.components) {
+            const amt = c.calc === 'PERCENT_OF_BASIC' ? Math.round((basic * c.value) / 100) : c.value;
+            if (c.type === 'EARNING') gross += amt; else deductions += amt;
+        }
+        return { gross, deductions, net: gross - deductions };
+    }, [hr.basicSalary, hr.components]);
+
     const rolesQuery = useQuery({ queryKey: ['staff', 'roles'], queryFn: () => api.getStaffRoles() });
     const builtIn = rolesQuery.data?.builtIn ?? [];
     const custom  = rolesQuery.data?.custom ?? [];
@@ -634,13 +656,24 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setErr(null); setSaving(true);
+        setErr(null);
+        if (!isEdit && hr.basicSalary !== '' && !(Number(hr.basicSalary) > 0)) {
+            setErr('Basic salary must be a positive amount, or leave it blank.');
+            return;
+        }
+        if (!isEdit && hr.components.some(c => !c.label.trim())) {
+            setErr('Every salary component needs a label.');
+            return;
+        }
+        setSaving(true);
         try {
             await onSave({
                 firstName, lastName, phone, email, role,
                 ...(password ? { password } : {}),
                 permissions: isFullAccess(role) ? [] : perms,
                 roles: isFullAccess(role) ? [] : selectedRoles.map(r => ({ type: r.type as 'BUILTIN' | 'CUSTOM', key: r.key })),
+                // Only on create — see the note on the `hr` state above.
+                ...(isEdit ? {} : { hr }),
             });
         } catch (e: any) {
             setErr(e?.response?.data?.message ?? 'Failed to save. Please try again.');
@@ -735,6 +768,89 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                             </div>
                             {!isEdit && <p className="text-[11px] text-slate-400 mt-1.5">Staff member will use this to log in to the portal.</p>}
                         </div>
+
+                        {/* Employment & pay — create only; HR & Payroll owns changes afterwards */}
+                        {!isEdit && (
+                            <div data-testid="staff-hr-section">
+                                <button type="button" data-testid="staff-hr-toggle-btn" onClick={() => setHrOpen(v => !v)}
+                                    className="flex items-center gap-2 w-full text-left">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Employment &amp; Pay</p>
+                                    <span className="text-[10px] text-slate-400">— optional, can be set later</span>
+                                    <ChevronDown size={14} className={`ml-auto text-slate-400 transition-transform ${hrOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {hrOpen && (
+                                    <div className="mt-3 space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className={labelCls}>Employee Code</label>
+                                                <input data-testid="staff-employee-code-input" value={hr.employeeCode} onChange={e => setHr(s => ({ ...s, employeeCode: e.target.value }))} className={inputCls} placeholder="EMP-014" />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Designation</label>
+                                                <input data-testid="staff-designation-input" value={hr.designation} onChange={e => setHr(s => ({ ...s, designation: e.target.value }))} className={inputCls} placeholder="Office Manager" />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Department</label>
+                                                <input data-testid="staff-department-input" value={hr.department} onChange={e => setHr(s => ({ ...s, department: e.target.value }))} className={inputCls} placeholder="Administration" />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Joining Date</label>
+                                                <input data-testid="staff-joining-date-input" type="date" value={hr.joiningDate} onChange={e => setHr(s => ({ ...s, joiningDate: e.target.value }))} className={inputCls} />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Employment Type</label>
+                                                <select data-testid="staff-employment-type-select" value={hr.employmentType} onChange={e => setHr(s => ({ ...s, employmentType: e.target.value }))} className={inputCls}>
+                                                    {['FULL_TIME', 'PART_TIME', 'CONTRACT', 'PROBATION', 'INTERN'].map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Basic Salary (₹/month)</label>
+                                                <input data-testid="staff-basic-salary-input" type="number" min={0} value={hr.basicSalary} onChange={e => setHr(s => ({ ...s, basicSalary: e.target.value }))} className={inputCls} placeholder="Leave blank to set later" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {hr.components.map((c, i) => (
+                                                <div key={i} data-testid="staff-component-row" data-type={c.type} className="flex items-center gap-2">
+                                                    <span className={`w-2 h-2 rounded-full shrink-0 ${c.type === 'EARNING' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                    <input data-testid="staff-component-label-input" value={c.label} placeholder={c.type === 'EARNING' ? 'e.g. HRA' : 'e.g. PF'}
+                                                        onChange={e => setHr(s => ({ ...s, components: s.components.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x) }))}
+                                                        className="flex-1 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg" />
+                                                    <select data-testid="staff-component-calc-select" value={c.calc}
+                                                        onChange={e => setHr(s => ({ ...s, components: s.components.map((x, idx) => idx === i ? { ...x, calc: e.target.value as any } : x) }))}
+                                                        className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg">
+                                                        <option value="FIXED">₹</option><option value="PERCENT_OF_BASIC">% of basic</option>
+                                                    </select>
+                                                    <input data-testid="staff-component-value-input" type="number" min={0} value={c.value}
+                                                        onChange={e => setHr(s => ({ ...s, components: s.components.map((x, idx) => idx === i ? { ...x, value: Number(e.target.value) } : x) }))}
+                                                        className="w-24 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-right" />
+                                                    <button type="button" data-testid="staff-component-remove-btn"
+                                                        onClick={() => setHr(s => ({ ...s, components: s.components.filter((_, idx) => idx !== i) }))}
+                                                        className="p-1.5 text-slate-400 hover:text-red-600"><X size={15} /></button>
+                                                </div>
+                                            ))}
+                                            <div className="flex gap-2">
+                                                <button type="button" data-testid="staff-add-earning-btn"
+                                                    onClick={() => setHr(s => ({ ...s, components: [...s.components, { type: 'EARNING', label: '', calc: 'FIXED', value: 0 }] }))}
+                                                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50"><Plus size={13} /> Earning</button>
+                                                <button type="button" data-testid="staff-add-deduction-btn"
+                                                    onClick={() => setHr(s => ({ ...s, components: [...s.components, { type: 'DEDUCTION', label: '', calc: 'FIXED', value: 0 }] }))}
+                                                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"><Plus size={13} /> Deduction</button>
+                                            </div>
+                                        </div>
+
+                                        {hr.basicSalary !== '' && (
+                                            <div data-testid="staff-salary-preview" data-gross={hrPreview.gross} data-deductions={hrPreview.deductions} data-net={hrPreview.net}
+                                                className="grid grid-cols-3 gap-2 bg-slate-50 rounded-lg p-3 text-center">
+                                                <div><div className="text-[11px] text-slate-500">Gross</div><div className="font-semibold">₹{hrPreview.gross.toLocaleString('en-IN')}</div></div>
+                                                <div><div className="text-[11px] text-slate-500">Deductions</div><div className="font-semibold text-red-600">₹{hrPreview.deductions.toLocaleString('en-IN')}</div></div>
+                                                <div><div className="text-[11px] text-slate-500">Net</div><div className="font-semibold text-emerald-700">₹{hrPreview.net.toLocaleString('en-IN')}</div></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Role */}
                         <div>
@@ -1206,9 +1322,42 @@ const StaffHome: React.FC = () => {
 
     // ── CRUD handlers ──────────────────────────────────────────────────────
 
-    const handleCreate = async (data: any) => {
-        await api.createStaff(data);
-        addToast('Staff member created successfully.', 'success');
+    const handleCreate = async ({ hr, ...data }: any) => {
+        const created: any = await api.createStaff(data);
+        const staffId: string | undefined = created?.user?.id;
+
+        // Employment/pay is a SEPARATE concern from the login account: if it
+        // fails we must not claim the whole thing failed, because the account
+        // already exists and retrying would collide on phone/email. Say exactly
+        // what landed and where to finish the rest.
+        let hrError: string | null = null;
+        if (staffId && hr) {
+            try {
+                await api.saveHrProfile('MANAGEMENT', staffId, {
+                    employeeCode: hr.employeeCode || null,
+                    designation: hr.designation || null,
+                    department: hr.department || null,
+                    joiningDate: hr.joiningDate || null,
+                    employmentType: hr.employmentType,
+                });
+                if (hr.basicSalary !== '') {
+                    await api.saveHrSalary('MANAGEMENT', staffId, {
+                        basicSalary: Number(hr.basicSalary),
+                        effectiveFrom: hr.joiningDate || new Date().toISOString().slice(0, 10),
+                        components: hr.components ?? [],
+                    });
+                }
+            } catch (e: any) {
+                hrError = e?.response?.data?.message ?? 'employment details could not be saved';
+            }
+        }
+
+        addToast(
+            hrError
+                ? `Staff member created, but ${hrError}. Finish their pay setup in HR & Payroll.`
+                : 'Staff member created successfully.',
+            hrError ? 'warning' : 'success',
+        );
         setShowCreate(false);
         fetchAll();
     };
