@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
 
 type AudienceType = "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
@@ -28,6 +29,7 @@ const lbl = "block text-[11px] font-semibold text-slate-500 uppercase tracking-w
 
 export default function CommunicationPage() {
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirm();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [audienceType, setAudienceType] = useState<AudienceType>("ALL");
@@ -114,12 +116,22 @@ export default function CommunicationPage() {
     }
   };
 
-  const onSend = async () => {
+  const onSend = () => {
     if (!subject.trim()) return addToast("Subject is required", "warning");
     if (!body.trim()) return addToast("Body is required", "warning");
     if (!preview || preview.count === 0) return addToast("Run a preview first", "warning");
-    if (!confirm(`Send to ${preview.count} recipient${preview.count > 1 ? "s" : ""}?`)) return;
+    // A broadcast cannot be recalled once sent, so the recipient count is
+    // confirmed in-page rather than through a native dialog the browser may
+    // suppress entirely — silently skipping the check on a send-to-everyone.
+    return confirm({
+      title: `Send to ${preview.count} recipient${preview.count > 1 ? "s" : ""}?`,
+      message: "Emails cannot be recalled once sent.",
+      confirmText: "Send now",
+      onConfirm: doSend,
+    });
+  };
 
+  const doSend = async () => {
     setSending(true);
     try {
       const r = await api.sendEmailBroadcast({
@@ -151,6 +163,7 @@ export default function CommunicationPage() {
 
   return (
     <div className="min-h-full bg-slate-50 flex flex-col">
+      {dialog}
       <PageHeader
         icon={Megaphone}
         title="Email Blast"
