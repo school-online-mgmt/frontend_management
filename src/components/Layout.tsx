@@ -50,7 +50,6 @@ const NAV_SECTIONS = [
     module: "TEACHERS" as const,
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
-      { path: "/teacher-onboarding", label: "Onboard Teacher", icon: UserPlus },
       { path: "/assignments", label: "Assignments", icon: ClipboardList },
       { path: "/staff", label: "Staff Accounts", icon: Settings },
       { path: "/hr", label: "Salaries & Payroll", icon: Wallet },
