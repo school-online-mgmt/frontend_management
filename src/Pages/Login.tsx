@@ -91,6 +91,9 @@ const Login: React.FC = () => {
           role: res.user.role,
           tenantId: res.user.tenantId,
           permissions: res.user.permissions,
+          // Shows the forced-change screen immediately instead of after the
+          // first gated call bounces with 403.
+          mustChangePassword: res.user.mustChangePassword === true,
         });
         setIsSuccess(true);
         addToast(

@@ -16,6 +16,7 @@ import AddSyllabusModal from "../../components/Exam/AddSyllabusModal";
 import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import ExamReport from "../../components/Exam/ExamReport";
+import { usePrompt } from "../../hooks/usePrompt";
 
 // ── Stage Map (all legacy + new statuses → 0-based stage index) ──────────────
 
@@ -243,6 +244,7 @@ const ExamDetails = () => {
     // Message
     const [message, setMessage]         = useState<string | null>(null);
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+    const { prompt, dialog: promptDialog } = usePrompt();
 
     const fetchExam = async () => {
         try {
@@ -445,6 +447,8 @@ const ExamDetails = () => {
                     <p>{message}</p>
                 </div>
             )}
+
+            {promptDialog}
 
             <BackButton />
 
@@ -1067,6 +1071,7 @@ const ExamDetails = () => {
                                         <th className="px-5 py-3 font-semibold text-slate-600">Marks</th>
                                         <th className="px-5 py-3 font-semibold text-slate-600">Remarks</th>
                                         <th className="px-5 py-3 font-semibold text-slate-600">Status</th>
+                                        <th className="px-5 py-3 font-semibold text-slate-600">Report card</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1098,6 +1103,40 @@ const ExamDetails = () => {
                                                         <CheckCircle2 size={10} />Published
                                                       </span>
                                                     : <span className="text-slate-400 text-xs">Unpublished</span>}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {/* The class teacher's overall comment for this child's TERM —
+                                                    not a note on this paper. It appears on the report card. */}
+                                                <button
+                                                    data-testid="exam-class-remark-btn"
+                                                    data-student-id={r.studentId ?? ""}
+                                                    onClick={() => prompt({
+                                                        title: `Report card remark — ${r.studentName || "student"}`,
+                                                        message: `Applies to the whole of ${exam.examTerm}, not just this paper. Leave blank to clear it.`,
+                                                        label: "Class teacher's remark",
+                                                        multiline: true,
+                                                        confirmText: "Save remark",
+                                                        validate: (v) => (v.length > 1000 ? "Keep the remark under 1000 characters." : null),
+                                                        onSubmit: async (remark) => {
+                                                            try {
+                                                                await api.setClassTeacherRemark(r.studentId, {
+                                                                    sessionId: exam.sessionId,
+                                                                    examTerm: exam.examTerm,
+                                                                    remark,
+                                                                });
+                                                                setMessage(remark ? "Remark saved to the report card." : "Remark cleared.");
+                                                                setMessageType("success");
+                                                            } catch (err: any) {
+                                                                setMessage(err?.response?.data?.message ?? "Couldn't save the remark.");
+                                                                setMessageType("error");
+                                                            }
+                                                        },
+                                                    })}
+                                                    disabled={!r.studentId}
+                                                    className="text-xs font-medium text-emerald-700 hover:text-emerald-800 disabled:text-slate-300"
+                                                >
+                                                    Remark…
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

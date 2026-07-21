@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import api, { setLogoutCallback } from "../api/api";
+import api, { setLogoutCallback, setPasswordChangeRequiredCallback } from "../api/api";
 
 export type ModulePermission = { module: string; level: 'READ' | 'ADMIN' };
 
@@ -25,6 +25,10 @@ export interface User {
     role?: string;
     phone?: string;
     tenantId?: string;
+    // Set when the account still holds a password someone else assigned. While
+    // true the backend blocks every route but the change-password endpoints, and
+    // the app shows the forced-change screen.
+    mustChangePassword?: boolean;
     // null = full access (admin/principal/director), array = explicit grants, missing = loading
     permissions?: ModulePermission[] | null;
     /**
@@ -43,6 +47,8 @@ interface AuthState {
     role: string | null;
     userId: string | null;
     user: User | null;
+    /** While true, the app shows the forced password-change screen instead of routes. */
+    mustChangePassword: boolean;
 }
 
 interface AuthContextValue extends AuthState {
@@ -50,6 +56,8 @@ interface AuthContextValue extends AuthState {
     logout: () => Promise<void>;
     /** Directly set auth from a login response without an extra checkAuth round-trip */
     loginDirect: (user: User) => void;
+    /** Called after a successful forced password change — clears the gate and sends the user to log in again. */
+    completePasswordChange: () => void;
     /** Returns true if the current user has at least READ access to the given module */
     hasModule: (module: AppModule) => boolean;
     /** Returns true if the current user has ADMIN access to the given module */
@@ -71,9 +79,11 @@ const AuthContext = createContext<AuthContextValue>({
     role: null,
     userId: null,
     user: null,
+    mustChangePassword: false,
     refresh: async () => {},
     logout: async () => {},
     loginDirect: () => {},
+    completePasswordChange: () => {},
     hasModule: () => true,
     hasModuleAdmin: () => true,
     isModuleEnabled: () => true,
@@ -87,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: null,
         userId: null,
         user: null,
+        mustChangePassword: false,
     });
     const navigate = useNavigate();
     const verifyInProgressRef = useRef(false);
@@ -109,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: user?.role ?? null,
                 userId: user?.id ?? null,
                 user: user ?? null,
+                mustChangePassword: user?.mustChangePassword === true,
             });
         } catch (error: any) {
             if (freshLoginRef.current) {
@@ -120,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Only reset auth state on an explicit 401 (unauthenticated).
                 // For server errors (5xx) or network failures, keep current state.
                 if (status === 401 || !status) {
-                    setAuth({ isAuthenticated: false, role: null, userId: null, user: null });
+                    setAuth({ isAuthenticated: false, role: null, userId: null, user: null, mustChangePassword: false });
                 }
             }
         } finally {
@@ -134,11 +146,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch {
             // Logout API error is non-critical
         } finally {
-            setAuth({ 
-                isAuthenticated: false, 
-                role: null, 
+            setAuth({
+                isAuthenticated: false,
+                role: null,
                 userId: null,
-                user: null 
+                user: null,
+                mustChangePassword: false,
             });
             navigate("/login", { replace: true });
         }
@@ -147,14 +160,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set the logout callback for API interceptor
     useEffect(() => {
         setLogoutCallback(() => {
-            setAuth({ 
-                isAuthenticated: false, 
-                role: null, 
+            setAuth({
+                isAuthenticated: false,
+                role: null,
                 userId: null,
-                user: null 
+                user: null,
+                mustChangePassword: false,
             });
             navigate("/login", { replace: true });
         });
+    }, [navigate]);
+
+    // Flip into the forced-change screen when any gated call reports the block.
+    useEffect(() => {
+        setPasswordChangeRequiredCallback(() => {
+            setAuth(prev => (prev.mustChangePassword ? prev : { ...prev, mustChangePassword: true }));
+        });
+    }, []);
+
+    // After a successful forced change the backend has revoked the session, so
+    // clear local auth and send the user back to sign in with the new password.
+    const completePasswordChange = useCallback(() => {
+        setAuth({ isAuthenticated: false, role: null, userId: null, user: null, mustChangePassword: false });
+        navigate("/login", { replace: true });
     }, [navigate]);
 
     // Verify auth on mount (without adding verify to dependency to avoid infinite loops)
@@ -180,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: user.role ?? null,
             userId: user.id,
             user,
+            mustChangePassword: user.mustChangePassword === true,
         });
     }, []);
 
@@ -228,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ ...auth, refresh: verify, logout, loginDirect, hasModule, hasModuleAdmin, isModuleEnabled, canUseModule, isFullAccess }}>
+        <AuthContext.Provider value={{ ...auth, refresh: verify, logout, loginDirect, completePasswordChange, hasModule, hasModuleAdmin, isModuleEnabled, canUseModule, isFullAccess }}>
             {children}
         </AuthContext.Provider>
     );
