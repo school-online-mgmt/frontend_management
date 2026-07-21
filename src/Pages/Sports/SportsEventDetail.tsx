@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import { usePrompt } from "../../hooks/usePrompt";
 
 type Tab = "overview" | "coaches" | "enrollments" | "attendance" | "incidents" | "achievements";
 
@@ -43,6 +44,7 @@ const SportsEventDetail = () => {
     };
     const [incidentModal, setIncidentModal] = useState(false);
     const [achievementModal, setAchievementModal] = useState(false);
+    const { prompt, dialog } = usePrompt();
 
     const eventQuery = useQuery({
         queryKey: ["sports", "event", eventId],
@@ -101,12 +103,18 @@ const SportsEventDetail = () => {
         try { await api.completeSportsEvent(eventId!); refresh(); toast("success", "Event marked complete"); }
         catch (e: any) { toast("error", e?.response?.data?.message || "Failed"); }
     };
-    const cancel = async () => {
-        const reason = window.prompt("Cancellation reason?");
-        if (reason === null) return;
-        try { await api.cancelSportsEvent(eventId!, reason); refresh(); toast("success", "Event cancelled"); }
-        catch (e: any) { toast("error", e?.response?.data?.message || "Failed"); }
-    };
+    const cancel = () => prompt({
+        title: "Cancel this event?",
+        label: "Cancellation reason",
+        placeholder: "Why is the event being cancelled?",
+        confirmText: "Cancel event",
+        cancelText: "Keep event",
+        multiline: true,
+        onSubmit: async (reason) => {
+            try { await api.cancelSportsEvent(eventId!, reason); refresh(); toast("success", "Event cancelled"); }
+            catch (e: any) { toast("error", e?.response?.data?.message || "Failed"); }
+        },
+    });
     const removeCoach = async (coachId: string) => {
         try { await api.removeSportsCoach(eventId!, coachId); refresh(); toast("success", "Coach removed"); }
         catch (e: any) { toast("error", e?.response?.data?.message || "Failed"); }
@@ -117,6 +125,7 @@ const SportsEventDetail = () => {
 
     return (
         <div className="space-y-6">
+            {dialog}
             <button data-testid="sports-nav-btn" onClick={() => nav("/sports")} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
                 <ArrowLeft size={16} /> Back to Sports
             </button>

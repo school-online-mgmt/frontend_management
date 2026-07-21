@@ -10,6 +10,7 @@ import type { HrStaffRow, HrComponent, PayrollRun, Payslip } from "../../api/api
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import useTabState from "../../hooks/useTabState";
+import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
 
 const MONTHS = ["", "January", "February", "March", "April", "May", "June",
@@ -446,6 +447,7 @@ function PayrollRunsTab() {
 function RunDetailModal({ runId, onClose }: { runId: string; onClose: () => void }) {
     const qc = useQueryClient();
     const { addToast } = useToast();
+    const { confirm, dialog } = useConfirm();
     const [payTarget, setPayTarget] = useState<Payslip | null>(null);
     const [finalizing, setFinalizing] = useState(false);
     const [cancelling, setCancelling] = useState(false);
@@ -466,32 +468,42 @@ function RunDetailModal({ runId, onClose }: { runId: string; onClose: () => void
         } finally { setFinalizing(false); }
     };
 
-    const cancelRun = async () => {
-        if (!window.confirm("Cancel this entire payroll run? All its payslips will be voided. This is only possible while no payment has been recorded.")) return;
-        setCancelling(true);
-        try {
-            await api.cancelPayrollRun(runId);
-            addToast("Payroll run cancelled.", "success");
-            await qc.invalidateQueries({ queryKey: ["hr"] });
-        } catch (err: any) {
-            addToast(err?.response?.data?.message ?? "Failed to cancel the run.", "error");
-        } finally { setCancelling(false); }
-    };
+    const cancelRun = () => confirm({
+        title: "Cancel this entire payroll run?",
+        message: "All its payslips will be voided. This is only possible while no payment has been recorded.",
+        confirmText: "Cancel run",
+        cancelText: "Keep run",
+        onConfirm: async () => {
+            setCancelling(true);
+            try {
+                await api.cancelPayrollRun(runId);
+                addToast("Payroll run cancelled.", "success");
+                await qc.invalidateQueries({ queryKey: ["hr"] });
+            } catch (err: any) {
+                addToast(err?.response?.data?.message ?? "Failed to cancel the run.", "error");
+            } finally { setCancelling(false); }
+        },
+    });
 
-    const voidPayslip = async (ps: Payslip) => {
-        if (!window.confirm(`Void the payslip for ${ps.staffName}? Only possible while nothing has been paid against it.`)) return;
-        try {
-            await api.cancelPayslip(ps.id);
-            addToast("Payslip cancelled.", "success");
-            await qc.invalidateQueries({ queryKey: ["hr"] });
-        } catch (err: any) {
-            addToast(err?.response?.data?.message ?? "Failed to cancel the payslip.", "error");
-        }
-    };
+    const voidPayslip = (ps: Payslip) => confirm({
+        title: `Void the payslip for ${ps.staffName}?`,
+        message: "Only possible while nothing has been paid against it.",
+        confirmText: "Void payslip",
+        onConfirm: async () => {
+            try {
+                await api.cancelPayslip(ps.id);
+                addToast("Payslip cancelled.", "success");
+                await qc.invalidateQueries({ queryKey: ["hr"] });
+            } catch (err: any) {
+                addToast(err?.response?.data?.message ?? "Failed to cancel the payslip.", "error");
+            }
+        },
+    });
 
     const run = data?.run;
     return (
         <Modal title={run ? `Payroll — ${MONTHS[run.periodMonth]} ${run.periodYear}` : "Payroll run"} onClose={onClose} wide>
+            {dialog}
             {isLoading || !run ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-600" /></div>
             ) : (

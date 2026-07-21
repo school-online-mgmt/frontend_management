@@ -10,7 +10,10 @@ import api from "../../api/api";
 import type { PantryItem, PantryWalletRow, PantryInsights } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection from "../../components/common/TabbedSection";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import useTabState from "../../hooks/useTabState";
+import { useConfirm } from "../../hooks/useConfirm";
+import { usePrompt } from "../../hooks/usePrompt";
 import { useToast } from "../../context/ToastContext";
 
 const inr = (n: number | null | undefined) => n == null ? "—" : `₹${Number(n).toLocaleString("en-IN")}`;
@@ -249,6 +252,8 @@ function PosTab() {
 function MenuTab() {
     const qc = useQueryClient();
     const { addToast } = useToast();
+    const { confirm, dialog: confirmDialog } = useConfirm();
+    const { prompt, dialog: promptDialog } = usePrompt();
     const [editing, setEditing] = useState<PantryItem | "new" | null>(null);
     const itemsQ = useQuery({ queryKey: ["pantry", "items"], queryFn: () => api.listPantryItems() });
     const items = itemsQ.data?.items ?? [];
@@ -260,22 +265,31 @@ function MenuTab() {
             refresh();
         } catch (err: any) { addToast(err?.response?.data?.message ?? "Update failed.", "error"); }
     };
-    const remove = async (item: PantryItem) => {
-        if (!window.confirm(`Delete "${item.name}" from the menu?`)) return;
-        try { await api.deletePantryItem(item.id); addToast("Item deleted.", "success"); refresh(); }
-        catch (err: any) { addToast(err?.response?.data?.message ?? "Delete failed.", "error"); }
-    };
-    const restock = async (item: PantryItem) => {
-        const raw = window.prompt(`Add stock for "${item.name}" (current: ${item.stockCount ?? "untracked"})`, "10");
-        if (!raw) return;
-        const qty = Number(raw);
-        if (!Number.isInteger(qty) || qty < 1) { addToast("Enter a whole positive number.", "error"); return; }
-        try { await api.restockPantryItem(item.id, qty); addToast("Stock updated.", "success"); refresh(); }
-        catch (err: any) { addToast(err?.response?.data?.message ?? "Restock failed.", "error"); }
-    };
+    const remove = (item: PantryItem) => confirm({
+        title: `Delete "${item.name}" from the menu?`,
+        confirmText: "Delete",
+        onConfirm: async () => {
+            try { await api.deletePantryItem(item.id); addToast("Item deleted.", "success"); refresh(); }
+            catch (err: any) { addToast(err?.response?.data?.message ?? "Delete failed.", "error"); }
+        },
+    });
+    const restock = (item: PantryItem) => prompt({
+        title: `Add stock for "${item.name}"`,
+        message: `Current stock: ${item.stockCount ?? "untracked"}`,
+        label: "Quantity to add",
+        defaultValue: "10",
+        confirmText: "Add stock",
+        validate: (v) => (Number.isInteger(Number(v)) && Number(v) >= 1 ? null : "Enter a whole positive number."),
+        onSubmit: async (v) => {
+            try { await api.restockPantryItem(item.id, Number(v)); addToast("Stock updated.", "success"); refresh(); }
+            catch (err: any) { addToast(err?.response?.data?.message ?? "Restock failed.", "error"); }
+        },
+    });
 
     return (
         <div>
+            {confirmDialog}
+            {promptDialog}
             <div className="flex justify-end mb-3">
                 <button data-testid="pantry-add-item-btn" onClick={() => setEditing("new")}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
@@ -433,6 +447,7 @@ function ItemModal({ item, onClose, onSaved }: { item: PantryItem | null; onClos
 function OrdersTab() {
     const qc = useQueryClient();
     const { addToast } = useToast();
+    const { confirm, dialog } = useConfirm();
     const [status, setStatus] = useState("");
     const [channel, setChannel] = useState("");
     const [date, setDate] = useState("");
@@ -453,6 +468,7 @@ function OrdersTab() {
 
     return (
         <div>
+            {dialog}
             <div className="flex flex-wrap gap-2 mb-3">
                 <select value={status} onChange={e => setStatus(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm">
                     <option value="">All statuses</option>
@@ -502,11 +518,22 @@ function OrdersTab() {
                                             {(o.status === "PLACED" || o.status === "READY") && (
                                                 <>
                                                     <button onClick={() => act(() => api.pantryOrderCollect(o.id), "Order collected.")} data-testid={`pantry-order-collect-btn-${o.id}`} title="Mark collected" className="p-1.5 text-slate-500 hover:text-emerald-600"><CheckCircle2 size={15} /></button>
-                                                    <button onClick={() => { if (window.confirm("Cancel this order? Wallet payments are refunded and stock restored.")) act(() => api.pantryOrderCancel(o.id), "Order cancelled."); }} data-testid={`pantry-order-cancel-btn-${o.id}`} title="Cancel" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
+                                                    <button onClick={() => confirm({
+                                                        title: "Cancel this order?",
+                                                        message: "Wallet payments are refunded and stock restored.",
+                                                        confirmText: "Cancel order",
+                                                        cancelText: "Keep order",
+                                                        onConfirm: () => act(() => api.pantryOrderCancel(o.id), "Order cancelled."),
+                                                    })} data-testid={`pantry-order-cancel-btn-${o.id}`} title="Cancel" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
                                                 </>
                                             )}
                                             {o.status === "COLLECTED" && o.paymentMethod === "WALLET" && (
-                                                <button onClick={() => { if (window.confirm("Refund this collected order to the wallet?")) act(() => api.pantryOrderRefund(o.id), "Refunded to wallet."); }} data-testid={`pantry-order-refund-btn-${o.id}`} title="Refund" className="p-1.5 text-slate-400 hover:text-rose-600"><RotateCcw size={15} /></button>
+                                                <button onClick={() => confirm({
+                                                    title: "Refund this collected order to the wallet?",
+                                                    message: "Stock is NOT restored — the food has already been handed over.",
+                                                    confirmText: "Refund",
+                                                    onConfirm: () => act(() => api.pantryOrderRefund(o.id), "Refunded to wallet."),
+                                                })} data-testid={`pantry-order-refund-btn-${o.id}`} title="Refund" className="p-1.5 text-slate-400 hover:text-rose-600"><RotateCcw size={15} /></button>
                                             )}
                                         </div>
                                     </td>
@@ -675,6 +702,10 @@ function WalletModal({ row, onClose, onChanged }: { row: PantryWalletRow; onClos
     });
     const [topupAmount, setTopupAmount] = useState<number | "">("");
     const [busy, setBusy] = useState(false);
+    const { prompt, dialog: promptDialog } = usePrompt();
+    const [adjust, setAdjust] = useState<
+        { direction: "CREDIT" | "DEBIT"; amount: string; notes: string; error: string | null; saving: boolean } | null
+    >(null);
 
     const refresh = () => {
         qc.invalidateQueries({ queryKey: ["pantry", "wallet", row.userType, row.userId] });
@@ -693,31 +724,42 @@ function WalletModal({ row, onClose, onChanged }: { row: PantryWalletRow; onClos
         finally { setBusy(false); }
     };
 
-    const adjust = async (direction: "CREDIT" | "DEBIT") => {
-        const raw = window.prompt(`${direction === "CREDIT" ? "Add to" : "Deduct from"} wallet (₹):`);
-        if (!raw) return;
-        const amount = Number(raw);
-        if (!Number.isInteger(amount) || amount < 1) { addToast("Enter a whole positive number.", "error"); return; }
-        const notes = window.prompt("Reason (required, will be audited):");
-        if (!notes || notes.trim().length < 3) { addToast("A reason is required.", "error"); return; }
+    // Amount and reason are captured in ONE dialog. Chaining two native prompts
+    // meant a manager who typed the amount and then cancelled at the reason had
+    // no idea whether the first value had already been applied.
+    const submitAdjust = async () => {
+        if (!adjust) return;
+        const amount = Number(adjust.amount);
+        if (!Number.isInteger(amount) || amount < 1) { setAdjust({ ...adjust, error: "Enter a whole positive number." }); return; }
+        if (adjust.notes.trim().length < 3) { setAdjust({ ...adjust, error: "A reason is required — this is audited." }); return; }
+        setAdjust({ ...adjust, error: null, saving: true });
         try {
-            await api.pantryAdjustWallet(row.userType, row.userId, { direction, amount, notes: notes.trim() });
+            await api.pantryAdjustWallet(row.userType, row.userId, { direction: adjust.direction, amount, notes: adjust.notes.trim() });
             addToast("Wallet adjusted.", "success");
+            setAdjust(null);
             refresh();
-        } catch (err: any) { addToast(err?.response?.data?.message ?? "Adjustment failed.", "error"); }
+        } catch (err: any) {
+            addToast(err?.response?.data?.message ?? "Adjustment failed.", "error");
+            setAdjust((p) => (p ? { ...p, saving: false } : null));
+        }
     };
 
-    const setLimit = async () => {
-        const raw = window.prompt("Daily spend limit in ₹ (leave empty to remove the cap):", row.dailyLimit == null ? "" : String(row.dailyLimit));
-        if (raw === null) return;
-        const dailyLimit = raw.trim() === "" ? null : Number(raw);
-        if (dailyLimit != null && (!Number.isInteger(dailyLimit) || dailyLimit < 0)) { addToast("Enter a whole number.", "error"); return; }
-        try {
-            await api.pantryPatchWallet(row.userType, row.userId, { dailyLimit });
-            addToast(dailyLimit == null ? "Daily limit removed." : `Daily limit set to ${inr(dailyLimit)}.`, "success");
-            refresh();
-        } catch (err: any) { addToast(err?.response?.data?.message ?? "Update failed.", "error"); }
-    };
+    const setLimit = () => prompt({
+        title: "Daily spend limit",
+        message: "Leave empty to remove the cap.",
+        label: "Limit (₹)",
+        defaultValue: row.dailyLimit == null ? "" : String(row.dailyLimit),
+        confirmText: "Save limit",
+        validate: (v) => (v.trim() === "" || (Number.isInteger(Number(v)) && Number(v) >= 0) ? null : "Enter a whole number."),
+        onSubmit: async (v) => {
+            const dailyLimit = v.trim() === "" ? null : Number(v);
+            try {
+                await api.pantryPatchWallet(row.userType, row.userId, { dailyLimit });
+                addToast(dailyLimit == null ? "Daily limit removed." : `Daily limit set to ${inr(dailyLimit)}.`, "success");
+                refresh();
+            } catch (err: any) { addToast(err?.response?.data?.message ?? "Update failed.", "error"); }
+        },
+    });
 
     const toggleFreeze = async () => {
         const wallet = detailQ.data?.wallet ?? row;
@@ -731,6 +773,40 @@ function WalletModal({ row, onClose, onChanged }: { row: PantryWalletRow; onClos
     const wallet = detailQ.data?.wallet;
     return (
         <Modal title={`Wallet — ${row.holderName ?? ""}`} onClose={onClose} wide>
+            {promptDialog}
+            {adjust && (
+                <ConfirmModal
+                    title={adjust.direction === "CREDIT" ? "Add to this wallet" : "Deduct from this wallet"}
+                    message={adjust.error ?? "Adjustments are recorded against your name in the wallet ledger."}
+                    confirmText={adjust.direction === "CREDIT" ? "Add" : "Deduct"}
+                    loading={adjust.saving}
+                    onConfirm={submitAdjust}
+                    onCancel={() => { if (!adjust.saving) setAdjust(null); }}
+                >
+                    <label className="block text-sm">
+                        <span className="mb-1 block font-medium text-slate-700">Amount (₹)</span>
+                        <input
+                            data-testid="pantry-adjust-amount-input"
+                            autoFocus
+                            value={adjust.amount}
+                            disabled={adjust.saving}
+                            onChange={(e) => setAdjust({ ...adjust, amount: e.target.value, error: null })}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none disabled:opacity-50"
+                        />
+                    </label>
+                    <label className="block text-sm">
+                        <span className="mb-1 block font-medium text-slate-700">Reason (audited)</span>
+                        <textarea
+                            data-testid="pantry-adjust-reason-input"
+                            rows={2}
+                            value={adjust.notes}
+                            disabled={adjust.saving}
+                            onChange={(e) => setAdjust({ ...adjust, notes: e.target.value, error: null })}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none disabled:opacity-50"
+                        />
+                    </label>
+                </ConfirmModal>
+            )}
             {detailQ.isLoading || !wallet ? (
                 <div className="flex justify-center py-10 text-slate-400"><Loader2 className="animate-spin" /></div>
             ) : (
@@ -748,8 +824,8 @@ function WalletModal({ row, onClose, onChanged }: { row: PantryWalletRow; onClos
                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">
                             {busy ? <Loader2 size={14} className="animate-spin" /> : <IndianRupee size={14} />} Top up (cash)
                         </button>
-                        <button data-testid="pantry-adjust-credit-btn" onClick={() => adjust("CREDIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">+ Adjust</button>
-                        <button data-testid="pantry-adjust-debit-btn" onClick={() => adjust("DEBIT")} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">− Adjust</button>
+                        <button data-testid="pantry-adjust-credit-btn" onClick={() => setAdjust({ direction: "CREDIT", amount: "", notes: "", error: null, saving: false })} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">+ Adjust</button>
+                        <button data-testid="pantry-adjust-debit-btn" onClick={() => setAdjust({ direction: "DEBIT", amount: "", notes: "", error: null, saving: false })} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">− Adjust</button>
                         <button data-testid="pantry-daily-limit-btn" onClick={setLimit} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Daily limit…</button>
                         <button data-testid="pantry-freeze-toggle-btn" onClick={toggleFreeze}
                             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm ${wallet.isActive ? "border-rose-200 text-rose-600 hover:bg-rose-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>

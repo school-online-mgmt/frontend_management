@@ -8,6 +8,7 @@ import {
 import api from "../../api/api";
 import type { ManagedPublication, PublicationAckStats } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
 
 /**
@@ -52,6 +53,7 @@ export default function PublicationsPage() {
     const [ackTarget, setAckTarget] = useState<ManagedPublication | null>(null);
     const [seeding, setSeeding] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
+    const { confirm, dialog } = useConfirm();
 
     const { data, isLoading, refetch, isFetching } = useQuery({
         queryKey: ["publications"],
@@ -74,11 +76,7 @@ export default function PublicationsPage() {
         } finally { setSeeding(false); }
     };
 
-    const publish = async (doc: ManagedPublication) => {
-        const republish = doc.status === "PUBLISHED";
-        if (republish && !window.confirm(
-            `Re-publish "${doc.title}"? This bumps it to version ${doc.version + 1} and everyone will be asked to acknowledge again.`,
-        )) return;
+    const runPublish = async (doc: ManagedPublication, republish: boolean) => {
         setBusyId(doc.id);
         try {
             await api.publishPublication(doc.id);
@@ -89,29 +87,49 @@ export default function PublicationsPage() {
         } finally { setBusyId(null); }
     };
 
-    const unpublish = async (doc: ManagedPublication) => {
-        if (!window.confirm(`Take "${doc.title}" offline? It will disappear from the portals until re-published.`)) return;
-        setBusyId(doc.id);
-        try {
-            await api.unpublishPublication(doc.id);
-            addToast("Document taken offline.", "success");
-            refresh();
-        } catch (err: any) {
-            addToast(err?.response?.data?.message ?? "Failed to unpublish.", "error");
-        } finally { setBusyId(null); }
+    const publish = (doc: ManagedPublication) => {
+        // Only a RE-publish needs confirming — it supersedes every existing
+        // acknowledgement, so the whole school is asked to sign again.
+        if (doc.status !== "PUBLISHED") return runPublish(doc, false);
+        return confirm({
+            title: `Re-publish "${doc.title}"?`,
+            message: `This bumps it to version ${doc.version + 1} and everyone will be asked to acknowledge again.`,
+            confirmText: "Re-publish",
+            onConfirm: () => runPublish(doc, true),
+        });
     };
 
-    const remove = async (doc: ManagedPublication) => {
-        if (!window.confirm(`Delete "${doc.title}" permanently? Its acknowledgement history is deleted too. This cannot be undone.`)) return;
-        setBusyId(doc.id);
-        try {
-            await api.deletePublication(doc.id);
-            addToast("Document deleted.", "success");
-            refresh();
-        } catch (err: any) {
-            addToast(err?.response?.data?.message ?? "Failed to delete.", "error");
-        } finally { setBusyId(null); }
-    };
+    const unpublish = (doc: ManagedPublication) => confirm({
+        title: `Take "${doc.title}" offline?`,
+        message: "It will disappear from the portals until re-published.",
+        confirmText: "Take offline",
+        onConfirm: async () => {
+            setBusyId(doc.id);
+            try {
+                await api.unpublishPublication(doc.id);
+                addToast("Document taken offline.", "success");
+                refresh();
+            } catch (err: any) {
+                addToast(err?.response?.data?.message ?? "Failed to unpublish.", "error");
+            } finally { setBusyId(null); }
+        },
+    });
+
+    const remove = (doc: ManagedPublication) => confirm({
+        title: `Delete "${doc.title}" permanently?`,
+        message: "Its acknowledgement history is deleted too. This cannot be undone.",
+        confirmText: "Delete",
+        onConfirm: async () => {
+            setBusyId(doc.id);
+            try {
+                await api.deletePublication(doc.id);
+                addToast("Document deleted.", "success");
+                refresh();
+            } catch (err: any) {
+                addToast(err?.response?.data?.message ?? "Failed to delete.", "error");
+            } finally { setBusyId(null); }
+        },
+    });
 
     const counts = useMemo(() => ({
         all: docs.length,
@@ -131,6 +149,7 @@ export default function PublicationsPage() {
 
     return (
         <div className="flex flex-col h-full bg-slate-50">
+            {dialog}
             <PageHeader
                 icon={ScrollText}
                 title="School Documents"
