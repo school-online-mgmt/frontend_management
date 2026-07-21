@@ -246,13 +246,13 @@ export default function PublicationsPage() {
                                             <div className="flex justify-end gap-1">
                                                 <button onClick={() => setEditing(doc)} title="Edit" className="p-1.5 text-slate-500 hover:text-orange-600"><Pencil size={15} /></button>
                                                 {doc.status === "DRAFT" ? (
-                                                    <button onClick={() => publish(doc)} disabled={busyId === doc.id} title="Publish" className="p-1.5 text-slate-500 hover:text-emerald-600 disabled:opacity-50">
+                                                    <button data-testid="publication-publish-btn" onClick={() => publish(doc)} disabled={busyId === doc.id} title="Publish" className="p-1.5 text-slate-500 hover:text-emerald-600 disabled:opacity-50">
                                                         {busyId === doc.id ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
                                                     </button>
                                                 ) : (
                                                     <>
-                                                        <button onClick={() => publish(doc)} disabled={busyId === doc.id} title="Re-publish (new version)" className="p-1.5 text-slate-500 hover:text-emerald-600 disabled:opacity-50"><Upload size={15} /></button>
-                                                        <button onClick={() => unpublish(doc)} disabled={busyId === doc.id} title="Take offline" className="p-1.5 text-slate-500 hover:text-amber-600 disabled:opacity-50"><Undo2 size={15} /></button>
+                                                        <button data-testid="publication-republish-btn" onClick={() => publish(doc)} disabled={busyId === doc.id} title="Re-publish (new version)" className="p-1.5 text-slate-500 hover:text-emerald-600 disabled:opacity-50"><Upload size={15} /></button>
+                                                        <button data-testid="publication-unpublish-btn" onClick={() => unpublish(doc)} disabled={busyId === doc.id} title="Take offline" className="p-1.5 text-slate-500 hover:text-amber-600 disabled:opacity-50"><Undo2 size={15} /></button>
                                                     </>
                                                 )}
                                                 <button onClick={() => remove(doc)} disabled={busyId === doc.id} title="Delete" className="p-1.5 text-slate-400 hover:text-red-600 disabled:opacity-50"><Trash2 size={15} /></button>
