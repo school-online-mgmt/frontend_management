@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import ForcedPasswordChange from './ForcedPasswordChange';
 
 const ProtectedRoute: React.FC = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, mustChangePassword } = useAuth();
 
     if (isAuthenticated === null) {
         return (
@@ -13,7 +14,13 @@ const ProtectedRoute: React.FC = () => {
         );
     }
 
-    return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
+    if (!isAuthenticated) return <Navigate to="/login" />;
+
+    // Gate BEFORE the onboarding wizard and every other route: an admin created
+    // with a temporary password sets their own first, then lands in onboarding.
+    if (mustChangePassword) return <ForcedPasswordChange />;
+
+    return <Outlet />;
 };
 
 export default ProtectedRoute;

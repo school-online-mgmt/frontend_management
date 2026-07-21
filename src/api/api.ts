@@ -28,6 +28,14 @@ export const setLogoutCallback = (callback: () => void) => {
     logoutCallback = callback;
 };
 
+// Set by AuthProvider — fires when the backend reports the user must change
+// their password before doing anything else (403 PASSWORD_CHANGE_REQUIRED).
+let passwordChangeRequiredCallback: (() => void) | null = null;
+
+export const setPasswordChangeRequiredCallback = (callback: () => void) => {
+    passwordChangeRequiredCallback = callback;
+};
+
 // Add a response interceptor to handle global errors (like 401 Unauthorized)
 apiClient.interceptors.response.use(
   (response) => response,
@@ -36,7 +44,17 @@ apiClient.interceptors.response.use(
     // A 401 there just means "not authenticated yet"; the AuthContext handles that state.
     const url: string = error.config?.url ?? '';
     const isAuthCheck = url.includes('/management/auth/verifyAuth');
-    if (error.response?.status === 401 && !isAuthCheck) {
+    const status = error.response?.status;
+
+    // A forced password change surfaces as a 403 on every gated route. Flip the
+    // app into the change-password screen rather than logging the user out —
+    // they are authenticated, just not yet allowed further.
+    if (status === 403 && error.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      passwordChangeRequiredCallback?.();
+      return Promise.reject(error);
+    }
+
+    if (status === 401 && !isAuthCheck) {
       if (logoutCallback) {
           logoutCallback();
       }
@@ -605,9 +623,23 @@ createStudent = async (data: {
         sessionId: string;
         subjectIds: string[];
         fullMarks: number;
+        /** In MARKS, not percent. Omit to inherit the platform default of 40%. */
+        passMarks?: number;
     }) => {
         const res = await apiClient.post("/management/exam/create", payload);
         return res.data;
+    };
+
+    /**
+     * The class teacher's overall comment for a child in one term. Written onto
+     * every result row in that term so the report card finds it regardless of
+     * which subjects are published. An empty string clears it.
+     */
+    setClassTeacherRemark = async (studentId: string, payload: {
+        sessionId: string; examTerm: string; remark: string;
+    }) => {
+        const res = await apiClient.patch(`/management/exam/students/${studentId}/class-remark`, payload);
+        return res.data as { message: string; updatedCount: number };
     };
 
     // Update Exam

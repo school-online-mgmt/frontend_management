@@ -21,6 +21,8 @@ const CreateExamModal = ({
     const [subjectIds, setSubjectIds] = useState<string[]>([]);
 
     const [fullMarks, setFullMarks] = useState<number | "">("");
+    /** Blank = inherit the platform default of 40% of full marks. */
+    const [passMarks, setPassMarks] = useState<number | "">("");
 
     const [sessions, setSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -95,6 +97,14 @@ const CreateExamModal = ({
             setMessageType("error");
             return;
         }
+        // Caught here as well as server-side: a pass mark above full marks makes
+        // the paper unfailable-by-nobody — every student fails and the reason is
+        // invisible on the result screen.
+        if (passMarks !== "" && Number(passMarks) > Number(fullMarks)) {
+            setMessage("Pass marks cannot be higher than full marks.");
+            setMessageType("error");
+            return;
+        }
         try {
             setLoading(true);
             await api.createExam({
@@ -103,6 +113,7 @@ const CreateExamModal = ({
                 sessionId,
                 subjectIds,
                 fullMarks: Number(fullMarks),
+                ...(passMarks === "" ? {} : { passMarks: Number(passMarks) }),
             });
             setMessage("Exam created successfully");
             setMessageType("success");
@@ -199,19 +210,41 @@ const CreateExamModal = ({
                         </div>
                     </div>
 
-                    {/* Row 3: Full Marks */}
-                    <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
-                            Full Marks <span className="text-red-400">*</span>
-                        </label>
-                        <input data-testid="create-exam-modal-full-marks-input"
-                            type="number"
-                            min={1}
-                            placeholder="e.g. 100"
-                            value={fullMarks}
-                            onChange={(e) => setFullMarks(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="w-full border border-slate-200 bg-slate-50 text-slate-700 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                        />
+                    {/* Row 3: Full Marks + Pass Marks */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
+                                Full Marks <span className="text-red-400">*</span>
+                            </label>
+                            <input data-testid="create-exam-modal-full-marks-input"
+                                type="number"
+                                min={1}
+                                placeholder="e.g. 100"
+                                value={fullMarks}
+                                onChange={(e) => setFullMarks(e.target.value === "" ? "" : Number(e.target.value))}
+                                className="w-full border border-slate-200 bg-slate-50 text-slate-700 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">
+                                Pass Marks
+                            </label>
+                            <input data-testid="create-exam-modal-pass-marks-input"
+                                type="number"
+                                min={0}
+                                placeholder={fullMarks ? `Default ${Math.round(Number(fullMarks) * 0.4)}` : "Default 40%"}
+                                value={passMarks}
+                                onChange={(e) => setPassMarks(e.target.value === "" ? "" : Number(e.target.value))}
+                                className="w-full border border-slate-200 bg-slate-50 text-slate-700 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                            />
+                            {/* Schools differ (33/35/40 are all common), and theory
+                                vs practical papers often differ within one school. */}
+                            <p className="text-[11px] text-slate-400 mt-1">
+                                {passMarks !== "" && fullMarks !== "" && Number(fullMarks) > 0
+                                    ? `${Math.round((Number(passMarks) / Number(fullMarks)) * 100)}% of full marks`
+                                    : "Blank uses the school default of 40%"}
+                            </p>
+                        </div>
                     </div>
 
                     {/* Divider */}
