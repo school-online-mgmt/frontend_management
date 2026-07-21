@@ -162,11 +162,11 @@ function StudentLeavesTab() {
                                     </div>
                                     {mgmtApproval && (
                                         <div className="flex gap-2 shrink-0">
-                                            <button data-testid="leave-respond-btn" onClick={() => respond(mgmtApproval.id, "APPROVED")} disabled={respondingId === mgmtApproval.id}
+                                            <button data-testid="leave-approve-btn" onClick={() => respond(mgmtApproval.id, "APPROVED")} disabled={respondingId === mgmtApproval.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold hover:bg-emerald-100 disabled:opacity-50">
                                                 {respondingId === mgmtApproval.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
                                             </button>
-                                            <button data-testid="leave-respond-btn-2" onClick={() => respond(mgmtApproval.id, "REJECTED")} disabled={respondingId === mgmtApproval.id}
+                                            <button data-testid="leave-reject-btn" onClick={() => respond(mgmtApproval.id, "REJECTED")} disabled={respondingId === mgmtApproval.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[11px] font-bold hover:bg-red-100 disabled:opacity-50">
                                                 {respondingId === mgmtApproval.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} Reject
                                             </button>

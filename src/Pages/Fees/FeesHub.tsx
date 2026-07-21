@@ -64,6 +64,12 @@ interface Invoice { id: string; invoiceNo: string; month: number; year: number; 
 interface Summary {
     totalInvoices: number;
     totalDemand: number; totalCollected: number; outstanding: number;
+    /**
+     * Forgiven rupees on WAIVED invoices. Still counted in `totalDemand` (it was
+     * genuinely billed) but excluded from `outstanding`, so the money row reads:
+     *   demand = collected + waived + outstanding.
+     */
+    waivedAmount: number;
     pending: number; partiallyPaid: number; paid: number;
     overdue: number; overdueAmount: number;
     waived: number; cancelled: number;
@@ -394,9 +400,18 @@ function SummaryTab() {
                             value={summary.outstanding}
                             accent={summary.overdueAmount > 0 ? 'rose' : 'amber'}
                             note={
-                                summary.overdueAmount > 0
-                                    ? <>Includes <span className="font-bold tabular-nums text-rose-700">{fmt(summary.overdueAmount)}</span> overdue</>
-                                    : <>All outstanding is current — nothing past due</>
+                                <>
+                                    {summary.overdueAmount > 0
+                                        ? <>Includes <span className="font-bold tabular-nums text-rose-700">{fmt(summary.overdueAmount)}</span> overdue</>
+                                        : <>All outstanding is current — nothing past due</>}
+                                    {/* Without this, demand − collected ≠ outstanding on screen
+                                        and the row looks like it has lost money. */}
+                                    {summary.waivedAmount > 0 && (
+                                        <div className="mt-0.5">
+                                            <span className="font-bold tabular-nums">{fmt(summary.waivedAmount)}</span> waived, no longer owed
+                                        </div>
+                                    )}
+                                </>
                             }
                         />
                     </div>
