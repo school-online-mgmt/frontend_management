@@ -32,7 +32,17 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
 
     useEffect(() => {
         api.getClasses().then((d: any) => setClasses(d || [])).catch(() => {});
-        api.getSessions().then((d: any) => setSessions(d || [])).catch(() => {});
+        api.getSessions().then((d: any) => {
+            const list = d || [];
+            setSessions(list);
+            // Default-select a session so a quick submit can't fire before the
+            // dropdown populates and fail "Please select an academic session"
+            // on a form the user did fill in (BUG-004).
+            if (list.length > 0) {
+                const preferred = list.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? list[0];
+                setSessionId(prev => prev || preferred.id);
+            }
+        }).catch(() => {});
     }, []);
 
     const handleNameChange = (value: string) => {
@@ -187,7 +197,7 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                             className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition disabled:opacity-50">
                             Cancel
                         </button>
-                        <button data-testid="course-submit-btn" onClick={handleSubmit} disabled={isSubmitting}
+                        <button data-testid="course-submit-btn" onClick={handleSubmit} disabled={isSubmitting || !sessionId}
                             className="flex-1 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
                             {isSubmitting
                                 ? <><Loader2 size={15} className="animate-spin" /> Creating…</>
