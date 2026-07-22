@@ -115,6 +115,12 @@ class API {
     const response = await apiClient.get(`/management/subject/${id}`);
     return response.data;
   };
+  // Sections where this subject is taught (subject → its courses → their classes
+  // → sections). Powers the teacher-onboarding section picker.
+  getSubjectSections = async (id: string): Promise<{ sections: { id: string; name: string; classId: string; className: string }[] }> => {
+    const response = await apiClient.get(`/management/subject/${id}/sections`);
+    return response.data;
+  };
   createSubject = async (subjectData: { name: string, slug: string, bookName: string, sessionId: string, type?: string, teacherId?: string }) => {
     const response = await apiClient.post('/management/subject/create', subjectData);
     return response.data;
@@ -929,7 +935,11 @@ createStudent = async (data: {
         return res.data;
     };
 
-    // Assign subject to teacher
+    // DEPRECATED / DO NOT USE. This posts to `/management/teacher/:id/assign-subject`,
+    // a route that does NOT exist in the backend — it 404s. A subject-teacher
+    // assignment is per-section: use `addTeacherToSubject(subjectId, { teacherId,
+    // sectionId })` above, which targets the real endpoint. Kept only so an old
+    // build doesn't crash on a missing symbol; remove once nothing references it.
     assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
         const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
         return res.data;

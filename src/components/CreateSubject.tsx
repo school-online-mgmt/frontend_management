@@ -30,7 +30,15 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
           api.getSessions(),
           api.getTeachers(),
         ]);
-        setSessions(Array.isArray(sessData) ? sessData : []);
+        const sessList = Array.isArray(sessData) ? sessData : [];
+        setSessions(sessList);
+        // Default-select a session so a fast submit can't fire with an empty
+        // sessionId before the dropdown has populated (BUG-004). Prefer a
+        // current/active session if the API marks one, else the first.
+        if (sessList.length > 0) {
+          const preferred = sessList.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? sessList[0];
+          setSubjectData(prev => prev.sessionId ? prev : { ...prev, sessionId: preferred.id });
+        }
         const tList = Array.isArray(teachData) ? teachData : teachData?.teachers ?? [];
         setTeachers(tList.filter((t: any) => t.isActive !== false));
       } catch { /* ignore */ }
@@ -177,7 +185,7 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
             <button data-testid="create-subject-close-btn-2" type="button" className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors" onClick={onClose}>
               Cancel
             </button>
-            <button data-testid="subject-submit-btn" type="submit" className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2" disabled={isSubmitting}>
+            <button data-testid="subject-submit-btn" type="submit" className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2" disabled={isSubmitting || !subjectData.sessionId}>
               {isSubmitting ? <><Loader2 size={14} className="animate-spin" /> Creating…</> : 'Create Subject'}
             </button>
           </div>

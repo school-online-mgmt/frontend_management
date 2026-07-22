@@ -476,7 +476,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                     </select>
                     <span className="text-xs text-slate-400">{buses.length} vehicle{buses.length !== 1 ? "s" : ""}</span>
                 </div>
-                <button data-testid="transport-add-zone-open-btn" onClick={() => { resetForm(); setShowForm(true); }}
+                <button data-testid="transport-add-vehicle-open-btn" onClick={() => { resetForm(); setShowForm(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-colors">
                     <Plus size={14} />Add Vehicle
                 </button>

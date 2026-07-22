@@ -39,14 +39,15 @@ interface WizardState {
     identity: { name: string; gender: string; age: string; qualification: string; phone: string; email: string; password: string; address: string };
     employment: { employeeCode: string; designation: string; department: string; joiningDate: string; employmentType: string };
     salary: { basicSalary: string; components: HrComponent[] };
-    assignedSubjectIds: string[];
+    /** subjectId → the sectionIds this teacher will teach that subject in. */
+    subjectSections: Record<string, string[]>;
 }
 
 const EMPTY: WizardState = {
     identity: { name: "", gender: "Male", age: "", qualification: "", phone: "", email: "", password: "", address: "" },
     employment: { employeeCode: "", designation: "", department: "", joiningDate: today(), employmentType: "FULL_TIME" },
     salary: { basicSalary: "", components: [] },
-    assignedSubjectIds: [],
+    subjectSections: {},
 };
 
 export function computePreview(basic: number, components: HrComponent[]) {
@@ -135,11 +136,32 @@ export default function TeacherOnboardingModal({ onClose, onDone }: { onClose: (
                 });
             }
 
-            for (const subjectId of state.assignedSubjectIds) {
-                await api.assignSubjectToTeacher(teacherId, subjectId);
+            // Assign the teacher to each picked (subject, section) via the real
+            // per-section endpoint. A duplicate returns 409, which we treat as
+            // "already assigned" rather than an error. These run after the
+            // teacher exists and are individually caught, so a single failure
+            // never rolls back the onboarding — it just gets reported.
+            let assigned = 0;
+            let failed = 0;
+            for (const [subjectId, sectionIds] of Object.entries(state.subjectSections)) {
+                for (const sectionId of sectionIds) {
+                    try {
+                        await api.addTeacherToSubject(subjectId, { teacherId, sectionId });
+                        assigned++;
+                    } catch (e: any) {
+                        if (e?.response?.status === 409) { assigned++; continue; }
+                        failed++;
+                    }
+                }
             }
-
-            addToast(`${state.identity.name} onboarded.`, "success");
+            addToast(
+                failed > 0
+                    ? `${state.identity.name} onboarded; ${assigned} subject-section assignment${assigned === 1 ? "" : "s"} saved, ${failed} failed — finish them from Subjects → Assignments.`
+                    : assigned > 0
+                        ? `${state.identity.name} onboarded and assigned to ${assigned} subject-section${assigned === 1 ? "" : "s"}.`
+                        : `${state.identity.name} onboarded.`,
+                failed > 0 ? "error" : "success",
+            );
             onDone?.();
             onClose();
         } catch (err: any) {
@@ -322,34 +344,84 @@ function AssignmentsStep({ state, setState }: { state: WizardState; setState: Re
         queryFn: () => api.getSubjects({ active: true }),
     });
 
-    // Selection only — the assignments are written at Finish along with the rest.
-    const toggle = (subjectId: string) => setState(s => ({
-        ...s,
-        assignedSubjectIds: s.assignedSubjectIds.includes(subjectId)
-            ? s.assignedSubjectIds.filter(id => id !== subjectId)
-            : [...s.assignedSubjectIds, subjectId],
-    }));
+    // Pick a subject (add/remove its key); an empty array means "picked, no
+    // sections chosen yet". Assignments are written at Finish with the rest.
+    const togglePick = (subjectId: string) => setState(s => {
+        const next = { ...s.subjectSections };
+        if (subjectId in next) delete next[subjectId]; else next[subjectId] = [];
+        return { ...s, subjectSections: next };
+    });
+    const toggleSection = (subjectId: string, sectionId: string) => setState(s => {
+        const cur = s.subjectSections[subjectId] ?? [];
+        const nextSecs = cur.includes(sectionId) ? cur.filter(x => x !== sectionId) : [...cur, sectionId];
+        return { ...s, subjectSections: { ...s.subjectSections, [subjectId]: nextSecs } };
+    });
 
     return (
         <div>
-            <p className="text-xs text-slate-500 mb-3">Optional — pick the subjects this teacher will handle. You can refine this later from the Teachers page.</p>
+            <p className="text-xs text-slate-500 mb-3">Optional — pick each subject this teacher handles, then tick the sections they teach it in. You can refine this later from Subjects → Assignments.</p>
             {isLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-indigo-600" /></div>
             ) : (subjects ?? []).length === 0 ? (
                 <p className="text-sm text-slate-500 py-6 text-center">No subjects found for this school yet.</p>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-                    {(subjects as any[]).map(sub => {
-                        const selected = state.assignedSubjectIds.includes(sub.id);
-                        return (
-                            <button key={sub.id} data-testid="teacher-onboard-subject-option" data-subject-name={sub.name} data-selected={selected}
-                                onClick={() => toggle(sub.id)}
-                                className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg border text-left ${selected ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 hover:bg-slate-50"}`}>
-                                <span className="truncate">{sub.name}</span>
-                                {selected ? <CheckCircle2 size={15} className="text-emerald-600" /> : <Plus size={15} className="text-slate-400" />}
-                            </button>
-                        );
-                    })}
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {(subjects as any[]).map(sub => (
+                        <SubjectRow key={sub.id} sub={sub}
+                            picked={sub.id in state.subjectSections}
+                            pickedSections={state.subjectSections[sub.id] ?? []}
+                            onTogglePick={() => togglePick(sub.id)}
+                            onToggleSection={(secId) => toggleSection(sub.id, secId)} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function SubjectRow({ sub, picked, pickedSections, onTogglePick, onToggleSection }: {
+    sub: any; picked: boolean; pickedSections: string[];
+    onTogglePick: () => void; onToggleSection: (sectionId: string) => void;
+}) {
+    // Load candidate sections only once the subject is picked (server derives
+    // them: subject → its courses → their classes → sections).
+    const { data, isLoading } = useQuery({
+        queryKey: ["subject-sections", sub.id],
+        queryFn: () => api.getSubjectSections(sub.id),
+        enabled: picked,
+    });
+    const sections = data?.sections ?? [];
+
+    return (
+        <div data-testid="teacher-onboard-subject-row" data-subject-name={sub.name} data-selected={picked}
+            className={`rounded-lg border ${picked ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200"}`}>
+            <button type="button" data-testid="teacher-onboard-subject-option" data-subject-name={sub.name} data-selected={picked}
+                onClick={onTogglePick}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-left">
+                <span className="truncate font-medium text-slate-800">{sub.name}</span>
+                {picked ? <CheckCircle2 size={15} className="text-emerald-600" /> : <Plus size={15} className="text-slate-400" />}
+            </button>
+            {picked && (
+                <div className="px-3 pb-2.5">
+                    {isLoading ? (
+                        <span className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Loading sections…</span>
+                    ) : sections.length === 0 ? (
+                        <span className="text-xs text-amber-600">Not part of any course yet — add this subject to a course to assign sections.</span>
+                    ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                            {sections.map((sec: any) => {
+                                const on = pickedSections.includes(sec.id);
+                                return (
+                                    <button key={sec.id} type="button"
+                                        data-testid="teacher-onboard-section-option" data-section-name={`${sec.className} ${sec.name}`} data-selected={on}
+                                        onClick={() => onToggleSection(sec.id)}
+                                        className={`px-2.5 py-1 text-xs rounded-md border ${on ? "border-emerald-300 bg-emerald-100 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                                        {sec.className} · {sec.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -384,7 +456,8 @@ function ReviewStep({ state }: { state: WizardState }) {
                 </section>
                 <section>
                     <h4 className="text-xs uppercase tracking-wide text-slate-400 mb-1">Subjects</h4>
-                    <Row label="Selected" value={String(state.assignedSubjectIds.length)} />
+                    <Row label="Subjects picked" value={String(Object.keys(state.subjectSections).length)} />
+                    <Row label="Section assignments" value={String(Object.values(state.subjectSections).reduce((n, arr) => n + arr.length, 0))} />
                 </section>
                 <div className="flex items-start gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2.5 text-xs text-indigo-800">
                     <IdCard size={16} className="shrink-0 mt-0.5" />
