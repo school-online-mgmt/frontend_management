@@ -175,15 +175,30 @@ const Student360Panel = ({ studentId }: { studentId: string }) => {
                                 <Stat label="Awaiting publication" value={academics.pendingPublication} tone="amber" />
                                 <Stat label="Papers missed" value={academics.absentPapers} tone="rose" />
                             </div>
-                            {(academics.byTerm ?? []).length > 0 && (
+                            {/* One card per exam the school actually conducted
+                                (FR-008). Falls back to the per-term roll-up on
+                                an older API that predates `examSets`. */}
+                            {((academics.examSets ?? academics.terms ?? []) as any[]).length > 0 && (
                                 <div className="mt-4 space-y-3">
-                                    {academics.byTerm.map((t: any) => (
-                                        <div key={`${t.term}-${t.examName}`} data-testid="student-360-exam-set" data-exam-name={t.examName}
+                                    {((academics.examSets ?? academics.terms) as any[]).map((t: any, gi: number) => (
+                                        <div key={`${t.term}-${t.examName ?? gi}`}
+                                            data-testid="student-360-exam-set"
+                                            data-exam-name={t.examName ?? (t.examNames ?? []).join(", ")}
                                             className="rounded-xl border border-slate-100 p-3">
-                                            <p className="mb-2 text-sm font-semibold text-slate-700">{t.examName}</p>
+                                            <div className="mb-2 flex items-center justify-between gap-2">
+                                                <p className="text-sm font-semibold text-slate-700">
+                                                    {t.examName ?? (t.examNames ?? []).join(" · ") ?? t.term}
+                                                </p>
+                                                <span className="text-xs font-semibold tabular-nums text-slate-500">
+                                                    {t.obtained}/{t.total} · {t.percentage}%{t.grade ? ` · ${t.grade}` : ""}
+                                                    {t.failedCount > 0 ? ` · ${t.failedCount} below pass` : ""}
+                                                </span>
+                                            </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {(t.subjects ?? []).map((s: any, i: number) => (
-                                                    <span key={i} className="rounded-lg bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                                                    <span key={i}
+                                                        className={`rounded-lg px-2.5 py-1 text-xs ${
+                                                            s.passed === false ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"}`}>
                                                         {s.subjectName}: <strong className="tabular-nums">{s.marks ?? "—"}/{s.fullMarks}</strong>
                                                     </span>
                                                 ))}
