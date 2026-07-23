@@ -78,9 +78,17 @@ body {
   to   { opacity: 1; transform: none; }
 }
 
-.animate-fade-up     { animation: fadeInUp   0.35s ease-out both; }
-.animate-slide-right { animation: slideRight 0.3s  ease-out both; }
-.animate-tabFadeIn   { animation: tabFadeIn  0.28s cubic-bezier(0.4, 0, 0.2, 1) both; }
+/* fill-mode BACKWARDS, not both/forwards: `both` retains the final keyframe
+   as a computed IDENTITY MATRIX (Chrome interpolates `transform: none` to
+   matrix(1,0,0,1,0,0) and keeps THAT, verified via getComputedStyle on the
+   live build) — and any retained transform makes the animated element the
+   containing block for every fixed-position modal inside it (BUG-022).
+   `backwards` only applies the `from` frame before the animation starts;
+   once it ends the element returns to its natural, transform-free style,
+   which is identical visually because the end state IS the natural state. */
+.animate-fade-up     { animation: fadeInUp   0.35s ease-out backwards; }
+.animate-slide-right { animation: slideRight 0.3s  ease-out backwards; }
+.animate-tabFadeIn   { animation: tabFadeIn  0.28s cubic-bezier(0.4, 0, 0.2, 1) backwards; }
 
 /* 3D flip card primitives — used by SessionCard.
    `.flip-card` is the perspective container, `.flip-card-inner` is the
