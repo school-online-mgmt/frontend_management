@@ -31,7 +31,7 @@ const SubjectDetailsPage = () => {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [teacherToRemove, setTeacherToRemove] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
-    const [editData, setEditData] = useState({ name: '', slug: '', bookName: '', sessionId: '' });
+    const [editData, setEditData] = useState({ name: '', slug: '', bookName: '', sessionId: '', teacherId: '' });
     const [editInitialized, setEditInitialized] = useState(false);
 
     const { data: subjectData, isLoading: subjectLoading } = useQuery({
@@ -47,6 +47,16 @@ const SubjectDetailsPage = () => {
         queryFn: async () => {
             const data = await api.getSessions();
             return Array.isArray(data) ? data : data?.sessions || [];
+        },
+    });
+
+    // All teachers — the edit modal's incharge picker (FR-005: previously the
+    // incharge was display-only; a school could never reassign a subject head).
+    const { data: allTeachersList = [] } = useQuery({
+        queryKey: ['teachers', 'for-incharge'],
+        queryFn: async () => {
+            const data: any = await api.getTeachers();
+            return Array.isArray(data) ? data : data?.teachers || data?.data || [];
         },
     });
 
@@ -132,7 +142,7 @@ const SubjectDetailsPage = () => {
 
     // Initialize edit form once subject loads
     if (subject && !editInitialized) {
-        setEditData({ name: subject.name || '', slug: subject.slug || '', bookName: subject.bookName || '', sessionId: subject.sessionId || '' });
+        setEditData({ name: subject.name || '', slug: subject.slug || '', bookName: subject.bookName || '', sessionId: subject.sessionId || '', teacherId: (subject as any).teacherId || '' });
         setEditInitialized(true);
     }
 
@@ -223,13 +233,26 @@ const SubjectDetailsPage = () => {
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Incharge Teacher</label>
+                                <select data-testid="subject-incharge-teacher-select" className="mt-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                    value={editData.teacherId}
+                                    onChange={e => setEditData({ ...editData, teacherId: e.target.value })}>
+                                    <option value="">No incharge assigned</option>
+                                    {allTeachersList.map((t: any) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-[11px] text-slate-400">The incharge owns this subject's exam papers and syllabus.</p>
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button data-testid="subject-is-edit-open-btn-2" onClick={() => setIsEditOpen(false)}
                                 className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition text-sm">
                                 Cancel
                             </button>
-                            <button onClick={() => updateSubjectMutation.mutate(editData)}
+                            <button data-testid="subject-edit-save-btn"
+                                onClick={() => updateSubjectMutation.mutate({ ...editData, teacherId: editData.teacherId || null })}
                                 disabled={updateSubjectMutation.isPending}
                                 className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 transition text-sm flex items-center justify-center gap-2">
                                 {updateSubjectMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Pencil size={15} />}
