@@ -227,6 +227,9 @@ const ExamDetails = () => {
     const [syllabusOpen, setSyllabusOpen] = useState(false);
     const [qpOpen, setQpOpen]           = useState(false);
     const [deleteOpen, setDeleteOpen]   = useState(false);
+    // FR-002: publishing is the point of no return (marks lock, students see
+    // results) — confirm it over a mini-summary instead of a bare click.
+    const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
 
     // Action loading key
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -332,7 +335,7 @@ const ExamDetails = () => {
         runAction("conduct", () => api.markConducted(examId), "Exam marked as conducted. Section teachers can now enter marks.");
 
     const handlePublishResults = () =>
-        runAction("publish-results", () => api.publishExamResults(examId), "Results published successfully! Students can now view their results.");
+        runAction("publish-results", () => api.publishExamResults(examId), "Results published successfully! Students can now view their results.").finally(() => setPublishConfirmOpen(false));
 
     const handleDelete = async () => {
         try {
@@ -882,7 +885,7 @@ const ExamDetails = () => {
                                 </div>
                             )}
                             <button data-testid="exam-publish-results-btn"
-                                onClick={handlePublishResults}
+                                onClick={() => setPublishConfirmOpen(true)}
                                 disabled={!canPublishResults || actionLoading === "publish-results"}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                                 {actionLoading === "publish-results"
@@ -890,6 +893,31 @@ const ExamDetails = () => {
                                     : <Award size={15} />}
                                 Publish Results
                             </button>
+                            {publishConfirmOpen && (() => {
+                                // FR-002 mini-summary: what is about to go out, computed
+                                // from the marks already on screen.
+                                const scores = marksEntered.map(r => Number(r.marks));
+                                const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+                                const passMark = exam.passMarks ?? Math.ceil((exam.fullMarks || 0) * 0.4);
+                                const passCount = scores.filter(m => m >= passMark).length;
+                                return (
+                                    <ConfirmModal
+                                        title="Complete & publish results?"
+                                        message="Marks lock permanently and every student sees their result. This cannot be undone."
+                                        confirmText="Publish results"
+                                        loading={actionLoading === "publish-results"}
+                                        onConfirm={handlePublishResults}
+                                        onCancel={() => setPublishConfirmOpen(false)}
+                                    >
+                                        <div className="text-sm text-slate-700 space-y-1.5" data-testid="publish-summary">
+                                            <div className="flex justify-between"><span className="text-slate-500">Students present</span><strong>{present.length}</strong></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Marks entered</span><strong>{marksEntered.length} / {present.length}</strong></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Average</span><strong>{avg.toFixed(1)} / {exam.fullMarks}</strong></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Passing (≥ {passMark})</span><strong>{passCount} of {scores.length}</strong></div>
+                                        </div>
+                                    </ConfirmModal>
+                                );
+                            })()}
                         </div>
                     )}
                 </div>
