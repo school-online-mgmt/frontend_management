@@ -84,7 +84,14 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
             api.getSectionsByClass(form.classId).then((data: any) => {
                 setSections(Array.isArray(data) ? data : []);
             }).catch(() => setSections([]));
-            setCourses(allCourses.filter((c: any) => c.classId === form.classId || c.class?.id === form.classId));
+            // Only offer courses that carry at least one subject — a course with
+            // no curriculum is not a valid placement (its students would be
+            // invisible to exams and fee structures). `subjectCount` comes from
+            // the course list API; courses from an older response without the
+            // field are kept so the form degrades gracefully.
+            setCourses(allCourses.filter((c: any) =>
+                (c.classId === form.classId || c.class?.id === form.classId)
+                && (c.subjectCount === undefined || c.subjectCount > 0)));
         } else {
             setSections([]);
             setCourses([]);
