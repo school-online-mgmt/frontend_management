@@ -9,7 +9,7 @@ import {
 import api from "../../api/api";
 import type { PantryItem, PantryWalletRow, PantryInsights } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
-import TabbedSection from "../../components/common/TabbedSection";
+import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import useTabState from "../../hooks/useTabState";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -52,11 +52,16 @@ export default function PantryHub() {
                     ariaLabel="Pantry sections"
                     theme="emerald"
                 >
-                    {tab === "pos" && <PosTab />}
-                    {tab === "menu" && <MenuTab />}
-                    {tab === "orders" && <OrdersTab />}
-                    {tab === "wallets" && <WalletsTab />}
-                    {tab === "insights" && <InsightsTab />}
+                    {/* TabbedSection resolves its active panel by matching each
+                        child's `tabKey` prop against `value` — raw `tab === x &&`
+                        conditionals have no tabKey, so NOTHING rendered (BUG-017:
+                        every pantry tab showed an empty panel). Only the matching
+                        TabPanel is mounted, so per-tab queries still lazy-fire. */}
+                    <TabPanel tabKey="pos"><PosTab /></TabPanel>
+                    <TabPanel tabKey="menu"><MenuTab /></TabPanel>
+                    <TabPanel tabKey="orders"><OrdersTab /></TabPanel>
+                    <TabPanel tabKey="wallets"><WalletsTab /></TabPanel>
+                    <TabPanel tabKey="insights"><InsightsTab /></TabPanel>
                 </TabbedSection>
             </div>
         </div>
