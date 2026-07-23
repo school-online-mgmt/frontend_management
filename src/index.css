@@ -49,23 +49,33 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* Both end at `transform: none` for the same reason as tabFadeIn below —
+   these run with fill-mode `both`, and a retained transform would trap any
+   fixed-position modal rendered inside the animated container (BUG-022). */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes slideRight {
   from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
 /* TabbedSection panel entrance — gentle slide-up + fade so tab changes
-   have a clear sense of motion without feeling sluggish. */
+   have a clear sense of motion without feeling sluggish.
+   The `to` frame MUST end at `transform: none` (not translateY(0)): the
+   animation runs with fill-mode `both`, and a RETAINED transform — any value
+   other than `none` — makes the panel the containing block for every
+   `position: fixed` descendant. That pinned modals rendered inside tab panels
+   (e.g. the pantry wallet modal) to the panel's box instead of the viewport,
+   leaving their buttons under the sticky tab strip, which swallowed the
+   clicks (BUG-022). */
 @keyframes tabFadeIn {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 
 .animate-fade-up     { animation: fadeInUp   0.35s ease-out both; }
