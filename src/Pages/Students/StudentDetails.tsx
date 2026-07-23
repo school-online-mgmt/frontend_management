@@ -8,6 +8,7 @@ import {
 import api from '../../api/api';
 import type { StudentDetailsResponse } from '../../api/types';
 import AdmitStudentModal from '../../components/Student/AdmitStudentModal';
+import Student360Panel from '../../components/Student/Student360Panel';
 
 // ── Reset Password Dialog ─────────────────────────────────────────────────────
 const ResetPasswordDialog: React.FC<{
@@ -231,6 +232,14 @@ const StudentDetails: React.FC = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+        {/* 360° record (FR-006) — attendance, academics, fees, library,
+            homework, sports and insights, redacted server-side for this role.
+            Full width above the split so the office reads the whole child
+            first and the raw record second. */}
+        <div className="mb-8">
+          <Student360Panel studentId={student.id} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main column — Academics */}
           <div className="lg:col-span-2 space-y-8">

@@ -821,6 +821,18 @@ createStudent = async (data: {
         return res.data;
     };
 
+    /**
+     * The 360° student record — attendance, academics, fees, library, homework,
+     * sports and derived insights, already redacted server-side for the calling
+     * role (see Student360Service.resolveVisibility).
+     */
+    getStudent360 = async (studentId: string, sessionId?: string) => {
+        const res = await apiClient.get(`/management/student/${studentId}/360`, {
+            params: sessionId ? { sessionId } : undefined,
+        });
+        return res.data;
+    };
+
     // Create admission for student
     createAdmission = async (studentId: string, admissionData: {
         sessionId: string;
