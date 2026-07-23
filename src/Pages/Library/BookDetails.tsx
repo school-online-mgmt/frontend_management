@@ -122,6 +122,7 @@ const BookDetailsPage = () => {
                                     <Edit2 size={14} /> Edit
                                 </button>
                                 <button
+                                    data-testid="library-delete-book-btn"
                                     onClick={() => confirm({
                                         title: "Delete this book?",
                                         message: `"${book.title}" will be permanently removed from the library. This cannot be undone.`,
