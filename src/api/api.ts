@@ -63,6 +63,16 @@ apiClient.interceptors.response.use(
   }
 );
 
+/** Per-sub-activity email gates (#8) — one row per module, with its triggers. */
+export interface EmailActivitySettingsResponse {
+  serviceEnabled: boolean;
+  modules: Array<{
+    module: string;
+    enabled: boolean;
+    activities: Array<{ key: string; label: string; enabled: boolean; inherited: boolean }>;
+  }>;
+}
+
 export interface StaffRoleDef {
   type: 'BUILTIN' | 'CUSTOM';
   key: string;
@@ -741,6 +751,39 @@ createStudent = async (data: {
     getExamReport = async (examId: string) => {
         const res = await apiClient.get(`/management/exam/${examId}/report`);
         return res.data;
+    };
+
+    /**
+     * Term report card (P1-EXM-10). `preview` returns the computed JSON so the UI
+     * can show the card on screen; otherwise the PDF blob is downloaded.
+     * `weights` maps examName → weight (out of 100, P1-EXM-11); omit for an equal split.
+     */
+    getReportCardPreview = async (studentId: string, params: {
+        sessionId: string; examTerm: string; termLabel?: string;
+        weights?: Record<string, number>; passPercent?: number;
+    }) => {
+        const res = await apiClient.get(`/management/exam/report-card/${studentId}`, {
+            params: {
+                ...params,
+                preview: 1,
+                ...(params.weights ? { weights: JSON.stringify(params.weights) } : {}),
+            },
+        });
+        return res.data;
+    };
+
+    downloadReportCard = async (studentId: string, params: {
+        sessionId: string; examTerm: string; termLabel?: string;
+        weights?: Record<string, number>; passPercent?: number;
+    }) => {
+        const res = await apiClient.get(`/management/exam/report-card/${studentId}`, {
+            responseType: "blob",
+            params: {
+                ...params,
+                ...(params.weights ? { weights: JSON.stringify(params.weights) } : {}),
+            },
+        });
+        return res.data as Blob;
     };
 
     // Get school-wide performance dashboard data
@@ -1457,6 +1500,10 @@ createStudent = async (data: {
         zoneId: string; busNumber: string; driverName: string; driverPhone?: string;
         conductorName?: string; conductorPhone?: string; capacity?: number;
         routeDescription?: string; pickupTime?: string; dropTime?: string; vehicleType?: string;
+        registrationNumber?: string; registrationExpiry?: string;
+        insuranceProvider?: string; insurancePolicyNumber?: string; insuranceExpiry?: string;
+        fitnessCertExpiry?: string; permitExpiry?: string; pollutionCertExpiry?: string;
+        lastServicedOn?: string; driverLicenseNumber?: string; driverLicenseExpiry?: string;
     }) => {
         const res = await apiClient.post("/management/transport/bus-details", data);
         return res.data;
@@ -1467,6 +1514,10 @@ createStudent = async (data: {
         conductorName: string; conductorPhone: string; capacity: number;
         routeDescription: string; pickupTime: string; dropTime: string;
         vehicleType: string; isActive: boolean;
+        registrationNumber: string; registrationExpiry: string | null;
+        insuranceProvider: string; insurancePolicyNumber: string; insuranceExpiry: string | null;
+        fitnessCertExpiry: string | null; permitExpiry: string | null; pollutionCertExpiry: string | null;
+        lastServicedOn: string | null; driverLicenseNumber: string; driverLicenseExpiry: string | null;
     }>) => {
         const res = await apiClient.patch(`/management/transport/bus-details/${id}`, data);
         return res.data;
@@ -1477,10 +1528,28 @@ createStudent = async (data: {
         return res.data;
     };
 
+    /** Bus document expiry insights (RC/insurance/fitness/permit/PUC/licence). */
+    getTransportCompliance = async (within?: number) => {
+        const res = await apiClient.get("/management/transport/compliance", {
+            params: within ? { within } : undefined,
+        });
+        return res.data;
+    };
+
     // ── Account & Support ────────────────────────────────────────────────────
     getAccount = async () => {
         const res = await apiClient.get('/management/support/account');
         return res.data;
+    };
+
+    // Activity / audit log (P0-AC-08)
+    getActivity = async (params: { module?: string; q?: string; before?: string; limit?: number } = {}) => {
+        const res = await apiClient.get('/management/activity', { params });
+        return res.data as { activities: any[]; nextBefore: string | null };
+    };
+    getActivityModules = async () => {
+        const res = await apiClient.get('/management/activity/modules');
+        return res.data as { modules: string[] };
     };
 
     // Support Tickets
@@ -1854,6 +1923,19 @@ createStudent = async (data: {
             serviceEnabled: boolean;
             modules: Record<string, boolean>;
         };
+    };
+
+    // ── Settings: per-sub-activity email gates (#8) ─────────────────────────
+    /** `inherited: true` = the trigger has no override and follows its module. */
+    getEmailActivities = async () => {
+        const res = await apiClient.get("/management/settings/email-activities");
+        return res.data as EmailActivitySettingsResponse;
+    };
+
+    /** Keys are "MODULE:ACTIVITY"; pass null to drop an override. */
+    updateEmailActivities = async (settings: Record<string, boolean | null>) => {
+        const res = await apiClient.patch("/management/settings/email-activities", { settings });
+        return res.data as EmailActivitySettingsResponse & { message: string };
     };
 
     // ── Platform bills (management → platform) ──────────────────────────────

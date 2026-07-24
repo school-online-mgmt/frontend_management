@@ -14,6 +14,7 @@ type EmailSettings = Awaited<ReturnType<typeof api.getEmailSettings>>["email"];
 type EmailUsage = Awaited<ReturnType<typeof api.getEmailUsage>>;
 type ModuleAddrs = Awaited<ReturnType<typeof api.getEmailModuleAddresses>>;
 type EmailModulesGates = Awaited<ReturnType<typeof api.getEmailModules>>;
+type EmailActivityGates = Awaited<ReturnType<typeof api.getEmailActivities>>;
 
 const inp =
   "w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white placeholder:text-slate-400 transition-colors";
@@ -798,6 +799,126 @@ function ModuleTilesPanel({
           Leave blank to revert to the default (e.g. <code className="font-mono text-slate-700">finance</code>,{" "}
           <code className="font-mono text-slate-700">attendance</code>).
         </p>
+      </div>
+
+      <ActivityGatesSection />
+    </div>
+  );
+}
+
+/**
+ * Per-trigger email gates (#8). A module can stay ON while ONE email inside it
+ * is muted — e.g. keep Finance on for new invoices but stop the overdue
+ * chasers. A trigger with no override of its own "follows" its module, and we
+ * say exactly that rather than showing a misleading hard ON.
+ */
+function ActivityGatesSection() {
+  const { addToast } = useToast();
+  const [data, setData] = useState<EmailActivityGates | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      setData(await api.getEmailActivities());
+    } catch {
+      setData(null);
+    }
+  };
+  useEffect(() => { void load(); }, []);
+
+  /** `next === null` drops the override so the trigger follows its module. */
+  const apply = async (moduleKey: string, activityKey: string, next: boolean | null) => {
+    const gateKey = `${moduleKey}:${activityKey}`;
+    setSavingKey(gateKey);
+    try {
+      const res = await api.updateEmailActivities({ [gateKey]: next });
+      setData(res);
+      addToast(
+        next === null ? "Trigger now follows its module"
+          : next ? "Trigger enabled" : "Trigger muted",
+        "success",
+      );
+    } catch (e: any) {
+      addToast(e?.response?.data?.message ?? "Could not update trigger", "error");
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  if (!data) return null;
+
+  const mutedCount = data.modules.reduce(
+    (n, m) => n + m.activities.filter((a) => !a.inherited && !a.enabled).length, 0,
+  );
+
+  return (
+    <div className="mt-6 pt-5 border-t border-slate-200" data-testid="email-activity-gates">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h4 className="text-sm font-bold text-slate-800">Individual email triggers</h4>
+        {mutedCount > 0 && (
+          <span data-testid="email-activity-muted-count"
+            className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+            {mutedCount} muted
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-500 mb-4">
+        Finer control than the module switches above. Muting a trigger stops only that one email —
+        the module keeps sending everything else, and the underlying action still happens.
+      </p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {data.modules.map((m) => (
+          <div key={m.module} className="rounded-xl border border-slate-200 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-xs font-bold text-slate-700">{MODULE_LABELS[m.module] ?? m.module}</p>
+              {!m.enabled && (
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+                  module off
+                </span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {m.activities.map((a) => {
+                const gateKey = `${m.module}:${a.key}`;
+                const busy = savingKey === gateKey;
+                return (
+                  <div key={a.key}
+                    data-testid="email-activity-row"
+                    data-activity-key={gateKey}
+                    data-enabled={a.enabled ? "true" : "false"}
+                    data-inherited={a.inherited ? "true" : "false"}
+                    className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-slate-600 truncate">{a.label}</p>
+                      {a.inherited ? (
+                        <p className="text-[10px] text-slate-400">following module</p>
+                      ) : (
+                        <button data-testid="email-activity-reset-btn"
+                          onClick={() => apply(m.module, a.key, null)}
+                          disabled={busy}
+                          className="text-[10px] text-indigo-500 hover:underline disabled:opacity-50">
+                          reset to module
+                        </button>
+                      )}
+                    </div>
+                    <button data-testid="email-activity-toggle-btn"
+                      onClick={() => apply(m.module, a.key, !a.enabled)}
+                      disabled={busy || !m.enabled}
+                      title={!m.enabled ? "Turn the module on first" : undefined}
+                      className={`shrink-0 text-[10px] font-bold rounded-full px-2.5 py-1 border transition-colors disabled:opacity-50 ${
+                        a.enabled
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                          : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200"
+                      }`}>
+                      {busy ? "…" : a.enabled ? "On" : "Muted"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

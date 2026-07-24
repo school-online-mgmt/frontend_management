@@ -43,6 +43,7 @@ import PlatformBillsPage from "./Pages/Account/PlatformBillsPage.tsx";
 import CommunicationPage from "./Pages/Communication/CommunicationPage.tsx";
 import PublicationsPage from "./Pages/Communication/PublicationsPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
+import ActivityPage from "./Pages/Activity/ActivityPage.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
 import SportsHome from "./Pages/Sports/SportsHome.tsx";
@@ -175,6 +176,7 @@ function App() {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/platform-bills" element={<PlatformBillsPage />} />
               <Route path="/support" element={<SupportCenter />} />
+              <Route path="/activity" element={<ActivityPage />} />
             </Route>
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
