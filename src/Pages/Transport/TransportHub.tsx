@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Bus, MapPin, Users, IndianRupee, TrendingUp, Phone, User, Clock,
     Plus, Pencil, Trash2, Check, X, Search, RefreshCw, BarChart3, Route,
-    Shield, Loader2, CheckCircle, AlertCircle, Info,
+    Shield, Loader2, CheckCircle, AlertCircle, Info, ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
@@ -16,7 +16,7 @@ import { useSessionId } from "../../context/SessionContext";
 const fmt = (n: number) => `₹${(n ?? 0).toLocaleString("en-IN")}`;
 const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
 const VEHICLE_TYPES = ["BUS", "VAN", "MINIBUS", "TEMPO", "OTHER"];
-type TabId = "dashboard" | "students" | "buses" | "zones";
+type TabId = "dashboard" | "students" | "buses" | "compliance" | "zones";
 
 /* ══════════════════════════════════════════════════════════════════════════════
    DASHBOARD TAB
@@ -410,6 +410,11 @@ const emptyBus = () => ({
     zoneId: "", busNumber: "", driverName: "", driverPhone: "",
     conductorName: "", conductorPhone: "", capacity: 40,
     routeDescription: "", pickupTime: "", dropTime: "", vehicleType: "BUS",
+    // Compliance documents (plain dates; blank = not recorded).
+    registrationNumber: "", registrationExpiry: "",
+    insuranceProvider: "", insurancePolicyNumber: "", insuranceExpiry: "",
+    fitnessCertExpiry: "", permitExpiry: "", pollutionCertExpiry: "",
+    lastServicedOn: "", driverLicenseNumber: "", driverLicenseExpiry: "",
 });
 
 function BusFleetTab({ zones }: { zones: any[] }) {
@@ -448,7 +453,11 @@ function BusFleetTab({ zones }: { zones: any[] }) {
     };
     const startEdit = (b: any) => {
         setEditId(b.id);
-        setForm({ zoneId: b.zoneId, busNumber: b.busNumber, driverName: b.driverName, driverPhone: b.driverPhone ?? "", conductorName: b.conductorName ?? "", conductorPhone: b.conductorPhone ?? "", capacity: b.capacity ?? 40, routeDescription: b.routeDescription ?? "", pickupTime: b.pickupTime ?? "", dropTime: b.dropTime ?? "", vehicleType: b.vehicleType ?? "BUS" });
+        setForm({ zoneId: b.zoneId, busNumber: b.busNumber, driverName: b.driverName, driverPhone: b.driverPhone ?? "", conductorName: b.conductorName ?? "", conductorPhone: b.conductorPhone ?? "", capacity: b.capacity ?? 40, routeDescription: b.routeDescription ?? "", pickupTime: b.pickupTime ?? "", dropTime: b.dropTime ?? "", vehicleType: b.vehicleType ?? "BUS",
+            registrationNumber: b.registrationNumber ?? "", registrationExpiry: (b.registrationExpiry ?? "").slice(0, 10),
+            insuranceProvider: b.insuranceProvider ?? "", insurancePolicyNumber: b.insurancePolicyNumber ?? "", insuranceExpiry: (b.insuranceExpiry ?? "").slice(0, 10),
+            fitnessCertExpiry: (b.fitnessCertExpiry ?? "").slice(0, 10), permitExpiry: (b.permitExpiry ?? "").slice(0, 10), pollutionCertExpiry: (b.pollutionCertExpiry ?? "").slice(0, 10),
+            lastServicedOn: (b.lastServicedOn ?? "").slice(0, 10), driverLicenseNumber: b.driverLicenseNumber ?? "", driverLicenseExpiry: (b.driverLicenseExpiry ?? "").slice(0, 10) });
         setShowForm(true); setErrors({});
     };
 
@@ -543,7 +552,7 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                                         className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
                                 </Field>
                             </div>
-                            <div className="sm:col-span-2">
+                            <div className="sm:col-span-2 lg:col-span-3">
                                 <Field label="Route Description">
                                     <input value={form.routeDescription} onChange={e => setForm(f => ({ ...f, routeDescription: e.target.value }))}
                                         placeholder="e.g. Sector 14 Bus Stand → Subhash Nagar → MG Road → School Gate"
@@ -551,6 +560,62 @@ function BusFleetTab({ zones }: { zones: any[] }) {
                                 </Field>
                             </div>
                         </div>
+
+                        {/* ── Compliance & document records ────────────────────── */}
+                        <div className="mt-6 pt-5 border-t border-slate-100">
+                            <div className="flex items-center gap-2 mb-4">
+                                <ShieldCheck size={15} className="text-amber-500" />
+                                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Compliance & Documents</h4>
+                                <span className="text-[11px] text-slate-400">— renewal dates trigger expiry alerts</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                <Field label="RC / Registration No.">
+                                    <input data-testid="bus-registration-number-input" value={form.registrationNumber} onChange={e => setForm(f => ({ ...f, registrationNumber: e.target.value }))} placeholder="Registration certificate no."
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="RC Valid Till">
+                                    <input data-testid="bus-registration-expiry-input" type="date" value={form.registrationExpiry} onChange={e => setForm(f => ({ ...f, registrationExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Fitness Certificate Expiry">
+                                    <input data-testid="bus-fitness-expiry-input" type="date" value={form.fitnessCertExpiry} onChange={e => setForm(f => ({ ...f, fitnessCertExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Insurance Provider">
+                                    <input value={form.insuranceProvider} onChange={e => setForm(f => ({ ...f, insuranceProvider: e.target.value }))} placeholder="Insurer name"
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Insurance Policy No.">
+                                    <input value={form.insurancePolicyNumber} onChange={e => setForm(f => ({ ...f, insurancePolicyNumber: e.target.value }))} placeholder="Policy number"
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Insurance Expiry">
+                                    <input data-testid="bus-insurance-expiry-input" type="date" value={form.insuranceExpiry} onChange={e => setForm(f => ({ ...f, insuranceExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Permit Expiry">
+                                    <input data-testid="bus-permit-expiry-input" type="date" value={form.permitExpiry} onChange={e => setForm(f => ({ ...f, permitExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Pollution (PUC) Expiry">
+                                    <input data-testid="bus-puc-expiry-input" type="date" value={form.pollutionCertExpiry} onChange={e => setForm(f => ({ ...f, pollutionCertExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Last Serviced On">
+                                    <input type="date" value={form.lastServicedOn} onChange={e => setForm(f => ({ ...f, lastServicedOn: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Driver Licence No.">
+                                    <input data-testid="bus-driver-license-input" value={form.driverLicenseNumber} onChange={e => setForm(f => ({ ...f, driverLicenseNumber: e.target.value }))} placeholder="DL number"
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                                <Field label="Driver Licence Expiry">
+                                    <input data-testid="bus-driver-license-expiry-input" type="date" value={form.driverLicenseExpiry} onChange={e => setForm(f => ({ ...f, driverLicenseExpiry: e.target.value }))}
+                                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
+                                </Field>
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
                             <button onClick={resetForm} className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
                             <button onClick={handleSubmit} disabled={pending}
@@ -801,6 +866,116 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   COMPLIANCE TAB — vehicle document expiry insights
+══════════════════════════════════════════════════════════════════════════════ */
+function ComplianceTab() {
+    const [within, setWithin] = useState(30);
+    const { data, isLoading, isFetching, refetch } = useQuery({
+        queryKey: ["transport-compliance", within],
+        queryFn: () => api.getTransportCompliance(within),
+        staleTime: 30_000,
+    });
+
+    const items: any[] = data?.items ?? [];
+    const expired = data?.expiredCount ?? 0;
+    const expiring = data?.expiringCount ?? 0;
+
+    const cards = [
+        { label: "Vehicles Tracked", value: data?.totalBuses ?? 0, cls: "text-slate-800", icon: Bus },
+        { label: "Expired Documents", value: expired, cls: "text-red-600", icon: ShieldAlert },
+        { label: "Expiring Soon", value: expiring, cls: "text-amber-600", icon: ShieldCheck },
+    ];
+
+    return (
+        <div className="space-y-5">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">Show documents due within</span>
+                    <select data-testid="compliance-within-select" value={within} onChange={e => setWithin(parseInt(e.target.value))}
+                        className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-indigo-400">
+                        <option value={15}>15 days</option>
+                        <option value={30}>30 days</option>
+                        <option value={60}>60 days</option>
+                        <option value={90}>90 days</option>
+                    </select>
+                </div>
+                <button data-testid="compliance-refresh-btn" onClick={() => refetch()} disabled={isFetching}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50">
+                    <RefreshCw size={13} className={isFetching ? "animate-spin" : ""} />Refresh
+                </button>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {cards.map(c => (
+                    <div key={c.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center"><c.icon size={18} className={c.cls} /></div>
+                        <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{c.label}</p>
+                            <p className={`text-2xl font-black tabular-nums mt-0.5 ${c.cls}`}>{c.value}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {isLoading ? (
+                    <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-500" size={26} /></div>
+                ) : items.length === 0 ? (
+                    <div className="py-16 text-center" data-testid="compliance-empty">
+                        <ShieldCheck size={36} className="mx-auto text-emerald-300 mb-3" />
+                        <p className="text-sm font-medium text-slate-500">All documents are valid</p>
+                        <p className="text-xs text-slate-400 mt-1">No vehicle documents expire within {within} days.</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                    <th className="px-4 py-3">Vehicle</th>
+                                    <th className="px-4 py-3">Zone</th>
+                                    <th className="px-4 py-3">Document</th>
+                                    <th className="px-4 py-3">Expiry Date</th>
+                                    <th className="px-4 py-3 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {items.map((it, idx) => (
+                                    <tr key={`${it.busId}-${it.document}-${idx}`} data-testid="compliance-row"
+                                        data-bus-number={it.busNumber} data-document={it.document} data-status={it.status}
+                                        className="hover:bg-slate-50/60 transition-colors">
+                                        <td className="px-4 py-3.5">
+                                            <p className="font-semibold text-slate-700">{it.busNumber}</p>
+                                            <p className="text-xs text-slate-400">{it.driverName}</p>
+                                        </td>
+                                        <td className="px-4 py-3.5 text-slate-500">{it.zoneName}</td>
+                                        <td className="px-4 py-3.5 font-medium text-slate-600">{it.document}</td>
+                                        <td className="px-4 py-3.5 tabular-nums text-slate-600">{it.expiryDate}</td>
+                                        <td className="px-4 py-3.5 text-right">
+                                            {it.status === "EXPIRED" ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold">
+                                                    <ShieldAlert size={11} />Expired {Math.abs(it.daysRemaining)}d ago
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">
+                                                    <Clock size={11} />{it.daysRemaining === 0 ? "Due today" : `${it.daysRemaining}d left`}
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    MAIN HUB
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function TransportHub() {
@@ -821,10 +996,11 @@ export default function TransportHub() {
     const sessions: any[] = sessionsData ?? [];
 
     const TABS = [
-        { key: "dashboard" as const, label: "Dashboard", icon: BarChart3 },
-        { key: "students"  as const, label: "Students",  icon: Users },
-        { key: "buses"     as const, label: "Bus Fleet", icon: Bus },
-        { key: "zones"     as const, label: "Zones",     icon: MapPin },
+        { key: "dashboard"  as const, label: "Dashboard",  icon: BarChart3 },
+        { key: "students"   as const, label: "Students",   icon: Users },
+        { key: "buses"      as const, label: "Bus Fleet",  icon: Bus },
+        { key: "compliance" as const, label: "Compliance", icon: ShieldCheck },
+        { key: "zones"      as const, label: "Zones",      icon: MapPin },
     ];
 
     return (
@@ -849,6 +1025,7 @@ export default function TransportHub() {
                 <TabPanel tabKey="dashboard"><DashboardTab /></TabPanel>
                 <TabPanel tabKey="students"><StudentsTab sessions={sessions} zones={zones} /></TabPanel>
                 <TabPanel tabKey="buses"><BusFleetTab zones={zones} /></TabPanel>
+                <TabPanel tabKey="compliance"><ComplianceTab /></TabPanel>
                 <TabPanel tabKey="zones"><ZonesTab zones={zones} zonesLoading={zonesLoading} refetchZones={refetchZones} /></TabPanel>
             </TabbedSection>
         </div>

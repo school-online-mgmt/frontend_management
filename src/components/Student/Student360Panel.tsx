@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
     Activity, AlertTriangle, BookOpen, CalendarCheck, GraduationCap,
-    IndianRupee, Info, Library, Loader2, Sparkles, Trophy, TrendingDown, TrendingUp,
+    IndianRupee, Info, Library, Loader2, Sparkles, Trophy, TrendingDown, TrendingUp, FileDown,
 } from "lucide-react";
 import api from "../../api/api";
 
@@ -59,6 +60,46 @@ const Section = ({ icon: Icon, title, badge, children }: {
         <div className="p-5">{children}</div>
     </div>
 );
+
+/** Per-term "Download Report Card" button. Streams the PDF and saves it. */
+const ReportCardButton = ({ studentId, sessionId, examTerm, termLabel }: {
+    studentId: string; sessionId?: string; examTerm: string; termLabel?: string;
+}) => {
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+    if (!sessionId) return null;
+
+    const download = async () => {
+        setBusy(true); setErr(null);
+        try {
+            const blob = await api.downloadReportCard(studentId, { sessionId, examTerm, ...(termLabel ? { termLabel } : {}) });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `ReportCard_${examTerm}.pdf`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e: any) {
+            const msg = e?.response?.status === 404
+                ? "No published results for this term yet."
+                : (e?.response?.data?.message ?? "Could not generate report card.");
+            setErr(msg);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            {err && <span className="text-[11px] text-rose-500">{err}</span>}
+            <button data-testid="student-360-report-card-btn" data-exam-term={examTerm} onClick={download} disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">
+                {busy ? <Loader2 size={11} className="animate-spin" /> : <FileDown size={11} />}
+                Report Card
+            </button>
+        </div>
+    );
+};
 
 const Student360Panel = ({ studentId }: { studentId: string }) => {
     const { data, isLoading, isError, error } = useQuery({
@@ -189,10 +230,18 @@ const Student360Panel = ({ studentId }: { studentId: string }) => {
                                                 <p className="text-sm font-semibold text-slate-700">
                                                     {t.examName ?? (t.examNames ?? []).join(" · ") ?? t.term}
                                                 </p>
-                                                <span className="text-xs font-semibold tabular-nums text-slate-500">
-                                                    {t.obtained}/{t.total} · {t.percentage}%{t.grade ? ` · ${t.grade}` : ""}
-                                                    {t.failedCount > 0 ? ` · ${t.failedCount} below pass` : ""}
-                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-semibold tabular-nums text-slate-500">
+                                                        {t.obtained}/{t.total} · {t.percentage}%{t.grade ? ` · ${t.grade}` : ""}
+                                                        {t.failedCount > 0 ? ` · ${t.failedCount} below pass` : ""}
+                                                    </span>
+                                                    <ReportCardButton
+                                                        studentId={studentId}
+                                                        sessionId={enrolment?.sessionId}
+                                                        examTerm={t.term}
+                                                        termLabel={t.examName ?? undefined}
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {(t.subjects ?? []).map((s: any, i: number) => (

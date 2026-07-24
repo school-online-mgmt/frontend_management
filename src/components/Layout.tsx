@@ -8,7 +8,7 @@ import {
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
-  UtensilsCrossed,
+  UtensilsCrossed, Activity,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -179,6 +179,7 @@ const NAV_SECTIONS = [
       { path: "/account",         label: "My Account",     icon: School },
       { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
       { path: "/jobs",            label: "Scheduled Jobs", icon: Zap },
+      { path: "/activity",        label: "Activity Log",   icon: Activity },
       { path: "/support",         label: "Support Center", icon: MessageSquare },
     ],
   },
