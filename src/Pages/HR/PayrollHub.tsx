@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Wallet, Users, Plus, X, Loader2, Download, Banknote, Pencil,
     CheckCircle2, Building2, CreditCard, Search, PlayCircle,
-    Lock, Receipt, Ban,
+    Lock, Receipt, Ban, Award, ChevronDown, ChevronRight, Save, Sparkles,
 } from "lucide-react";
 import api from "../../api/api";
 import type { HrStaffRow, HrComponent, PayrollRun, Payslip } from "../../api/api";
@@ -52,7 +52,7 @@ const Pill = ({ status }: { status: string }) => (
     </span>
 );
 
-type TabId = "staff" | "runs";
+type TabId = "staff" | "runs" | "leave" | "appraisals";
 
 export default function PayrollHub() {
     const [tab, setTab] = useTabState<TabId>("tab", "staff");
@@ -72,6 +72,8 @@ export default function PayrollHub() {
                     tabs={[
                         { key: "staff", label: "Staff & Salaries" },
                         { key: "runs", label: "Payroll Runs" },
+                        { key: "leave", label: "Leave Balances" },
+                        { key: "appraisals", label: "Appraisals" },
                     ]}
                     value={tab}
                     onChange={setTab}
@@ -84,8 +86,332 @@ export default function PayrollHub() {
                     <TabPanel tabKey="runs">
                         <PayrollRunsTab />
                     </TabPanel>
+                    <TabPanel tabKey="leave">
+                        <LeaveBalancesTab />
+                    </TabPanel>
+                    <TabPanel tabKey="appraisals">
+                        <AppraisalsTab />
+                    </TabPanel>
                 </TabbedSection>
             </div>
+        </div>
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LEAVE BALANCES (P1-TT-05, HR-2) — per-teacher balance + encashment preview
+   ══════════════════════════════════════════════════════════════════════════ */
+function LeaveBalancesTab() {
+    const [sessions, setSessions] = useState<Array<{ id: string; name: string }>>([]);
+    const [sessionId, setSessionId] = useState("");
+
+    useEffect(() => {
+        api.getSessions().then((s: any) => {
+            const list = Array.isArray(s) ? s : (s?.sessions ?? []);
+            setSessions(list);
+            if (list[0]) setSessionId(list[0].id);
+        }).catch(() => {});
+    }, []);
+
+    const { data, isLoading } = useQuery({
+        queryKey: ["hr", "leave-balances", sessionId],
+        queryFn: () => api.getHrLeaveBalances(sessionId),
+        enabled: !!sessionId,
+    });
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-3 flex-wrap">
+                <select value={sessionId} onChange={e => setSessionId(e.target.value)}
+                    className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {data && (
+                    <span className="text-xs text-slate-500">
+                        Entitlement {data.entitlement} days/yr · encash ₹{data.encashPerDay}/day ·
+                        <span className="font-semibold text-slate-700"> total encashable {fmtINR(data.totalEncash)}</span>
+                    </span>
+                )}
+            </div>
+            {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
+            : !data || data.teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers / balances for this session.</div>
+            : (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                    <th className="px-4 py-2.5">Teacher</th>
+                                    <th className="px-4 py-2.5 text-right">Entitled</th>
+                                    <th className="px-4 py-2.5 text-right">Taken</th>
+                                    <th className="px-4 py-2.5 text-right">Balance</th>
+                                    <th className="px-4 py-2.5 text-right">Encashable</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {data.teachers.map(t => (
+                                    <tr key={t.teacherId} data-testid="leave-balance-row" className="hover:bg-slate-50/60">
+                                        <td className="px-4 py-2.5 text-slate-700">{t.teacherName}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums">{t.entitlement}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums">{t.taken}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{t.balance}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums">{fmtINR(t.encashAmount)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   APPRAISALS (P3-HR-07, HR-4) — quarterly review → close with bonus/increment
+   ══════════════════════════════════════════════════════════════════════════ */
+type Appraisal = Awaited<ReturnType<typeof api.listAppraisals>>["appraisals"][number];
+const QUARTER_KEYS = ["q1Notes", "q2Notes", "q3Notes", "q4Notes"] as const;
+
+function AppraisalsTab() {
+    const qc = useQueryClient();
+    const { addToast } = useToast();
+    const [sessions, setSessions] = useState<Array<{ id: string; name: string }>>([]);
+    const [sessionId, setSessionId] = useState("");
+    const [expanded, setExpanded] = useState<string | null>(null);
+    const [closing, setClosing] = useState<Appraisal | null>(null);
+
+    useEffect(() => {
+        api.getSessions().then((s: any) => {
+            const list = Array.isArray(s) ? s : (s?.sessions ?? []);
+            setSessions(list);
+            if (list[0]) setSessionId(list[0].id);
+        }).catch(() => {});
+    }, []);
+
+    const { data, isLoading } = useQuery({
+        queryKey: ["hr", "appraisals", sessionId],
+        queryFn: () => api.listAppraisals(sessionId),
+        enabled: !!sessionId,
+    });
+    const { data: staffData } = useQuery({ queryKey: ["hr", "staff"], queryFn: () => api.listHrStaff() });
+    const teachers = useMemo(() => (staffData?.staff ?? []).filter(s => s.staffType === "TEACHER"), [staffData]);
+
+    const appraisalByTeacher = useMemo(() => {
+        const m = new Map<string, Appraisal>();
+        (data?.appraisals ?? []).forEach(a => m.set(a.teacherId, a));
+        return m;
+    }, [data]);
+
+    const refresh = () => qc.invalidateQueries({ queryKey: ["hr", "appraisals", sessionId] });
+
+    const start = async (teacherId: string) => {
+        try { await api.createAppraisal(teacherId, sessionId); refresh(); }
+        catch (e: any) { addToast(e?.response?.data?.message || "Failed", "error"); }
+    };
+
+    return (
+        <div className="space-y-4">
+            {closing && (
+                <CloseAppraisalModal appraisal={closing} sessions={sessions} currentSessionId={sessionId}
+                    onClose={() => setClosing(null)} onDone={() => { setClosing(null); refresh(); }} />
+            )}
+            <div className="flex items-center gap-3 flex-wrap">
+                <select data-testid="appraisal-session" value={sessionId} onChange={e => setSessionId(e.target.value)}
+                    className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <span className="text-xs text-slate-500">Quarterly HR–teacher–management review. Close after all four quarters are filled.</span>
+            </div>
+
+            {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
+            : teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers.</div>
+            : (
+                <div className="space-y-2">
+                    {teachers.map(t => {
+                        const a = appraisalByTeacher.get(t.staffId);
+                        const filled = a ? QUARTER_KEYS.filter(k => !!(a[k] && a[k]!.trim())).length : 0;
+                        const isOpen = expanded === t.staffId;
+                        return (
+                            <div key={t.staffId} data-testid="appraisal-row" className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <button onClick={() => setExpanded(isOpen ? null : t.staffId)} className="text-slate-400 hover:text-slate-600">
+                                        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </button>
+                                    <span className="font-semibold text-slate-700 flex-1">{t.name}</span>
+                                    {a ? (
+                                        <>
+                                            {a.status === "CLOSED"
+                                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 text-emerald-700"><Lock size={11} /> Closed{a.salaryChange !== "NONE" ? ` · ${a.salaryChange === "BONUS" ? fmtINR(a.bonusAmount) + " bonus" : a.incrementPercent + "% increment"}` : ""}</span>
+                                                : <span className="text-[11px] text-slate-500">{filled}/4 quarters</span>}
+                                            {a.status === "IN_PROGRESS" && (
+                                                <button data-testid="appraisal-close-btn" disabled={filled < 4} onClick={() => setClosing(a)}
+                                                    className="flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40">
+                                                    <Award size={12} /> Close
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <button data-testid="appraisal-start-btn" onClick={() => start(t.staffId)}
+                                            className="flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                                            <Plus size={12} /> Start
+                                        </button>
+                                    )}
+                                </div>
+                                {isOpen && a && <QuarterEditor appraisal={a} onSaved={refresh} />}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function QuarterEditor({ appraisal, onSaved }: { appraisal: Appraisal; onSaved: () => void }) {
+    const { addToast } = useToast();
+    const [drafts, setDrafts] = useState<string[]>(QUARTER_KEYS.map(k => appraisal[k] ?? ""));
+    const [savingQ, setSavingQ] = useState<number | null>(null);
+    const readonly = appraisal.status === "CLOSED";
+
+    const save = async (idx: number) => {
+        setSavingQ(idx);
+        try {
+            await api.setAppraisalQuarter(appraisal.id, (idx + 1) as 1 | 2 | 3 | 4, drafts[idx]);
+            addToast(`Quarter ${idx + 1} saved`, "success");
+            onSaved();
+        } catch (e: any) { addToast(e?.response?.data?.message || "Save failed", "error"); }
+        finally { setSavingQ(null); }
+    };
+
+    return (
+        <div className="border-t border-slate-100 px-4 py-3 grid gap-3 sm:grid-cols-2">
+            {QUARTER_KEYS.map((_, idx) => (
+                <div key={idx}>
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quarter {idx + 1}</label>
+                    <textarea data-testid={`appraisal-q${idx + 1}`} disabled={readonly} rows={3} value={drafts[idx]}
+                        onChange={e => setDrafts(d => d.map((v, i) => i === idx ? e.target.value : v))}
+                        className="mt-1 w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-slate-50" />
+                    {!readonly && (
+                        <button onClick={() => save(idx)} disabled={savingQ === idx || !drafts[idx].trim()}
+                            className="mt-1 flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                            {savingQ === idx ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save
+                        </button>
+                    )}
+                </div>
+            ))}
+            {readonly && appraisal.summaryNotes && (
+                <div className="sm:col-span-2 bg-slate-50 rounded-lg p-3">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Yearly summary</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{appraisal.summaryNotes}</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CloseAppraisalModal({ appraisal, sessions, currentSessionId, onClose, onDone }: {
+    appraisal: Appraisal; sessions: Array<{ id: string; name: string }>; currentSessionId: string;
+    onClose: () => void; onDone: () => void;
+}) {
+    const { addToast } = useToast();
+    const { confirm, dialog } = useConfirm();
+    const [summary, setSummary] = useState(appraisal.summaryNotes ?? "");
+    const [nextSessionId, setNextSessionId] = useState("");
+    const [salaryChange, setSalaryChange] = useState<"NONE" | "BONUS" | "INCREMENT">("NONE");
+    const [bonusAmount, setBonusAmount] = useState(0);
+    const [incrementPercent, setIncrementPercent] = useState(0);
+    const [saving, setSaving] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const nextSessions = sessions.filter(s => s.id !== currentSessionId);
+
+    // "Generate using AI" — drafts the summary from the quarter notes; the result
+    // is editable. Warns about the per-call charge before spending.
+    const generate = () => confirm({
+        title: "Generate with AI?",
+        message: "This drafts the summary from the quarterly notes using AI and adds a per-call charge to your school's monthly bill. You can edit the result before saving.",
+        confirmText: "Generate",
+        onConfirm: async () => {
+            setGenerating(true);
+            try {
+                const { draft } = await api.generateAppraisalSummary(appraisal.id);
+                setSummary(draft);
+                addToast("Draft generated — review and edit before closing", "success");
+            } finally { setGenerating(false); }
+        },
+    });
+
+    const submit = async () => {
+        setSaving(true);
+        try {
+            await api.closeAppraisal(appraisal.id, {
+                summaryNotes: summary,
+                nextSessionId: nextSessionId || null,
+                salaryChange,
+                ...(salaryChange === "BONUS" ? { bonusAmount } : {}),
+                ...(salaryChange === "INCREMENT" ? { incrementPercent } : {}),
+            });
+            addToast("Appraisal closed", "success");
+            onDone();
+        } catch (e: any) { addToast(e?.response?.data?.message || "Close failed", "error"); }
+        finally { setSaving(false); }
+    };
+
+    const inp = "w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none";
+    return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><Award size={18} className="text-emerald-600" /> Close appraisal — {appraisal.teacherName}</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                </div>
+                <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Closing is final — the appraisal becomes read-only. An increment applies from the next session; a bonus is paid on this session's last payroll.</p>
+
+                <div>
+                    <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-slate-600">Yearly summary</label>
+                        <button type="button" data-testid="appraisal-ai-generate" onClick={generate} disabled={generating}
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-50">
+                            {generating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />} Generate using AI
+                        </button>
+                    </div>
+                    <textarea data-testid="appraisal-summary" rows={4} value={summary} onChange={e => setSummary(e.target.value)} className={`${inp} mt-1`} placeholder="Overall performance summary for the year…" />
+                </div>
+                <div>
+                    <label className="text-xs font-semibold text-slate-600">Carry forward to session (optional)</label>
+                    <select value={nextSessionId} onChange={e => setNextSessionId(e.target.value)} className={`${inp} mt-1`}>
+                        <option value="">— none —</option>
+                        {nextSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="text-xs font-semibold text-slate-600">Salary change</label>
+                    <div className="flex gap-2 mt-1">
+                        {(["NONE", "BONUS", "INCREMENT"] as const).map(v => (
+                            <button key={v} data-testid={`salary-change-${v}`} onClick={() => setSalaryChange(v)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${salaryChange === v ? "bg-emerald-600 text-white border-emerald-600" : "border-slate-200 text-slate-600"}`}>{v}</button>
+                        ))}
+                    </div>
+                </div>
+                {salaryChange === "BONUS" && (
+                    <div>
+                        <label className="text-xs font-semibold text-slate-600">Bonus amount (₹, one-off on last payroll)</label>
+                        <input data-testid="bonus-amount" type="number" min={0} value={bonusAmount} onChange={e => setBonusAmount(Number(e.target.value) || 0)} className={`${inp} mt-1`} />
+                    </div>
+                )}
+                {salaryChange === "INCREMENT" && (
+                    <div>
+                        <label className="text-xs font-semibold text-slate-600">Increment (%, applies from next session)</label>
+                        <input data-testid="increment-percent" type="number" min={0} max={100} value={incrementPercent} onChange={e => setIncrementPercent(Number(e.target.value) || 0)} className={`${inp} mt-1`} />
+                        <p className="text-[11px] text-slate-400 mt-1">Requires a carry-forward session above.</p>
+                    </div>
+                )}
+                <button data-testid="appraisal-close-submit" onClick={submit} disabled={saving || summary.trim().length < 3}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />} Close appraisal
+                </button>
+            </div>
+            {dialog}
         </div>
     );
 }

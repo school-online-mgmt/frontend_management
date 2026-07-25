@@ -4,13 +4,14 @@ import {
   AlertTriangle,
   Shield, Phone, Mail, ExternalLink, RefreshCw,
   Edit2, X, Check, MapPin, CreditCard,
-  AlertCircle, FileText, Settings2, UserCircle, GraduationCap, Loader2, BellRing, CalendarDays,
+  AlertCircle, FileText, Settings2, UserCircle, GraduationCap, Loader2, BellRing, CalendarDays, CalendarClock,
 } from "lucide-react";
 import api from "../../api/api";
 import PaymentSettingsTab from "./PaymentSettingsTab";
 import EmailServiceTab from "./EmailServiceTab";
 import FeeReminderSettingsTab from "./FeeReminderSettingsTab";
 import SchoolOperationsTab from "./SchoolOperationsTab";
+import LeavePolicyTab from "./LeavePolicyTab";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
@@ -583,11 +584,12 @@ function SchoolProfileTab({ user }: { user: any }) {
 
 // ── Main Account Page ─────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'operations' | 'payments' | 'email' | 'fee-reminders';
+type Tab = 'profile' | 'operations' | 'leave-policy' | 'payments' | 'email' | 'fee-reminders';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
   { key: 'profile',  label: 'School Profile', icon: Building2 },
   { key: 'operations', label: 'Operations',   icon: CalendarDays, adminOnly: true },
+  { key: 'leave-policy', label: 'Leave Policy', icon: CalendarClock, adminOnly: true },
   { key: 'payments', label: 'Payments',       icon: CreditCard, adminOnly: true },
   { key: 'email',    label: 'Email',          icon: Mail,       adminOnly: true },
   { key: 'fee-reminders', label: 'Fee Reminders', icon: BellRing, adminOnly: true },
@@ -757,6 +759,7 @@ export default function AccountPage() {
           >
             <TabPanel tabKey="profile"><SchoolProfileTab user={user} /></TabPanel>
             {isAdmin && <TabPanel tabKey="operations"><SchoolOperationsTab /></TabPanel>}
+            {isAdmin && <TabPanel tabKey="leave-policy"><LeavePolicyTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="payments"><PaymentSettingsTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="email"><EmailServiceTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="fee-reminders"><FeeReminderSettingsTab /></TabPanel>}

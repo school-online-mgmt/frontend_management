@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     ClipboardCheck, Users, CheckCircle2, XCircle, Clock,
     ChevronLeft, ChevronRight, BarChart3, Search, RefreshCw,
-    AlertTriangle, Building2, Edit3, Loader2, CalendarDays, X, Calendar
+    AlertTriangle, Building2, Edit3, Loader2, CalendarDays, X, Calendar, FileDown
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
@@ -543,6 +543,45 @@ function CalendarTab() {
     );
 }
 
+// Statutory monthly attendance register export (P1-ATT-06). Shows once a
+// specific section is chosen — a whole-school register isn't a statutory artefact.
+function RegisterExport({ sectionId, className, sectionName }: { sectionId: string; className: string; sectionName: string }) {
+    const now = new Date();
+    const [ym, setYm] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const download = async () => {
+        const [y, m] = ym.split("-").map(Number);
+        if (!y || !m) { setErr("Pick a month"); return; }
+        setBusy(true); setErr(null);
+        try {
+            await api.downloadAttendanceRegister(sectionId, y, m, `attendance-${className}-${sectionName}`.replace(/\s+/g, "-"));
+        } catch (e: any) {
+            setErr(e?.response?.data?.message || "Download failed");
+        } finally { setBusy(false); }
+    };
+
+    return (
+        <div className="bg-white rounded-xl border border-slate-200 px-5 py-3.5 flex flex-wrap items-center gap-3 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-700">
+                <FileDown size={16} className="text-emerald-600" />
+                <span className="text-sm font-semibold">Statutory register</span>
+                <span className="text-[11px] text-slate-400">— {className} {sectionName}, monthly, for inspection</span>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+                <input type="month" value={ym} onChange={e => setYm(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" />
+                <button data-testid="attendance-register-download" onClick={download} disabled={busy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Download CSV
+                </button>
+            </div>
+            {err && <p className="w-full text-xs text-red-600">{err}</p>}
+        </div>
+    );
+}
+
 // =============================================================================
 //  VIEW / REPORTS TAB
 // =============================================================================
@@ -593,6 +632,14 @@ function ViewTab() {
                     </div>
                 ))}
             </div>
+
+            {selSection && (
+                <RegisterExport
+                    sectionId={selSection}
+                    className={classes.find(c => c.id === selClass)?.name ?? ""}
+                    sectionName={sections.find(s => s.id === selSection)?.name ?? ""}
+                />
+            )}
 
             {summary.total>0&&(
                 <div className="bg-white rounded-xl border border-slate-200 px-5 py-3 flex items-center gap-4 flex-wrap shadow-sm">

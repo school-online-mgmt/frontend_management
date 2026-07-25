@@ -1349,6 +1349,27 @@ lookupParent = async (phone: string): Promise<{
         return res.data;
     };
 
+    // Statutory monthly attendance register (P1-ATT-06).
+    getAttendanceRegister = async (sectionId: string, year: number, month: number) => {
+        const res = await apiClient.get("/management/attendance/register", { params: { sectionId, year, month } });
+        return res.data;
+    };
+    // Downloads the register CSV; triggers a browser save.
+    downloadAttendanceRegister = async (sectionId: string, year: number, month: number, filenameHint = "attendance-register") => {
+        const res = await apiClient.get("/management/attendance/register", {
+            params: { sectionId, year, month, format: "csv" },
+            responseType: "blob",
+        });
+        const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filenameHint}-${year}-${String(month).padStart(2, "0")}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
+
     getAttendanceTodaySummary = async () => {
         const res = await apiClient.get("/management/attendance/today-summary");
         return res.data;
@@ -1869,6 +1890,9 @@ lookupParent = async (phone: string): Promise<{
         schoolType?: string | null;
         emergencyContact?: string | null;
         principalName?: string | null;
+        udiseCode?: string | null;
+        affiliationNumber?: string | null;
+        boardSchoolCode?: string | null;
     }) => {
         const res = await apiClient.patch("/management/settings/config", data);
         return res.data;
@@ -1941,6 +1965,21 @@ lookupParent = async (phone: string): Promise<{
         academicYearStartMonth?: number; defaultPassPercentage?: number; currency?: string; timezone?: string;
     }) => {
         const res = await apiClient.patch("/management/settings/school-operations", payload);
+        return res.data;
+    };
+
+    // ── Settings: Leave policy (P1-TT-05 per-role entitlement + encash) ─────
+    getLeavePolicy = async () => {
+        const res = await apiClient.get("/management/settings/leave-policy");
+        return res.data as {
+            policies: { staffType: "TEACHER" | "MANAGEMENT"; sickDays: number; personalDays: number; familyDays: number; otherDays: number; totalDays: number }[];
+            leaveEncashPerDay: number;
+        };
+    };
+    updateLeavePolicy = async (payload: {
+        staffType?: "TEACHER" | "MANAGEMENT"; sickDays?: number; personalDays?: number; familyDays?: number; otherDays?: number; leaveEncashPerDay?: number;
+    }) => {
+        const res = await apiClient.patch("/management/settings/leave-policy", payload);
         return res.data;
     };
 
@@ -2666,6 +2705,26 @@ lookupParent = async (phone: string): Promise<{
         const res = await apiClient.get(`/management/documents/certificates/${id}/prefill`);
         return res.data as { certType: string; fields: any[]; prefill: any; defaultExpiryDate: string; infinityDate: string };
     };
+
+    // Board / UDISE+ return for a session (P0-SAF-08).
+    getBoardReturns = async (sessionId: string) => {
+        const res = await apiClient.get('/management/reports/board-returns', { params: { sessionId } });
+        return res.data as {
+            school: { name: string; udiseCode: string | null; affiliationNumber: string | null; boardAffiliation: string | null };
+            sessionName: string;
+            enrolment: { classes: { classId: string; className: string; male: number; female: number; other: number; total: number; cwsn: number }[]; totals: { male: number; female: number; other: number; total: number; cwsn: number } };
+            staff: { total: number; male: number; female: number; other: number };
+        };
+    };
+    downloadBoardReturns = async (sessionId: string, sessionName = "session") => {
+        const res = await apiClient.get('/management/reports/board-returns', { params: { sessionId, format: "csv" }, responseType: "blob" });
+        const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `board-returns-${sessionName.replace(/\s+/g, "-")}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+    };
     publishCertificate = async (id: string, data: { fields: Record<string, any>; expiryDate: string; issueDate?: string }) => {
         const res = await apiClient.post(`/management/documents/certificates/${id}/publish`, data);
         return res.data;
@@ -2746,9 +2805,55 @@ lookupParent = async (phone: string): Promise<{
         const res = await apiClient.get('/management/hr/payroll/runs');
         return res.data as { runs: PayrollRun[] };
     };
+    // Per-teacher leave balance + encashment preview for a session (P1-TT-05).
+    getHrLeaveBalances = async (sessionId: string) => {
+        const res = await apiClient.get('/management/hr/leave-balances', { params: { sessionId } });
+        return res.data as {
+            entitlement: number; encashPerDay: number; totalEncash: number;
+            teachers: { teacherId: string; teacherName: string; entitlement: number; taken: number; balance: number; encashAmount: number }[];
+        };
+    };
     generatePayrollRun = async (month: number, year: number) => {
         const res = await apiClient.post('/management/hr/payroll/runs', { month, year });
         return res.data as { message: string; runId: string; created: number; skipped: number; totalNet: number };
+    };
+
+    // ── Teacher appraisals (P3-HR-07, HR-4) ────────────────────────────────
+    listAppraisals = async (sessionId: string) => {
+        const res = await apiClient.get('/management/hr/appraisals', { params: { sessionId } });
+        return res.data as {
+            appraisals: {
+                id: string; teacherId: string; teacherName: string; status: 'IN_PROGRESS' | 'CLOSED';
+                q1Notes: string | null; q2Notes: string | null; q3Notes: string | null; q4Notes: string | null;
+                summaryNotes: string | null; salaryChange: 'NONE' | 'BONUS' | 'INCREMENT';
+                bonusAmount: number; incrementPercent: number; nextSessionId: string | null; closedAt: string | null;
+            }[];
+        };
+    };
+    createAppraisal = async (teacherId: string, sessionId: string) => {
+        const res = await apiClient.post('/management/hr/appraisals', { teacherId, sessionId });
+        return res.data as { appraisal: { id: string } };
+    };
+    setAppraisalQuarter = async (id: string, quarter: 1 | 2 | 3 | 4, notes: string) => {
+        const res = await apiClient.patch(`/management/hr/appraisals/${id}/quarter`, { quarter, notes });
+        return res.data;
+    };
+    closeAppraisal = async (id: string, payload: {
+        summaryNotes: string; nextSessionId?: string | null;
+        salaryChange: 'NONE' | 'BONUS' | 'INCREMENT'; bonusAmount?: number; incrementPercent?: number;
+    }) => {
+        const res = await apiClient.post(`/management/hr/appraisals/${id}/close`, payload);
+        return res.data;
+    };
+    // AI-draft the appraisal summary from the quarter notes (charges the tenant AI rate).
+    generateAppraisalSummary = async (id: string) => {
+        const res = await apiClient.post(`/management/hr/appraisals/${id}/generate-summary`);
+        return res.data as { draft: string; charged: number };
+    };
+    // AI-draft a student report-card / promotion feedback from their 360 data.
+    generateStudentReport = async (studentId: string, kind: 'REPORT_CARD' | 'PROMOTION_FEEDBACK', sessionId?: string) => {
+        const res = await apiClient.post(`/management/student/${studentId}/generate-report`, { kind, ...(sessionId ? { sessionId } : {}) });
+        return res.data as { draft: string; charged: number };
     };
     getPayrollRun = async (runId: string) => {
         const res = await apiClient.get(`/management/hr/payroll/runs/${runId}`);
