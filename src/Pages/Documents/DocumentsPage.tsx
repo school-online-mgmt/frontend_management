@@ -174,10 +174,102 @@ const RejectModal = ({ title, onClose, onConfirm }: { title: string; onClose: ()
 };
 
 /* ── Main page ─────────────────────────────────────────────────────────────── */
+/* ── Board / UDISE+ returns (P0-SAF-08) ─────────────────────────────────── */
+function BoardReturnsPanel() {
+    const { addToast } = useToast();
+    const [sessions, setSessions] = useState<Array<{ id: string; name: string }>>([]);
+    const [sessionId, setSessionId] = useState("");
+    const [data, setData] = useState<Awaited<ReturnType<typeof api.getBoardReturns>> | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        api.getSessions().then((s: any) => {
+            const list = Array.isArray(s) ? s : (s?.sessions ?? []);
+            setSessions(list);
+            if (list[0]) setSessionId(list[0].id);
+        }).catch(() => {});
+    }, []);
+    useEffect(() => {
+        if (!sessionId) { setData(null); return; }
+        setLoading(true);
+        api.getBoardReturns(sessionId).then(setData).catch(() => setData(null)).finally(() => setLoading(false));
+    }, [sessionId]);
+
+    const download = async () => {
+        setBusy(true);
+        try { await api.downloadBoardReturns(sessionId, data?.sessionName ?? "session"); }
+        catch (e: any) { addToast(e?.response?.data?.message ?? "Download failed", "error"); }
+        finally { setBusy(false); }
+    };
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" data-testid="documents-board-returns">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h3 className="text-sm font-bold text-slate-800">Board / UDISE+ return</h3>
+                    <p className="text-[11px] text-slate-400">Class-wise enrolment + staff summary for annual filing. Downloads as CSV.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <select value={sessionId} onChange={e => setSessionId(e.target.value)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <button data-testid="board-returns-download" onClick={download} disabled={busy || !data}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                        {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} CSV
+                    </button>
+                </div>
+            </div>
+            {loading ? <div className="flex justify-center py-14"><Loader2 size={20} className="animate-spin text-slate-400" /></div>
+            : !data ? <div className="py-14 text-center text-slate-400 text-sm">No data for this session.</div>
+            : (
+                <div className="p-4 space-y-4">
+                    <div className="text-[11px] text-slate-500">
+                        {data.school.name}{data.school.udiseCode ? ` · UDISE ${data.school.udiseCode}` : ""}{data.school.affiliationNumber ? ` · Aff. ${data.school.affiliationNumber}` : ""}
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                    <th className="px-3 py-2">Class</th><th className="px-3 py-2 text-right">Boys</th><th className="px-3 py-2 text-right">Girls</th>
+                                    <th className="px-3 py-2 text-right">Other</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2 text-right">CWSN</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {data.enrolment.classes.map(c => (
+                                    <tr key={c.classId} className="hover:bg-slate-50/60">
+                                        <td className="px-3 py-2 text-slate-700">{c.className}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{c.male}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{c.female}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{c.other}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums font-semibold">{c.total}</td>
+                                        <td className="px-3 py-2 text-right tabular-nums">{c.cwsn}</td>
+                                    </tr>
+                                ))}
+                                <tr className="bg-slate-50 font-semibold">
+                                    <td className="px-3 py-2">Total</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{data.enrolment.totals.male}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{data.enrolment.totals.female}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{data.enrolment.totals.other}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{data.enrolment.totals.total}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{data.enrolment.totals.cwsn}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="text-xs text-slate-600">
+                        <span className="font-semibold">Teaching staff:</span> {data.staff.total} total · {data.staff.male} male · {data.staff.female} female{data.staff.other ? ` · ${data.staff.other} other` : ""}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 const DocumentsPage = () => {
     const { addToast } = useToast();
     const [subject, setSubject] = useState<Subject>("students");
-    const [tab, setTab] = useState<"certificates" | "uploads" | "tc-register">("certificates");
+    const [tab, setTab] = useState<"certificates" | "uploads" | "tc-register" | "board-returns">("certificates");
     const [certs, setCerts] = useState<any[]>([]);
     const [uploads, setUploads] = useState<any[]>([]);
     const [tcRegister, setTcRegister] = useState<Awaited<ReturnType<typeof api.getTcRegister>>["entries"]>([]);
@@ -198,8 +290,8 @@ const DocumentsPage = () => {
             }).finally(() => setLoading(false));
     }, [subject]);
     useEffect(() => { load(); }, [load]);
-    // TC register tab only makes sense for students; snap back when on teachers.
-    useEffect(() => { if (subject === "teachers" && tab === "tc-register") setTab("certificates"); }, [subject, tab]);
+    // TC register + board returns are student-only; snap back when on teachers.
+    useEffect(() => { if (subject === "teachers" && (tab === "tc-register" || tab === "board-returns")) setTab("certificates"); }, [subject, tab]);
 
     const download = async (id: string) => {
         try { const r = await A.download(id); openUrl(r.url); }
@@ -253,10 +345,17 @@ const DocumentsPage = () => {
                             TC Register {tcRegister.length > 0 && <span className="ml-1 text-[10px] bg-slate-200 text-slate-700 px-1.5 rounded-full">{tcRegister.length}</span>}
                         </button>
                     )}
+                    {subject === "students" && (
+                        <button data-testid="documents-board-returns-tab" onClick={() => setTab("board-returns")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "board-returns" ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>
+                            Board Returns
+                        </button>
+                    )}
                 </div>
 
                 {loading ? <div className="flex justify-center py-20"><Loader2 size={22} className="animate-spin text-slate-400" /></div>
-                : tab === "tc-register" ? (
+                : tab === "board-returns" ? (
+                    <BoardReturnsPanel />
+                ) : tab === "tc-register" ? (
                     tcRegister.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No Transfer Certificates issued yet.</div>
                     : (
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" data-testid="documents-tc-register">

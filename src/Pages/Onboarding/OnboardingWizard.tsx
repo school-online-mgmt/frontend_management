@@ -21,6 +21,9 @@ type TenantConfigInput = {
     phone: string; email: string; website: string; footerText: string;
     establishedYear: string; boardAffiliation: string; schoolType: string;
     principalName: string; emergencyContact: string;
+    // Statutory identity — printed on official exports (UDISE+/board returns,
+    // attendance register). Optional at onboarding; editable later in settings.
+    udiseCode: string; affiliationNumber: string; boardSchoolCode: string;
 };
 type ClassInput    = { name: string; sections: string[]; subjects: SubjectInput[]; courses: CourseInput[] };
 type ZoneInput     = { name: string; description: string; price: string };
@@ -282,6 +285,26 @@ const SettingsStep: React.FC<{
                     </select>
                 </div>
             </div>
+
+            {/* Statutory identity — required on official/board exports. Optional here. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label className={lbl}>UDISE Code <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                    <input data-testid="onboarding-udise-code-input" value={data.udiseCode} onChange={e => onChange('udiseCode', e.target.value)}
+                        placeholder="11-digit UDISE+ code" className={inp} />
+                </div>
+                <div>
+                    <label className={lbl}>Affiliation No. <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                    <input data-testid="onboarding-affiliation-number-input" value={data.affiliationNumber} onChange={e => onChange('affiliationNumber', e.target.value)}
+                        placeholder="Board affiliation number" className={inp} />
+                </div>
+                <div>
+                    <label className={lbl}>School Code <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                    <input data-testid="onboarding-board-school-code-input" value={data.boardSchoolCode} onChange={e => onChange('boardSchoolCode', e.target.value)}
+                        placeholder="Board school code" className={inp} />
+                </div>
+            </div>
+            <p className="text-[11px] text-slate-400 -mt-1">Used on statutory documents and board/UDISE+ returns. You can add these later in Settings.</p>
         </div>
 
         {/* Footer */}
@@ -1303,6 +1326,7 @@ const OnboardingWizard: React.FC = () => {
             pincode: '', phone: '', email: '', website: '', footerText: '',
 
             establishedYear: '', boardAffiliation: '', schoolType: '', principalName: '', emergencyContact: '',
+            udiseCode: '', affiliationNumber: '', boardSchoolCode: '',
         },
         classes:        [],
         globalFeeItems: [],
@@ -1548,6 +1572,9 @@ const OnboardingWizard: React.FC = () => {
                 schoolType:            config.schoolType || null,
                 principalName:         config.principalName.trim() || null,
                 emergencyContact:      config.emergencyContact.trim() || null,
+                udiseCode:             config.udiseCode.trim() || null,
+                affiliationNumber:     config.affiliationNumber.trim() || null,
+                boardSchoolCode:       config.boardSchoolCode.trim() || null,
             });
             updateLog(idx, 'done');
 
