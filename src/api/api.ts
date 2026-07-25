@@ -367,7 +367,19 @@ getEndSessionProgress = async (id: string) => {
         totals: { pending: number; promote: number; holdBack: number; total: number };
         teachers: { teacherId: string | null; teacherName: string | null; total: number; pending: number; promote: number; holdBack: number }[];
         canEnd: boolean;
+        insights: {
+            perClass: { classId: string | null; className: string | null; total: number; promote: number; holdBack: number; pending: number; promoteRate: number }[];
+            totalOutstanding: number;
+            promotedBlockedByDues: number;
+            avgHeldBackPct: number | null;
+        };
     };
+};
+
+/** Management override of a single student's promotion decision (only while ENDING). */
+overridePromotionDecision = async (sessionId: string, academicId: string, body: { decision: "PROMOTE" | "HOLD_BACK" | "PENDING"; note?: string }) => {
+    const response = await apiClient.patch(`/management/session/${sessionId}/promotion/${academicId}`, body);
+    return response.data as { message: string; academic: { id: string; promotionStatus: string } };
 };
 
 endSession = async (id: string) => {
@@ -444,6 +456,13 @@ updateSubject = async (id: string, data: { name?: string, slug?: string, bookNam
     getSectionsByClass = async (classId: string) => {
         const response = await apiClient.get(`/management/class/${classId}/sections`);
         return response.data.sections ?? response.data ?? [];
+    };
+
+    // Mid-term section transfer (P1-ACA-06) — move a student to another section
+    // in the same class + session.
+    transferStudentSection = async (studentId: string, data: { sessionId: string; toSectionId: string; rollNo?: string; reason?: string }) => {
+        const res = await apiClient.post(`/management/student/${studentId}/transfer-section`, data);
+        return res.data as { message: string; academics: any; fromSection: string; toSection: string };
     };
 
     // ── Notice Board APIs ─────────────────────────────────────────────────────
@@ -603,8 +622,29 @@ createStudent = async (data: {
     phone: string; address: string; password: string;
     disability: boolean; disabilityDescription?: string;
     email: string; dateOfBirth: string; comments?: string;
+    allergies?: string; medicalNotes?: string; bloodGroup?: string;
+    emergencyContactName?: string; emergencyContactPhone?: string;
+    // Parent login (P4-AC-12). When present, a parent account is created (or an
+    // existing one linked) so the parent can sign into the student portal.
+    parent?: {
+        name: string; relation: "FATHER" | "MOTHER" | "GUARDIAN";
+        phone: string; email?: string; occupation?: string; password: string;
+    };
 }) => {
     const response = await apiClient.post('/management/student/create', data);
+    return response.data;
+};
+
+/**
+ * Parent lookup by phone (P4-AC-12). Used by the admission form to reuse an
+ * existing parent account for a 2nd/3rd child instead of creating a duplicate.
+ */
+lookupParent = async (phone: string): Promise<{
+    found: boolean;
+    parent: { id: string; name: string; relation: string; phone: string; email: string | null; occupation: string | null } | null;
+    childCount?: number;
+}> => {
+    const response = await apiClient.get('/management/student/parent-lookup', { params: { phone } });
     return response.data;
 };
 
@@ -741,6 +781,13 @@ createStudent = async (data: {
         return res.data;
     };
 
+    // Authorised re-evaluation of a PUBLISHED result (P0-EXM-05). Requires a
+    // reason; audited with old → new marks. PRINCIPAL / ADMIN only.
+    reEvaluateResult = async (resultId: string, payload: { marks: number; reason: string; remarks?: string }) => {
+        const res = await apiClient.patch(`/management/exam/result/${resultId}/re-evaluate`, payload);
+        return res.data as { message: string; result: any; oldMarks: number | null; newMarks: number };
+    };
+
     // Publish exam results (principal only)
     publishExamResults = async (examId: string) => {
         const res = await apiClient.post(`/management/exam/${examId}/publish`);
@@ -790,6 +837,13 @@ createStudent = async (data: {
     getPerformanceDashboard = async (params: { sessionId: string; classId?: string; sectionId?: string; term?: string; studentId?: string }) => {
         const res = await apiClient.get("/management/exam/performance", { params });
         return res.data;
+    };
+
+    // Consolidated term result (P1-EXM-11) — sum of marks over sum of full marks,
+    // no weighting. Per subject + overall, ranked.
+    getExamAggregate = async (params: { sessionId: string; classId?: string; sectionId?: string; term?: string }) => {
+        const res = await apiClient.get("/management/exam/aggregate", { params });
+        return res.data as { students: ExamAggregateRow[]; examCount: number };
     };
 
     // Publish exam (CREATED → PUBLISHED)
@@ -1367,6 +1421,18 @@ createStudent = async (data: {
         const res = await apiClient.get("/management/fees/payments", { params });
         return res.data;
     };
+    /** Daily collection day-book for cash reconciliation (P0-FEE-10). */
+    getFeeDayBook = async (date?: string) => {
+        const res = await apiClient.get("/management/fees/day-book", { params: date ? { date } : undefined });
+        return res.data as {
+            date: string;
+            totals: { count: number; totalAmount: number };
+            cashInHand: number;
+            byMode: { mode: string; count: number; amount: number }[];
+            byCollector: { receivedBy: string | null; collectorName: string; count: number; amount: number }[];
+            payments: { id: string; receiptNo: string | null; time: string; studentName: string; invoiceNo: string; amount: number; paymentMode: string; referenceNo: string | null; collectorName: string }[];
+        };
+    };
     exportFeePayments = async (params?: { from?: string; to?: string; paymentMode?: string; paymentStatus?: string }) => {
         const res = await apiClient.get("/management/fees/payments/export", { params, responseType: 'blob' });
         const url = globalThis.URL.createObjectURL(new Blob([res.data]));
@@ -1381,6 +1447,11 @@ createStudent = async (data: {
     refundPayment = async (paymentId: string) => {
         const res = await apiClient.post(`/management/fees/payments/${paymentId}/refund`);
         return res.data;
+    };
+    /** Reverse an offline payment that didn't clear — cheque bounce (P0-FEE-12). */
+    reversePayment = async (paymentId: string, data: { reason: string; bounceFee?: number }) => {
+        const res = await apiClient.post(`/management/fees/payments/${paymentId}/reverse`, data);
+        return res.data as { message: string; invoice: unknown; bounceFeeInvoiceId: string | null };
     };
 
     // ── Library Module ────────────────────────────────────────────────────────
@@ -1550,6 +1621,61 @@ createStudent = async (data: {
     getActivityModules = async () => {
         const res = await apiClient.get('/management/activity/modules');
         return res.data as { modules: string[] };
+    };
+
+    // ── Parent grievances / complaints (P1-COM-08) ──────────────────────────
+    getGrievances = async (status?: string) => {
+        const res = await apiClient.get('/management/grievances', { params: status ? { status } : undefined });
+        return res.data as { grievances: any[]; summary: { open: number; inProgress: number } };
+    };
+    getGrievance = async (id: string) => {
+        const res = await apiClient.get(`/management/grievances/${id}`);
+        return res.data as { grievance: any; student: { name: string; phone: string | null; email: string | null } | null; replies: any[] };
+    };
+    replyGrievance = async (id: string, message: string, isInternal = false) => {
+        const res = await apiClient.post(`/management/grievances/${id}/reply`, { message, isInternal });
+        return res.data;
+    };
+    setGrievanceStatus = async (id: string, status: string, assignToSelf = false) => {
+        const res = await apiClient.patch(`/management/grievances/${id}/status`, { status, assignToSelf });
+        return res.data;
+    };
+
+    // ── Parent-Teacher Meetings (P1-COM-07) ─────────────────────────────────
+    createPtmEvent = async (data: {
+        title: string; description?: string | null;
+        sessionId?: string | null; classId?: string | null; sectionId?: string | null;
+        meetingDate: string; location?: string | null; slotDurationMins?: number;
+        bookingOpensAt?: string | null; bookingClosesAt?: string | null;
+    }) => {
+        const res = await apiClient.post('/management/ptm/events', data);
+        return res.data.data as PtmEvent;
+    };
+    getPtmEvents = async () => {
+        const res = await apiClient.get('/management/ptm/events');
+        return res.data.data as PtmEvent[];
+    };
+    getPtmEventSlots = async (eventId: string) => {
+        const res = await apiClient.get(`/management/ptm/events/${eventId}/slots`);
+        return res.data.data as PtmSlot[];
+    };
+    generatePtmSlots = async (eventId: string, data: {
+        teacherIds: string[]; windowStart: string; windowEnd: string; slotDurationMins?: number;
+    }) => {
+        const res = await apiClient.post(`/management/ptm/events/${eventId}/generate-slots`, data);
+        return res.data.data as { created: number };
+    };
+    publishPtmEvent = async (eventId: string) => {
+        const res = await apiClient.post(`/management/ptm/events/${eventId}/publish`);
+        return res.data.data as PtmEvent;
+    };
+    cancelPtmEvent = async (eventId: string) => {
+        const res = await apiClient.post(`/management/ptm/events/${eventId}/cancel`);
+        return res.data.data as PtmEvent;
+    };
+    markPtmAttendance = async (slotId: string, attendance: "PENDING" | "ATTENDED" | "NO_SHOW", teacherNotes?: string) => {
+        const res = await apiClient.patch(`/management/ptm/slots/${slotId}/attendance`, { attendance, teacherNotes });
+        return res.data.data as PtmSlot;
     };
 
     // Support Tickets
@@ -1800,6 +1926,32 @@ createStudent = async (data: {
             message: string;
             payments: { enabled: boolean; keyId: string | null; configuredAt: string | null };
         };
+    };
+
+    // ── Settings: School operations (working week, timing, etc.) ────────────
+    getSchoolOperations = async () => {
+        const res = await apiClient.get("/management/settings/school-operations");
+        return res.data as {
+            weeklyOffDays: number[]; schoolStartTime: string | null; schoolEndTime: string | null;
+            academicYearStartMonth: number; defaultPassPercentage: number; currency: string; timezone: string;
+        };
+    };
+    updateSchoolOperations = async (payload: {
+        weeklyOffDays?: number[]; schoolStartTime?: string | null; schoolEndTime?: string | null;
+        academicYearStartMonth?: number; defaultPassPercentage?: number; currency?: string; timezone?: string;
+    }) => {
+        const res = await apiClient.patch("/management/settings/school-operations", payload);
+        return res.data;
+    };
+
+    // ── Settings: Fee-defaulter reminder ladder (P1-COM-06 per-tenant) ──────
+    getFeeReminderSettings = async () => {
+        const res = await apiClient.get("/management/settings/fee-reminders");
+        return res.data as { enabled: boolean; gentleDays: number; firmDays: number; finalDays: number; note?: string };
+    };
+    updateFeeReminderSettings = async (payload: { enabled?: boolean; gentleDays?: number; firmDays?: number; finalDays?: number }) => {
+        const res = await apiClient.patch("/management/settings/fee-reminders", payload);
+        return res.data as { message: string; enabled: boolean; gentleDays: number; firmDays: number; finalDays: number };
     };
 
     // ── Settings: Email service (Zepto BYO or platform-shared) ─────────────
@@ -2502,6 +2654,14 @@ createStudent = async (data: {
         const res = await apiClient.get('/management/documents/certificates', { params });
         return res.data as { count: number; certificates: any[] };
     };
+    /** Serial Transfer-Certificate register (P0-SAF-07). */
+    getTcRegister = async (year?: string) => {
+        const res = await apiClient.get('/management/documents/tc-register', { params: year ? { year } : undefined });
+        return res.data as {
+            total: number;
+            entries: { id: string; serialNo: string | null; studentName: string; issueDate: string | null; publishedAt: string | null; fileName: string | null }[];
+        };
+    };
     getCertificatePrefill = async (id: string) => {
         const res = await apiClient.get(`/management/documents/certificates/${id}/prefill`);
         return res.data as { certType: string; fields: any[]; prefill: any; defaultExpiryDate: string; infinityDate: string };
@@ -2736,6 +2896,9 @@ export interface PantryWalletRow {
     id: string; userType: 'STUDENT' | 'TEACHER'; userId: string;
     balance: number; dailyLimit: number | null; isActive: boolean;
     holderName?: string;
+    // Safety flags carried to the counter (P0-SAF-01 / P2-PAN-06).
+    allergies?: string | null;
+    dietaryPreference?: string | null;
 }
 export interface PantryLedgerRow {
     id: string; type: 'CREDIT' | 'DEBIT';
@@ -2801,3 +2964,30 @@ export interface Payslip {
     status: string; breakdown: { type: string; label: string; amount: number }[];
 }
 export interface SalaryPayment { id: string; amount: number; method: string; paidAt: string; reference: string | null; notes: string | null; }
+
+// Consolidated term result (P1-EXM-11)
+export interface ExamSubjectAggregate { subjectId: string; subjectName: string; achieved: number; total: number; pct: number; grade: string; examCount: number; }
+export interface ExamAggregateRow {
+    studentId: string; studentName: string; rollNo: string;
+    classId: string; className: string; sectionId: string; sectionName: string;
+    subjects: ExamSubjectAggregate[];
+    achieved: number; total: number; pct: number; grade: string; examCount: number; rank: number;
+}
+
+// ── Parent-Teacher Meetings (P1-COM-07) ─────────────────────────────────────
+export type PtmEventStatus = "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+export type PtmSlotStatus = "OPEN" | "BOOKED" | "BLOCKED";
+export type PtmAttendance = "PENDING" | "ATTENDED" | "NO_SHOW";
+export interface PtmEvent {
+    id: string; title: string; description: string | null;
+    sessionId: string | null; classId: string | null; sectionId: string | null;
+    meetingDate: string; location: string | null; slotDurationMins: number;
+    status: PtmEventStatus; bookingOpensAt: string | null; bookingClosesAt: string | null;
+    publishedAt: string | null; createdAt: string;
+}
+export interface PtmSlot {
+    id: string; teacherId?: string; teacherName?: string;
+    startTime: string; endTime: string; status: PtmSlotStatus;
+    studentId: string | null; studentName?: string | null;
+    attendance: PtmAttendance; teacherNotes?: string | null;
+}

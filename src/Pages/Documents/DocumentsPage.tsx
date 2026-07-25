@@ -177,9 +177,10 @@ const RejectModal = ({ title, onClose, onConfirm }: { title: string; onClose: ()
 const DocumentsPage = () => {
     const { addToast } = useToast();
     const [subject, setSubject] = useState<Subject>("students");
-    const [tab, setTab] = useState<"certificates" | "uploads">("certificates");
+    const [tab, setTab] = useState<"certificates" | "uploads" | "tc-register">("certificates");
     const [certs, setCerts] = useState<any[]>([]);
     const [uploads, setUploads] = useState<any[]>([]);
+    const [tcRegister, setTcRegister] = useState<Awaited<ReturnType<typeof api.getTcRegister>>["entries"]>([]);
     const [loading, setLoading] = useState(true);
     const [issuing, setIssuing] = useState<any>(null);
     const [rejecting, setRejecting] = useState<{ kind: "cert" | "upload"; id: string } | null>(null);
@@ -188,13 +189,17 @@ const DocumentsPage = () => {
     const load = useCallback(() => {
         setLoading(true);
         const api2 = docApi(subject);
-        Promise.allSettled([api2.getCertificates(), api2.getUploads()])
-            .then(([c, u]) => {
+        // TC register is a student-only, tenant-wide serial log (not per subject).
+        Promise.allSettled([api2.getCertificates(), api2.getUploads(), subject === "students" ? api.getTcRegister() : Promise.resolve({ total: 0, entries: [] })])
+            .then(([c, u, tc]) => {
                 setCerts(c.status === "fulfilled" ? c.value.certificates ?? [] : []);
                 setUploads(u.status === "fulfilled" ? u.value.uploads ?? [] : []);
+                setTcRegister(tc.status === "fulfilled" ? (tc.value as any).entries ?? [] : []);
             }).finally(() => setLoading(false));
     }, [subject]);
     useEffect(() => { load(); }, [load]);
+    // TC register tab only makes sense for students; snap back when on teachers.
+    useEffect(() => { if (subject === "teachers" && tab === "tc-register") setTab("certificates"); }, [subject, tab]);
 
     const download = async (id: string) => {
         try { const r = await A.download(id); openUrl(r.url); }
@@ -243,10 +248,49 @@ const DocumentsPage = () => {
                     <button onClick={() => setTab("uploads")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "uploads" ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>
                         Document Verification {pendingDocs > 0 && <span className="ml-1 text-[10px] bg-amber-400 text-amber-900 px-1.5 rounded-full">{pendingDocs}</span>}
                     </button>
+                    {subject === "students" && (
+                        <button data-testid="documents-tc-register-tab" onClick={() => setTab("tc-register")} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${tab === "tc-register" ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-700"}`}>
+                            TC Register {tcRegister.length > 0 && <span className="ml-1 text-[10px] bg-slate-200 text-slate-700 px-1.5 rounded-full">{tcRegister.length}</span>}
+                        </button>
+                    )}
                 </div>
 
                 {loading ? <div className="flex justify-center py-20"><Loader2 size={22} className="animate-spin text-slate-400" /></div>
-                : tab === "certificates" ? (
+                : tab === "tc-register" ? (
+                    tcRegister.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No Transfer Certificates issued yet.</div>
+                    : (
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" data-testid="documents-tc-register">
+                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-slate-800">Transfer Certificate register</h3>
+                                <span className="text-[11px] text-slate-400">{tcRegister.length} issued · serial order</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                            <th className="px-4 py-2.5">Serial No.</th>
+                                            <th className="px-4 py-2.5">Student</th>
+                                            <th className="px-4 py-2.5">Issue date</th>
+                                            <th className="px-4 py-2.5 text-right">Certificate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {tcRegister.map(t => (
+                                            <tr key={t.id} data-testid="documents-tc-row" data-serial={t.serialNo ?? ""} className="hover:bg-slate-50/60">
+                                                <td className="px-4 py-2.5 font-mono text-[12px] font-semibold text-slate-700">{t.serialNo ?? "—"}</td>
+                                                <td className="px-4 py-2.5 text-slate-700">{t.studentName || "—"}</td>
+                                                <td className="px-4 py-2.5 tabular-nums text-slate-500">{t.issueDate ?? "—"}</td>
+                                                <td className="px-4 py-2.5 text-right">
+                                                    <button onClick={() => download(t.id)} className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 inline-flex items-center gap-1"><Download size={11} /> PDF</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )
+                ) : tab === "certificates" ? (
                     certs.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No certificate requests yet.</div>
                     : (
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">

@@ -5,7 +5,7 @@ import {
     BookOpen, Calendar, CheckCircle2, Clock, FileText,
     Pencil, Trash2, User, BookMarked, GraduationCap, Loader2,
     AlertCircle, ChevronRight, Award, BarChart3,
-    XCircle, FileDown, ShieldCheck, Zap, Users, ClipboardList,
+    XCircle, FileDown, ShieldCheck, Zap, Users, ClipboardList, Scale,
 } from "lucide-react";
 import api from "../../api/api";
 import BackButton from "../../components/common/BackButton";
@@ -16,6 +16,7 @@ import AddSyllabusModal from "../../components/Exam/AddSyllabusModal";
 import AddQuestionPaperModal from "../../components/Exam/AddQuestionPaperModal";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import ExamReport from "../../components/Exam/ExamReport";
+import ReEvaluateModal from "../../components/Exam/ReEvaluateModal";
 import { usePrompt } from "../../hooks/usePrompt";
 
 // ── Stage Map (all legacy + new statuses → 0-based stage index) ──────────────
@@ -241,6 +242,8 @@ const ExamDetails = () => {
     // Results & sections
     const [examResults, setExamResults]   = useState<any[]>([]);
     const [resultsLoading, setResultsLoading] = useState(false);
+    const [resultsReloadKey, setResultsReloadKey] = useState(0);
+    const [reEval, setReEval] = useState<{ id: string; name: string; marks: number | null } | null>(null);
     const [sections, setSections]         = useState<any[]>([]);
     const [sectionsLoading, setSectionsLoading] = useState(false);
 
@@ -285,7 +288,7 @@ const ExamDetails = () => {
             .then((data: any) => setExamResults(Array.isArray(data) ? data : (data.results ?? [])))
             .catch(() => setExamResults([]))
             .finally(() => setResultsLoading(false));
-    }, [exam?.status, examId]);
+    }, [exam?.status, examId, resultsReloadKey]);
 
     // Fetch sections summary for CONDUCTED stage
     useEffect(() => {
@@ -975,6 +978,32 @@ const ExamDetails = () => {
                             </div>
                         );
                     })()}
+
+                    {/* Authorised re-evaluation (P0-EXM-05) — PRINCIPAL/ADMIN only. */}
+                    {isPrincipalOrAdmin && !resultsLoading && present.length > 0 && (
+                        <div className="pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Scale size={15} className="text-indigo-500" />
+                                <h3 className="text-sm font-semibold text-slate-700">Re-evaluation</h3>
+                                <span className="text-[11px] text-slate-400">correct a published mark after a recheck — audited</span>
+                            </div>
+                            <div className="bg-slate-50 rounded-xl divide-y divide-slate-100 overflow-hidden">
+                                {present.map((r: any) => (
+                                    <div key={r.id} data-testid="reeval-row" className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                                        <span className="font-medium text-slate-700 truncate">{r.studentName}</span>
+                                        <span className="flex items-center gap-3 shrink-0">
+                                            <span className="tabular-nums text-slate-600">{r.marks ?? "—"} / {exam.fullMarks}</span>
+                                            <button data-testid="reeval-open-btn"
+                                                onClick={() => setReEval({ id: r.id, name: r.studentName, marks: r.marks ?? null })}
+                                                className="text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1">
+                                                Re-evaluate
+                                            </button>
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1178,6 +1207,17 @@ const ExamDetails = () => {
             {/* ── Exam Report (stage 4 only) ─────────────────────────────────── */}
             {stage === 4 && (
                 <ExamReport examId={examId} />
+            )}
+
+            {reEval && exam && (
+                <ReEvaluateModal
+                    resultId={reEval.id}
+                    studentName={reEval.name}
+                    currentMarks={reEval.marks}
+                    fullMarks={exam.fullMarks}
+                    onClose={() => setReEval(null)}
+                    onDone={() => { setReEval(null); setResultsReloadKey(k => k + 1); }}
+                />
             )}
 
         </div>

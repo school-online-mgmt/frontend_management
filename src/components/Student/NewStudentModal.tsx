@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     X, AlertCircle, User, Phone, Users, Lock, GraduationCap,
-    HeartPulse, ChevronLeft, ChevronRight, Check, Loader2, Eye, EyeOff,
+    HeartPulse, ChevronLeft, ChevronRight, Check, Loader2, Eye, EyeOff, UserPlus, Link2,
 } from "lucide-react";
 import api from "../../api/api";
 
@@ -37,6 +37,19 @@ interface FormState {
     transportOpted: boolean;
     comments: string;
     password: string;
+
+    // Parent login (P4-AC-12) — REQUIRED. Every student must have a parent the
+    // school can communicate with. A parent account is created (or an existing
+    // one, matched by phone, is linked to this child).
+    parentName: string;
+    parentRelation: "FATHER" | "MOTHER" | "GUARDIAN";
+    parentPhone: string;
+    parentEmail: string;
+    parentOccupation: string;
+    parentPassword: string;
+    /** Set to the matched parent's id when the phone belongs to an existing
+     *  parent — the child will be LINKED and password/details are read-only. */
+    parentLinkedId: string;
 }
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -58,6 +71,13 @@ const BLANK: FormState = {
     transportOpted: false,
     comments: "",
     password: "",
+    parentName: "",
+    parentRelation: "FATHER",
+    parentPhone: "",
+    parentEmail: "",
+    parentOccupation: "",
+    parentPassword: "",
+    parentLinkedId: "",
 };
 
 // ── Validation (per step + final) ───────────────────────────────────────────
@@ -106,6 +126,21 @@ function runStepValidation(step: number, f: FormState): Errors {
         if (!f.password.trim()) e.password = "Password is required";
         else if (f.password.length < 8) e.password = "Password must be at least 8 characters";
     }
+    if (step === 7) {
+        if (!f.parentName.trim()) e.parentName = "Parent name is required";
+        const ppe = validatePhone(f.parentPhone, "Parent phone");
+        if (ppe) e.parentPhone = ppe;
+        else if (f.phone && f.parentPhone === f.phone)
+            e.parentPhone = "Parent login phone cannot match the student's phone";
+        if (f.parentEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.parentEmail))
+            e.parentEmail = "Enter a valid email address";
+        // A password is only needed for a NEW parent; when linking to an
+        // existing account (parentLinkedId set) the field is hidden and skipped.
+        if (!f.parentLinkedId) {
+            if (!f.parentPassword.trim()) e.parentPassword = "Password is required";
+            else if (f.parentPassword.length < 8) e.parentPassword = "Password must be at least 8 characters";
+        }
+    }
     return e;
 }
 
@@ -115,6 +150,7 @@ const REQUIRED_KEYS: (keyof FormState)[] = [
     "emergencyContactName", "emergencyContactPhone", "emergencyContactRelationship",
     "fatherName", "motherName", "previousSchoolName", "previousGrade",
     "password",
+    "parentName", "parentPhone",
 ];
 function getProgress(f: FormState): number {
     const filled = REQUIRED_KEYS.filter(k => {
@@ -134,6 +170,7 @@ const STEPS = [
     { id: 4, title: "Academic",  desc: "Previous school history",       icon: GraduationCap },
     { id: 5, title: "Medical",   desc: "Health and accessibility",      icon: HeartPulse },
     { id: 6, title: "Account",   desc: "Login & additional info",       icon: Lock },
+    { id: 7, title: "Parent",    desc: "Parent portal login (optional)", icon: UserPlus },
 ] as const;
 
 // ── Field wrapper ───────────────────────────────────────────────────────────
@@ -197,6 +234,53 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
     const progress = useMemo(() => getProgress(form), [form]);
 
+    // ── Parent lookup (P4-AC-12) ────────────────────────────────────────────
+    // When the operator types a 10-digit parent phone, check if a parent
+    // already exists at this school. If so, auto-fill and switch to LINK mode
+    // (this becomes the 2nd/3rd child of that parent). Debounced.
+    const [lookupState, setLookupState] = useState<"idle" | "checking" | "found" | "new">("idle");
+    const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastLookedUp = useRef<string>("");
+
+    useEffect(() => {
+        const phone = form.parentPhone;
+        if (!/^\d{10}$/.test(phone)) { setLookupState("idle"); return; }
+        if (phone === lastLookedUp.current) return;
+        if (lookupTimer.current) clearTimeout(lookupTimer.current);
+        lookupTimer.current = setTimeout(async () => {
+            setLookupState("checking");
+            try {
+                const res = await api.lookupParent(phone);
+                lastLookedUp.current = phone;
+                if (res.found && res.parent) {
+                    setForm(prev => ({
+                        ...prev,
+                        parentName: res.parent!.name,
+                        parentRelation: (["FATHER", "MOTHER", "GUARDIAN"].includes(res.parent!.relation)
+                            ? res.parent!.relation : "GUARDIAN") as FormState["parentRelation"],
+                        parentEmail: res.parent!.email ?? "",
+                        parentOccupation: res.parent!.occupation ?? "",
+                        parentPassword: "",
+                        parentLinkedId: res.parent!.id,
+                    }));
+                    setErrors(prev => {
+                        const n = { ...prev };
+                        delete n.parentName; delete n.parentPassword; delete n.parentEmail;
+                        return n;
+                    });
+                    setLookupState("found");
+                } else {
+                    // A previously-linked parent phone was edited to a new one.
+                    setForm(prev => prev.parentLinkedId ? { ...prev, parentLinkedId: "" } : prev);
+                    setLookupState("new");
+                }
+            } catch {
+                setLookupState("idle");
+            }
+        }, 500);
+        return () => { if (lookupTimer.current) clearTimeout(lookupTimer.current); };
+    }, [form.parentPhone]);
+
     const goNext = () => {
         const stepErrs = runStepValidation(step, form);
         if (Object.keys(stepErrs).length > 0) {
@@ -244,6 +328,21 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                 email: form.email,
                 dateOfBirth: form.dateOfBirth,
                 comments: form.comments || undefined,
+                allergies: form.allergies || undefined,
+                medicalNotes: form.medicalHistory || undefined,
+                bloodGroup: form.bloodGroup || undefined,
+                emergencyContactName: form.emergencyContactName || undefined,
+                emergencyContactPhone: form.emergencyContactPhone || undefined,
+                parent: {
+                    name: form.parentName,
+                    relation: form.parentRelation,
+                    phone: form.parentPhone,
+                    email: form.parentEmail || undefined,
+                    occupation: form.parentOccupation || undefined,
+                    // For an existing parent the backend ignores the password;
+                    // send a placeholder so the field is always present.
+                    password: form.parentLinkedId ? "linked-existing" : form.parentPassword,
+                },
             });
             onCreated();
             onClose();
@@ -546,6 +645,124 @@ const NewStudentModal: React.FC<Props> = ({ onClose, onCreated }) => {
                             <Field label="Comments / Notes" optional>
                                 <textarea rows={2} className={`${inputCls()} resize-none`} value={form.comments} onChange={set("comments")} placeholder="Anything else the school should know about the student" />
                             </Field>
+                        </div>
+                    )}
+
+                    {/* ── STEP 7 — PARENT LOGIN (P4-AC-12) ────────────────────── */}
+                    {step === 7 && (
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3 p-3 border border-indigo-200 bg-indigo-50/60 rounded-lg">
+                                <UserPlus size={16} className="shrink-0 mt-0.5 text-indigo-600" />
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-700">Parent portal login <span className="text-red-500">*</span></p>
+                                    <p className="text-[11px] text-slate-500">
+                                        Every student must have a parent — a person the school can communicate with and who signs into
+                                        the student portal to view fees, attendance, notices and give consents (not necessarily the
+                                        biological parent). If they already have a child here, enter their phone to link this child to the same account.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <>
+                                    <Field label="Parent Login Phone" required error={errors.parentPhone}>
+                                        <div className="relative">
+                                            <input
+                                                data-testid="new-student-modal-parent-phone-input"
+                                                className={`${inputCls(!!errors.parentPhone)} pr-24`}
+                                                value={form.parentPhone}
+                                                onChange={setPhone("parentPhone")}
+                                                placeholder="10-digit number (their login ID)"
+                                                inputMode="numeric"
+                                                maxLength={10}
+                                            />
+                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold">
+                                                {lookupState === "checking" && (
+                                                    <span className="flex items-center gap-1 text-slate-400"><Loader2 size={11} className="animate-spin" /> Checking…</span>
+                                                )}
+                                                {lookupState === "found" && (
+                                                    <span className="flex items-center gap-1 text-emerald-600"><Link2 size={11} /> Existing parent</span>
+                                                )}
+                                                {lookupState === "new" && (
+                                                    <span className="flex items-center gap-1 text-indigo-500"><UserPlus size={11} /> New parent</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    </Field>
+
+                                    {form.parentLinkedId && (
+                                        <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 text-xs text-emerald-800">
+                                            <Link2 size={14} className="shrink-0 mt-0.5" />
+                                            <span>
+                                                This phone already belongs to a parent at this school. This child will be
+                                                <strong> linked to their existing account</strong> — their name and password stay unchanged.
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <Field label="Parent Name" required error={errors.parentName}>
+                                            <input
+                                                data-testid="new-student-modal-parent-name-input"
+                                                className={inputCls(!!errors.parentName)}
+                                                value={form.parentName}
+                                                onChange={set("parentName")}
+                                                disabled={!!form.parentLinkedId}
+                                                placeholder="Full name"
+                                            />
+                                        </Field>
+                                        <Field label="Relation" required>
+                                            <select
+                                                data-testid="new-student-modal-parent-relation-select"
+                                                className={inputCls()}
+                                                value={form.parentRelation}
+                                                onChange={set("parentRelation")}
+                                                disabled={!!form.parentLinkedId}
+                                            >
+                                                <option value="FATHER">Father</option>
+                                                <option value="MOTHER">Mother</option>
+                                                <option value="GUARDIAN">Guardian</option>
+                                            </select>
+                                        </Field>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <Field label="Parent Email" optional error={errors.parentEmail}>
+                                            <input
+                                                data-testid="new-student-modal-parent-email-input"
+                                                type="email"
+                                                className={inputCls(!!errors.parentEmail)}
+                                                value={form.parentEmail}
+                                                onChange={set("parentEmail")}
+                                                disabled={!!form.parentLinkedId}
+                                                placeholder="parent@example.com"
+                                            />
+                                        </Field>
+                                        <Field label="Occupation" optional>
+                                            <input
+                                                data-testid="new-student-modal-parent-occupation-input"
+                                                className={inputCls()}
+                                                value={form.parentOccupation}
+                                                onChange={set("parentOccupation")}
+                                                disabled={!!form.parentLinkedId}
+                                                placeholder="e.g. Engineer"
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    {!form.parentLinkedId && (
+                                        <Field label="Parent Account Password" required error={errors.parentPassword}>
+                                            <input
+                                                data-testid="new-student-modal-parent-password-input"
+                                                type="text"
+                                                className={inputCls(!!errors.parentPassword)}
+                                                value={form.parentPassword}
+                                                onChange={set("parentPassword")}
+                                                placeholder="Min 8 characters"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-1">The parent uses this to log in; they'll be asked to change it on first sign-in.</p>
+                                        </Field>
+                                    )}
+                            </>
                         </div>
                     )}
                 </div>

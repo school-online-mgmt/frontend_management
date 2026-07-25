@@ -309,8 +309,9 @@ const SectionDetails = () => {
             <SessionStudentsTable
                 filterSectionId={sectionId}
                 title={`Students in ${section.class?.name ? section.class.name + " · " : ""}${section.name}`}
-                subtitle="Click any row to open the student profile."
+                subtitle="Click a row to open the profile, or use ⇄ to move a student to another section."
                 accent="violet"
+                enableSectionTransfer
             />
         </div>
     );
