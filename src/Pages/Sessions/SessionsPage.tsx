@@ -417,6 +417,56 @@ const EndSessionWorkflow: React.FC<{
         </div>
       </div>
 
+      {/* Insights */}
+      {progress?.insights && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm" data-testid="sessions-insights">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles size={14} className="text-indigo-500" />
+            <h3 className="text-sm font-bold text-slate-800">Insights</h3>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <div className="rounded-xl border border-slate-100 p-3">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">To collect before next session</p>
+              <p className="text-lg font-black text-slate-800 tabular-nums mt-0.5">₹{progress.insights.totalOutstanding.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="rounded-xl border border-slate-100 p-3">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Promoted, blocked by dues</p>
+              <p className={`text-lg font-black tabular-nums mt-0.5 ${progress.insights.promotedBlockedByDues > 0 ? "text-amber-600" : "text-slate-800"}`}>
+                {progress.insights.promotedBlockedByDues}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-100 p-3">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Avg. marks of held-back</p>
+              <p className="text-lg font-black text-slate-800 tabular-nums mt-0.5">
+                {progress.insights.avgHeldBackPct === null ? "—" : `${progress.insights.avgHeldBackPct}%`}
+              </p>
+            </div>
+          </div>
+          {progress.insights.promotedBlockedByDues > 0 && (
+            <div className="flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>{progress.insights.promotedBlockedByDues} promoted student(s) still carry unpaid dues and cannot be admitted to the next session until cleared.</span>
+            </div>
+          )}
+          {progress.insights.perClass.length > 0 && (
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 mb-2">Promote rate by class</p>
+              <div className="space-y-1.5">
+                {progress.insights.perClass.map((c) => (
+                  <div key={c.classId ?? c.className ?? "—"} data-testid="sessions-insights-class" className="flex items-center gap-2 text-[11px]">
+                    <span className="w-28 truncate text-slate-700 font-semibold">{c.className ?? "—"}</span>
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500" style={{ width: `${c.promoteRate}%` }} />
+                    </div>
+                    <span className="w-24 text-right tabular-nums text-slate-500">{c.promoteRate}% · {c.promote}/{c.total}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Per-teacher progress */}
       {teacherRows.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">

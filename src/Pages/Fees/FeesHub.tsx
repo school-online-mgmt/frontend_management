@@ -121,7 +121,7 @@ interface BulkPreviewStudent { academicId: string; studentId: string; firstName:
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeesHub() {
-    const [tab, setTab] = useTabState<'summary' | 'fee-structure' | 'extra' | 'invoices' | 'payments'>('tab', 'summary');
+    const [tab, setTab] = useTabState<'summary' | 'fee-structure' | 'extra' | 'invoices' | 'payments' | 'day-book'>('tab', 'summary');
     const selectedSessionId = useSessionId();
     const [refreshKey, setRefreshKey] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
@@ -159,6 +159,7 @@ export default function FeesHub() {
                         { key: 'extra',         label: 'Charges & Fines', icon: AlertCircle },
                         { key: 'invoices',      label: 'Invoices',        icon: CreditCard },
                         { key: 'payments',      label: 'Payments',        icon: Wallet },
+                        { key: 'day-book',      label: 'Day Book',        icon: BookOpen },
                     ]}
                 >
                     <TabPanel tabKey="summary"       key={`summary-${refreshKey}`}><SummaryTab /></TabPanel>
@@ -166,6 +167,7 @@ export default function FeesHub() {
                     <TabPanel tabKey="extra"         key={`extra-${refreshKey}`}><ExtraChargesTab /></TabPanel>
                     <TabPanel tabKey="invoices"      key={`inv-${refreshKey}`}><InvoicesTab /></TabPanel>
                     <TabPanel tabKey="payments"      key={`pay-${refreshKey}`}><PaymentsTab /></TabPanel>
+                    <TabPanel tabKey="day-book"      key={`db-${refreshKey}`}><DayBookTab /></TabPanel>
                 </TabbedSection>
             )}
         </div>
@@ -1566,7 +1568,8 @@ function FeeStructureTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 interface PaymentRow {
     id: string; amount: number; paymentMode: string; paymentStatus: string;
-    referenceNo?: string; paymentDate: string; remarks?: string;
+    referenceNo?: string; receiptNo?: string | null; paymentDate: string; remarks?: string;
+    reversedAt?: string | null; reversalReason?: string | null;
     razorpayPaymentId?: string; razorpayOrderId?: string;
     invoiceId: string; invoiceNo: string; invoiceMonth: number; invoiceYear: number;
     studentId: string; studentFirstName: string; studentLastName: string; studentPhone: string;
@@ -1581,6 +1584,140 @@ const paymentStatusColor: Record<string, string> = {
     REFUNDED: 'bg-orange-100 text-orange-700',
 };
 
+/* ─────────────────────────── Day Book (P0-FEE-10) ─────────────────────────── */
+const MODE_LABEL: Record<string, string> = {
+    CASH: 'Cash', CHEQUE: 'Cheque', ONLINE: 'Online', BANK_TRANSFER: 'Bank transfer', DD: 'Demand draft',
+};
+function DayBookTab() {
+    const { addToast } = useToast();
+    const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [data, setData] = useState<Awaited<ReturnType<typeof api.getFeeDayBook>> | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const load = useCallback(async (d: string) => {
+        setLoading(true);
+        try { setData(await api.getFeeDayBook(d)); }
+        catch (e) { addToast(apiMsg(e, 'Failed to load the day book.'), 'error'); }
+        finally { setLoading(false); }
+    }, [addToast]);
+
+    useEffect(() => { void load(date); }, [date, load]);
+
+    return (
+        <div className="space-y-5" data-testid="fees-day-book">
+            {/* Date picker */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-slate-400" />
+                    <input data-testid="day-book-date" type="date" value={date} max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                    <span className="text-xs text-slate-400">Collections received on this day</span>
+                </div>
+                <button data-testid="day-book-refresh" onClick={() => load(date)} disabled={loading}
+                    className="inline-flex items-center gap-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50 disabled:opacity-50">
+                    <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+                </button>
+            </div>
+
+            {loading && !data ? (
+                <div className="flex justify-center py-16"><Loader2 className="animate-spin text-emerald-500" size={24} /></div>
+            ) : data ? (
+                <>
+                    {/* Headline cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">Cash in hand</p>
+                            <p className="text-2xl font-black text-emerald-800 tabular-nums mt-0.5" data-testid="day-book-cash">{fmt(data.cashInHand)}</p>
+                            <p className="text-[10px] text-emerald-600/80 mt-0.5">must match the drawer</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total collected</p>
+                            <p className="text-2xl font-black text-slate-800 tabular-nums mt-0.5">{fmt(data.totals.totalAmount)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Receipts</p>
+                            <p className="text-2xl font-black text-slate-800 tabular-nums mt-0.5">{data.totals.count}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Non-cash</p>
+                            <p className="text-2xl font-black text-slate-800 tabular-nums mt-0.5">{fmt(data.totals.totalAmount - data.cashInHand)}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">online / cheque / DD</p>
+                        </div>
+                    </div>
+
+                    {/* By mode + by collector */}
+                    <div className="grid lg:grid-cols-2 gap-4">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                            <h3 className="text-sm font-bold text-slate-800 mb-3">By payment mode</h3>
+                            {data.byMode.length === 0 ? <p className="text-sm text-slate-400">No collections.</p> : (
+                                <div className="space-y-2">
+                                    {data.byMode.map((m) => (
+                                        <div key={m.mode} data-testid="day-book-mode-row" className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-600">{MODE_LABEL[m.mode] ?? m.mode} <span className="text-slate-400">· {m.count}</span></span>
+                                            <span className="font-semibold text-slate-800 tabular-nums">{fmt(m.amount)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                            <h3 className="text-sm font-bold text-slate-800 mb-3">By collector</h3>
+                            {data.byCollector.length === 0 ? <p className="text-sm text-slate-400">No collections.</p> : (
+                                <div className="space-y-2">
+                                    {data.byCollector.map((c, i) => (
+                                        <div key={c.receivedBy ?? `x-${i}`} className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-600 truncate">{c.collectorName} <span className="text-slate-400">· {c.count}</span></span>
+                                            <span className="font-semibold text-slate-800 tabular-nums">{fmt(c.amount)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Line items */}
+                    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-100"><h3 className="text-sm font-bold text-slate-800">Receipts ({data.payments.length})</h3></div>
+                        {data.payments.length === 0 ? (
+                            <p className="text-sm text-slate-400 px-5 py-8 text-center">No fee payments were received on {data.date}.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                            <th className="px-4 py-2.5">Receipt</th>
+                                            <th className="px-4 py-2.5">Time</th>
+                                            <th className="px-4 py-2.5">Student</th>
+                                            <th className="px-4 py-2.5">Invoice</th>
+                                            <th className="px-4 py-2.5">Mode</th>
+                                            <th className="px-4 py-2.5">Collector</th>
+                                            <th className="px-4 py-2.5 text-right">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {data.payments.map((p) => (
+                                            <tr key={p.id} data-testid="day-book-row" className="hover:bg-slate-50/60">
+                                                <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500">{p.receiptNo ?? '—'}</td>
+                                                <td className="px-4 py-2.5 text-slate-500 tabular-nums">{new Date(p.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</td>
+                                                <td className="px-4 py-2.5 text-slate-700">{p.studentName || '—'}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{p.invoiceNo}</td>
+                                                <td className="px-4 py-2.5 text-slate-500">{MODE_LABEL[p.paymentMode] ?? p.paymentMode}{p.referenceNo ? ` · ${p.referenceNo}` : ''}</td>
+                                                <td className="px-4 py-2.5 text-slate-500 truncate">{p.collectorName}</td>
+                                                <td className="px-4 py-2.5 text-right font-semibold text-slate-800 tabular-nums">{fmt(p.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            ) : null}
+        </div>
+    );
+}
+
 function PaymentsTab() {
     const navigate = useNavigate();
     const { addToast } = useToast();
@@ -1593,6 +1730,11 @@ function PaymentsTab() {
     const [status, setStatus] = useState('');
     const [exporting, setExporting] = useState(false);
     const [refunding, setRefunding] = useState<string | null>(null);
+    // Cheque bounce / reversal (P0-FEE-12).
+    const [reverseTarget, setReverseTarget] = useState<PaymentRow | null>(null);
+    const [reverseReason, setReverseReason] = useState('');
+    const [reverseBounceFee, setReverseBounceFee] = useState('');
+    const [reversing, setReversing] = useState(false);
 
     const [tick, setTick] = useState(0);
 
@@ -1645,6 +1787,20 @@ function PaymentsTab() {
         });
     };
 
+    const submitReverse = async () => {
+        if (!reverseTarget || !reverseReason.trim()) return;
+        setReversing(true);
+        try {
+            const fee = reverseBounceFee.trim() ? Number(reverseBounceFee) : undefined;
+            const data = await api.reversePayment(reverseTarget.id, { reason: reverseReason.trim(), ...(fee ? { bounceFee: fee } : {}) });
+            addToast(data.bounceFeeInvoiceId ? 'Payment reversed · bounce fee raised' : 'Payment reversed', 'success');
+            setReverseTarget(null); setReverseReason(''); setReverseBounceFee('');
+            await reload();
+        } catch (err: unknown) {
+            addToast('Reversal failed', 'error', apiMsg(err, ''));
+        } finally { setReversing(false); }
+    };
+
     const totalAmount = payments.reduce((s, p) => s + (['CAPTURED', 'AUTHORIZED'].includes(p.paymentStatus) ? p.amount : 0), 0);
     const totalRefunded = payments.filter(p => p.paymentStatus === 'REFUNDED').reduce((s, p) => s + p.amount, 0);
     const totalFailed = payments.filter(p => p.paymentStatus === 'FAILED').reduce((s, p) => s + p.amount, 0);
@@ -1652,6 +1808,45 @@ function PaymentsTab() {
     return (
         <div className="space-y-4">
             {confirmDialog}
+
+            {/* Reverse / cheque-bounce modal (P0-FEE-12) */}
+            {reverseTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-rose-50/60">
+                            <h3 className="font-bold text-rose-900 text-sm">Reverse payment · {fmt(reverseTarget.amount)}</h3>
+                            <button data-testid="fees-reverse-cancel-btn" onClick={() => setReverseTarget(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <p className="text-xs text-slate-500">
+                                Use this when a {reverseTarget.paymentMode.toLowerCase()} payment didn't clear (bounced cheque, wrong entry).
+                                The receipt stays for audit; the amount is removed from invoice {reverseTarget.invoiceNo} and it drops out of collection reports.
+                            </p>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reason</label>
+                                <textarea data-testid="fees-reverse-reason-input" value={reverseReason} onChange={e => setReverseReason(e.target.value)} rows={2}
+                                    placeholder="e.g. Cheque #001234 bounced — insufficient funds"
+                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none" />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Bounce fee (₹, optional)</label>
+                                <input data-testid="fees-reverse-bounce-fee-input" type="number" min={0} value={reverseBounceFee} onChange={e => setReverseBounceFee(e.target.value)}
+                                    placeholder="Raise a separate fine invoice"
+                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300" />
+                            </div>
+                            <div className="flex gap-3 pt-1">
+                                <button onClick={() => setReverseTarget(null)} disabled={reversing}
+                                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+                                <button data-testid="fees-reverse-confirm-btn" onClick={submitReverse} disabled={reversing || !reverseReason.trim()}
+                                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition disabled:opacity-50">
+                                    {reversing ? 'Reversing…' : 'Confirm reversal'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Filters */}
             <div className="flex flex-wrap gap-3 items-end justify-between">
                 <div className="flex gap-3 items-end flex-wrap">
@@ -1722,15 +1917,28 @@ function PaymentsTab() {
                                 <td className="px-3 py-3 font-medium">{p.studentFirstName} {p.studentLastName}</td>
                                 <td className="px-3 py-3"><span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.paymentMode.replaceAll('_', ' ')}</span></td>
                                 <td className="px-3 py-3 text-slate-400 font-mono text-xs">{p.referenceNo || p.razorpayPaymentId || '—'}</td>
-                                <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusColor[p.paymentStatus] || 'bg-slate-100 text-slate-600'}`}>{p.paymentStatus}</span></td>
+                                <td className="px-3 py-3">
+                                    {p.reversedAt ? (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700" title={p.reversalReason ?? undefined}>REVERSED</span>
+                                    ) : (
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusColor[p.paymentStatus] || 'bg-slate-100 text-slate-600'}`}>{p.paymentStatus}</span>
+                                    )}
+                                </td>
                                 <td className="px-3 py-3 font-semibold text-right whitespace-nowrap">
-                                    <span className={p.paymentStatus === 'REFUNDED' ? 'text-orange-600 line-through' : 'text-green-700'}>{fmt(p.amount)}</span>
+                                    <span className={(p.paymentStatus === 'REFUNDED' || p.reversedAt) ? 'text-orange-600 line-through' : 'text-green-700'}>{fmt(p.amount)}</span>
                                 </td>
                                 <td className="px-3 py-3">
-                                    {p.paymentMode === 'ONLINE' && p.paymentStatus === 'CAPTURED' && (
+                                    {p.paymentMode === 'ONLINE' && p.paymentStatus === 'CAPTURED' && !p.reversedAt && (
                                         <button data-testid={`fees-payment-refund-btn-${p.id}`} onClick={() => handleRefund(p)} disabled={refunding === p.id}
                                             className="flex items-center gap-1 px-2.5 py-1 text-xs border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-50">
                                             <RotateCcw size={12} />{refunding === p.id ? 'Processing…' : 'Refund'}
+                                        </button>
+                                    )}
+                                    {/* Offline (cheque/cash/DD) payments can be reversed if they don't clear. */}
+                                    {p.paymentMode !== 'ONLINE' && p.paymentStatus !== 'REFUNDED' && !p.reversedAt && (
+                                        <button data-testid={`fees-payment-reverse-btn-${p.id}`} onClick={() => { setReverseTarget(p); setReverseReason(''); setReverseBounceFee(''); }}
+                                            className="flex items-center gap-1 px-2.5 py-1 text-xs border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50">
+                                            <RotateCcw size={12} />Reverse
                                         </button>
                                     )}
                                 </td>

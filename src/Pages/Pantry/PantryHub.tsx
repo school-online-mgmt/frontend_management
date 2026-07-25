@@ -205,6 +205,7 @@ function PosTab() {
                         {method === "WALLET" ? "Wallet holder (required)" : "Customer (optional — for their history)"}
                     </span>
                     {buyer ? (
+                        <>
                         <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-emerald-800 truncate">{buyer.holderName}</p>
@@ -212,6 +213,24 @@ function PosTab() {
                             </div>
                             <button onClick={() => setBuyer(null)} className="p-1 text-emerald-600"><X size={14} /></button>
                         </div>
+                        {/* Allergy / dietary warning at the counter (P0-SAF-01 / P2-PAN-06). */}
+                        {(buyer.allergies || buyer.dietaryPreference) && (
+                            <div data-testid="pantry-allergy-warning"
+                                data-allergies={buyer.allergies ?? ""}
+                                className="mt-1.5 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2">
+                                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-600" />
+                                <div className="text-[11px] leading-snug">
+                                    {buyer.allergies && (
+                                        <p className="font-bold text-red-700">Allergies: {buyer.allergies}</p>
+                                    )}
+                                    {buyer.dietaryPreference && (
+                                        <p className="text-red-600">Dietary: {buyer.dietaryPreference}</p>
+                                    )}
+                                    <p className="text-red-500/80 mt-0.5">Check the items before serving.</p>
+                                </div>
+                            </div>
+                        )}
+                        </>
                     ) : (
                         <div className="relative mt-1">
                             <input data-testid="pantry-buyer-search" value={buyerQuery} onChange={e => setBuyerQuery(e.target.value)}

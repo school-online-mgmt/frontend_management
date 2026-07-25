@@ -23,6 +23,7 @@ import ExamHome from "./Pages/Exam/ExamHome.tsx";
 import ExamDetails from "./Pages/Exam/ExamDetails.tsx";
 import AdmitCardsPage from "./Pages/Exam/AdmitCardsPage.tsx";
 import ResultsPerformancePage from "./Pages/Performance/ResultsPerformancePage.tsx";
+import AggregatePage from "./Pages/Exam/AggregatePage.tsx";
 import NoticeBoardHome from "./Pages/Notice/NoticeBoardHome.tsx";
 import NoticeBoardDetails from "./Pages/Notice/NoticeBoardDetails.tsx";
 import CalendarPage from "./Pages/Events/CalendarPage.tsx";
@@ -44,6 +45,8 @@ import CommunicationPage from "./Pages/Communication/CommunicationPage.tsx";
 import PublicationsPage from "./Pages/Communication/PublicationsPage.tsx";
 import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import ActivityPage from "./Pages/Activity/ActivityPage.tsx";
+import GrievancesPage from "./Pages/Grievances/GrievancesPage.tsx";
+import PtmPage from "./Pages/Ptm/PtmPage.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
 import SportsHome from "./Pages/Sports/SportsHome.tsx";
@@ -103,6 +106,7 @@ function App() {
               <Route path="/exam/:examId" element={<ExamDetails />} />
               <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
               <Route path="/performance" element={<ResultsPerformancePage />} />
+              <Route path="/consolidated-results" element={<AggregatePage />} />
             </Route>
 
             {/* ATTENDANCE — daily student & teacher attendance + leaves + reports */}
@@ -177,6 +181,8 @@ function App() {
               <Route path="/platform-bills" element={<PlatformBillsPage />} />
               <Route path="/support" element={<SupportCenter />} />
               <Route path="/activity" element={<ActivityPage />} />
+              <Route path="/grievances" element={<GrievancesPage />} />
+              <Route path="/ptm" element={<PtmPage />} />
             </Route>
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>

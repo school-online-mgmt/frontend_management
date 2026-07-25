@@ -8,7 +8,7 @@ import {
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
-  UtensilsCrossed, Activity,
+  UtensilsCrossed, Activity, MessageSquareWarning, CalendarClock, Sigma,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -19,6 +19,7 @@ import api from "../api/api";
 import DesktopOnlyGate from "./DesktopOnlyGate";
 import PageFooter from "./PageFooter";
 import OverdueBillsBanner from "./OverdueBillsBanner";
+import EndedSessionBanner from "./EndedSessionBanner";
 
 /* ── Nav configuration ─────────────────────────────────────────────────── */
 // module: matches AppModule enum. null = always visible (no permission needed)
@@ -75,6 +76,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/exam-home", label: "Exams", icon: ClipboardList },
       { path: "/performance", label: "Performance", icon: BarChart3 },
+      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma },
     ],
   },
   {
@@ -139,6 +141,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/notices",       label: "Notice Board",  icon: Megaphone },
       { path: "/communication", label: "Email Blast",   icon: Send },
+      { path: "/ptm",           label: "Parent Meetings", icon: CalendarClock },
       { path: "/publications",  label: "School Documents", icon: ScrollText },
       { path: "/calendar",      label: "Calendar",      icon: Calendar },
     ],
@@ -180,6 +183,7 @@ const NAV_SECTIONS = [
       { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
       { path: "/jobs",            label: "Scheduled Jobs", icon: Zap },
       { path: "/activity",        label: "Activity Log",   icon: Activity },
+      { path: "/grievances",      label: "Parent Grievances", icon: MessageSquareWarning },
       { path: "/support",         label: "Support Center", icon: MessageSquare },
     ],
   },
@@ -728,6 +732,7 @@ const Layout = () => {
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-100">
           <div className="min-h-full flex flex-col">
             <OverdueBillsBanner />
+            <EndedSessionBanner />
             <div className="flex-1 flex flex-col">
               <Outlet />
             </div>

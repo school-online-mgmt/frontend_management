@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     CalendarDays, Users, Loader2, Hash, ChevronRight,
-    Search, X, Phone,
+    Search, X, Phone, ArrowRightLeft,
 } from "lucide-react";
 import api from "../../api/api";
 import type { Student } from "../../api/types";
 import { useSessionId } from "../../context/SessionContext";
+import TransferSectionModal from "./TransferSectionModal";
 
 interface Props {
     /** Filter students by their academic.classId for the selected session. */
@@ -18,6 +19,8 @@ interface Props {
     subtitle?: string;
     /** Theme tint for the empty state icon + search bar gradient. */
     accent?: "indigo" | "violet" | "emerald";
+    /** Show a per-row "transfer section" action (P1-ACA-06). Management only. */
+    enableSectionTransfer?: boolean;
 }
 
 const ACCENT: Record<NonNullable<Props["accent"]>, { from: string; to: string; tint: string; tintBorder: string }> = {
@@ -29,7 +32,7 @@ const ACCENT: Record<NonNullable<Props["accent"]>, { from: string; to: string; t
 const SessionStudentsTable: React.FC<Props> = ({
     filterClassId, filterSectionId, title = "Enrolled Students",
     subtitle = "Students currently enrolled — click a row to open the student profile",
-    accent = "indigo",
+    accent = "indigo", enableSectionTransfer = false,
 }) => {
     const navigate = useNavigate();
     const a = ACCENT[accent];
@@ -41,8 +44,10 @@ const SessionStudentsTable: React.FC<Props> = ({
     const [loading, setLoading]                 = useState(false);
     const [error, setError]                     = useState<string | null>(null);
     const [search, setSearch]                   = useState("");
+    const [reloadKey, setReloadKey]             = useState(0);
+    const [transfer, setTransfer]               = useState<{ id: string; name: string; classId: string; sectionId: string; sectionName?: string } | null>(null);
 
-    // Refetch students whenever the global session changes.
+    // Refetch students whenever the global session changes (or after a transfer).
     useEffect(() => {
         if (!selectedSessionId) { setStudents([]); return; }
         let cancelled = false;
@@ -59,7 +64,7 @@ const SessionStudentsTable: React.FC<Props> = ({
             } finally { if (!cancelled) setLoading(false); }
         })();
         return () => { cancelled = true; };
-    }, [selectedSessionId]);
+    }, [selectedSessionId, reloadKey]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -186,8 +191,20 @@ const SessionStudentsTable: React.FC<Props> = ({
                                                 {s.status}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-3 text-right">
-                                            <ChevronRight size={14} className="inline text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                                            {enableSectionTransfer && enr.classId && enr.sectionId && (
+                                                <button
+                                                    data-testid="transfer-section-btn"
+                                                    title="Transfer to another section"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setTransfer({ id: s.id, name: `${s.firstName} ${s.lastName ?? ""}`.trim(), classId: enr.classId!, sectionId: enr.sectionId!, sectionName: enr.sectionName ?? undefined });
+                                                    }}
+                                                    className="mr-2 inline-flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors align-middle">
+                                                    <ArrowRightLeft size={14} />
+                                                </button>
+                                            )}
+                                            <ChevronRight size={14} className="inline text-slate-300 group-hover:text-indigo-500 transition-colors align-middle" />
                                         </td>
                                     </tr>
                                 );
@@ -195,6 +212,19 @@ const SessionStudentsTable: React.FC<Props> = ({
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {transfer && selectedSessionId && (
+                <TransferSectionModal
+                    studentId={transfer.id}
+                    studentName={transfer.name}
+                    sessionId={selectedSessionId}
+                    classId={transfer.classId}
+                    currentSectionId={transfer.sectionId}
+                    currentSectionName={transfer.sectionName}
+                    onClose={() => setTransfer(null)}
+                    onDone={() => { setTransfer(null); setReloadKey(k => k + 1); }}
+                />
             )}
         </div>
     );
