@@ -233,9 +233,11 @@ function AppraisalsTab() {
                         const filled = a ? QUARTER_KEYS.filter(k => !!(a[k] && a[k]!.trim())).length : 0;
                         const isOpen = expanded === t.staffId;
                         return (
-                            <div key={t.staffId} data-testid="appraisal-row" className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div key={t.staffId} data-testid="appraisal-row" data-staff-name={t.name}
+                                data-status={a?.status ?? "NONE"} data-filled={filled}
+                                className="bg-white rounded-xl border border-slate-200 shadow-sm">
                                 <div className="flex items-center gap-3 px-4 py-3">
-                                    <button onClick={() => setExpanded(isOpen ? null : t.staffId)} className="text-slate-400 hover:text-slate-600">
+                                    <button data-testid="appraisal-expand-btn" onClick={() => setExpanded(isOpen ? null : t.staffId)} className="text-slate-400 hover:text-slate-600">
                                         {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                     </button>
                                     <span className="font-semibold text-slate-700 flex-1">{t.name}</span>
@@ -293,7 +295,7 @@ function QuarterEditor({ appraisal, onSaved }: { appraisal: Appraisal; onSaved: 
                         onChange={e => setDrafts(d => d.map((v, i) => i === idx ? e.target.value : v))}
                         className="mt-1 w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none disabled:bg-slate-50" />
                     {!readonly && (
-                        <button onClick={() => save(idx)} disabled={savingQ === idx || !drafts[idx].trim()}
+                        <button data-testid={`appraisal-q${idx + 1}-save`} onClick={() => save(idx)} disabled={savingQ === idx || !drafts[idx].trim()}
                             className="mt-1 flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
                             {savingQ === idx ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save
                         </button>
