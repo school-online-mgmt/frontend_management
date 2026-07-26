@@ -360,6 +360,7 @@ const EndSessionWorkflow: React.FC<{
             title="Initiate End of Session?"
             body={`This will close admissions to "${session.name}" and prompt every teacher to record promote / hold-back decisions for their students. You can cancel this before finalising if needed.`}
             confirmLabel="Yes, initiate" tone="amber"
+            confirmTestId="sessions-initiate-confirm-btn"
             confirming={busy === "init"}
             onCancel={() => setConfirmInitiate(false)}
             onConfirm={initiate}
@@ -514,6 +515,11 @@ const EndSessionWorkflow: React.FC<{
               const isAck = acknowledged.has(sec.sectionId);
               return (
                 <button key={sec.sectionId}
+                  data-testid="sessions-review-section-btn"
+                  data-section-id={sec.sectionId}
+                  data-section-name={`${sec.className} · ${sec.sectionName}`}
+                  data-acknowledged={isAck}
+                  data-pending={sec.pending}
                   onClick={() => setActiveSectionId(sec.sectionId)}
                   className={`p-3 rounded-xl border text-left transition-all group ${
                     isAck ? "border-emerald-300 bg-emerald-50/50" :
@@ -568,7 +574,7 @@ const EndSessionWorkflow: React.FC<{
             <span>Every decision is made and every section reviewed. You're ready to finalise.</span>
           </div>
         )}
-        <button onClick={() => setConfirmFinalize(true)}
+        <button data-testid="sessions-finalize-btn" onClick={() => setConfirmFinalize(true)}
           disabled={!canFinalise || !allAcknowledged}
           className="mt-3 w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shadow-sm">
           <CheckCheck size={14} /> Finalise "{session.name}"
@@ -580,6 +586,7 @@ const EndSessionWorkflow: React.FC<{
           title="Finalise the session?"
           body={`This closes "${session.name}" for your school and unlocks admissions for the next academic year. Students marked "promote" will move up; "hold back" will repeat. This action can't be undone.`}
           confirmLabel="Yes, finalise" tone="emerald"
+          confirmTestId="sessions-finalize-confirm-btn"
           confirming={busy === "end"}
           onCancel={() => setConfirmFinalize(false)}
           onConfirm={finalize}
@@ -590,6 +597,7 @@ const EndSessionWorkflow: React.FC<{
           title="Cancel the workflow?"
           body="This reverts the session to ACTIVE and clears all teacher decisions so far. Nothing else changes."
           confirmLabel="Yes, cancel" tone="rose"
+          confirmTestId="sessions-cancel-confirm-btn"
           confirming={busy === "cancel"}
           onCancel={() => setConfirmCancel(false)}
           onConfirm={cancel}
@@ -937,7 +945,8 @@ const ConfirmDialog: React.FC<{
   confirming: boolean;
   onCancel: () => void;
   onConfirm: () => void;
-}> = ({ title, body, confirmLabel, tone, confirming, onCancel, onConfirm }) => {
+  confirmTestId?: string;
+}> = ({ title, body, confirmLabel, tone, confirming, onCancel, onConfirm, confirmTestId }) => {
   const btnCls = tone === "amber" ? "bg-amber-600 hover:bg-amber-700"
     : tone === "emerald" ? "bg-emerald-600 hover:bg-emerald-700"
     : "bg-rose-600 hover:bg-rose-700";
@@ -962,7 +971,7 @@ const ConfirmDialog: React.FC<{
             className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">
             Cancel
           </button>
-          <button onClick={onConfirm} disabled={confirming}
+          <button data-testid={confirmTestId} onClick={onConfirm} disabled={confirming}
             className={`px-4 py-2 ${btnCls} text-white rounded-lg text-sm font-semibold flex items-center gap-1.5 disabled:opacity-60`}>
             {confirming ? <Loader2 size={12} className="animate-spin" /> : null}
             {confirmLabel}
