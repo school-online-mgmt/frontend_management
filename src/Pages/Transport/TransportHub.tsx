@@ -761,7 +761,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
                     <p className="text-sm font-bold text-slate-800">Transport Zones</p>
                     <p className="text-xs text-slate-400 mt-0.5">Define geographical zones and their monthly transport fees</p>
                 </div>
-                <button onClick={() => { resetForm(); setShowForm(true); }}
+                <button data-testid="transport-add-zone-open-btn" onClick={() => { resetForm(); setShowForm(true); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200">
                     <Plus size={14} />Add Zone
                 </button>
@@ -780,25 +780,25 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Zone Name <span className="text-red-400">*</span></label>
-                                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. North Zone, Sector 14"
+                                <input data-testid="transport-zone-name-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. North Zone, Sector 14"
                                     className={`w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400 ${errors.name ? "border-red-300" : "border-slate-200"}`} />
                                 {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Monthly Fee (₹) <span className="text-red-400">*</span></label>
-                                <input type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: parseInt(e.target.value) || 0 }))}
+                                <input data-testid="transport-zone-fee-input" type="number" min={0} value={form.price} onChange={e => setForm(f => ({ ...f, price: parseInt(e.target.value) || 0 }))}
                                     className={`w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400 ${errors.price ? "border-red-300" : "border-slate-200"}`} />
                                 {errors.price && <p className="text-[11px] text-red-500 mt-1">{errors.price}</p>}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
-                                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Areas covered, stops…"
+                                <input data-testid="transport-zone-description-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Areas covered, stops…"
                                     className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-indigo-400" />
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
                             <button onClick={resetForm} className="px-5 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-                            <button onClick={handleSubmit} disabled={pending}
+                            <button data-testid="transport-zone-submit-btn" onClick={handleSubmit} disabled={pending}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm shadow-indigo-200 transition-colors">
                                 {pending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                                 {editId ? "Save Changes" : "Create Zone"}
