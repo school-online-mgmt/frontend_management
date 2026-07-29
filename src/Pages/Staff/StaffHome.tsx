@@ -158,14 +158,14 @@ const LEVEL_CONFIG = {
     ADMIN: { label: 'Admin', active: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/50', idle: 'text-slate-300 hover:text-emerald-600 hover:bg-emerald-50'},
 };
 
-const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOnly?: boolean; minRead?: boolean }> = ({ level, onChange, readOnly, minRead }) => (
+const LevelPicker: React.FC<{ level: Level; onChange: (l: Level) => void; readOnly?: boolean; minRead?: boolean; mod?: string }> = ({ level, onChange, readOnly, minRead, mod }) => (
     <div className="flex rounded-lg overflow-hidden border border-slate-200 shrink-0">
         {(['NONE', 'READ', 'ADMIN'] as Level[]).map(l => {
             const cfg = LEVEL_CONFIG[l];
             // minRead = always-on module: READ is the floor, so NONE is locked.
             const locked = readOnly || (minRead && l === 'NONE');
             return (
-                <button data-testid="staff-change-btn"
+                <button data-testid={mod ? `staff-perm-${mod}-${l}` : "staff-change-btn"}
                     key={l}
                     type="button"
                     disabled={locked}
@@ -379,7 +379,7 @@ const PermissionGridSection: React.FC<{
                             <p className="text-[11px] text-slate-400 leading-tight mt-0.5 line-clamp-1">{meta.desc}</p>
                         </div>
                     </div>
-                    <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} minRead={minRead} />
+                    <LevelPicker level={level} onChange={(l) => setLevel(mod, l)} readOnly={readOnly} minRead={minRead} mod={mod} />
                 </div>
             );
         })}
@@ -396,6 +396,7 @@ const RolePicker: React.FC<{ value: string; onChange: (v: string) => void }> = (
             return (
                 <button
                     key={r.value}
+                    data-testid={`staff-role-card-${r.value}`}
                     type="button"
                     onClick={() => onChange(r.value)}
                     className={`relative flex flex-col items-center gap-2 p-3.5 rounded-xl border-2 transition-all text-left
@@ -719,11 +720,11 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelCls}>First Name <span className="text-red-400">*</span></label>
-                                    <input value={firstName} onChange={e => setFirstName(e.target.value)} required className={inputCls} placeholder="Rahul" />
+                                    <input data-testid="staff-first-name-input" value={firstName} onChange={e => setFirstName(e.target.value)} required className={inputCls} placeholder="Rahul" />
                                 </div>
                                 <div>
                                     <label className={labelCls}>Last Name <span className="text-red-400">*</span></label>
-                                    <input value={lastName} onChange={e => setLastName(e.target.value)} required className={inputCls} placeholder="Sharma" />
+                                    <input data-testid="staff-last-name-input" value={lastName} onChange={e => setLastName(e.target.value)} required className={inputCls} placeholder="Sharma" />
                                 </div>
                             </div>
                         </div>
@@ -734,7 +735,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                                 <label className={labelCls}>Phone <span className="text-red-400">*</span></label>
                                 <div className="relative">
                                     <Phone size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    <input data-testid="staff-phone-input" type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                         required pattern="[0-9]{10}" className={inputCls + " pl-9"} placeholder="9876543210" />
                                 </div>
                             </div>
@@ -742,7 +743,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                                 <label className={labelCls}>Email <span className="text-red-400">*</span></label>
                                 <div className="relative">
                                     <Mail size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                                    <input data-testid="staff-email-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required
                                         className={inputCls + " pl-9"} placeholder="rahul@school.edu" />
                                 </div>
                             </div>
@@ -756,7 +757,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                             </label>
                             <div className="relative">
                                 <Lock size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                                <input type={showPass ? 'text' : 'password'} value={password}
+                                <input data-testid="staff-password-input" type={showPass ? 'text' : 'password'} value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     required={!isEdit} minLength={8}
                                     placeholder={isEdit ? 'Leave blank to keep current password' : 'Minimum 8 characters'}
@@ -948,7 +949,7 @@ const StaffDrawer: React.FC<DrawerProps> = ({ initial, enabledModules, copyFromO
                             className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={saving}
+                        <button type="submit" disabled={saving} data-testid="staff-submit-btn"
                             className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-indigo-200">
                             {saving && <Loader2 size={14} className="animate-spin" />}
                             {isEdit ? 'Save Changes' : 'Create Staff Member'}
@@ -1694,7 +1695,7 @@ const StaffHome: React.FC = () => {
                     <div className="flex items-center gap-1.5 ml-auto">
                         {/* Refresh moved to the page header for consistency. */}
                         {canManageStaff && tab === 'staff' && (
-                            <button onClick={() => setShowCreate(true)}
+                            <button data-testid="staff-add-btn" onClick={() => setShowCreate(true)}
                                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-300">
                                 <UserPlus size={12} /> Add Staff
                             </button>
@@ -1758,6 +1759,7 @@ const StaffHome: React.FC = () => {
                                             data-id={user.id}
                                             data-role={user.role}
                                             data-name={fullName}
+                                            data-phone={user.phone}
                                             className="grid grid-cols-[2fr_1fr_2fr_auto] gap-2 sm:gap-3 items-center px-3 sm:px-4 py-3 sm:py-2.5 hover:bg-slate-50/60 transition-colors">
                                             {/* Member — bigger text on mobile */}
                                             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -1821,7 +1823,7 @@ const StaffHome: React.FC = () => {
                                                                 <Lock size={14} />
                                                             </button>
                                                         )}
-                                                        <button onClick={() => setEditTarget(user)} aria-label="Edit staff member"
+                                                        <button data-testid="staff-edit-btn" onClick={() => setEditTarget(user)} aria-label="Edit staff member"
                                                             className="w-9 h-9 sm:w-auto sm:h-auto sm:p-1.5 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 rounded-md transition-colors">
                                                             <Pencil size={14} className="sm:hidden" />
                                                             <Pencil size={12} className="hidden sm:block" />

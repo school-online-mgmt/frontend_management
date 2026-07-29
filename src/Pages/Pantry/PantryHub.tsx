@@ -23,6 +23,7 @@ const CATEGORIES = ["SNACKS", "MEALS", "BEVERAGES", "STATIONERY", "OTHER"];
 const STATUS_PILL: Record<string, string> = {
     PLACED: "bg-amber-50 text-amber-700", READY: "bg-blue-50 text-blue-700",
     COLLECTED: "bg-emerald-50 text-emerald-700", CANCELLED: "bg-slate-100 text-slate-500",
+    ABANDONED: "bg-slate-100 text-slate-500",
     REFUNDED: "bg-rose-50 text-rose-600",
 };
 
@@ -496,7 +497,7 @@ function OrdersTab() {
             <div className="flex flex-wrap gap-2 mb-3">
                 <select value={status} onChange={e => setStatus(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm">
                     <option value="">All statuses</option>
-                    {["PLACED", "READY", "COLLECTED", "CANCELLED", "REFUNDED"].map(s => <option key={s} value={s}>{s}</option>)}
+                    {["PLACED", "READY", "COLLECTED", "CANCELLED", "REFUNDED", "ABANDONED"].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <select value={channel} onChange={e => setChannel(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm">
                     <option value="">All channels</option>
@@ -543,12 +544,12 @@ function OrdersTab() {
                                                 <>
                                                     <button onClick={() => act(() => api.pantryOrderCollect(o.id), "Order collected.")} data-testid={`pantry-order-collect-btn-${o.id}`} title="Mark collected" className="p-1.5 text-slate-500 hover:text-emerald-600"><CheckCircle2 size={15} /></button>
                                                     <button onClick={() => confirm({
-                                                        title: "Cancel this order?",
-                                                        message: "Wallet payments are refunded and stock restored.",
-                                                        confirmText: "Cancel order",
+                                                        title: "Abandon this order?",
+                                                        message: "Wallet payments are refunded and stock restored. Use this when a placed order is never collected.",
+                                                        confirmText: "Abandon order",
                                                         cancelText: "Keep order",
-                                                        onConfirm: () => act(() => api.pantryOrderCancel(o.id), "Order cancelled."),
-                                                    })} data-testid={`pantry-order-cancel-btn-${o.id}`} title="Cancel" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
+                                                        onConfirm: () => act(() => api.pantryOrderAbandon(o.id), "Order abandoned."),
+                                                    })} data-testid={`pantry-order-abandon-btn-${o.id}`} title="Abandon" className="p-1.5 text-slate-400 hover:text-rose-600"><Ban size={15} /></button>
                                                 </>
                                             )}
                                             {o.status === "COLLECTED" && o.paymentMethod === "WALLET" && (

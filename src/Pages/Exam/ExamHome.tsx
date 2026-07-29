@@ -638,6 +638,7 @@ const ExamHome = () => {
                                                                     data-testid="exam-row"
                                                                     data-exam-id={exam.id}
                                                                     data-exam-name={exam.examName}
+                                                                    data-subject-name={exam.subjectName ?? ""}
                                                                     data-status={exam.status}
                                                                     className="hover:bg-indigo-50/30 cursor-pointer transition-colors">
                                                                     <td className="px-5 py-3.5">

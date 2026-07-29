@@ -40,7 +40,16 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
-        api.getSessions().then((data) => setSessions(data || [])).catch(() => {});
+        api.getSessions().then((data) => {
+            const list = data || [];
+            setSessions(list);
+            // Preselect the current/active session so a fast submit before the
+            // dropdown resolves doesn't fail validation on an empty field (BUG-004).
+            if (list.length) {
+                const preferred = list.find((s: any) => s.isCurrent || s.isActive || s.status === "ACTIVE") ?? list[0];
+                setSessionId(prev => prev || preferred.id);
+            }
+        }).catch(() => {});
     }, []);
 
     const handleNameChange = (value: string) => {
@@ -184,7 +193,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                         <button
                             data-testid="course-submit-btn"
                             onClick={handleSubmit}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !sessionId}
                             className="flex-1 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isSubmitting
