@@ -160,6 +160,8 @@ const CourseDetails = () => {
                     </div>
 
                     <button
+                        data-testid="course-delete-btn"
+                        data-in-use={isCourseInUse ? "true" : "false"}
                         onClick={() => setIsDeleteCourseActive(true)}
                         disabled={isCourseInUse}
                         className={`px-4 py-2 border rounded-xl flex items-center gap-2 transition text-sm font-medium ${

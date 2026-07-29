@@ -1072,6 +1072,19 @@ lookupParent = async (phone: string): Promise<{
         return res.data;
     };
 
+    // Delete a class (guarded server-side: refused with CLASS_IN_USE if it still
+    // has sections or courses).
+    deleteClass = async (classId: string) => {
+        const res = await apiClient.delete(`/management/class/${classId}`);
+        return res.data;
+    };
+
+    // Delete a section (guarded server-side if it still has enrolled students).
+    deleteSection = async (sectionId: string) => {
+        const res = await apiClient.delete(`/management/section/${sectionId}`);
+        return res.data;
+    };
+
     // ── School Events ─────────────────────────────────────────────────────────
     getSchoolEvents = async (from?: string, to?: string) => {
         const res = await apiClient.get("/management/events", {
@@ -2982,7 +2995,7 @@ lookupParent = async (phone: string): Promise<{
     };
     pantryOrderReady = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/ready`)).data as { message: string; order: PantryOrderRow };
     pantryOrderCollect = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/collect`)).data as { message: string; order: PantryOrderRow };
-    pantryOrderCancel = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/cancel`)).data as { message: string; status: string; refunded: number };
+    pantryOrderAbandon = async (id: string) => (await apiClient.post(`/management/pantry/orders/${id}/abandon`)).data as { message: string; status: string; refunded: number };
     pantryOrderRefund = async (id: string, notes?: string) => (await apiClient.post(`/management/pantry/orders/${id}/refund`, { notes })).data as { message: string; status: string; refunded: number };
     getPantryInsights = async (from?: string, to?: string) => {
         const res = await apiClient.get('/management/pantry/insights', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } });
@@ -3012,7 +3025,7 @@ export interface PantryLedgerRow {
 }
 export interface PantryOrderRow {
     id: string; channel: 'POS' | 'SELF';
-    status: 'PLACED' | 'READY' | 'COLLECTED' | 'CANCELLED' | 'REFUNDED';
+    status: 'PLACED' | 'READY' | 'COLLECTED' | 'CANCELLED' | 'REFUNDED' | 'ABANDONED';
     userType: 'STUDENT' | 'TEACHER' | null; userName: string | null;
     paymentMethod: 'WALLET' | 'CASH'; totalAmount: number; itemCount: number; createdAt: string;
 }

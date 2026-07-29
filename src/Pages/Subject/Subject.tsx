@@ -298,7 +298,7 @@ const SubjectDetailsPage = () => {
                             className="flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-xl hover:bg-white/25 transition backdrop-blur-sm">
                             <Pencil size={14} /> Edit
                         </button>
-                        <button data-testid="subject-is-confirm-open-btn" onClick={() => setIsConfirmOpen(true)}
+                        <button data-testid="subject-is-confirm-open-btn" data-in-use={isUsedInCourses ? "true" : "false"} onClick={() => setIsConfirmOpen(true)}
                             disabled={isUsedInCourses || deleteSubjectMutation.isPending}
                             title={isUsedInCourses ? 'Subject is in use' : 'Delete subject'}
                             className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-300/30 text-red-100 text-sm font-semibold rounded-xl hover:bg-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition backdrop-blur-sm">

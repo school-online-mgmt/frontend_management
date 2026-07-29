@@ -341,7 +341,7 @@ const TimetablePage = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="relative">
                         <School size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <select value={sectionId} onChange={e => setSectionId(e.target.value)}
+                        <select data-testid="timetable-section-select" value={sectionId} onChange={e => setSectionId(e.target.value)}
                             className="appearance-none pl-9 pr-9 py-2 border border-slate-200 rounded-xl text-sm bg-white shadow-sm min-w-[240px]">
                             <option value="">Select a section…</option>
                             {classes.map(c => (
@@ -404,7 +404,7 @@ const TimetablePage = () => {
                                             return (
                                                 <td key={d.n} className="p-1 align-top">
                                                     {c ? (
-                                                        <button onClick={() => setModal({ dayOfWeek: d.n, periodNumber: p, entry: c })}
+                                                        <button data-testid={`timetable-cell-${d.n}-${p}`} data-filled="true" onClick={() => setModal({ dayOfWeek: d.n, periodNumber: p, entry: c })}
                                                             className={`w-full text-left rounded-lg border px-2 py-1.5 hover:shadow-sm transition ${st!.bg} ${st!.border} group`}>
                                                             {c.type === "CLASS" ? (
                                                                 <>
@@ -418,7 +418,7 @@ const TimetablePage = () => {
                                                             <Pencil size={10} className="text-slate-300 opacity-0 group-hover:opacity-100 mt-0.5" />
                                                         </button>
                                                     ) : (
-                                                        <button onClick={() => setModal({ dayOfWeek: d.n, periodNumber: p })}
+                                                        <button data-testid={`timetable-cell-${d.n}-${p}`} data-filled="false" onClick={() => setModal({ dayOfWeek: d.n, periodNumber: p })}
                                                             className="w-full h-full min-h-[48px] rounded-lg border border-dashed border-slate-200 text-slate-300 hover:border-sky-300 hover:text-sky-400 hover:bg-sky-50/40 transition flex items-center justify-center">
                                                             <Plus size={14} />
                                                         </button>

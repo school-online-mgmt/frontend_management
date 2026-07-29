@@ -228,7 +228,7 @@ function MarkTab() {
                                         {(["PRESENT","ABSENT","LATE"] as SK[]).map(st => {
                                             const c = SC[st]; const sel = cur===st;
                                             return (
-                                                <button key={st} onClick={() => setStatuses(p=>({...p,[t.id]:st}))}
+                                                <button key={st} data-testid={`staff-att-status-${st}-${t.id}`} onClick={() => setStatuses(p=>({...p,[t.id]:st}))}
                                                     className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                                                         sel ? `${c.bg} ${c.text} ${c.border} shadow-sm` : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
                                                     }`}>
@@ -249,7 +249,7 @@ function MarkTab() {
                             </div>
                             <span className="text-[11px] text-slate-500 font-medium">{sum.t>0?`${Math.round(((sum.p+sum.l)/sum.t)*100)}% present`:"—"}</span>
                         </div>
-                        <button onClick={submit} disabled={submitting}
+                        <button onClick={submit} disabled={submitting} data-testid="staff-att-submit-btn"
                             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 shadow-md shadow-violet-200 active:scale-95 transition-all">
                             {submitting?<Loader2 size={14} className="animate-spin"/>:<CheckCircle2 size={14}/>}
                             {submitting?"Saving…":marked?"Update Attendance":"Submit Attendance"}

@@ -121,7 +121,7 @@ const HomeworkPage = () => {
                             const pill = STATUS_PILL[hw.status] ?? STATUS_PILL.PUBLISHED;
                             const overdue = hw.status === "PUBLISHED" && hw.dueDate < today;
                             return (
-                                <div key={hw.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/70 transition">
+                                <div key={hw.id} data-testid="homework-overview-row" data-homework-id={hw.id} data-title={hw.title} data-status={hw.status} data-submissions={hw.submissionCount ?? hw.submissionsCount ?? ""} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/70 transition">
                                     <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0"><BookMarked size={15} className="text-rose-500" /></div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 truncate">{hw.title}</p>

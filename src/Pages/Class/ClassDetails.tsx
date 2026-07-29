@@ -17,6 +17,9 @@ const ClassDetails = () => {
     const [showBoardsModal, setShowBoardsModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [confirmDeleteClass, setConfirmDeleteClass] = useState(false);
+    const [confirmDeleteSection, setConfirmDeleteSection] = useState<{ id: string; name: string } | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const showToast = (text: string, type: "success" | "error") => {
         setToast({ text, type });
@@ -35,6 +38,33 @@ const ClassDetails = () => {
 
     useEffect(() => { fetchClass(); }, [fetchClass]);
 
+    const doDeleteClass = async () => {
+        setDeleting(true);
+        try {
+            await api.deleteClass(classId);
+            showToast("Class deleted", "success");
+            setConfirmDeleteClass(false);
+            navigate("/class-Home");
+        } catch (e: any) {
+            showToast(e?.response?.data?.message || "Cannot delete this class", "error");
+            setConfirmDeleteClass(false);
+        } finally { setDeleting(false); }
+    };
+
+    const doDeleteSection = async () => {
+        if (!confirmDeleteSection) return;
+        setDeleting(true);
+        try {
+            await api.deleteSection(confirmDeleteSection.id);
+            showToast("Section deleted", "success");
+            setConfirmDeleteSection(null);
+            fetchClass();
+        } catch (e: any) {
+            showToast(e?.response?.data?.message || "Cannot delete this section", "error");
+            setConfirmDeleteSection(null);
+        } finally { setDeleting(false); }
+    };
+
     if (isLoading && !classData) {
         return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCcw size={28} className="animate-spin text-emerald-600" /></div>;
     }
@@ -46,6 +76,32 @@ const ClassDetails = () => {
         <div className="p-2 max-w-7xl mx-auto space-y-6">
             {toast && (
                 <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>{toast.text}</div>
+            )}
+
+            {confirmDeleteClass && (
+                <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/40" onClick={() => setConfirmDeleteClass(false)}>
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="font-bold text-slate-800">Delete class?</h3>
+                        <p className="text-sm text-slate-500 mt-1">Delete <span className="font-semibold">{classData.name}</span>? This cannot be undone.</p>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setConfirmDeleteClass(false)} className="px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                            <button data-testid="class-delete-confirm-btn" onClick={doDeleteClass} disabled={deleting} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {confirmDeleteSection && (
+                <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/40" onClick={() => setConfirmDeleteSection(null)}>
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="font-bold text-slate-800">Delete section?</h3>
+                        <p className="text-sm text-slate-500 mt-1">Delete <span className="font-semibold">{confirmDeleteSection.name}</span>? This cannot be undone.</p>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button onClick={() => setConfirmDeleteSection(null)} className="px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                            <button data-testid="section-delete-confirm-btn" onClick={doDeleteSection} disabled={deleting} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">Delete</button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {showSectionModal && (
@@ -105,6 +161,16 @@ const ClassDetails = () => {
                         </button>
                         <button data-testid="class-fetch-class-btn" onClick={fetchClass} className="px-3 py-2 border border-slate-200 rounded-xl flex items-center gap-2 text-sm text-slate-600 hover:bg-white transition">
                             <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        </button>
+                        <button
+                            data-testid="class-delete-btn"
+                            data-in-use={((classData.sections?.length ?? 0) > 0 || (classData.courses?.length ?? 0) > 0) ? "true" : "false"}
+                            disabled={(classData.sections?.length ?? 0) > 0 || (classData.courses?.length ?? 0) > 0}
+                            title={((classData.sections?.length ?? 0) > 0 || (classData.courses?.length ?? 0) > 0) ? "Remove all sections and courses before deleting this class" : "Delete this class"}
+                            onClick={() => setConfirmDeleteClass(true)}
+                            className="px-3 py-2 border border-red-200 text-red-600 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Delete Class
                         </button>
                     </div>
                 </div>
@@ -180,6 +246,17 @@ const ClassDetails = () => {
                                         <Users size={12} />
                                         {section.studentCount ?? 0} students
                                     </div>
+
+                                    <button
+                                        data-testid={`section-delete-btn-${section.slug}`}
+                                        data-in-use={(section.studentCount ?? 0) > 0 ? "true" : "false"}
+                                        disabled={(section.studentCount ?? 0) > 0}
+                                        title={(section.studentCount ?? 0) > 0 ? "Move all students out before deleting this section" : "Delete this section"}
+                                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteSection({ id: section.id, name: section.name }); }}
+                                        className="px-2.5 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Delete
+                                    </button>
 
                                     <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
                                 </div>

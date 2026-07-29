@@ -332,13 +332,13 @@ ${payments.length > 0 ? `
                     {canPay && (
                         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-2">
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Management Actions</p>
-                            <button onClick={() => { setShowWaive(true); setShowCancel(false); }} className="w-full py-2 border border-purple-200 text-purple-700 rounded-xl text-sm hover:bg-purple-50">Waive Invoice</button>
-                            <button onClick={() => { setShowCancel(true); setShowWaive(false); }} className="w-full py-2 border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50">Cancel Invoice</button>
+                            <button data-testid="fees-waive-open-btn" onClick={() => { setShowWaive(true); setShowCancel(false); }} className="w-full py-2 border border-purple-200 text-purple-700 rounded-xl text-sm hover:bg-purple-50">Waive Invoice</button>
+                            <button data-testid="fees-cancel-open-btn" onClick={() => { setShowCancel(true); setShowWaive(false); }} className="w-full py-2 border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50">Cancel Invoice</button>
                             {(showWaive || showCancel) && (
                                 <div className="mt-2 space-y-2">
                                     <input data-testid="fees-action-remarks-input" value={actionRemarks} onChange={e => setActionRemarks(e.target.value)} placeholder="Reason (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
                                     <div className="flex gap-2">
-                                        <button onClick={showWaive ? waive : cancel} className="flex-1 py-2 bg-slate-800 text-white rounded-lg text-sm">Confirm</button>
+                                        <button data-testid="fees-action-confirm-btn" onClick={showWaive ? waive : cancel} className="flex-1 py-2 bg-slate-800 text-white rounded-lg text-sm">Confirm</button>
                                         <button onClick={() => { setShowWaive(false); setShowCancel(false); }} className="flex-1 py-2 border border-slate-200 rounded-lg text-sm">Cancel</button>
                                     </div>
                                 </div>

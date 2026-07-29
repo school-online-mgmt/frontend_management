@@ -823,7 +823,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {zones.map((z: any, i: number) => (
-                        <div key={z.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+                        <div key={z.id} data-testid="transport-zone-card" data-zone-id={z.id} data-zone-name={z.name} data-zone-price={z.price} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                             <div className={`h-1.5 ${["bg-indigo-400","bg-emerald-400","bg-sky-400","bg-amber-400","bg-violet-400","bg-rose-400"][i % 6]}`} />
                             <div className="p-5">
                                 <div className="flex items-start justify-between">
@@ -839,7 +839,7 @@ function ZonesTab({ zones, zonesLoading, refetchZones }: { zones: any[]; zonesLo
                                     </div>
                                     <div className="flex gap-1 shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button data-testid={`transport-zone-edit-btn-${z.id}`} onClick={() => startEdit(z)} className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-slate-100"><Pencil size={12} /></button>
-                                        <button onClick={() => confirmDialog({ title: "Delete Zone", message: `Delete zone "${z.name}"? Any students assigned to this zone will be unassigned.`, confirmText: "Delete", onConfirm: async () => { deleteMut.mutate(z.id); } })}
+                                        <button data-testid={`transport-zone-delete-btn-${z.id}`} onClick={() => confirmDialog({ title: "Delete Zone", message: `Delete zone "${z.name}"? Any students assigned to this zone will be unassigned.`, confirmText: "Delete", onConfirm: async () => { deleteMut.mutate(z.id); } })}
                                             className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 border border-slate-100"><Trash2 size={12} /></button>
                                     </div>
                                 </div>
