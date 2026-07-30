@@ -155,7 +155,11 @@ const ApplicantsHome: React.FC = () => {
       if (statusFilter && a.status !== statusFilter) return false;
       if (genderFilter && a.gender.toLowerCase() !== genderFilter.toLowerCase()) return false;
       if (q) {
-        const hay = `${a.firstName} ${a.middleName ?? ''} ${a.lastName} ${a.phone} ${a.email} ${a.fatherName}`.toLowerCase();
+        // Join only the parts that exist — interpolating an absent middle name
+        // left a double space, so an applicant without one could not be found by
+        // typing their full name ("Aarav Sharma" missed "Aarav  Sharma").
+        const hay = [a.firstName, a.middleName, a.lastName, a.phone, a.email, a.fatherName]
+          .filter(Boolean).join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
