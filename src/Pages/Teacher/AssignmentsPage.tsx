@@ -5,7 +5,7 @@ import {
   ChevronRight, School, BookOpen, UserCheck,
   GraduationCap, Users, ClipboardList, UserCog,
   UserMinus, Edit2, ChevronDown, Layers, Shield,
-  Search, Award, Filter,
+  Search, Award, Filter, TrendingUp, UserX, Briefcase,
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
@@ -28,6 +28,9 @@ interface AssignedPair {
 
 /** A single "who teaches this subject in this section" cell. */
 interface TeachingCell { subjectId: string; subjectName: string; teacherId: string | null; teacherName: string | null }
+
+/** Every post one teacher holds, across all four kinds of assignment. */
+interface Workload { id: string; name: string; classes: number; sections: number; subjects: number; heads: number; total: number }
 
 type AssignTarget =
   | { type: "class";            id: string; label: string; currentTeacherId?: string }
@@ -308,13 +311,15 @@ const CoverageBar = ({ assigned, total, color }: { assigned: number; total: numb
 };
 
 /* ── Coverage Meter (header card) ──────────────────────────────────────────── */
-const CoverageMeter = ({ icon: Icon, label, assigned, total, color, tint, tintText }: {
-  icon: typeof School; label: string; assigned: number; total: number; color: string; tint: string; tintText: string;
+const CoverageMeter = ({ icon: Icon, label, assigned, total, color, tint, tintText, testId }: {
+  icon: typeof School; label: string; assigned: number; total: number; color: string; tint: string; tintText: string; testId?: string;
 }) => {
   const done = total > 0 && assigned === total;
   const gaps = total - assigned;
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"
+      data-testid={testId ? `coverage-${testId}` : undefined}
+      data-assigned={assigned} data-total={total}>
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-8 h-8 ${tint} rounded-lg flex items-center justify-center shrink-0`}><Icon size={15} className={tintText} /></div>
@@ -328,6 +333,42 @@ const CoverageMeter = ({ icon: Icon, label, assigned, total, color, tint, tintTe
     </div>
   );
 };
+
+/* ── Insight Tile (compact stat beside the coverage meters) ────────────────── */
+const INSIGHT_TONES = {
+  amber:   { tint: "bg-amber-50",   text: "text-amber-600",   value: "text-amber-700" },
+  emerald: { tint: "bg-emerald-50", text: "text-emerald-600", value: "text-emerald-700" },
+  indigo:  { tint: "bg-indigo-50",  text: "text-indigo-600",  value: "text-indigo-700" },
+  violet:  { tint: "bg-violet-50",  text: "text-violet-600",  value: "text-violet-700" },
+} as const;
+
+const InsightTile = ({ icon: Icon, label, value, hint, tone, testId }: {
+  icon: typeof School; label: string; value: string; hint?: string;
+  tone: keyof typeof INSIGHT_TONES; testId?: string;
+}) => {
+  const t = INSIGHT_TONES[tone];
+  return (
+    <div data-testid={testId ? `insight-${testId}` : undefined} data-value={value}
+      className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-center gap-3 min-w-0">
+      <div className={`w-9 h-9 ${t.tint} rounded-xl flex items-center justify-center shrink-0`}>
+        <Icon size={16} className={t.text} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">{label}</p>
+        <p className={`text-sm font-bold truncate ${t.value}`}>{value}</p>
+        {hint && <p className="text-[10px] text-slate-400 truncate">{hint}</p>}
+      </div>
+    </div>
+  );
+};
+
+/** One "3 subjects" style badge on a teacher's posting row. */
+const LoadPill = ({ icon: Icon, n, what }: { icon: typeof School; n: number; what: string }) => (
+  <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg px-2 py-0.5 text-[10px] font-semibold">
+    <Icon size={10} className="text-slate-400 shrink-0" />
+    {n} {what}{n !== 1 ? "s" : ""}
+  </span>
+);
 
 /* ── Teacher Chips ─────────────────────────────────────────────────────────── */
 const AssignedChip = ({ teacher, onReassign, variant }: { teacher: TeacherRef; onReassign?: () => void; variant?: "incharge" }) => (
@@ -369,6 +410,7 @@ const AssignmentsPage = () => {
   const [search, setSearch]           = useState("");
   const [gapsOnly, setGapsOnly]       = useState(false);
   const [showHeads, setShowHeads]     = useState(false);
+  const [showLoad, setShowLoad]       = useState(false);
 
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
   const toggleClass = (id: string) => setExpandedClasses(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -487,6 +529,35 @@ const AssignmentsPage = () => {
   const sectionHasGap = (s: SectionRef) => !s.teacher || teachingCellsFor(s.id).some(c => !c.teacherId);
   const classHasGap   = (c: ClassEntry) => !c.teacher || c.sections.some(sectionHasGap);
 
+  /* ── Insights: how the staffing load actually falls across the staff room ───
+     Every post a teacher holds — class teacher, section teacher, a subject in a
+     section, or subject in-charge — counts once, so the office can see at a
+     glance who is carrying the school and who has not been given anything yet. */
+  const workloads: Workload[] = teachers.map(t => {
+    const asClass   = classes.filter(c => c.teacher?.id === t.id).length;
+    const asSection = allSections.filter(s => s.teacher?.id === t.id).length;
+    const asSubject = assignedPairs.filter(p => p.teacherId === t.id).length;
+    const asHead    = allSubjects.filter(s => s.teacherId === t.id).length;
+    return {
+      id: t.id, name: t.name,
+      classes: asClass, sections: asSection, subjects: asSubject, heads: asHead,
+      total: asClass + asSection + asSubject + asHead,
+    };
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  const postedTeachers      = workloads.filter(w => w.total > 0).length;
+  const idleTeachers        = workloads.filter(w => w.total === 0);
+  const busiest             = workloads[0]?.total ? workloads[0] : null;
+  const fullyStaffedClasses = classes.filter(c => !classHasGap(c)).length;
+  const totalGaps =
+    (classes.length - classAssigned) +
+    (allSections.length - sectionAssigned) +
+    subjectGaps.length +
+    (allSubjects.length - subjectHeadCount);
+  const avgLoad = postedTeachers > 0
+    ? (workloads.reduce((n, w) => n + w.total, 0) / postedTeachers).toFixed(1)
+    : "0";
+
   const classMatchesSearch = (c: ClassEntry) =>
     !q ||
     c.name.toLowerCase().includes(q) ||
@@ -546,10 +617,31 @@ const AssignmentsPage = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-5">
         {/* Coverage meters */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <CoverageMeter icon={School}        label="Class teachers"   assigned={classAssigned}   total={classes.length}     color="bg-indigo-500" tint="bg-indigo-50" tintText="text-indigo-600" />
-          <CoverageMeter icon={Layers}        label="Section teachers" assigned={sectionAssigned} total={allSections.length} color="bg-violet-500" tint="bg-violet-50" tintText="text-violet-600" />
-          <CoverageMeter icon={ClipboardList} label="Subject teaching" assigned={subjectAssigned} total={totalSubjectPairs}   color="bg-teal-500"   tint="bg-teal-50"   tintText="text-teal-600" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <CoverageMeter testId="class-teacher"   icon={School}        label="Class teachers"   assigned={classAssigned}    total={classes.length}     color="bg-indigo-500" tint="bg-indigo-50" tintText="text-indigo-600" />
+          <CoverageMeter testId="section-teacher" icon={Layers}        label="Section teachers" assigned={sectionAssigned}  total={allSections.length} color="bg-violet-500" tint="bg-violet-50" tintText="text-violet-600" />
+          <CoverageMeter testId="subject-teacher" icon={ClipboardList} label="Subject teaching" assigned={subjectAssigned}  total={totalSubjectPairs}  color="bg-teal-500"   tint="bg-teal-50"   tintText="text-teal-600" />
+          <CoverageMeter testId="subject-incharge" icon={Shield}       label="Subject in-charge" assigned={subjectHeadCount} total={allSubjects.length} color="bg-amber-500"  tint="bg-amber-50"  tintText="text-amber-600" />
+        </div>
+
+        {/* Insights — the staffing picture behind the meters */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="assignment-insights">
+          <InsightTile testId="open-posts" icon={AlertTriangle} tone={totalGaps > 0 ? "amber" : "emerald"}
+            label="Open posts" value={String(totalGaps)}
+            hint={totalGaps === 0 ? "every post is filled" : "across all four boards"} />
+          <InsightTile testId="classes-complete" icon={CheckCircle2} tone="indigo"
+            label="Classes fully staffed" value={`${fullyStaffedClasses}/${classes.length}`}
+            hint="class, section and subject posts filled" />
+          <InsightTile testId="teachers-posted" icon={Briefcase} tone="violet"
+            label="Teachers on duty" value={`${postedTeachers}/${teachers.length}`}
+            hint={`${avgLoad} posts each on average`} />
+          <InsightTile testId="teachers-idle" icon={idleTeachers.length ? UserX : TrendingUp}
+            tone={idleTeachers.length ? "amber" : "emerald"}
+            label={idleTeachers.length ? "Not yet given a post" : "Busiest teacher"}
+            value={idleTeachers.length ? String(idleTeachers.length) : (busiest?.name ?? "—")}
+            hint={idleTeachers.length
+              ? idleTeachers.slice(0, 3).map(t => t.name).join(", ") + (idleTeachers.length > 3 ? "…" : "")
+              : busiest ? `${busiest.total} posts` : "nobody has a post yet"} />
         </div>
 
         {/* Search + gaps-only filter + legend */}
@@ -682,6 +774,45 @@ const AssignmentsPage = () => {
           );
         })}
 
+        {/* Secondary: who is carrying what — the per-teacher posting sheet */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button onClick={() => setShowLoad(v => !v)} data-testid="teaching-load-toggle"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50/70 transition-colors">
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${showLoad ? "rotate-0" : "-rotate-90"}`} />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Briefcase size={14} className="text-slate-500" /></div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-bold text-slate-700">Teaching load <span className="text-[11px] font-normal text-slate-400">· every post each teacher holds</span></p>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500 shrink-0">{postedTeachers}/{teachers.length} on duty</span>
+          </button>
+          {showLoad && (
+            <div className="border-t border-slate-100 divide-y divide-slate-50">
+              {workloads.length === 0 ? (
+                <p className="text-xs text-slate-400 px-4 py-3">No teachers yet.</p>
+              ) : workloads.map(w => (
+                <div key={w.id} data-testid="teaching-load-row" data-teacher-name={w.name} data-total-posts={w.total}
+                  className="flex items-center gap-3 px-4 py-2.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                    w.total === 0 ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-600"}`}>
+                    {w.name.charAt(0)}
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 flex-1 min-w-0 truncate">{w.name}</p>
+                  {w.total === 0 ? (
+                    <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5 shrink-0">No post yet</span>
+                  ) : (
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                      {w.classes  > 0 && <LoadPill icon={School}        n={w.classes}  what="class teacher" />}
+                      {w.sections > 0 && <LoadPill icon={Layers}        n={w.sections} what="section teacher" />}
+                      {w.subjects > 0 && <LoadPill icon={ClipboardList} n={w.subjects} what="subject" />}
+                      {w.heads    > 0 && <LoadPill icon={Shield}        n={w.heads}    what="in-charge" />}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Secondary: Subject Heads (session-wide subject owners) */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <button onClick={() => setShowHeads(v => !v)}
@@ -700,7 +831,8 @@ const AssignmentsPage = () => {
               ) : filteredHeads.map(s => {
                 const head = teachers.find(t => t.id === s.teacherId);
                 return (
-                  <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 border border-slate-100 bg-white">
+                  <div key={s.id} data-testid="subject-head-row" data-subject-name={s.name} data-head-name={head?.name ?? ""}
+                    className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 border border-slate-100 bg-white">
                     <span className="text-xs font-medium text-slate-600 truncate flex items-center gap-1.5 min-w-0">
                       <BookOpen size={11} className="text-slate-400 shrink-0" />{s.name}
                       {s.type && <span className="text-[9px] uppercase tracking-wide text-slate-400">{s.type}</span>}
