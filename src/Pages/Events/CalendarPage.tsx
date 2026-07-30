@@ -221,7 +221,12 @@ const CalendarPage = () => {
                             }`}>
                             <List size={14} /> All Events
                         </button>
-                        <button onClick={() => openCreateForm(selectedDate ?? "")}
+                        {/* The always-available create affordance. The other
+                            create button (events-open-create-form-btn) lives in
+                            the selected-date sidebar and only exists once a date
+                            has been picked, so this one needs its own handle. */}
+                        <button data-testid="events-new-event-btn"
+                            onClick={() => openCreateForm(selectedDate ?? "")}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
                             <Plus size={14} /> New Event
                         </button>

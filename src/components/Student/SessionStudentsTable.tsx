@@ -74,7 +74,12 @@ const SessionStudentsTable: React.FC<Props> = ({
             if (filterClassId   && enr.classId   !== filterClassId)   return false;
             if (filterSectionId && enr.sectionId !== filterSectionId) return false;
             if (q) {
-                const hay = `${s.firstName} ${s.middleName ?? ""} ${s.lastName} ${enr.rollNo ?? ""} ${enr.sectionName ?? ""} ${s.phone}`.toLowerCase();
+                // Join the parts that EXIST. Interpolating an absent middle name
+                // left a double space, so a student with no middle name could
+                // never be found by typing their full name ("Ira Bose" did not
+                // match "Ira  Bose") — the search silently returned nothing.
+                const hay = [s.firstName, s.middleName, s.lastName, enr.rollNo, enr.sectionName, s.phone]
+                    .filter(Boolean).join(" ").toLowerCase();
                 if (!hay.includes(q)) return false;
             }
             return true;
