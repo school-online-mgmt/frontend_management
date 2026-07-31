@@ -254,9 +254,9 @@ const BookDetailsPage = () => {
                             {activeIssues.map((issue) => {
                                 const todayStr = new Date().toISOString().split("T")[0];
                                 const isOverdue = issue.isOverdue ?? (issue.status !== "RETURNED" && issue.status !== "LOST" && (issue.status === "OVERDUE" || issue.dueDate < todayStr));
+                                // data-status makes a loan's state readable directly,
+                                // instead of pattern-matching the whole page.
                                 return (
-                                    {/* data-status makes a loan's state readable directly,
-                                        instead of pattern-matching the whole page. */}
                                     <tr key={issue.id} data-testid="library-row" data-id={issue.id}
                                         data-status={issue.status} data-student={issue.studentName}
                                         className="hover:bg-slate-50">
