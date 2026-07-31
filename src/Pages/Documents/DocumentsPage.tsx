@@ -165,7 +165,11 @@ const RejectModal = ({ title, onClose, onConfirm }: { title: string; onClose: ()
                 <textarea data-testid="documents-reason-input" value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Reason…" className="mt-2 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" />
                 <div className="flex justify-end gap-2 mt-3">
                     <button data-testid="documents-close-btn-3" onClick={onClose} className="px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-                    <button onClick={() => reason.trim().length >= 3 && onConfirm(reason.trim())} disabled={reason.trim().length < 3}
+                    {/* Named: every request ROW also renders a "Reject" button, so
+                        addressing this confirm by label alone lands on a row button
+                        sitting behind the modal instead. */}
+                    <button data-testid="documents-reject-confirm-btn"
+                        onClick={() => reason.trim().length >= 3 && onConfirm(reason.trim())} disabled={reason.trim().length < 3}
                         className="px-3 py-2 text-xs font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50">Reject</button>
                 </div>
             </div>
