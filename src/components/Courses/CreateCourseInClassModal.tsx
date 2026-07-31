@@ -40,17 +40,28 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
-        api.getSessions().then((data) => {
+        // A course belongs to its CLASS's session — the class decides the year, so
+        // this is not a free choice. Defaulting to "the current/active session"
+        // put the course in a different year from its class whenever the school
+        // had more than one subscribed (i.e. after any renewal); the course was
+        // then created but invisible on every session-scoped screen. Resolve the
+        // class's own session and pin the field to it.
+        Promise.all([
+            api.getSessions().catch(() => []),
+            api.getClassById(classId).catch(() => null),
+        ]).then(([data, cls]) => {
             const list = data || [];
             setSessions(list);
-            // Preselect the current/active session so a fast submit before the
-            // dropdown resolves doesn't fail validation on an empty field (BUG-004).
+            const ownSessionId = cls?.classData?.sessionId ?? cls?.sessionId ?? "";
+            if (ownSessionId) { setSessionId(ownSessionId); return; }
+            // Class lookup failed — fall back to the previous behaviour rather
+            // than leaving the required field empty (BUG-004).
             if (list.length) {
                 const preferred = list.find((s: any) => s.isCurrent || s.isActive || s.status === "ACTIVE") ?? list[0];
                 setSessionId(prev => prev || preferred.id);
             }
-        }).catch(() => {});
-    }, []);
+        });
+    }, [classId]);
 
     const handleNameChange = (value: string) => {
         setName(value);
@@ -150,18 +161,24 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                     </Field>
 
                     <Field label="Academic Session" required error={fieldErrors.sessionId}>
+                        {/* Read-only: the course inherits its CLASS's session. Letting
+                            this be changed only ever produced a course the office
+                            could not then see, since every listing is session-scoped. */}
                         <select
                             data-testid="course-session-select"
                             value={sessionId}
-                            onChange={(e) => { setSessionId(e.target.value); setFieldErrors(f => ({ ...f, sessionId: "" })); }}
-                            className={`w-full border p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 transition
-                                ${fieldErrors.sessionId ? "border-red-300 focus:ring-red-200 bg-red-50" : "border-slate-200 focus:ring-emerald-200 focus:border-emerald-400 bg-slate-50"}`}
+                            disabled
+                            aria-readonly="true"
+                            title={`Courses are created in ${className}'s own academic session`}
+                            className={`w-full border p-2.5 rounded-xl text-sm bg-slate-100 text-slate-600 cursor-not-allowed
+                                ${fieldErrors.sessionId ? "border-red-300" : "border-slate-200"}`}
                         >
                             <option value="">Select Session</option>
                             {sessions.map((s) => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
+                        <p className="mt-1 text-[11px] text-slate-500">Set by the class — a course always belongs to its class's session.</p>
                         {sessions.length === 0 && (
                             <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
                                 <AlertTriangle size={11} /> No sessions found — create an academic session first.

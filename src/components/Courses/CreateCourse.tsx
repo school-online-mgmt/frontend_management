@@ -148,15 +148,21 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                             className={inputCls("slug") + " font-mono"} />
                     </div>
 
-                    {/* Session */}
+                    {/* Session — derived from the chosen class, not picked separately.
+                        These two fields used to move independently, so a class from
+                        one year plus the session field sitting on another created a
+                        course that no session-scoped screen would ever list. */}
                     <div>
                         <FieldLabel label="Academic Session" required />
                         <select data-testid="course-session-select" value={sessionId}
-                            onChange={(e) => { setSessionId(e.target.value); setFieldErrors(f => ({ ...f, sessionId: "" })); }}
-                            className={inputCls("sessionId")}>
+                            disabled
+                            aria-readonly="true"
+                            title="Set by the class this course belongs to"
+                            className="w-full border border-slate-200 p-2.5 rounded-xl text-sm bg-slate-100 text-slate-600 cursor-not-allowed">
                             <option value="">Select Session</option>
                             {sessions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
+                        <p className="mt-1 text-[11px] text-slate-500">Set by the class — a course always belongs to its class's session.</p>
                         <FieldError msg={fieldErrors.sessionId} />
                         {sessions.length === 0 && (
                             <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
@@ -168,8 +174,15 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                     {/* Class */}
                     <div>
                         <FieldLabel label="Class" required />
+                        {/* Picking the class also fixes the session shown above. */}
                         <select data-testid="course-class-select" value={classId}
-                            onChange={(e) => { setClassId(e.target.value); setFieldErrors(f => ({ ...f, classId: "" })); }}
+                            onChange={(e) => {
+                                const picked = e.target.value;
+                                setClassId(picked);
+                                setFieldErrors(f => ({ ...f, classId: "", sessionId: "" }));
+                                const own = classes.find((c: any) => c.id === picked)?.sessionId;
+                                if (own) setSessionId(own);
+                            }}
                             className={inputCls("classId")}>
                             <option value="">Select Class</option>
                             {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

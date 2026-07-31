@@ -255,7 +255,11 @@ const BookDetailsPage = () => {
                                 const todayStr = new Date().toISOString().split("T")[0];
                                 const isOverdue = issue.isOverdue ?? (issue.status !== "RETURNED" && issue.status !== "LOST" && (issue.status === "OVERDUE" || issue.dueDate < todayStr));
                                 return (
-                                    <tr key={issue.id} data-testid="library-row" data-id={issue.id} className="hover:bg-slate-50">
+                                    {/* data-status makes a loan's state readable directly,
+                                        instead of pattern-matching the whole page. */}
+                                    <tr key={issue.id} data-testid="library-row" data-id={issue.id}
+                                        data-status={issue.status} data-student={issue.studentName}
+                                        className="hover:bg-slate-50">
                                         <td className="p-4">
                                             <p className="font-medium">{issue.studentName}</p>
                                             <p className="text-xs text-slate-400">{issue.studentPhone}</p>
