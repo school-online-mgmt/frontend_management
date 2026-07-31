@@ -949,12 +949,22 @@ function PaymentModal({ payslip, onClose, onDone }: { payslip: Payslip; onClose:
 
 /* ── Shared modal primitives ──────────────────────────────────────────────── */
 function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+    // Escape closes the dialog. Without this the only way out of the run-detail
+    // modal was the header X — the backdrop and Escape both did nothing, so a
+    // keyboard user was trapped in it. It is also a full-screen overlay, so
+    // while it is up nothing behind it (the HR tabs included) can be reached.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-label={title} data-testid="hr-modal" className={`bg-white rounded-2xl shadow-xl w-full ${wide ? "max-w-3xl" : "max-w-lg"} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white">
                     <h3 className="font-semibold text-slate-800">{title}</h3>
-                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+                    <button data-testid="hr-modal-close-btn" aria-label="Close" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
                 </div>
                 <div className="p-5">{children}</div>
             </div>
