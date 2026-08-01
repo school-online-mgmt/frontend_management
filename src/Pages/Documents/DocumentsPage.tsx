@@ -86,7 +86,7 @@ const IssueModal = ({ cert, subject, onClose, onDone }: { cert: any; subject: Su
     const tch = prefill?.teacher;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div data-testid="documents-issue-modal" className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                     <div><h3 className="text-sm font-bold text-slate-800">Issue {humanType(cert.certType)}</h3>
                         <p className="text-[11px] text-slate-500">{rowName(cert)}</p></div>

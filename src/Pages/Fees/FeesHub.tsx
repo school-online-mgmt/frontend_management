@@ -2005,9 +2005,14 @@ function ExtraChargesTab() {
     // Load students for single mode
     useEffect(() => {
         if (mode === 'single' && showSingleForm && singleStudents.length === 0) {
-            api.getStudents().then(d => setSingleStudents(Array.isArray(d) ? d : d.students || [])).catch(() => {});
+            api.getStudents()
+                .then(d => setSingleStudents(Array.isArray(d) ? d : d.students || []))
+                // Swallowing this left an empty Student dropdown with no
+                // explanation — indistinguishable from "the school has no
+                // students". Say so, like the charges load above does.
+                .catch((err: unknown) => addToast(apiMsg(err, 'Failed to load students'), 'error'));
         }
-    }, [mode, showSingleForm, singleStudents.length]);
+    }, [mode, showSingleForm, singleStudents.length, addToast]);
 
     // Load student academics on student change
     useEffect(() => {

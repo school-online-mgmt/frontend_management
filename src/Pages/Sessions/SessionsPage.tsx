@@ -1037,7 +1037,21 @@ const SessionsPage: React.FC = () => {
   const { current, next, archived } = useMemo(() => {
     // Sort by start date desc so most recent comes first.
     const sorted = [...sessions].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-    const active  = sorted.find(s => s.status === "ACTIVE" || s.status === "ENDING") ?? null;
+    // The CURRENT session is the year actually being taught — the live session
+    // that TODAY falls inside; failing that, the most recent one that has at
+    // least started. Picking simply "the newest ACTIVE" meant that subscribing
+    // to next year immediately made next year current, even when it starts
+    // months from now: the school's own year was demoted to "next", and the
+    // year-end close-out then ran against the new (empty) session instead of the
+    // one holding every student.
+    const nowMs = Date.now();
+    const started = (s: AcademicSession) => new Date(s.startDate).getTime() <= nowMs;
+    const live = sorted.filter(s => s.status === "ACTIVE" || s.status === "ENDING");
+    const active =
+      live.find(s => started(s) && new Date(s.endDate).getTime() >= nowMs)
+      ?? live.find(started)
+      ?? live[0]
+      ?? null;
     const ended   = sorted.filter(s => s.status === "ENDED");
     // "Next" is the newest session that is ACTIVE / upcoming AND not the current one being taught.
     // Once the current session is ENDING or ENDED, the newest ACTIVE session is a candidate for next.

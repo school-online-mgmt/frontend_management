@@ -231,7 +231,12 @@ function TeacherLeavesTab() {
                         const sc = STATUS_CFG[l.status as LeaveStatus] || STATUS_CFG.PENDING;
                         const teacherName = l.teacher?.name || "Unknown";
                         return (
-                            <div key={l.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                            // Same card contract as the student tab above. A teacher
+                            // request is a leave request too, and anything reading this
+                            // queue shouldn't have to know which tab it landed on.
+                            <div key={l.id} data-testid="leave-request-card" data-leave-id={l.id}
+                                data-status={l.status} data-applicant={teacherName}
+                                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                                 <div className="flex items-start gap-4">
                                     <div className={`mt-0.5 p-2 rounded-xl border ${sc.bg} ${sc.border}`}>
                                         <sc.icon size={16} className={sc.text} />
@@ -259,11 +264,11 @@ function TeacherLeavesTab() {
                                     </div>
                                     {l.status === "PENDING" && (
                                         <div className="flex gap-2 shrink-0">
-                                            <button data-testid="leave-respond-btn-3" onClick={() => respond(l.id, "APPROVED")} disabled={respondingId === l.id}
+                                            <button data-testid="leave-approve-btn" onClick={() => respond(l.id, "APPROVED")} disabled={respondingId === l.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold hover:bg-emerald-100 disabled:opacity-50">
                                                 {respondingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Approve
                                             </button>
-                                            <button data-testid="leave-respond-btn-4" onClick={() => respond(l.id, "REJECTED")} disabled={respondingId === l.id}
+                                            <button data-testid="leave-reject-btn" onClick={() => respond(l.id, "REJECTED")} disabled={respondingId === l.id}
                                                 className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[11px] font-bold hover:bg-red-100 disabled:opacity-50">
                                                 {respondingId === l.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} Reject
                                             </button>
