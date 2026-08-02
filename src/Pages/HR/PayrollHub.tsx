@@ -422,7 +422,11 @@ function CloseAppraisalModal({ appraisal, sessions, currentSessionId, onClose, o
    STAFF & SALARIES
    ══════════════════════════════════════════════════════════════════════════ */
 function StaffSalariesTab() {
-    const [search, setSearch] = useState("");
+    // Deep-linkable: the Staff accounts page sends "…/hr?tab=staff&q=<name>" when
+    // someone clicks "No pay set" on a row, so they land on that person rather
+    // than on a list they then have to search themselves.
+    const [search, setSearch] = useState(
+        () => new URLSearchParams(window.location.search).get("q") ?? "");
     const [profileTarget, setProfileTarget] = useState<HrStaffRow | null>(null);
     const [salaryTarget, setSalaryTarget] = useState<HrStaffRow | null>(null);
 

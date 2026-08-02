@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-    Activity, AlertTriangle, BookOpen, CalendarCheck, GraduationCap,
+    Activity, AlertTriangle, BookOpen, CalendarCheck, ClipboardCheck, GraduationCap,
     IndianRupee, Info, Library, Loader2, Sparkles, Trophy, TrendingDown, TrendingUp, FileDown,
 } from "lucide-react";
 import api from "../../api/api";
@@ -123,7 +123,7 @@ const Student360Panel = ({ studentId }: { studentId: string }) => {
         );
     }
 
-    const { visibility, attendance, academics, fees, library, homework, sports, insights, enrolment } = data as any;
+    const { visibility, attendance, academics, fees, library, homework, sports, ptm, entrance, insights, enrolment } = data as any;
 
     return (
         <div className="space-y-4" data-testid="student-360-panel" data-scope={visibility?.scope ?? ""}>
@@ -263,6 +263,17 @@ const Student360Panel = ({ studentId }: { studentId: string }) => {
                                             s.trend === "down" ? "bg-rose-50 text-rose-700" : s.trend === "up" ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-500"}`}>
                                             {s.trend === "down" ? <TrendingDown size={11} /> : s.trend === "up" ? <TrendingUp size={11} /> : null}
                                             {s.subjectName}{s.delta != null ? ` (${s.delta > 0 ? "+" : ""}${s.delta}%)` : ""}
+                                            {/* Class average — present only when the cohort was large
+                                                enough to aggregate without identifying individuals.
+                                                Staff-facing; this panel is never shown to a family. */}
+                                            {s.classAverage != null && (
+                                                <em
+                                                    className="not-italic text-slate-400"
+                                                    title={`Class average across ${s.classCohort} students`}
+                                                >
+                                                    · vs {s.classAverage}%
+                                                </em>
+                                            )}
                                         </span>
                                     ))}
                                 </div>
@@ -319,6 +330,41 @@ const Student360Panel = ({ studentId }: { studentId: string }) => {
                             <Stat label="Applied" value={sports.applied} />
                             <Stat label="Completed" value={sports.completed} tone="indigo" />
                         </div>
+                    </Section>
+                )}
+
+                {/* Parent-teacher meetings. Only rendered once a meeting exists —
+                    a panel of zeroes for a school that has not run a PTM yet is
+                    noise, not information. */}
+                {ptm && ptm.booked > 0 && (
+                    <Section icon={CalendarCheck} title="Parent meetings">
+                        <div className="grid grid-cols-2 gap-3" data-testid="student-360-ptm">
+                            <Stat label="Booked" value={ptm.booked} />
+                            <Stat label="Attended" value={ptm.attended} tone="emerald" />
+                            <Stat label="No-shows" value={ptm.noShow} tone={ptm.noShow > 0 ? "rose" : "slate"} />
+                            <Stat label="Upcoming" value={ptm.upcoming} tone="indigo" />
+                        </div>
+                    </Section>
+                )}
+
+                {/* Entrance exam — present only for a child admitted through an
+                    application. Null for direct office entries, which is
+                    ordinary rather than missing data. */}
+                {entrance && (
+                    <Section icon={ClipboardCheck} title="Entrance exam">
+                        <div className="grid grid-cols-2 gap-3" data-testid="student-360-entrance">
+                            <Stat
+                                label="Result"
+                                value={entrance.verdict ?? "—"}
+                                tone={entrance.verdict === "PASS" ? "emerald" : "rose"}
+                            />
+                            <Stat label="Score" value={entrance.percentage != null ? `${entrance.percentage}%` : "—"} />
+                        </div>
+                        {entrance.admittedOnOverride && (
+                            <p className="mt-2 text-xs text-amber-700">
+                                Admitted on an override after not clearing the entrance exam.
+                            </p>
+                        )}
                     </Section>
                 )}
             </div>

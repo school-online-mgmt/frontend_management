@@ -151,12 +151,28 @@ class API {
   };
 
 // Create course
+  /**
+   * A course cannot accept admissions without an entrance paper holding at
+   * least five questions (FR-012). Pass `entrancePaper` to author it in the same
+   * action; omit it only when a paper already exists for this class/course slug
+   * pair, which is the normal case from the second academic year onward because
+   * papers are session-independent and carry forward.
+   */
   createCourse = async (courseData: {
     slug: string;
     name: string;
     description: string;
     classId: string;
     sessionId: string;
+    /** Create now, author the entrance paper later — the onboarding path. */
+    deferEntrancePaper?: boolean;
+    entrancePaper?: {
+      name?: string;
+      passPercentage?: number;
+      durationMinutes?: number;
+      questionsToDraw?: number;
+      questions: EntranceQuestionInput[];
+    };
   }) => {
     const response = await apiClient.post(
         "/management/course/create",
@@ -1041,16 +1057,6 @@ lookupParent = async (phone: string): Promise<{
 
     updateTeacherApplicationStatus = async (id: string, data: { status: string; comments?: string }) => {
         const res = await apiClient.patch(`/management/teacher/applications/${id}`, data);
-        return res.data;
-    };
-
-    // DEPRECATED / DO NOT USE. This posts to `/management/teacher/:id/assign-subject`,
-    // a route that does NOT exist in the backend — it 404s. A subject-teacher
-    // assignment is per-section: use `addTeacherToSubject(subjectId, { teacherId,
-    // sectionId })` above, which targets the real endpoint. Kept only so an old
-    // build doesn't crash on a missing symbol; remove once nothing references it.
-    assignSubjectToTeacher = async (teacherId: string, subjectId: string) => {
-        const res = await apiClient.post(`/management/teacher/${teacherId}/assign-subject`, { subjectId });
         return res.data;
     };
 
