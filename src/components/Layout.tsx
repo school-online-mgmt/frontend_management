@@ -9,6 +9,7 @@ import {
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
   UtensilsCrossed, Activity, MessageSquareWarning, CalendarClock, Sigma,
+  Building2,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -40,6 +41,7 @@ const NAV_SECTIONS = [
     module: "PEOPLE" as const,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus },
+      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList },
       { path: "/students-home", label: "Students", icon: Users },
       { path: "/documents", label: "Documents", icon: FileText },
     ],
@@ -53,6 +55,7 @@ const NAV_SECTIONS = [
       { path: "/teacher-home", label: "Teachers", icon: UserCog },
       { path: "/assignments", label: "Assignments", icon: ClipboardList },
       { path: "/staff", label: "Staff Accounts", icon: Settings },
+      { path: "/permissions", label: "Permissions", icon: KeyRound },
       { path: "/hr", label: "Salaries & Payroll", icon: Wallet },
     ],
   },
@@ -66,6 +69,7 @@ const NAV_SECTIONS = [
       { path: "/class-Home", label: "Classes", icon: Layers },
       { path: "/course-Home", label: "Courses", icon: BookMarked },
       { path: "/subject-Home", label: "Subjects", icon: BookOpen },
+      { path: "/organisation", label: "Organisation", icon: Building2 },
     ],
   },
   {

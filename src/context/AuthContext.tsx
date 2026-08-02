@@ -2,9 +2,44 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useNavigate } from "react-router-dom";
 import api, { setLogoutCallback, setPasswordChangeRequiredCallback } from "../api/api";
 
-export type ModulePermission = { module: string; level: 'READ' | 'ADMIN' };
+/**
+ * Since FR-014e the backend reports permissions as `resource:action` statements,
+ * not as a module x level grid. `null` still means full access.
+ */
+export type ModulePermission = string;
 
-// ADMIN + PRINCIPAL have full write access; DIRECTOR has read-only to all modules
+/**
+ * Which resources belong to which billable module, for menu gating only.
+ *
+ * The server never uses this — it authorises on statements. This exists purely
+ * so the sidebar can decide whether to offer a section at all. Getting an entry
+ * wrong hides or shows a menu item; it can never grant access, because every
+ * route is checked server-side regardless.
+ */
+const MODULE_RESOURCES: Record<string, string[]> = {
+    PEOPLE: ['student', 'applicant', 'entrance_exam', 'parent', 'document'],
+    TEACHERS: ['teacher', 'staff_account', 'employment', 'salary', 'payroll', 'leave', 'appraisal', 'rbac'],
+    ACADEMICS: ['session', 'class', 'section', 'subject', 'course', 'wing', 'department', 'promotion'],
+    STUDIES: ['exam', 'marks', 'result', 'report_card'],
+    ATTENDANCE: ['attendance', 'teacher_attendance'],
+    LIBRARY: ['library_catalogue', 'library_circulation', 'library_fine'],
+    COMMUNICATION: ['notice', 'broadcast', 'calendar', 'event', 'publication', 'grievance', 'ptm'],
+    FINANCE: ['fee_structure', 'invoice', 'payment', 'fee_concession', 'platform_bill', 'finance_report'],
+    TRANSPORT: ['transport'],
+    SPORTS: ['sports', 'sports_profile', 'sports_lesson', 'sports_attendance', 'sports_incident'],
+    INVENTORY: ['inventory'],
+    HOMEWORK: ['homework'],
+    TIMETABLE: ['timetable'],
+    PANTRY: ['pantry'],
+};
+
+/** Actions that only read. Anything else counts as write for menu purposes. */
+const READ_ACTIONS = new Set(['read', 'view', 'export', 'read-sensitive', 'board-returns', 'export-register']);
+
+// ADMIN + PRINCIPAL have full write access. DIRECTOR is NO LONGER special-cased:
+// since FR-014e it is an ordinary group, so its menu follows its statements like
+// everyone else's. Showing it modules its group can't use would only produce
+// 403s a click later.
 export const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL'] as const;
 export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK', 'TIMETABLE', 'PANTRY'] as const;
 export type AppModule = typeof ALL_MODULES[number];
@@ -214,22 +249,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const isFullAccess = FULL_ACCESS_ROLES.includes((auth.user?.role ?? '') as any);
 
+    /** Does the user hold ANY statement over a resource in this module? */
     const hasModule = (module: AppModule): boolean => {
         if (isFullAccess) return true;                         // ADMIN, PRINCIPAL
-        if (auth.user?.role === 'DIRECTOR') return true;      // Director has read access to all modules
         const perms = auth.user?.permissions;
-        if (perms === null) return true;
-        if (!perms) return false;
-        return perms.some(p => p.module === module);
+        if (perms === null) return true;                       // server said full access
+        if (!perms?.length) return false;
+        const resources = MODULE_RESOURCES[module] ?? [];
+        return perms.some(st => resources.includes(st.split(':')[0] ?? ''));
     };
 
+    /** …and at least one of them that changes something? */
     const hasModuleAdmin = (module: AppModule): boolean => {
         if (isFullAccess) return true;                         // ADMIN, PRINCIPAL
-        if (auth.user?.role === 'DIRECTOR') return false;     // Director is read-only
         const perms = auth.user?.permissions;
         if (perms === null) return true;
-        if (!perms) return false;
-        return perms.some(p => p.module === module && p.level === 'ADMIN');
+        if (!perms?.length) return false;
+        const resources = MODULE_RESOURCES[module] ?? [];
+        return perms.some(st => {
+            const [resource, action] = st.split(':');
+            return resources.includes(resource ?? '') && !READ_ACTIONS.has(action ?? '');
+        });
     };
 
     const isModuleEnabled = (module: AppModule): boolean => {
