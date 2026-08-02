@@ -4,6 +4,10 @@ import { OnboardingProvider } from './context/OnboardingContext.tsx';
 import OnboardingGate from './components/OnboardingGate.tsx';
 import SubjectHomePage from './Pages/Subject/SubjectHome.tsx';
 import SubjectDetails from './Pages/Subject/Subject.tsx';
+import OrganisationHome from './Pages/Organisation/OrganisationHome.tsx';
+import PermissionsHome from './Pages/Permissions/PermissionsHome.tsx';
+import EntranceExamPage from './Pages/Entrance/EntranceExamPage.tsx';
+import EntrancePapersHome from './Pages/Entrance/EntrancePapersHome.tsx';
 import LoginPage from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -68,6 +72,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/teacher-apply" element={<TeacherApply />} />
+          <Route path="/entrance-exam" element={<EntranceExamPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<OnboardingGate />}>
@@ -81,6 +86,8 @@ function App() {
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/staff" element={<StaffHome />} />
+            <Route path="/permissions" element={<PermissionsHome />} />
+            <Route path="/entrance-papers" element={<EntrancePapersHome />} />
             <Route path="/documents" element={<DocumentsPage />} />
 
             {/* TEACHERS — teacher onboarding & directory (always-on bundled default) */}
@@ -90,6 +97,7 @@ function App() {
             {/* ACADEMICS — sessions, classes, sections, courses, subjects */}
             <Route element={<ModuleGate module="ACADEMICS" />}>
               <Route path="/subject-Home" element={<SubjectHomePage />} />
+              <Route path="/organisation" element={<OrganisationHome />} />
               <Route path="/subject/:slug" element={<SubjectDetails />} />
               <Route path="/course-Home" element={<CourseHome />} />
               <Route path="/course/:courseId" element={<CourseDetails />} />

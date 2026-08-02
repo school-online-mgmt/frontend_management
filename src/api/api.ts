@@ -73,14 +73,6 @@ export interface EmailActivitySettingsResponse {
   }>;
 }
 
-export interface StaffRoleDef {
-  type: 'BUILTIN' | 'CUSTOM';
-  key: string;
-  name: string;
-  description: string;
-  permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
-}
-
 class API {
   // --- Authentication APIs ---
   login = async (phone: string, password: string) => {
@@ -588,8 +580,16 @@ searchApplicants = async (query: string) => {
     return response.data;
 };
 
-acceptApplication = async (applicantId: string) => {
-    const response = await apiClient.post(`/management/student/accept/${applicantId}`);
+/**
+ * Accepting is gated on the entrance result (FR-012). A candidate who failed can
+ * still be admitted, but only with an override carrying a category AND a note —
+ * both recorded, and notified to the principal.
+ */
+acceptApplication = async (applicantId: string, override?: { category: string; note: string }) => {
+    const response = await apiClient.post(
+        `/management/student/accept/${applicantId}`,
+        override ? { override } : {},
+    );
     return response.data;
 };
 
@@ -1797,50 +1797,30 @@ lookupParent = async (phone: string): Promise<{
 
     // ── Staff Management ──────────────────────────────────────────────────────
 
-    getStaff = async (): Promise<{ staff: Array<{
-        id: string; firstName: string; middleName?: string; lastName: string;
-        phone: string; email: string; role: string | null; createdAt: string;
-        permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> | null;
-        roles?: Array<{ type: string; key: string; name: string }>;
-    }> }> => {
+    // ── Staff accounts (FR-014e) ─────────────────────────────────────────────
+    // Permissions are NOT part of the account any more — they are group
+    // memberships, managed through the `rbac*` methods below.
+    getStaff = async (): Promise<{ staff: StaffAccount[] }> => {
         const res = await apiClient.get('/management/staff');
         return res.data;
     };
 
-    createStaff = async (data: {
-        firstName: string; lastName: string; phone: string; email: string;
-        password: string; role?: string;
-        roles?: Array<{ type: 'BUILTIN' | 'CUSTOM'; key: string }>;
-        permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }>;
-    }) => {
-        const res = await apiClient.post('/management/staff', data);
+    /** Teachers who hold staff groups, and so can also sign in here (FR-014g). */
+    getTeachersWithAccess = async (): Promise<{ teachers: Array<{
+        id: string; name: string; phone: string; email: string | null;
+        isActive: boolean; staffType: 'TEACHER'; groups: StaffGroupMembership[];
+    }> }> => {
+        const res = await apiClient.get('/management/staff/teachers-with-access');
         return res.data;
     };
 
-    // ── Staff role catalogue (built-in + school-defined) ──────────────────────
-    getStaffRoles = async (): Promise<{
-        builtIn: StaffRoleDef[];
-        custom: StaffRoleDef[];
-        modules: string[];
-        alwaysOn: string[];
-    }> => {
-        const res = await apiClient.get('/management/staff/roles');
-        return res.data;
-    };
-    createStaffRole = async (data: { name: string; description?: string; permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }> }) => {
-        const res = await apiClient.post('/management/staff/roles', data);
-        return res.data;
-    };
-    updateStaffRole = async (roleId: string, data: { name?: string; description?: string; permissions?: Array<{ module: string; level: 'READ' | 'ADMIN' }> }) => {
-        const res = await apiClient.patch(`/management/staff/roles/${roleId}`, data);
-        return res.data;
-    };
-    deleteStaffRole = async (roleId: string) => {
-        const res = await apiClient.delete(`/management/staff/roles/${roleId}`);
-        return res.data;
-    };
-    updateStaffRoles = async (id: string, roles: Array<{ type: 'BUILTIN' | 'CUSTOM'; key: string }>, applyPermissions = false) => {
-        const res = await apiClient.put(`/management/staff/${id}/roles`, { roles, applyPermissions });
+    createStaff = async (data: {
+        firstName: string; middleName?: string; lastName: string;
+        phone: string; email: string; password: string; role: string;
+        /** Groups to grant immediately, so onboarding is one step. */
+        groupIds?: string[];
+    }) => {
+        const res = await apiClient.post('/management/staff', data);
         return res.data;
     };
 
@@ -1857,25 +1837,47 @@ lookupParent = async (phone: string): Promise<{
         return res.data;
     };
 
-    updateStaffPermissions = async (id: string, permissions: Array<{ module: string; level: 'READ' | 'ADMIN' }>) => {
-        const res = await apiClient.put(`/management/staff/${id}/permissions`, { permissions });
-        return res.data;
-    };
+    // ── Permissions: groups, statements and scoped memberships (FR-014e) ─────
+    getRbacCatalogue = async (): Promise<{
+        statements: string[];
+        resourceGroups: Record<string, string[]>;
+        builtInGroups: Array<{
+            key: string; name: string; description: string;
+            category: string; intendedScope: ScopeType; statementCount: number;
+        }>;
+    }> => (await apiClient.get('/management/rbac/catalogue')).data;
 
-    /**
-     * Returns which modules the tenant has subscribed to. The staff-editor
-     * UI uses this to render subscription badges on the permission grid, so
-     * admins see which grants will actually take effect right now vs. which
-     * are dormant (awaiting a module subscription).
-     */
-    getStaffAllowedModules = async (): Promise<{
-        all: string[];
-        enabled: string[];
-        alwaysOn: string[];
-    }> => {
-        const res = await apiClient.get('/management/staff/allowed-modules');
-        return res.data;
-    };
+    getPermissionGroups = async (): Promise<{ groups: PermissionGroup[] }> =>
+        (await apiClient.get('/management/rbac/groups')).data;
+
+    seedPermissionGroups = async () =>
+        (await apiClient.post('/management/rbac/groups/seed')).data as { message: string; created: number; updated: number };
+
+    createPermissionGroup = async (data: {
+        name: string; description?: string; intendedScope: ScopeType; statements: string[];
+    }) => (await apiClient.post('/management/rbac/groups', data)).data;
+
+    updatePermissionGroupStatements = async (id: string, statements: string[]) =>
+        (await apiClient.put(`/management/rbac/groups/${id}/statements`, { statements })).data;
+
+    deletePermissionGroup = async (id: string) =>
+        (await apiClient.delete(`/management/rbac/groups/${id}`)).data;
+
+    getStaffMemberships = async (staffType: 'MANAGEMENT' | 'TEACHER', staffId: string):
+        Promise<{ memberships: StaffGroupMembership[] }> =>
+        (await apiClient.get(`/management/rbac/memberships/${staffType}/${staffId}`)).data;
+
+    assignStaffGroup = async (data: {
+        staffType: 'MANAGEMENT' | 'TEACHER'; staffId: string; groupId: string;
+        scopeType?: ScopeType; scopeIds?: string[];
+    }) => (await apiClient.post('/management/rbac/memberships', data)).data;
+
+    revokeStaffGroup = async (membershipId: string) =>
+        (await apiClient.delete(`/management/rbac/memberships/${membershipId}`)).data;
+
+    /** What the signed-in user may do — drives menu gating. null = full access. */
+    getMyStatements = async (): Promise<{ statements: string[] | null; fullAccess: boolean }> =>
+        (await apiClient.get('/management/rbac/me/statements')).data;
 
     // Tenant Config / School Settings
     getTenantConfig = async () => {
@@ -3001,8 +3003,171 @@ lookupParent = async (phone: string): Promise<{
         const res = await apiClient.get('/management/pantry/insights', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } });
         return res.data as PantryInsights;
     };
+
+    // ── Entrance exam (FR-012) ──────────────────────────────────────────────
+    getEntrancePapers = async (): Promise<{ papers: EntrancePaper[] }> =>
+        (await apiClient.get('/management/entrance/papers')).data;
+
+    getEntrancePaper = async (id: string): Promise<{ paper: EntrancePaper; questions: EntranceQuestion[] }> =>
+        (await apiClient.get(`/management/entrance/papers/${id}`)).data;
+
+    createEntrancePaper = async (data: {
+        classSlug: string; courseSlug: string; name: string;
+        passPercentage?: number; durationMinutes?: number; questionsToDraw?: number;
+        questions?: EntranceQuestionInput[];
+    }) => (await apiClient.post('/management/entrance/papers', data)).data;
+
+    updateEntrancePaper = async (id: string, data: Partial<{
+        name: string; passPercentage: number; durationMinutes: number;
+        questionsToDraw: number; isActive: boolean;
+    }>) => (await apiClient.patch(`/management/entrance/papers/${id}`, data)).data;
+
+    addEntranceQuestion = async (paperId: string, q: EntranceQuestionInput) =>
+        (await apiClient.post(`/management/entrance/papers/${paperId}/questions`, q)).data;
+
+    updateEntranceQuestion = async (questionId: string, q: EntranceQuestionInput) =>
+        (await apiClient.patch(`/management/entrance/questions/${questionId}`, q)).data;
+
+    deleteEntranceQuestion = async (questionId: string) =>
+        (await apiClient.delete(`/management/entrance/questions/${questionId}`)).data;
+
+    /** Which courses can't yet accept admissions, and why. */
+    getEntranceReadiness = async (): Promise<{
+        minimumQuestions: number; notReady: number;
+        courses: Array<{
+            courseId: string; courseName: string; courseSlug: string;
+            entrancePaperId: string | null; paperName: string | null;
+            questionCount: number; ready: boolean; reason: string | null;
+        }>;
+    }> => (await apiClient.get('/management/entrance/readiness')).data;
+
+    /**
+     * Seats a candidate. On success THIS BROWSER IS SIGNED OUT — the response
+     * clears the management cookies — so the caller must hand over the device
+     * rather than expect to keep working.
+     */
+    startEntranceExam = async (data: { applicantId?: string; applicationNumber?: string; allowedAttempts?: number }) =>
+        (await apiClient.post('/management/entrance/attempts', data)).data as {
+            message: string; attemptId: string; durationMinutes: number;
+            extraTimeApplied: boolean; candidate: string;
+        };
+
+    getEntranceResult = async (applicantId: string): Promise<EntranceResult> =>
+        (await apiClient.get(`/management/entrance/result/${applicantId}`)).data;
+
+    recordOfflineEntrance = async (data: {
+        applicantId: string; marksObtained: number; maxMarks: number; notes?: string;
+    }) => (await apiClient.post('/management/entrance/attempts/offline', data)).data;
+
+    authoriseEntranceRetake = async (data: { applicantId: string; reason: string }) =>
+        (await apiClient.post('/management/entrance/attempts/authorise-retake', data)).data as
+            { message: string; allowedAttempts: number };
+
+    // ── Organisation structure: wings & departments (FR-014b) ───────────────
+    // Also the anchors for wing- and department-scoped staff permissions.
+    getWings = async () => (await apiClient.get('/management/org/wings')).data as { wings: Wing[] };
+    createWing = async (data: { name: string; slug: string; position?: number; description?: string }) =>
+        (await apiClient.post('/management/org/wings', data)).data as { message: string; wing: Wing };
+    updateWing = async (id: string, data: Partial<{ name: string; slug: string; position: number; description: string; isActive: boolean }>) =>
+        (await apiClient.patch(`/management/org/wings/${id}`, data)).data as { message: string; wing: Wing };
+    deleteWing = async (id: string) =>
+        (await apiClient.delete(`/management/org/wings/${id}`)).data as { message: string };
+    assignClassesToWing = async (id: string, classIds: string[]) =>
+        (await apiClient.put(`/management/org/wings/${id}/classes`, { classIds })).data as { message: string; assigned: number };
+
+    getDepartments = async () => (await apiClient.get('/management/org/departments')).data as { departments: Department[] };
+    createDepartment = async (data: { name: string; slug: string; description?: string; hodTeacherId?: string | null }) =>
+        (await apiClient.post('/management/org/departments', data)).data as { message: string; department: Department };
+    updateDepartment = async (id: string, data: Partial<{ name: string; slug: string; description: string; hodTeacherId: string | null; isActive: boolean }>) =>
+        (await apiClient.patch(`/management/org/departments/${id}`, data)).data as { message: string; department: Department };
+    deleteDepartment = async (id: string) =>
+        (await apiClient.delete(`/management/org/departments/${id}`)).data as { message: string };
+    assignDepartmentHod = async (id: string, hodTeacherId: string | null) =>
+        (await apiClient.put(`/management/org/departments/${id}/hod`, { hodTeacherId })).data as { message: string; department: Department };
+    assignSubjectsToDepartment = async (id: string, subjectIds: string[]) =>
+        (await apiClient.put(`/management/org/departments/${id}/subjects`, { subjectIds })).data as { message: string; assigned: number };
 }
 export default new API();
+
+// ── Entrance exam types (FR-012) ────────────────────────────────────────────
+export type EntranceQuestionType = 'MCQ_SINGLE' | 'MCQ_MULTI' | 'NUMERIC';
+
+export interface EntranceQuestionInput {
+    type: EntranceQuestionType;
+    text: string;
+    marks: number;
+    options: Array<{ id: string; text: string }>;
+    correctOptionIds: string[];
+    numericAnswer?: number | null;
+    numericTolerance?: number;
+}
+
+export interface EntranceQuestion extends EntranceQuestionInput {
+    id: string;
+    paperId: string;
+    isActive: boolean;
+}
+
+export interface EntrancePaper {
+    id: string; classSlug: string; courseSlug: string; name: string;
+    passPercentage: number; durationMinutes: number; questionsToDraw: number;
+    isActive: boolean;
+    questionCount: number;
+    ready: boolean;
+    minimumQuestions?: number;
+}
+
+export interface EntranceResult {
+    attempted: boolean;
+    verdict: 'PASS' | 'FAIL' | null;
+    score: number | null;
+    maxScore: number | null;
+    percentage: number | null;
+    passPercentage: number | null;
+    mode: 'ONLINE' | 'OFFLINE' | null;
+    attemptId: string | null;
+    attemptNumber: number;
+    focusLossCount: number;
+    submittedAt: string | null;
+    inProgress: boolean;
+    overrideCategories?: string[];
+}
+
+// ── Permissions types (FR-014e) ─────────────────────────────────────────────
+export type ScopeType = 'GLOBAL' | 'SECTION' | 'CLASS' | 'WING' | 'DEPARTMENT' | 'SESSION';
+
+export interface StaffGroupMembership {
+    membershipId?: string;
+    id?: string;
+    groupId: string;
+    groupKey: string | null;
+    groupName: string;
+    scopeType: ScopeType;
+    scopeIds: string[];
+}
+
+export interface StaffAccount {
+    id: string; firstName: string; middleName?: string | null; lastName: string;
+    phone: string; email: string; role: string | null; createdAt: string;
+    staffType: 'MANAGEMENT';
+    groups: StaffGroupMembership[];
+}
+
+export interface PermissionGroup {
+    id: string; key: string | null; name: string; description: string | null;
+    isBuiltIn: boolean; intendedScope: ScopeType; isActive: boolean;
+    statements: string[];
+}
+
+// ── Organisation structure types (FR-014b) ──────────────────────────────────
+export interface Wing {
+    id: string; name: string; slug: string; position: number;
+    description: string | null; isActive: boolean;
+}
+export interface Department {
+    id: string; name: string; slug: string; description: string | null;
+    hodTeacherId: string | null; hodName?: string | null; isActive: boolean;
+}
 
 // ── Pantry types ──────────────────────────────────────────────────────────────
 export interface PantryItem {

@@ -8,6 +8,7 @@ import {
   // MapPin is also imported above — keep at the consolidated import block
 } from 'lucide-react';
 import api from '../../api/api';
+import EntranceResultModal from '../../components/Entrance/EntranceResultModal';
 import type { Applicant } from '../../api/types';
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -106,6 +107,8 @@ const ApplicantDetails: React.FC = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
+  const [enrollOpen, setEnrollOpen] = useState(false);
+
   const fetchApplicant = useCallback(async () => {
     if (!applicantId) { setError('No applicant ID provided.'); setLoading(false); return; }
     setLoading(true);
@@ -122,16 +125,46 @@ const ApplicantDetails: React.FC = () => {
 
   useEffect(() => { fetchApplicant(); }, [fetchApplicant]);
 
-  const handleAccept = async () => {
+  /**
+   * Accepting now goes through the entrance-result modal (FR-012) rather than a
+   * plain confirm — the office needs to see the score, and a failed candidate
+   * needs an override reason, before anyone is admitted.
+   */
+  const handleAccept = async (override?: { category: string; note: string }) => {
     if (!applicant) return;
     setActionLoading(true);
     try {
-      await api.acceptApplication(applicant.id);
-      showToast('Application accepted. Student moved to admission queue.', true);
+      await api.acceptApplication(applicant.id, override);
+      showToast(
+        override
+          ? 'Admitted with an override. The principal has been notified.'
+          : 'Application accepted. Student moved to admission queue.',
+        true,
+      );
       await fetchApplicant();
-    } catch {
-      showToast('Failed to accept application.', false);
+    } catch (e: any) {
+      // Surface the gate's own message — "hasn't sat the exam yet" is far more
+      // useful to the office than a generic failure.
+      showToast(e?.response?.data?.message ?? 'Failed to accept application.', false);
+      throw e;
     } finally { setActionLoading(false); setConfirm(null); }
+  };
+
+  /**
+   * Seats the candidate. On success THIS BROWSER IS SIGNED OUT — the server
+   * clears the management cookies — so we navigate straight to the exam page and
+   * hand the device over, rather than trying to keep working.
+   */
+  const handleStartExam = async () => {
+    if (!applicant) return;
+    setActionLoading(true);
+    try {
+      await api.startEntranceExam({ applicantId: applicant.id });
+      window.location.href = '/entrance-exam';
+    } catch (e: any) {
+      showToast(e?.response?.data?.message ?? 'Could not start the entrance exam.', false);
+      setActionLoading(false);
+    }
   };
 
   const handleReject = async () => {
@@ -195,14 +228,26 @@ const ApplicantDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Confirm Modal */}
-      {confirm && (
+      {/* Reject still uses the plain confirm; accepting goes through the
+          entrance-result modal, which is where the score and any override live. */}
+      {confirm === 'reject' && (
         <ConfirmModal
-          type={confirm}
+          type="reject"
           name={fullName}
           loading={actionLoading}
-          onConfirm={confirm === 'accept' ? handleAccept : handleReject}
+          onConfirm={handleReject}
           onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {enrollOpen && applicant && (
+        <EntranceResultModal
+          applicantId={applicant.id}
+          applicantName={fullName}
+          desiredClassName={(applicant as any).desiredClassName ?? null}
+          desiredCourseName={(applicant as any).desiredCourseName ?? null}
+          onClose={() => setEnrollOpen(false)}
+          onConfirm={handleAccept}
         />
       )}
 
@@ -260,7 +305,11 @@ const ApplicantDetails: React.FC = () => {
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition">
                   <XCircle size={15} /> Reject
                 </button>
-                <button data-testid="applicants-confirm-btn-3" onClick={() => setConfirm('accept')}
+                <button data-testid="applicants-start-exam-btn" onClick={() => void handleStartExam()} disabled={actionLoading}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-50 transition disabled:opacity-50">
+                  Take entrance exam
+                </button>
+                <button data-testid="applicants-enroll-btn" onClick={() => setEnrollOpen(true)}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shadow-sm">
                   <CheckCircle2 size={15} /> Accept
                 </button>
@@ -387,7 +436,7 @@ const ApplicantDetails: React.FC = () => {
                 className="flex items-center justify-center gap-2 px-5 py-3 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition">
                 <XCircle size={16} /> Reject Application
               </button>
-              <button data-testid="applicants-confirm-btn-5" onClick={() => setConfirm('accept')}
+              <button data-testid="applicants-enroll-btn-2" onClick={() => setEnrollOpen(true)}
                 className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shadow-sm">
                 <CheckCircle2 size={16} /> Accept Application
               </button>
