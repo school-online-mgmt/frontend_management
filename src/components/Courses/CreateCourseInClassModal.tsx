@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import EntranceQuestionsField, { MIN_QUESTIONS } from "../Entrance/EntranceQuestionsField";
+import type { EntranceQuestionInput } from "../../api/api";
+
 import { AlertTriangle, CheckCircle2, Loader2, X, BookOpen } from "lucide-react";
 import api from "../../api/api.ts";
 
@@ -33,6 +36,8 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
     const [slug, setSlug] = useState("");
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    // FR-012: a course needs an entrance paper of 5+ questions, authored here.
+    const [entranceQuestions, setEntranceQuestions] = useState<EntranceQuestionInput[]>([]);
     const [sessionId, setSessionId] = useState("");
     const [sessions, setSessions] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +97,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
         setIsSubmitting(true);
         setError("");
         try {
-            await api.createCourse({ slug, name, description: description.trim(), classId, sessionId });
+            await api.createCourse({ slug, name, description: description.trim(), classId, sessionId , entrancePaper: { questions: entranceQuestions } });
             onSuccess(`✅ Course "${name}" created successfully for ${className}.`);
             onClose();
         } catch (e: any) {
@@ -202,6 +207,9 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                         <p className="text-[10px] text-slate-400 mt-0.5">{description.length} / 500 characters</p>
                     </Field>
 
+                    {/* FR-012: entrance questions are authored with the course. */}
+                    <EntranceQuestionsField questions={entranceQuestions} onChange={setEntranceQuestions} />
+
                     <div className="flex gap-3 pt-1">
                         <button onClick={onClose} disabled={isSubmitting}
                             className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition disabled:opacity-50">
@@ -210,7 +218,7 @@ const CreateCourseInClassModal = ({ classId, className, onClose, onSuccess }: Pr
                         <button
                             data-testid="course-submit-btn"
                             onClick={handleSubmit}
-                            disabled={isSubmitting || !sessionId}
+                            disabled={isSubmitting || !sessionId || entranceQuestions.length < MIN_QUESTIONS}
                             className="flex-1 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isSubmitting

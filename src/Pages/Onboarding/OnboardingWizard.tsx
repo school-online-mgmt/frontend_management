@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import type { EntranceQuestionInput } from '../../api/api';
 import {
     School, CalendarDays, Layers, BookOpen, Bus, Library,
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
@@ -14,7 +15,9 @@ import { SESSIONS_QUERY_KEY } from '../../context/SessionContext';
 
 type SubjectInput  = { name: string; bookName: string; type: 'core' | 'elective' };
 type CourseFeeItem = { name: string; feeType: FeeItemType; frequency: FeeFrequency; amount: string };
-type CourseInput   = { name: string; description: string; subjectIndices: number[]; feeItems: CourseFeeItem[] };
+type CourseInput   = { name: string; description: string; subjectIndices: number[]; feeItems: CourseFeeItem[];
+                       /** FR-012: a course can't be created without an entrance paper of 5+ questions. */
+                       entranceQuestions?: EntranceQuestionInput[] };
 type TenantConfigInput = {
     schoolName: string; tagline: string; bio: string; address: string;
     city: string; state: string; country: string; pincode: string;
@@ -1634,6 +1637,18 @@ const OnboardingWizard: React.FC = () => {
                         // course.name is already class-prefixed ("Class 1 : General").
                         name: course.name.trim(), slug: slugify(course.name),
                         classId, sessionId, description: course.description.trim(),
+                        // Setup does not author entrance papers (FR-012). A school
+                        // creating twenty courses would otherwise face a hundred
+                        // questions before it could finish onboarding, and preparing
+                        // for admissions is a different job done weeks later. The
+                        // course simply cannot admit anyone until a paper exists —
+                        // Entrance Papers lists exactly which ones those are.
+                        //
+                        // If a paper already exists from a previous year the server
+                        // links it automatically; papers are session-independent.
+                        ...(course.entranceQuestions?.length
+                            ? { entrancePaper: { questions: course.entranceQuestions } }
+                            : { deferEntrancePaper: true }),
                     });
                     const courseId: string = courseRes.course?.id;
                     if (!courseId) throw new Error(`Course "${course.name}" creation did not return an ID.`);

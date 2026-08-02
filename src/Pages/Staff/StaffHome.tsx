@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api, { type StaffAccount } from '../../api/api';
-import { UserCog, Plus, Trash2, Pencil, X, Search, ShieldCheck, KeyRound } from 'lucide-react';
+import { UserCog, Plus, Trash2, Pencil, X, Search, ShieldCheck, KeyRound, Wallet } from 'lucide-react';
 
 /**
  * Staff accounts (FR-014e).
@@ -15,6 +15,12 @@ import { UserCog, Plus, Trash2, Pencil, X, Search, ShieldCheck, KeyRound } from 
  * Their roles are still SHOWN, because "who is this person and what can they
  * do" is one question in an admin's head; they're just read-only here, with a
  * link to the screen that changes them.
+ *
+ * Pay is the same story (BUG-005). It is owned by HR & Payroll, not duplicated
+ * here — but a staff member with no salary structure silently drops out of the
+ * monthly payroll run, and nobody finds out until payday. So we READ their pay
+ * state and flag its absence on the row. Showing the gap is the fix; owning the
+ * form in two places is what caused the bug.
  */
 
 /** Portal roles a school can assign. ADMIN is provisioned by support only. */
@@ -40,11 +46,27 @@ export default function StaffHome() {
     const [form, setForm] = useState({ ...blankForm });
     const [busy, setBusy] = useState(false);
 
+    /** staffId -> has a salary structure. Absent id = we couldn't tell. */
+    const [paySet, setPaySet] = useState<Record<string, boolean>>({});
+
     const load = useCallback(async () => {
         setLoading(true); setError(null);
         try {
-            const res = await api.getStaff();
+            // Pay state is a nice-to-have on this page; if HR is unreadable for
+            // this user (they may lack hr:view) we still show the accounts
+            // rather than failing the whole page.
+            const [res, hr] = await Promise.all([
+                api.getStaff(),
+                api.listHrStaff().catch(() => null),
+            ]);
             setStaff(res.staff ?? []);
+            if (hr) {
+                const map: Record<string, boolean> = {};
+                for (const row of hr.staff) {
+                    if (row.staffType === 'MANAGEMENT') map[row.staffId] = row.hasSalary;
+                }
+                setPaySet(map);
+            }
         } catch (e: any) {
             setError(e?.response?.data?.message ?? 'Could not load staff accounts.');
         } finally {
@@ -92,7 +114,7 @@ export default function StaffHome() {
                     lastName: form.lastName, phone: form.phone,
                     email: form.email, password: form.password, role: form.role,
                 });
-                setNotice('Account created. Assign their roles on the Permissions page.');
+                setNotice('Account created. Next: assign their roles on Permissions, and their salary in HR & Payroll — both start empty.');
             }
             setEditing(null); setCreating(false);
             await load();
@@ -179,6 +201,17 @@ export default function StaffHome() {
                                     aria-label={`Delete ${s.firstName}`}
                                 ><Trash2 size={16} /></button>
                             </div>
+
+                            {paySet[s.id] === false && (
+                                <Link
+                                    to={`/hr?tab=staff&q=${encodeURIComponent(`${s.firstName} ${s.lastName}`)}`}
+                                    data-testid={`staff-nopay-${s.id}`}
+                                    className="mt-3 inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100"
+                                >
+                                    <Wallet size={12} />
+                                    No pay set — they won't appear in payroll. Set it up
+                                </Link>
+                            )}
 
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                                 {FULL_ACCESS.has(s.role ?? '') ? (
