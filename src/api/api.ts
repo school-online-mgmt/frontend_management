@@ -1718,6 +1718,55 @@ lookupParent = async (phone: string): Promise<{
         return res.data.data as PtmSlot;
     };
 
+    // ── Feedback & Appraisals module (FR-017) ───────────────────────────────
+    getFeedbackDashboard = async (eventId?: string) => {
+        const res = await apiClient.get('/management/feedback/dashboard', { params: eventId ? { eventId } : {} });
+        return res.data.data as FeedbackDashboard;
+    };
+    /** Every child in the meeting's scope, so the GAPS are visible — not just those with feedback. */
+    getFeedbackEventStudents = async (eventId: string) => {
+        const res = await apiClient.get(`/management/feedback/events/${eventId}/students`);
+        return res.data.data as FeedbackEventStudent[];
+    };
+    /** MANAGEMENT audience — includes the teacher's internal note. */
+    getStudentFeedbackHistory = async (studentId: string) => {
+        const res = await apiClient.get(`/management/feedback/students/${studentId}/history`);
+        return res.data.data as {
+            entries: ManagementFeedbackEntry[];
+            trend: Array<{ meetingDate: string | null; overallRating: number | null }>;
+            latestOverall: number | null;
+            direction: FeedbackDirection;
+        };
+    };
+    getFeedbackAreaAverages = async (params: { eventId?: string; classId?: string; sectionId?: string } = {}) => {
+        const res = await apiClient.get('/management/feedback/area-averages', { params });
+        return res.data.data as AreaAverage[];
+    };
+    getFeedbackFollowUps = async (limit = 50) => {
+        const res = await apiClient.get('/management/feedback/follow-ups', { params: { limit } });
+        return res.data.data as FeedbackFollowUp[];
+    };
+    getFeedbackRatingScale = async () => {
+        const res = await apiClient.get('/management/feedback/rating-scale');
+        return res.data.data as { ptmAreas: string[]; appraisalAreas: string[]; labels: Record<string, string> };
+    };
+
+    // Teacher–Principal review meetings. These hang off the existing appraisal
+    // (FR-017 D3) — recording one opens the appraisal if the teacher has none,
+    // so a mid-year joiner can still be reviewed.
+    getTeacherReviewOverview = async (sessionId?: string) => {
+        const res = await apiClient.get('/management/feedback/teacher-overview', { params: sessionId ? { sessionId } : {} });
+        return res.data.data as { sessionId: string | null; teachers: TeacherReviewSummary[] };
+    };
+    getTeacherReviews = async (teacherId: string, sessionId: string) => {
+        const res = await apiClient.get('/management/feedback/teacher-meetings', { params: { teacherId, sessionId } });
+        return res.data.data as { appraisal: Record<string, unknown> | null; entries: AppraisalEntry[] };
+    };
+    recordTeacherReview = async (payload: AppraisalEntryInput) => {
+        const res = await apiClient.post('/management/feedback/teacher-meetings', payload);
+        return res.data.data as AppraisalEntry;
+    };
+
     // Support Tickets
     getSupportTickets = async () => {
         const res = await apiClient.get('/management/support/tickets');
@@ -1782,10 +1831,16 @@ lookupParent = async (phone: string): Promise<{
         return res.data;
     };
 
-    // Recommended annual App Development Fee (platform module cost × 12 per seat).
+    /**
+     * Recommended annual App Development Fee — what the school pays the platform
+     * per student, over a year. Since schools buy a PLAN, the per-seat cost is
+     * the plan rate plus any add-ons bought on top; the plan already covers its
+     * own modules, so they are not listed separately.
+     */
     getAppDevFee = async (): Promise<{
         annualPerStudent: number; monthlyPerSeat: number;
-        enabledModules: Array<{ module: string; label: string; pricePerSeat: number }>;
+        plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null;
+        addOns: Array<{ module: string; label: string; pricePerSeat: number }>;
     }> => {
         const res = await apiClient.get('/management/onboarding/app-fee');
         return res.data;
@@ -3279,4 +3334,137 @@ export interface PtmSlot {
     startTime: string; endTime: string; status: PtmSlotStatus;
     studentId: string | null; studentName?: string | null;
     attendance: PtmAttendance; teacherNotes?: string | null;
+}
+
+// ── Feedback & Appraisals (FR-017) ──────────────────────────────────────────
+
+export type FeedbackDirection = "IMPROVING" | "DECLINING" | "STEADY" | "INSUFFICIENT_DATA";
+
+export interface AreaAverage {
+    area: string;
+    average: number | null;
+    label: string | null;
+}
+
+export interface FeedbackDashboard {
+    event: { id: string; title: string; meetingDate: string; status: string; location: string | null } | null;
+    coverage: {
+        recorded: number;
+        presentCount: number;
+        absentCount: number;
+        followUps: number;
+        averageOverall: number | null;
+        /** Children in the meeting's scope — the denominator that matters. */
+        inScope: number;
+        missing: number;
+        coveragePct: number | null;
+        attendancePct: number | null;
+    } | null;
+    areaAverages: AreaAverage[];
+    weakestArea?: AreaAverage | null;
+    followUps: FeedbackFollowUp[];
+    /** Present only when no meeting has been published yet — an ordinary state. */
+    message?: string;
+}
+
+export interface FeedbackEventStudent {
+    studentId: string;
+    academicId: string;
+    rollNo: string | null;
+    studentName: string;
+    className: string | null;
+    sectionName: string | null;
+    hasFeedback: boolean;
+    isPresent: boolean | null;
+    overallRating: number | null;
+    overallLabel: string | null;
+    followUpRequired: boolean;
+    areasToImprove: string | null;
+    teacherName: string | null;
+}
+
+/** STAFF view — carries the teacher's private note, unlike the parent payload. */
+export interface ManagementFeedbackEntry {
+    id: string;
+    eventId: string;
+    studentId: string;
+    isPresent: boolean;
+    ratingAcademics: number | null;
+    ratingBehaviour: number | null;
+    ratingParticipation: number | null;
+    ratingHomework: number | null;
+    ratingPunctuality: number | null;
+    overallRating: string | null;
+    strengths: string | null;
+    areasToImprove: string | null;
+    actionForParents: string | null;
+    internalNote: string | null;
+    followUpRequired: boolean;
+    nextReviewDate: string | null;
+    eventTitle?: string | null;
+    meetingDate?: string | null;
+    teacherName?: string | null;
+}
+
+export interface FeedbackFollowUp {
+    id: string;
+    studentId: string;
+    studentName: string;
+    className: string | null;
+    sectionName: string | null;
+    nextReviewDate: string | null;
+    areasToImprove: string | null;
+    meetingDate: string | null;
+    teacherName: string | null;
+}
+
+export interface TeacherReviewSummary {
+    teacherId: string;
+    teacherName: string;
+    email: string | null;
+    appraisalId: string | null;
+    appraisalStatus: string | null;
+    salaryChange: string | null;
+    /** Zero means nobody has reviewed this person all year — the useful signal. */
+    meetings: number;
+    latestOverall: number | null;
+    latestLabel: string | null;
+    lastMetOn: string | null;
+}
+
+export interface AppraisalEntry {
+    id: string;
+    appraisalId: string;
+    quarter: number;
+    metOn: string;
+    ratingTeaching: number | null;
+    ratingOutcomes: number | null;
+    ratingPunctuality: number | null;
+    ratingCollaboration: number | null;
+    ratingCompliance: number | null;
+    overallRating: string | null;
+    strengths: string | null;
+    areasToImprove: string | null;
+    agreedActions: string | null;
+    /** The principal's private record — withheld from the teacher's own portal. */
+    internalNote: string | null;
+    createdAt?: string;
+}
+
+export interface AppraisalEntryInput {
+    teacherId: string;
+    sessionId: string;
+    quarter: number;
+    metOn: string;
+    ratings: {
+        teaching?: number | null;
+        outcomes?: number | null;
+        punctuality?: number | null;
+        collaboration?: number | null;
+        compliance?: number | null;
+    };
+    strengths?: string | null;
+    areasToImprove?: string | null;
+    agreedActions?: string | null;
+    internalNote?: string | null;
 }

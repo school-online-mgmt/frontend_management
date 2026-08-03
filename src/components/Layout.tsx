@@ -9,7 +9,7 @@ import {
   GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
   UtensilsCrossed, Activity, MessageSquareWarning, CalendarClock, Sigma,
-  Building2,
+  Building2, MessagesSquare,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext } from "../context/AuthContext";
@@ -145,9 +145,20 @@ const NAV_SECTIONS = [
     items: [
       { path: "/notices",       label: "Notice Board",  icon: Megaphone },
       { path: "/communication", label: "Email Blast",   icon: Send },
-      { path: "/ptm",           label: "Parent Meetings", icon: CalendarClock },
       { path: "/publications",  label: "School Documents", icon: ScrollText },
       { path: "/calendar",      label: "Calendar",      icon: Calendar },
+    ],
+  },
+  {
+    label: "Feedback",
+    icon: MessagesSquare,
+    collapsible: true,
+    // FR-017 D5 — STANDARD and above; a paid add-on for BASIC. Existing schools
+    // were grandfathered in migration 0124, so nobody loses the PTM they had.
+    module: "FEEDBACK" as const,
+    items: [
+      { path: "/feedback",      label: "Dashboard",       icon: LayoutDashboard },
+      { path: "/ptm",           label: "Parent Meetings", icon: CalendarClock },
     ],
   },
   {

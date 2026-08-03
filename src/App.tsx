@@ -51,6 +51,7 @@ import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import ActivityPage from "./Pages/Activity/ActivityPage.tsx";
 import GrievancesPage from "./Pages/Grievances/GrievancesPage.tsx";
 import PtmPage from "./Pages/Ptm/PtmPage.tsx";
+import FeedbackPage from "./Pages/Feedback/FeedbackPage.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
 import SportsHome from "./Pages/Sports/SportsHome.tsx";
@@ -191,6 +192,7 @@ function App() {
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/grievances" element={<GrievancesPage />} />
               <Route path="/ptm" element={<PtmPage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
             </Route>
             <Route path="/onboarding" element={<OnboardingPage />} />
             </Route>
