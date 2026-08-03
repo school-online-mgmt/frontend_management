@@ -810,7 +810,7 @@ const CourseFeeStep: React.FC<{
 // The App Development Fee card — prefilled platform cost, editable, always shown.
 const AppDevFeeCard: React.FC<{
     amount: string; onAmount: (v: string) => void;
-    appFee: { annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null;
+    appFee: { annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null;
     showErrors: boolean;
 }> = ({ amount, onAmount, appFee, showErrors }) => {
     const amtErr = showErrors && (amount === '' || Number(amount) < 0);
@@ -822,13 +822,18 @@ const AppDevFeeCard: React.FC<{
                     <p className="text-sm font-black text-violet-900">App Development Fee <span className="text-[10px] font-bold uppercase bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-md ml-1">Annual · All students</span></p>
                     <p className="text-xs text-violet-600 mt-0.5">
                         Charged once a year to every student to cover your school's software platform.
-                        Recommended = your enabled modules’ yearly cost per student{appFee ? <> (₹{appFee.monthlyPerSeat}/mo × 12)</> : ''}.
+                        Recommended = your subscription's yearly cost per student{appFee ? <> (₹{appFee.monthlyPerSeat}/mo × 12)</> : ''}.
                         You can change this amount.
                     </p>
-                    {appFee && appFee.enabledModules.length > 0 && (
+                    {appFee && (appFee.plan || appFee.addOns.length > 0) && (
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                            {appFee.enabledModules.map(m => (
-                                <span key={m.module} className="text-[10px] font-semibold bg-white/70 border border-violet-200 text-violet-700 rounded-md px-1.5 py-0.5">{m.label} ₹{m.pricePerSeat}</span>
+                            {appFee.plan && (
+                                <span className="text-[10px] font-bold bg-violet-200 border border-violet-300 text-violet-800 rounded-md px-1.5 py-0.5">
+                                    {appFee.plan.name} plan ₹{appFee.plan.pricePerSeat}
+                                </span>
+                            )}
+                            {appFee.addOns.map(m => (
+                                <span key={m.module} className="text-[10px] font-semibold bg-white/70 border border-violet-200 text-violet-700 rounded-md px-1.5 py-0.5">+ {m.label} ₹{m.pricePerSeat}</span>
                             ))}
                         </div>
                     )}
@@ -857,7 +862,7 @@ const GlobalFeeStep: React.FC<{
     showErrors: boolean;
     appDevAmount: string;
     onAppDevAmount: (v: string) => void;
-    appFee: { annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null;
+    appFee: { annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null;
 }> = ({ items, update, showErrors, appDevAmount, onAppDevAmount, appFee }) => {
     const add    = () => update([...items, mkGlobalFeeItem()]);
     const remove = (i: number) => update(items.filter((_, idx) => idx !== i));
@@ -1418,7 +1423,7 @@ const OnboardingWizard: React.FC = () => {
     // ── State helpers ──────────────────────────────────────────────────────────
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));
     // Recommended annual App Development Fee (platform module cost × 12) + breakdown.
-    const [appFee, setAppFee] = useState<{ annualPerStudent: number; monthlyPerSeat: number; enabledModules: { module: string; label: string; pricePerSeat: number }[] } | null>(null);
+    const [appFee, setAppFee] = useState<{ annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null>(null);
     useEffect(() => {
         api.getAppDevFee().then(r => {
             setAppFee(r);

@@ -41,7 +41,7 @@ const READ_ACTIONS = new Set(['read', 'view', 'export', 'read-sensitive', 'board
 // everyone else's. Showing it modules its group can't use would only produce
 // 403s a click later.
 export const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL'] as const;
-export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK', 'TIMETABLE', 'PANTRY'] as const;
+export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK', 'TIMETABLE', 'PANTRY', 'FEEDBACK'] as const;
 export type AppModule = typeof ALL_MODULES[number];
 
 /**
