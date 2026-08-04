@@ -9,6 +9,7 @@ import {
 import api from '../../api/api.ts';
 import ConfirmModal from '../../components/common/ConfirmModal.tsx';
 import type { Subject, CourseSubject } from '../../api/types';
+import { ErrorState } from "../../components/ui";
 
 /* ── Sub-components ─────────────────────────────────────────────────────── */
 const StatPill = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) => (
@@ -34,7 +35,10 @@ const SubjectDetailsPage = () => {
     const [editData, setEditData] = useState({ name: '', slug: '', bookName: '', sessionId: '', teacherId: '' });
     const [editInitialized, setEditInitialized] = useState(false);
 
-    const { data: subjectData, isLoading: subjectLoading } = useQuery({
+    const {
+        data: subjectData, isLoading: subjectLoading,
+        isError: subjectError, refetch: refetchSubject,
+    } = useQuery({
         queryKey: ['subject', slug],
         queryFn: () => api.getSubjectById(slug!),
         enabled: !!slug,
@@ -153,6 +157,17 @@ const SubjectDetailsPage = () => {
     if (subjectLoading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <Loader2 className="animate-spin text-emerald-600" size={32} />
+        </div>
+    );
+    // A failed request is not a deleted subject — "Subject not found" would
+    // send someone hunting for a record that is still there.
+    if (subjectError) return (
+        <div className="min-h-[60vh] flex items-center justify-center">
+            <ErrorState
+                message="Could not load this subject."
+                onRetry={() => void refetchSubject()}
+                testId="subject-error"
+            />
         </div>
     );
     if (!subject) return (

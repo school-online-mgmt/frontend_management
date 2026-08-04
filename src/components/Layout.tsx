@@ -6,13 +6,13 @@ import {
   UserPlus, UserCog, Layers, ClipboardList, Calendar, CreditCard,
   ChevronLeft, Menu, X, ChevronDown, Settings, HelpCircle,
   Megaphone, ClipboardCheck, UserCheck, CalendarDays, Library, BarChart3,
-  GraduationCap, BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
+  BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
   UtensilsCrossed, Activity, MessageSquareWarning, CalendarClock, Sigma,
-  Building2, MessagesSquare,
+  Building2, MessagesSquare, Network,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
-import { useAuthContext } from "../context/AuthContext";
+import { useAuthContext, type AppModule } from "../context/AuthContext";
 import { SessionProvider } from "../context/SessionContext";
 import TopbarSessionSelector from "./common/TopbarSessionSelector";
 import TopbarClock from "./common/TopbarClock";
@@ -22,186 +22,198 @@ import PageFooter from "./PageFooter";
 import OverdueBillsBanner from "./OverdueBillsBanner";
 import EndedSessionBanner from "./EndedSessionBanner";
 
-/* ── Nav configuration ─────────────────────────────────────────────────── */
-// module: matches AppModule enum. null = always visible (no permission needed)
-const NAV_SECTIONS = [
+/* ── Nav configuration ─────────────────────────────────────────────────────
+ *
+ * Sections are DOMAINS — a job the school does — not modules.
+ *
+ * They used to be one section per billing module, which produced 17 top-level
+ * entries, five of them a single link (Library, Sports, Timetable, Inventory,
+ * Pantry), and split related work along billing lines rather than by task:
+ * fees under "Finance" but platform bills under "Account"; entrance papers
+ * under "Students" but exams under "Studies"; grievances and support buried in
+ * "Account". It also could not scale — the module catalogue is heading toward
+ * ~38 entries (see backend/docs/business/MODULES.md), which would have meant 38
+ * sections.
+ *
+ * So: a domain draws pages from SEVERAL modules, and `module` lives on the
+ * ITEM. Selling a new module adds a page inside an existing domain and never
+ * adds a section. Two rules keep it that way:
+ *
+ *   1. A domain never holds a single page — that is what Campus is for.
+ *   2. A domain shows when the school owns ANY page in it, and each page hides
+ *      on its own. A BASIC school that bought only Library still sees Campus,
+ *      with just Library inside it.
+ *
+ * `module: null` = always visible. Paths are unchanged from the module-grouped
+ * version, so bookmarks, deep links and the E2E suite are unaffected.
+ */
+/** Lucide icons also take `strokeWidth`, so keep this permissive. */
+type NavIcon = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: NavIcon;
+  /** Module that must be owned for this page to appear. `null` = always. */
+  module: AppModule | null;
+  /** Additionally restrict to ADMIN, matching the AdminRoute guard. */
+  adminOnly?: boolean;
+}
+
+interface NavSection {
+  label: string;
+  icon: NavIcon;
+  collapsible: boolean;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
     label: "Overview",
     icon: LayoutDashboard,
     collapsible: false,
-    module: null,
     items: [
-      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: null },
+    ],
+  },
+  {
+    label: "Admissions",
+    icon: UserPlus,
+    collapsible: true,
+    items: [
+      { path: "/applicants-home", label: "Applicants", icon: UserPlus, module: "PEOPLE" },
+      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList, module: "STUDIES" },
     ],
   },
   {
     label: "Students",
     icon: Users,
     collapsible: true,
-    module: "PEOPLE" as const,
     items: [
-      { path: "/applicants-home", label: "Applicants", icon: UserPlus },
-      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList },
-      { path: "/students-home", label: "Students", icon: Users },
-      { path: "/documents", label: "Documents", icon: FileText },
+      { path: "/students-home", label: "Students", icon: Users, module: "PEOPLE" },
+      { path: "/documents", label: "Certificates & TC", icon: FileText, module: "PEOPLE" },
     ],
   },
   {
-    label: "Teachers & Staff",
+    // Everything about the people who work here — records, access and pay.
+    // "Assignments" is a teacher's CLASS assignment, not homework; it sits here
+    // rather than next to Homework, where the label used to read as the latter.
+    label: "Staff",
     icon: UserCog,
     collapsible: true,
-    module: "TEACHERS" as const,
     items: [
-      { path: "/teacher-home", label: "Teachers", icon: UserCog },
-      { path: "/assignments", label: "Assignments", icon: ClipboardList },
-      { path: "/staff", label: "Staff Accounts", icon: Settings },
-      { path: "/permissions", label: "Permissions", icon: KeyRound },
-      { path: "/hr", label: "Salaries & Payroll", icon: Wallet },
+      { path: "/teacher-home", label: "Teachers", icon: UserCog, module: "TEACHERS" },
+      { path: "/assignments", label: "Class Assignments", icon: ClipboardList, module: "TEACHERS" },
+      { path: "/teacher-attendance", label: "Staff Attendance", icon: UserCheck, module: "ATTENDANCE" },
+      { path: "/hr", label: "Salaries & Payroll", icon: Wallet, module: "TEACHERS" },
+      { path: "/staff", label: "Staff Accounts", icon: Settings, module: "TEACHERS" },
+      { path: "/permissions", label: "Roles & Permissions", icon: KeyRound, module: "TEACHERS" },
     ],
   },
   {
+    // The shape of the school and how teaching is delivered against it.
     label: "Academics",
-    icon: GraduationCap,
+    icon: Network,
     collapsible: true,
-    module: "ACADEMICS" as const,
     items: [
-      { path: "/sessions", label: "Sessions", icon: CalendarDays },
-      { path: "/class-Home", label: "Classes", icon: Layers },
-      { path: "/course-Home", label: "Courses", icon: BookMarked },
-      { path: "/subject-Home", label: "Subjects", icon: BookOpen },
-      { path: "/organisation", label: "Organisation", icon: Building2 },
+      { path: "/structure", label: "Overview", icon: LayoutDashboard, module: "ACADEMICS" },
+      { path: "/structure/classes", label: "Classes & Sections", icon: Layers, module: "ACADEMICS" },
+      { path: "/subject-Home", label: "Subjects", icon: BookOpen, module: "ACADEMICS" },
+      { path: "/course-Home", label: "Courses", icon: BookMarked, module: "ACADEMICS" },
+      { path: "/timetable", label: "Timetable", icon: CalendarDays, module: "TIMETABLE" },
+      { path: "/homework", label: "Homework", icon: BookMarked, module: "HOMEWORK" },
+      { path: "/sessions", label: "Sessions", icon: CalendarDays, module: "ACADEMICS" },
+      { path: "/organisation", label: "Organisation", icon: Building2, module: "ACADEMICS" },
     ],
   },
   {
-    label: "Studies",
-    icon: BookMarked,
+    // Measuring what was learned. Exams, and everything downstream of them.
+    label: "Assessment",
+    icon: ClipboardList,
     collapsible: true,
-    module: "STUDIES" as const,
     items: [
-      { path: "/exam-home", label: "Exams", icon: ClipboardList },
-      { path: "/performance", label: "Performance", icon: BarChart3 },
-      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma },
+      { path: "/exam-home", label: "Exams", icon: ClipboardList, module: "STUDIES" },
+      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma, module: "STUDIES" },
+      { path: "/performance", label: "Performance", icon: BarChart3, module: "STUDIES" },
     ],
   },
   {
     label: "Attendance",
     icon: ClipboardCheck,
     collapsible: true,
-    module: "ATTENDANCE" as const,
     items: [
-      { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck },
-      { path: "/teacher-attendance", label: "Teacher Attendance", icon: UserCheck },
-      { path: "/leaves", label: "Leave Management", icon: CalendarDays },
+      { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck, module: "ATTENDANCE" },
+      { path: "/leaves", label: "Leave Management", icon: CalendarDays, module: "ATTENDANCE" },
     ],
   },
   {
-    label: "Library",
-    icon: Library,
-    collapsible: true,
-    module: "LIBRARY" as const,
-    items: [
-      { path: "/library", label: "Library", icon: Library },
-    ],
-  },
-  {
-    label: "Sports",
-    icon: Trophy,
-    collapsible: true,
-    module: "SPORTS" as const,
-    items: [
-      { path: "/sports", label: "Sports", icon: Trophy },
-    ],
-  },
-  {
-    label: "Homework",
-    icon: BookMarked,
-    module: "HOMEWORK" as const,
-    items: [
-      { path: "/homework", label: "Homework", icon: BookMarked },
-    ],
-  },
-  {
-    label: "Timetable",
-    icon: CalendarDays,
-    module: "TIMETABLE" as const,
-    items: [
-      { path: "/timetable", label: "Timetable", icon: CalendarDays },
-    ],
-  },
-  {
-    label: "Inventory",
-    icon: Package,
-    collapsible: true,
-    module: "INVENTORY" as const,
-    items: [
-      { path: "/inventory", label: "Inventory", icon: Package },
-    ],
-  },
-  {
-    label: "Communication",
-    icon: MessageSquare,
-    collapsible: true,
-    module: "COMMUNICATION" as const,
-    items: [
-      { path: "/notices",       label: "Notice Board",  icon: Megaphone },
-      { path: "/communication", label: "Email Blast",   icon: Send },
-      { path: "/publications",  label: "School Documents", icon: ScrollText },
-      { path: "/calendar",      label: "Calendar",      icon: Calendar },
-    ],
-  },
-  {
-    label: "Feedback",
-    icon: MessagesSquare,
-    collapsible: true,
-    // FR-017 D5 — STANDARD and above; a paid add-on for BASIC. Existing schools
-    // were grandfathered in migration 0124, so nobody loses the PTM they had.
-    module: "FEEDBACK" as const,
-    items: [
-      { path: "/feedback",      label: "Dashboard",       icon: LayoutDashboard },
-      { path: "/ptm",           label: "Parent Meetings", icon: CalendarClock },
-    ],
-  },
-  {
+    // All money in one place. Platform bills used to sit under "Account",
+    // which meant the two things an accountant does were two domains apart.
     label: "Finance",
     icon: Wallet,
     collapsible: true,
-    module: "FINANCE" as const,
     items: [
-      { path: "/fees", label: "Fee Management", icon: CreditCard },
+      { path: "/fees", label: "Fee Management", icon: CreditCard, module: "FINANCE" },
+      { path: "/platform-bills", label: "Platform Bills", icon: Wallet, module: null, adminOnly: true },
     ],
   },
   {
-    label: "Transport",
-    icon: Bus,
+    // Outbound, one-to-many: things the school SAYS to everyone.
+    label: "Communication",
+    icon: Megaphone,
     collapsible: true,
-    module: "TRANSPORT" as const,
     items: [
-      { path: "/transport", label: "Transport", icon: Bus },
+      { path: "/notices", label: "Notice Board", icon: Megaphone, module: "COMMUNICATION" },
+      { path: "/communication", label: "Email Broadcast", icon: Send, module: "COMMUNICATION" },
+      // No separate "Events" entry: /events is a redirect to /calendar, so
+      // listing both would be the same page under two names.
+      { path: "/calendar", label: "Calendar & Events", icon: Calendar, module: "COMMUNICATION" },
+      { path: "/publications", label: "School Documents", icon: ScrollText, module: "COMMUNICATION" },
     ],
   },
   {
-    label: "Pantry",
-    icon: UtensilsCrossed,
+    // Two-way, per-family: conversations with ONE parent about ONE child.
+    // Kept apart from Communication because the work is different — a
+    // broadcast is published, a grievance is answered.
+    label: "Parent Relations",
+    icon: MessagesSquare,
     collapsible: true,
-    module: "PANTRY" as const,
     items: [
-      { path: "/pantry", label: "Pantry & Canteen", icon: UtensilsCrossed },
+      { path: "/ptm", label: "Parent Meetings", icon: CalendarClock, module: "FEEDBACK" },
+      { path: "/feedback", label: "Feedback", icon: MessagesSquare, module: "FEEDBACK" },
+      { path: "/grievances", label: "Grievances", icon: MessageSquareWarning, module: null },
     ],
   },
   {
-    label: "Account",
-    icon: School,
+    // Facilities and services the school runs. These were five separate
+    // single-link sections before — the top-level list read as a module
+    // inventory rather than a place to work.
+    label: "Campus",
+    icon: Building2,
     collapsible: true,
-    module: null,
     items: [
-      { path: "/account",         label: "My Account",     icon: School },
-      { path: "/platform-bills",  label: "Platform Bills", icon: Wallet },
-      { path: "/jobs",            label: "Scheduled Jobs", icon: Zap },
-      { path: "/activity",        label: "Activity Log",   icon: Activity },
-      { path: "/grievances",      label: "Parent Grievances", icon: MessageSquareWarning },
-      { path: "/support",         label: "Support Center", icon: MessageSquare },
+      { path: "/library", label: "Library", icon: Library, module: "LIBRARY" },
+      { path: "/sports", label: "Sports", icon: Trophy, module: "SPORTS" },
+      { path: "/transport", label: "Transport", icon: Bus, module: "TRANSPORT" },
+      { path: "/pantry", label: "Pantry & Canteen", icon: UtensilsCrossed, module: "PANTRY" },
+      { path: "/inventory", label: "Inventory", icon: Package, module: "INVENTORY" },
     ],
   },
+];
+
+/**
+ * Administration — reached from the profile menu, not the sidebar.
+ *
+ * These are settings and back-office tools, not daily work. Keeping them in the
+ * sidebar created an "Account" catch-all that had swallowed platform bills
+ * (money → Finance) and grievances (a parent conversation → Parent Relations).
+ * ADMIN-only, matching the AdminRoute guard.
+ */
+const ADMIN_MENU_ITEMS: Array<{ path: string; label: string; icon: NavIcon }> = [
+  { path: "/account", label: "School Settings", icon: School },
+  { path: "/jobs", label: "Scheduled Jobs", icon: Zap },
+  { path: "/activity", label: "Activity Log", icon: Activity },
+  { path: "/support", label: "Support Center", icon: MessageSquare },
 ];
 
 const getInitials = (first?: string, last?: string) =>
@@ -449,13 +461,27 @@ const Layout = () => {
   const isSectionActive = (section: typeof NAV_SECTIONS[0]) =>
     section.items.some(i => isActive(i.path));
 
-  // Sections the current user may see. Account (My Account, Platform Bills,
-  // Scheduled Jobs, Support) is ADMIN-only — matches the AdminRoute guard.
-  const hideAccount = user?.role !== 'ADMIN';
-  const visibleSections = NAV_SECTIONS.filter(s => {
-    if (s.label === 'Account' && hideAccount) return false;
-    return s.module === null || canUseModule(s.module);
-  });
+  const isAdmin = user?.role === 'ADMIN';
+
+  /*
+    Gating is per ITEM now, not per section.
+
+    A domain draws pages from several modules, so "does this school own the
+    section" is no longer a question with an answer. A section survives when at
+    least one of its pages does — so a BASIC school that bought only Library
+    still gets Campus, holding just Library, instead of losing the whole domain.
+  */
+  const visibleSections = NAV_SECTIONS
+    .map(s => ({
+      ...s,
+      items: s.items.filter(i => {
+        if ((i as { adminOnly?: boolean }).adminOnly && !isAdmin) return false;
+        return i.module === null || canUseModule(i.module);
+      }),
+    }))
+    .filter(s => s.items.length > 0);
+
+  const adminMenuItems = isAdmin ? ADMIN_MENU_ITEMS : [];
 
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
@@ -719,6 +745,22 @@ const Layout = () => {
                     <p className="text-xs font-semibold text-slate-800">{user?.firstName} {user?.lastName}</p>
                     <p className="text-[10px] text-slate-400">{user?.email ?? "admin@school.edu"}</p>
                   </div>
+                  {/* Administration — settings and back-office tools. These
+                      were a sidebar section called "Account" that had also
+                      accumulated platform bills and grievances; both moved to
+                      the domain that owns them. */}
+                  {adminMenuItems.length > 0 && (
+                    <div className="py-0.5 border-b border-slate-100">
+                      {adminMenuItems.map(({ path, label, icon: Icon }) => (
+                        <Link key={path} to={path} onClick={() => setProfileOpen(false)}
+                          data-testid={`nav-item-${path.replace(/\//g, "")}`}
+                          data-nav-label={label}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50 transition-colors">
+                          <Icon size={13} className="text-slate-400" /> {label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                   <div className="py-0.5">
                     <button onClick={() => { setChangePasswordOpen(true); setProfileOpen(false); }}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50 transition-colors">

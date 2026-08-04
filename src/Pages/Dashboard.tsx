@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, BookOpen, GraduationCap, Calendar, Clock, Activity,
@@ -107,6 +108,37 @@ const Dashboard = () => {
   const refreshAll = () => {
     for (const key of dashKeys) queryClient.invalidateQueries({ queryKey: key as readonly unknown[] });
   };
+
+  /**
+   * Which panels failed to load, in plain words.
+   *
+   * Every query below defaults to [] or 0 on failure, so without this a dead
+   * fees endpoint renders "₹0 collected" — indistinguishable from a month
+   * where nobody paid. Naming the panel is the difference between "something
+   * is broken" and "nobody has paid their fees".
+   */
+  const failedPanels = useMemo(() => ([
+    [studentsQ.isError,      'Students'],
+    [teachersQ.isError,      'Teachers'],
+    [subjectsQ.isError,      'Subjects'],
+    [classesQ.isError,       'Classes'],
+    [studentAttQ.isError,    "Today's student attendance"],
+    [teacherAttQ.isError,    "Today's staff attendance"],
+    [feeYTDQ.isError || feeMonthQ.isError || feeLastQ.isError, 'Fee collection'],
+    [libraryQ.isError,       'Library'],
+    [leavesQ.isError || teacherLeavesQ.isError, 'Pending leaves'],
+    [noticesQ.isError,       'Notices'],
+    [staffGapsQ.isError,     'Staffing gaps'],
+    [schoolStatsQ.isError,   'School statistics'],
+  ] as const)
+    .filter(([failed]) => failed)
+    .map(([, label]) => label), [
+    studentsQ.isError, teachersQ.isError, subjectsQ.isError, classesQ.isError,
+    studentAttQ.isError, teacherAttQ.isError,
+    feeYTDQ.isError, feeMonthQ.isError, feeLastQ.isError,
+    libraryQ.isError, leavesQ.isError, teacherLeavesQ.isError,
+    noticesQ.isError, staffGapsQ.isError, schoolStatsQ.isError,
+  ]);
 
   const firstName = user?.firstName ?? "Admin";
   const hour = now.getHours();
@@ -244,6 +276,40 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-4 space-y-4">
+
+      {/*
+        Partial-failure banner.
+
+        A dashboard fans out across sixteen independent queries, so blanking the
+        whole page because one failed would be worse than what it replaces. But
+        the opposite — silently rendering a zero — is how "fees collected: ₹0"
+        becomes a panicked phone call. Keep every tile that loaded, and say
+        plainly that some numbers are missing.
+      */}
+      {failedPanels.length > 0 && (
+        <div
+          data-testid="dashboard-partial-error"
+          className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+        >
+          <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-900">
+              {failedPanels.length === 1
+                ? `${failedPanels[0]} could not be loaded`
+                : `${failedPanels.length} sections could not be loaded`}
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">
+              {failedPanels.join(', ')} — the figures below exclude {failedPanels.length === 1 ? 'it' : 'them'}.
+            </p>
+          </div>
+          <button
+            onClick={refreshAll}
+            className="shrink-0 text-xs font-semibold text-amber-900 underline hover:text-amber-950"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Hero Welcome ─────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 rounded-2xl p-4 md:p-5 relative overflow-hidden">

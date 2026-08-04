@@ -16,6 +16,7 @@ import NewStudentModal from '../../components/Student/NewStudentModal';
 import { useSession } from '../../context/SessionContext';
 import ActionBar from '../../components/common/ActionBar';
 import { useToast } from '../../context/ToastContext';
+import { ErrorState } from "../../components/ui";
 
 interface SessionOption {
   id: string;
@@ -441,6 +442,14 @@ const StudentsHome: React.FC = () => {
               <RefreshCcw size={18} className="animate-spin text-indigo-400" />
               <p className="text-[11px] text-slate-500">Loading students…</p>
             </div>
+          ) : studentsQuery.isError ? (
+            /* Ahead of the empty state on purpose: a failed request otherwise
+               told the office "No students have been enrolled yet." */
+            <ErrorState
+              message="Could not load students."
+              onRetry={() => void studentsQuery.refetch()}
+              testId="students-error"
+            />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-1.5">
               <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">

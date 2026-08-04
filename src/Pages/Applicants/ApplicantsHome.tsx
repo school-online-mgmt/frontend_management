@@ -13,6 +13,7 @@ import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { EmptySessionState } from '../../components/common/SessionGate';
 import { useSession } from '../../context/SessionContext';
 import ActionBar from '../../components/common/ActionBar';
+import { ErrorState } from "../../components/ui";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string; border: string }> = {
@@ -466,6 +467,14 @@ const ApplicantsHome: React.FC = () => {
               <RefreshCcw size={18} className="animate-spin text-indigo-400" />
               <p className="text-[11px] text-slate-500">Loading applicants…</p>
             </div>
+          ) : applicantsQuery.isError ? (
+            /* "No applications submitted yet" during admissions season is a
+               conclusion nobody should reach from a network failure. */
+            <ErrorState
+              message="Could not load applicants."
+              onRetry={() => void applicantsQuery.refetch()}
+              testId="applicants-error"
+            />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-1.5">
               <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">

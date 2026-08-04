@@ -5,6 +5,7 @@ import { Trophy, Plus, Calendar, MapPin, Users, X } from "lucide-react";
 import api from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
+import { ErrorState } from "../../components/ui";
 
 type Tab = "events" | "catalog";
 
@@ -76,6 +77,9 @@ const SportsHome = () => {
                     </div>
                     {eventsQuery.isLoading ? (
                         <p>Loading…</p>
+                    ) : eventsQuery.isError ? (
+                        <ErrorState message="Could not load sports events."
+                            onRetry={() => void eventsQuery.refetch()} testId="sports-events-error" />
                     ) : (eventsQuery.data ?? []).length === 0 ? (
                         <p className="text-slate-500">No events yet. Create one to get started.</p>
                     ) : (
@@ -132,6 +136,11 @@ const SportsHome = () => {
                     </div>
                     {sportsQuery.isLoading ? (
                         <p>Loading…</p>
+                    ) : sportsQuery.isError ? (
+                        /* The empty copy tells someone to add sports they may
+                           already have — the wrong instruction on a failure. */
+                        <ErrorState message="Could not load the sports catalogue."
+                            onRetry={() => void sportsQuery.refetch()} testId="sports-catalog-error" />
                     ) : (sportsQuery.data ?? []).length === 0 ? (
                         <p className="text-slate-500">No sports in your catalog yet. Add one (e.g. Football, Badminton) before creating events.</p>
                     ) : (

@@ -10,6 +10,7 @@ import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
 import { useSession } from "../../context/SessionContext";
+import { ErrorState } from "../../components/ui";
 
 /* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface CalendarEvent {
@@ -392,6 +393,14 @@ const CalendarPage = () => {
                         {/* Days */}
                         {loading ? (
                             <div className="flex items-center justify-center h-80"><Loader2 className="animate-spin text-slate-400" size={36} /></div>
+                        ) : eventsQuery.isError ? (
+                            /* An empty grid is indistinguishable from a month
+                               with nothing scheduled — say the load failed. */
+                            <ErrorState
+                                message="Could not load the calendar."
+                                onRetry={() => void eventsQuery.refetch()}
+                                testId="calendar-error"
+                            />
                         ) : (
                             <div className="grid grid-cols-7 gap-1">
                                 {calendarDays.map((day, idx) => {
