@@ -8,6 +8,7 @@ import {
 import api from "../../api/api";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import { usePrompt } from "../../hooks/usePrompt";
+import { ErrorState } from "../../components/ui";
 
 type Tab = "overview" | "coaches" | "enrollments" | "attendance" | "incidents" | "achievements";
 
@@ -121,6 +122,16 @@ const SportsEventDetail = () => {
     };
 
     if (eventQuery.isLoading) return <div className="p-6">Loading eventâ€¦</div>;
+    // "Event not found." also covered failures, which reads as deleted.
+    if (eventQuery.isError) return (
+        <div className="p-6">
+            <ErrorState
+                message="Could not load this event."
+                onRetry={() => void eventQuery.refetch()}
+                testId="sports-event-error"
+            />
+        </div>
+    );
     if (!event) return <div className="p-6">Event not found.</div>;
 
     return (

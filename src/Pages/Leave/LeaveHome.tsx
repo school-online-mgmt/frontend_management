@@ -11,6 +11,7 @@ import { EmptySessionState } from "../../components/common/SessionGate";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import useTabState from "../../hooks/useTabState";
 import { useSessionId } from "../../context/SessionContext";
+import { ErrorState } from "../../components/ui";
 
 const useLeaveSession = () => useSessionId();
 
@@ -117,7 +118,10 @@ function StudentLeavesTab() {
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                 </button>
             </div>
-            {loading ? <Spinner /> : leaves.length > 0 ? (
+            {loading ? <Spinner /> : leavesQuery.isError ? (
+                <ErrorState message="Could not load leave requests."
+                    onRetry={() => void leavesQuery.refetch()} />
+            ) : leaves.length > 0 ? (
                 <div className="space-y-3">
                     {leaves.map((l: any) => {
                         const sc = STATUS_CFG[l.status as LeaveStatus] || STATUS_CFG.PENDING;
@@ -225,7 +229,10 @@ function TeacherLeavesTab() {
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                 </button>
             </div>
-            {loading ? <Spinner /> : leaves.length > 0 ? (
+            {loading ? <Spinner /> : leavesQuery.isError ? (
+                <ErrorState message="Could not load leave requests."
+                    onRetry={() => void leavesQuery.refetch()} />
+            ) : leaves.length > 0 ? (
                 <div className="space-y-3">
                     {leaves.map((l: any) => {
                         const sc = STATUS_CFG[l.status as LeaveStatus] || STATUS_CFG.PENDING;

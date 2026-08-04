@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import { useSession } from "../../context/SessionContext";
+import { ErrorState } from "../../components/ui";
 
 interface SessionOpt { id: string; name: string; status?: "ACTIVE" | "ENDING" | "ENDED" }
 
@@ -103,6 +104,19 @@ const CourseHome = () => {
                                             <td colSpan={2} className="text-center p-16 text-slate-500">
                                                 <RefreshCcw size={18} className="animate-spin inline mr-2" />
                                                 Loading courses...
+                                            </td>
+                                        </tr>
+                                    ) : coursesQuery.isError ? (
+                                        <tr>
+                                            <td colSpan={2} className="p-0">
+                                                {/* Previously fell through to "No courses found in
+                                                    this session", which reads as a setup problem
+                                                    rather than a failed request. */}
+                                                <ErrorState
+                                                    message="Could not load courses."
+                                                    onRetry={() => void coursesQuery.refetch()}
+                                                    testId="courses-error"
+                                                />
                                             </td>
                                         </tr>
                                     ) : courses.length > 0 ? (

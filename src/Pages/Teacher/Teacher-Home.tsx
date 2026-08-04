@@ -14,6 +14,7 @@ import TeacherCalculatorModal from "../../components/Teacher/TeacherCalculatorMo
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import type { Teacher, TeacherApplication } from "../../api/types";
+import { ErrorState } from "../../components/ui";
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 const AVATAR_COLORS = [
@@ -546,7 +547,17 @@ const TeacherHome = () => {
               )}
             </div>
 
-            {filtered.length === 0 ? (
+            {teachersQuery.isError ? (
+              /* "Add your first teacher to get started" shown to an established
+                 school is how a failed request becomes a support ticket. */
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <ErrorState
+                  message="Could not load teachers."
+                  onRetry={() => void teachersQuery.refetch()}
+                  testId="teachers-error"
+                />
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 flex flex-col items-center justify-center gap-3">
                 <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center">
                   <Users size={24} className="text-slate-300" />
@@ -697,6 +708,14 @@ const TeacherHome = () => {
             {appsLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 size={24} className="animate-spin text-violet-500" />
+              </div>
+            ) : applicationsQuery.isError ? (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <ErrorState
+                  message="Could not load job applications."
+                  onRetry={() => void applicationsQuery.refetch()}
+                  testId="teacher-applications-error"
+                />
               </div>
             ) : applications.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 flex flex-col items-center justify-center gap-3">

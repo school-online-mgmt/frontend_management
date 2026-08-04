@@ -12,6 +12,7 @@ import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import useTabState from "../../hooks/useTabState";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
+import { ErrorState } from "../../components/ui";
 
 const MONTHS = ["", "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
@@ -113,7 +114,7 @@ function LeaveBalancesTab() {
         }).catch(() => {});
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "leave-balances", sessionId],
         queryFn: () => api.getHrLeaveBalances(sessionId),
         enabled: !!sessionId,
@@ -134,7 +135,8 @@ function LeaveBalancesTab() {
                 )}
             </div>
             {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
-            : !data || data.teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers / balances for this session.</div>
+            : isError ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load leave balances." onRetry={() => void refetch()} testId="hr-balances-error" /></div>
+                        : !data || data.teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers / balances for this session.</div>
             : (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
@@ -189,7 +191,7 @@ function AppraisalsTab() {
         }).catch(() => {});
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "appraisals", sessionId],
         queryFn: () => api.listAppraisals(sessionId),
         enabled: !!sessionId,
@@ -225,7 +227,8 @@ function AppraisalsTab() {
             </div>
 
             {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
-            : teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers.</div>
+            : isError ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load appraisals." onRetry={() => void refetch()} testId="hr-appraisals-error" /></div>
+                        : teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers.</div>
             : (
                 <div className="space-y-2">
                     {teachers.map(t => {
@@ -430,7 +433,7 @@ function StaffSalariesTab() {
     const [profileTarget, setProfileTarget] = useState<HrStaffRow | null>(null);
     const [salaryTarget, setSalaryTarget] = useState<HrStaffRow | null>(null);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "staff"],
         queryFn: () => api.listHrStaff(),
     });
@@ -459,6 +462,8 @@ function StaffSalariesTab() {
 
             {isLoading ? (
                 <div className="flex justify-center py-16"><Loader2 className="animate-spin text-emerald-600" /></div>
+            ) : isError ? (
+                <ErrorState message="Could not load staff." onRetry={() => void refetch()} testId="hr-staff-error" />
             ) : rows.length === 0 ? (
                 <div className="text-center py-16 text-slate-500">No staff found.</div>
             ) : (
@@ -703,7 +708,7 @@ function PayrollRunsTab() {
     const [running, setRunning] = useState(false);
     const [openRun, setOpenRun] = useState<string | null>(null);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "runs"],
         queryFn: () => api.listPayrollRuns(),
     });
@@ -741,6 +746,8 @@ function PayrollRunsTab() {
 
             {isLoading ? (
                 <div className="flex justify-center py-16"><Loader2 className="animate-spin text-emerald-600" /></div>
+            ) : isError ? (
+                <ErrorState message="Could not load payroll runs." onRetry={() => void refetch()} testId="hr-runs-error" />
             ) : (data?.runs ?? []).length === 0 ? (
                 <div className="text-center py-16 text-slate-500">No payroll runs yet.</div>
             ) : (

@@ -13,6 +13,7 @@ import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import useTabState from "../../hooks/useTabState";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
+import { ErrorState } from "../../components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -1316,7 +1317,7 @@ function ItemsTab({ onOpenItem, onOpenModal, itemsCount }: {
     const [active, setActive] = useState<"true" | "false" | "all">("true");
     const [lowOnly, setLowOnly] = useState(false);
 
-    const { data, isLoading, refetch, isFetching } = useQuery({
+    const { data, isLoading, isError, refetch, isFetching } = useQuery({
         queryKey: ["inventory-items", search, category, active, lowOnly],
         queryFn: () => api.listInventoryItems({
             search: search.trim() || undefined,
@@ -1431,6 +1432,10 @@ function ItemsTab({ onOpenItem, onOpenModal, itemsCount }: {
                                     {isLoading ? (
                                         <tr><td colSpan={7} className="py-12 text-center">
                                             <Loader2 className="animate-spin text-lime-500 inline" size={24} />
+                                        </td></tr>
+                                    ) : isError ? (
+                                        <tr><td colSpan={7} className="p-0">
+                                            <ErrorState message="Could not load inventory items." onRetry={() => void refetch()} testId="inventory-items-error" />
                                         </td></tr>
                                     ) : items.length === 0 ? (
                                         <tr><td colSpan={7} className="py-16 text-center">
@@ -1613,7 +1618,7 @@ function TransactionsTab() {
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
 
-    const { data, isLoading, refetch, isFetching } = useQuery({
+    const { data, isLoading, isError, refetch, isFetching } = useQuery({
         queryKey: ["inventory-transactions", type, consumerType, fromDate, toDate],
         queryFn: () => api.listInventoryTransactions({
             type: type || undefined,
@@ -1708,7 +1713,11 @@ function TransactionsTab() {
                                 <tr><td colSpan={7} className="py-12 text-center">
                                     <Loader2 className="animate-spin text-lime-500 inline" size={24} />
                                 </td></tr>
-                            ) : rows.length === 0 ? (
+                            ) : isError ? (
+                                        <tr><td colSpan={7} className="p-0">
+                                            <ErrorState message="Could not load stock transactions." onRetry={() => void refetch()} testId="inventory-txns-error" />
+                                        </td></tr>
+                                    ) : rows.length === 0 ? (
                                 <tr><td colSpan={7} className="py-16 text-center">
                                     <div className="flex flex-col items-center gap-2 text-slate-400">
                                         <History size={32} strokeWidth={1.5} />

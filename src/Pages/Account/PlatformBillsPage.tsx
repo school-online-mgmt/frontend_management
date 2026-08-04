@@ -8,6 +8,7 @@ import {
 import api from "../../api/api";
 import { useToast } from "../../context/ToastContext";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { ErrorState } from "../../components/ui";
 
 declare global {
     interface Window { Razorpay: any; }
@@ -118,7 +119,19 @@ const PlatformBillsPage = () => {
     };
 
     if (query.isLoading) return <div className="p-6 text-slate-500">Loading bills…</div>;
-    if (!query.data) return <div className="p-6 text-rose-600">Failed to load bills.</div>;
+    // A flat "Failed to load bills." with no retry, on the screen a school pays
+    // us from. Give it the standard error state so it can be retried in place.
+    if (query.isError || !query.data) {
+        return (
+            <div className="p-6">
+                <ErrorState
+                    message="Could not load your bills."
+                    onRetry={() => void query.refetch()}
+                    testId="platform-bills-error"
+                />
+            </div>
+        );
+    }
 
     const { rows, totals, activeCycle } = query.data;
 

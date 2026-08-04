@@ -341,3 +341,55 @@ export interface TeacherApplication {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── Academic Structure ────────────────────────────────────────────────────────
+//
+// The shape of the school for ONE session. A school's structure belongs to an
+// academic year, not to the school forever — the same classes are rebuilt (or
+// carried forward) each year.
+
+export interface StructureGapRef {
+  id: string;
+  name: string;
+  /** Present on section-level gaps so the UI can show "Class 5 · Section A". */
+  classId?: string;
+  className?: string;
+}
+
+export interface StructureSection {
+  id: string;
+  name: string;
+  slug: string;
+  teacher: { id: string; name: string } | null;
+  studentCount: number;
+}
+
+export interface StructureClass {
+  id: string;
+  name: string;
+  slug: string;
+  teacher: { id: string; name: string } | null;
+  studentCount: number;
+  sections: StructureSection[];
+}
+
+export interface StructureOverview {
+  session: { id: string; name: string; status: string };
+  totals: { classes: number; sections: number; courses: number; subjects: number; students: number };
+  readiness: {
+    /** 0 when there is no structure at all — an empty school is not a ready one. */
+    percent: number;
+    /** Only the gaps that BLOCK daily work; see the backend for what counts. */
+    blockingIssues: number;
+    isReady: boolean;
+  };
+  gaps: {
+    classesWithoutSections: StructureGapRef[];
+    classesWithoutTeacher: StructureGapRef[];
+    sectionsWithoutTeacher: StructureGapRef[];
+    /** Informational, not a fault — a section is legitimately empty before admissions. */
+    emptySections: StructureGapRef[];
+    coursesWithoutSubjects: StructureGapRef[];
+  };
+  classes: StructureClass[];
+}

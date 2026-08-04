@@ -13,6 +13,7 @@ import type { Subject, Session } from "../../api/types";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import { useSession } from "../../context/SessionContext";
+import { ErrorState } from "../../components/ui";
 
 /* ── Subject type config ─────────────────────────────────────────────────── */
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof BookOpen; bg: string; text: string; border: string }> = {
@@ -142,7 +143,8 @@ const SubjectPage = () => {
   const [viewMode, setViewMode]                   = useState<"grid" | "table">("grid");
 
   const {
-    data: subjects = [], isLoading: subjectsLoading, refetch: refetchSubjects,
+    data: subjects = [], isLoading: subjectsLoading, isError: subjectsError,
+    refetch: refetchSubjects,
   } = useQuery<Subject[]>({
     queryKey: ["subjects"],
     queryFn: () => api.getSubjects(),
@@ -412,8 +414,20 @@ const SubjectPage = () => {
           )}
         </div>
 
-        {/* ── Empty state ───────────────────────────────────────────────────── */}
-        {filtered.length === 0 ? (
+        {/* ── Error ─────────────────────────────────────────────────────────
+            Must precede the empty state: `subjects` defaults to [] on failure,
+            so a dead API rendered "No subjects found — create your first
+            subject" to a school with a full curriculum. */}
+        {subjectsError ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <ErrorState
+              message="Could not load subjects."
+              onRetry={() => void refetchSubjects()}
+              testId="subjects-error"
+            />
+          </div>
+        ) : /* ── Empty state ─────────────────────────────────────────────── */
+        filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 flex flex-col items-center justify-center gap-3">
             <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center">
               <BookOpen size={24} className="text-slate-300" />

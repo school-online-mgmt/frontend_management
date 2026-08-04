@@ -4,7 +4,7 @@ import ConfirmModal from "../common/ConfirmModal";
 
 interface CreateClassModalProps {
     /** The session this class will be created under — required, since classes
-        are session-scoped. Provided by the parent ClassHome page. */
+        are session-scoped. Provided by the parent Classes & Sections page. */
     sessionId: string;
     onClose: () => void;
     onSuccess: (msg: { type: "success" | "error"; text: string }) => void;

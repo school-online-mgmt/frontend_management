@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, Layers, Plus, Users, User, BookOpen, ChevronRight, ArrowLeft, Calendar, Bell } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import AddSectionModal from "../../components/Classes/AddSectionModal";
+import AddSectionModal from "../../components/Structure/AddSectionModal";
 import CreateCourseInClassModal from "../../components/Courses/CreateCourseInClassModal.tsx";
 import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
 import NoticeBoardsModal from "../../components/Classes/NoticeBoardsModal";
@@ -107,8 +107,14 @@ const ClassDetails = () => {
             {showSectionModal && (
                 <AddSectionModal
                     classId={classId}
+                    className={classData.name}
+                    existingSlugs={(classData.sections ?? []).map((s: any) => s.slug)}
                     onClose={() => setShowSectionModal(false)}
-                    onSuccess={(msg: any) => { showToast(msg.text, msg.type); fetchClass(); }}
+                    onSuccess={(n: number) => {
+                        showToast(`Added ${n} section${n === 1 ? "" : "s"}`, "success");
+                        setShowSectionModal(false);
+                        fetchClass();
+                    }}
                 />
             )}
             {showCreateCourseModal && (

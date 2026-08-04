@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
     CreateClassData,
+    StructureOverview,
     UpdateTeacherData,
     UpdateExamPayload,
     UpdateSchoolEventData,
@@ -276,6 +277,42 @@ class API {
     const response = await apiClient.get("/management/section");
     return response.data.sections;
 };
+
+  // ─── Academic Structure ──────────────────────────────────────────────────
+  /**
+   * The setup-health view for one session: totals, the gaps that block
+   * day-to-day work, and the full class→section tree with headcounts.
+   *
+   * One call replaces opening every class in turn to find out that a section
+   * has no teacher — which in practice was discovered in week two of term,
+   * when attendance could not be marked.
+   */
+  getStructureOverview = async (sessionId: string) => {
+    const res = await apiClient.get("/management/structure/overview", { params: { sessionId } });
+    return res.data as StructureOverview;
+  };
+  /**
+   * Create many classes and their sections in ONE transaction.
+   *
+   * Anything whose slug already exists in the session is SKIPPED and reported,
+   * not treated as an error — schools build their structure incrementally
+   * ("we forgot Class 9"), so a rerun must be able to add only what is missing.
+   */
+  createStructureBulk = async (payload: {
+    sessionId: string;
+    classes: Array<{
+      name: string; slug: string; teacherId?: string | null;
+      sections: Array<{ name: string; slug: string; teacherId?: string | null }>;
+    }>;
+  }) => {
+    const res = await apiClient.post("/management/structure/bulk", payload);
+    return res.data as {
+      message: string;
+      summary: { classesCreated: number; classesSkipped: number; sectionsCreated: number; sectionsSkipped: number };
+      created: Array<{ class: string; sections: number }>;
+      skipped: Array<{ class: string; reason: string }>;
+    };
+  };
 
   // Get staff assignment gaps (classes/sections/subjects without teacher)
   getStaffGaps = async (): Promise<{

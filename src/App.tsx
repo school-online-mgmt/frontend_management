@@ -17,7 +17,6 @@ import CourseDetails from "./Pages/Course/CourseDetails.tsx";
 import TeacherHome from './Pages/Teacher/Teacher-Home.tsx';
 import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
 import AssignmentsPage from './Pages/Teacher/AssignmentsPage.tsx';
-import ClassHome from "./Pages/Class/ClassHome.tsx";
 import ClassDetails from "./Pages/Class/ClassDetails.tsx";
 import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
@@ -51,6 +50,9 @@ import SupportCenter from "./Pages/Support/SupportCenter.tsx";
 import ActivityPage from "./Pages/Activity/ActivityPage.tsx";
 import GrievancesPage from "./Pages/Grievances/GrievancesPage.tsx";
 import PtmPage from "./Pages/Ptm/PtmPage.tsx";
+import StructureOverviewPage from "./Pages/Structure/StructureOverview.tsx";
+import ClassesSections from "./Pages/Structure/ClassesSections.tsx";
+import QuickSetup from "./Pages/Structure/QuickSetup.tsx";
 import FeedbackPage from "./Pages/Feedback/FeedbackPage.tsx";
 import TeacherApply from "./Pages/TeacherApply.tsx";
 import OnboardingPage from "./Pages/Onboarding/OnboardingPage.tsx";
@@ -102,7 +104,13 @@ function App() {
               <Route path="/subject/:slug" element={<SubjectDetails />} />
               <Route path="/course-Home" element={<CourseHome />} />
               <Route path="/course/:courseId" element={<CourseDetails />} />
-              <Route path="/class-Home" element={<ClassHome />} />
+              {/* Academic Structure (FR-018) — overview, the merged
+                  Classes & Sections page, and the bulk builder. */}
+              <Route path="/structure" element={<StructureOverviewPage />} />
+              <Route path="/structure/classes" element={<ClassesSections />} />
+              <Route path="/structure/setup" element={<QuickSetup />} />
+              {/* Kept so old links and bookmarks still resolve. */}
+              <Route path="/class-Home" element={<ClassesSections />} />
               <Route path="/class/:classId" element={<ClassDetails />} />
               <Route path="/section/:sectionId" element={<SectionDetails />} />
               <Route path="/sessions" element={<SessionsPage />} />
