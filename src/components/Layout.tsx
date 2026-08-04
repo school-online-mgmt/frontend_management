@@ -82,7 +82,7 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus, module: "PEOPLE" },
-      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList, module: "STUDIES" },
+      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList, module: "ENTRANCE_EXAM" },
     ],
   },
   {
@@ -91,7 +91,7 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/students-home", label: "Students", icon: Users, module: "PEOPLE" },
-      { path: "/documents", label: "Certificates & TC", icon: FileText, module: "PEOPLE" },
+      { path: "/documents", label: "Certificates & TC", icon: FileText, module: "DOCUMENTS" },
     ],
   },
   {
@@ -104,8 +104,8 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/teacher-home", label: "Teachers", icon: UserCog, module: "TEACHERS" },
       { path: "/assignments", label: "Class Assignments", icon: ClipboardList, module: "TEACHERS" },
-      { path: "/teacher-attendance", label: "Staff Attendance", icon: UserCheck, module: "ATTENDANCE" },
-      { path: "/hr", label: "Salaries & Payroll", icon: Wallet, module: "TEACHERS" },
+      { path: "/teacher-attendance", label: "Staff Attendance", icon: UserCheck, module: "STAFF_ATTENDANCE" },
+      { path: "/hr", label: "Salaries & Payroll", icon: Wallet, module: "HR_PAYROLL" },
       { path: "/staff", label: "Staff Accounts", icon: Settings, module: "TEACHERS" },
       { path: "/permissions", label: "Roles & Permissions", icon: KeyRound, module: "TEACHERS" },
     ],
@@ -133,8 +133,8 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/exam-home", label: "Exams", icon: ClipboardList, module: "STUDIES" },
-      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma, module: "STUDIES" },
-      { path: "/performance", label: "Performance", icon: BarChart3, module: "STUDIES" },
+      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma, module: "REPORT_CARDS" },
+      { path: "/performance", label: "Performance", icon: BarChart3, module: "ANALYTICS" },
     ],
   },
   {
@@ -143,7 +143,7 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck, module: "ATTENDANCE" },
-      { path: "/leaves", label: "Leave Management", icon: CalendarDays, module: "ATTENDANCE" },
+      { path: "/leaves", label: "Leave Management", icon: CalendarDays, module: "LEAVE" },
     ],
   },
   {
@@ -164,11 +164,11 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/notices", label: "Notice Board", icon: Megaphone, module: "COMMUNICATION" },
-      { path: "/communication", label: "Email Broadcast", icon: Send, module: "COMMUNICATION" },
+      { path: "/communication", label: "Email Broadcast", icon: Send, module: "BROADCAST" },
       // No separate "Events" entry: /events is a redirect to /calendar, so
       // listing both would be the same page under two names.
       { path: "/calendar", label: "Calendar & Events", icon: Calendar, module: "COMMUNICATION" },
-      { path: "/publications", label: "School Documents", icon: ScrollText, module: "COMMUNICATION" },
+      { path: "/publications", label: "School Documents", icon: ScrollText, module: "PUBLICATIONS" },
     ],
   },
   {
@@ -181,7 +181,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/ptm", label: "Parent Meetings", icon: CalendarClock, module: "FEEDBACK" },
       { path: "/feedback", label: "Feedback", icon: MessagesSquare, module: "FEEDBACK" },
-      { path: "/grievances", label: "Grievances", icon: MessageSquareWarning, module: null },
+      { path: "/grievances", label: "Grievances", icon: MessageSquareWarning, module: "GRIEVANCE" },
     ],
   },
   {

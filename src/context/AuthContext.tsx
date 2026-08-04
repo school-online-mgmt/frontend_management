@@ -41,7 +41,16 @@ const READ_ACTIONS = new Set(['read', 'view', 'export', 'read-sensitive', 'board
 // everyone else's. Showing it modules its group can't use would only produce
 // 403s a click later.
 export const FULL_ACCESS_ROLES = ['ADMIN', 'PRINCIPAL'] as const;
-export const ALL_MODULES = ['PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY', 'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK', 'TIMETABLE', 'PANTRY', 'FEEDBACK'] as const;
+// Keep in sync with `PlatformModule` in backend src/Middlewares/requireModule.ts.
+export const ALL_MODULES = [
+  'PEOPLE', 'TEACHERS', 'ACADEMICS', 'STUDIES', 'ATTENDANCE', 'LIBRARY',
+  'COMMUNICATION', 'FINANCE', 'TRANSPORT', 'SPORTS', 'INVENTORY', 'HOMEWORK',
+  'TIMETABLE', 'PANTRY', 'FEEDBACK',
+  // Gated 2026-08-04 (migrations 0125/0126) — capabilities that shipped ungated.
+  'LEAVE', 'DOCUMENTS', 'PUBLICATIONS', 'GRIEVANCE', 'ENTRANCE_EXAM', 'COMPLIANCE',
+  // Split out of a coarser parent 2026-08-04 (migrations 0127/0128).
+  'HR_PAYROLL', 'STAFF_ATTENDANCE', 'ONLINE_PAYMENTS', 'REPORT_CARDS', 'ANALYTICS', 'BROADCAST',
+] as const;
 export type AppModule = typeof ALL_MODULES[number];
 
 /**
