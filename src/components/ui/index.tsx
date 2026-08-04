@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   AlertTriangle, CheckCircle2, Info, XCircle, Inbox, Loader2,
-  ArrowUpRight, ArrowDownRight, Minus, ChevronRight,
+  ArrowUpRight, ArrowDownRight, Minus, ChevronRight, Lock,
 } from 'lucide-react';
 
 /**
@@ -246,23 +246,66 @@ export const EmptyState: React.FC<{
   </div>
 );
 
-/** Distinct from EmptyState on purpose — "it broke" must not read as "nothing here". */
-export const ErrorState: React.FC<{ message?: string; onRetry?: () => void; testId?: string }> = ({
-  message, onRetry, testId,
-}) => (
-  <div data-testid={testId ?? 'error-state'} className="text-center py-14 px-6">
-    <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-3">
-      <XCircle size={22} className="text-rose-500" />
+/**
+ * Is this failure a module paywall rather than a broken request?
+ *
+ * The backend answers 402 + `MODULE_NOT_ENABLED` when a school's plan does not
+ * cover the feature. That is not an error the user can retry away, and showing
+ * them a "Try again" button invites them to click it forever.
+ */
+export const isModulePaywall = (err: unknown): boolean => {
+  const e = err as { response?: { status?: number; data?: { code?: string } } } | undefined;
+  return e?.response?.status === 402 || e?.response?.data?.code === 'MODULE_NOT_ENABLED';
+};
+
+/**
+ * Distinct from EmptyState on purpose — "it broke" must not read as "nothing here".
+ *
+ * Pass `error` (the caught request error) and a 402 renders as an upgrade
+ * prompt with no retry, because retrying a billing state never succeeds.
+ */
+export const ErrorState: React.FC<{
+  message?: string;
+  onRetry?: () => void;
+  testId?: string;
+  /** The caught error, so a module paywall can be told from a real failure. */
+  error?: unknown;
+}> = ({ message, onRetry, testId, error }) => {
+  const paywall = error !== undefined && isModulePaywall(error);
+
+  if (paywall) {
+    const mod = (error as { response?: { data?: { module?: string } } })?.response?.data?.module;
+    return (
+      <div data-testid={testId ? testId + '-paywall' : 'module-paywall'} className="text-center py-14 px-6">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-3">
+          <Lock size={22} className="text-amber-600" />
+        </div>
+        <p className="text-sm font-semibold text-slate-800">Not included in your plan</p>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+          {mod
+            ? 'The ' + mod.replace(/_/g, ' ').toLowerCase() + ' module is not enabled for your school.'
+            : 'This feature is not enabled for your school.'}{' '}
+          Contact your administrator to add it.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid={testId ?? 'error-state'} className="text-center py-14 px-6">
+      <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-3">
+        <XCircle size={22} className="text-rose-500" />
+      </div>
+      <p className="text-sm font-semibold text-slate-800">Could not load this</p>
+      <p className="text-xs text-slate-500 mt-1">{message ?? 'Something went wrong fetching the data.'}</p>
+      {onRetry && (
+        <button onClick={onRetry} className="mt-4 px-3.5 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">
+          Try again
+        </button>
+      )}
     </div>
-    <p className="text-sm font-semibold text-slate-800">Could not load this</p>
-    <p className="text-xs text-slate-500 mt-1">{message ?? 'Something went wrong fetching the data.'}</p>
-    {onRetry && (
-      <button onClick={onRetry} className="mt-4 px-3.5 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800">
-        Try again
-      </button>
-    )}
-  </div>
-);
+  );
+};
 
 /* ── Metrics ────────────────────────────────────────────────────────────── */
 

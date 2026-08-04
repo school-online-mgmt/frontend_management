@@ -90,8 +90,12 @@ function App() {
             <Route path="/student/:id" element={<StudentDetails />} />
             <Route path="/staff" element={<StaffHome />} />
             <Route path="/permissions" element={<PermissionsHome />} />
-            <Route path="/entrance-papers" element={<EntrancePapersHome />} />
-            <Route path="/documents" element={<DocumentsPage />} />
+            <Route element={<ModuleGate module="ENTRANCE_EXAM" />}>
+              <Route path="/entrance-papers" element={<EntrancePapersHome />} />
+            </Route>
+            <Route element={<ModuleGate module="DOCUMENTS" />}>
+              <Route path="/documents" element={<DocumentsPage />} />
+            </Route>
 
             {/* TEACHERS — teacher onboarding & directory (always-on bundled default) */}
             <Route path="/teacher-home" element={<TeacherHome />} />
@@ -117,20 +121,38 @@ function App() {
               <Route path="/assignments" element={<AssignmentsPage />} />
             </Route>
 
-            {/* STUDIES — exam workflow + performance */}
+            {/* STUDIES — the exam cycle itself: papers, admit cards, marks */}
             <Route element={<ModuleGate module="STUDIES" />}>
               <Route path="/exam-home" element={<ExamHome />} />
               <Route path="/exam/:examId" element={<ExamDetails />} />
               <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
+            </Route>
+
+            {/* Extensions of STUDIES, each sold on its own. Kept OUTSIDE the
+                STUDIES block so the 402 names the module actually missing —
+                nesting would report "STUDIES" for a school that has it. */}
+            <Route element={<ModuleGate module="ANALYTICS" />}>
               <Route path="/performance" element={<ResultsPerformancePage />} />
+            </Route>
+            <Route element={<ModuleGate module="REPORT_CARDS" />}>
               <Route path="/consolidated-results" element={<AggregatePage />} />
             </Route>
 
-            {/* ATTENDANCE — daily student & teacher attendance + leaves + reports */}
+            {/* ATTENDANCE — daily STUDENT roll-call */}
             <Route element={<ModuleGate module="ATTENDANCE" />}>
               <Route path="/attendance" element={<AttendanceHome />} />
               <Route path="/attendance/jobs" element={<JobsPage />} />
+            </Route>
+
+            {/* STAFF_ATTENDANCE — the staff muster, split from ATTENDANCE */}
+            <Route element={<ModuleGate module="STAFF_ATTENDANCE" />}>
               <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
+            </Route>
+
+            {/* LEAVE — its own module since 0125/0126. Deliberately NOT nested
+                inside ATTENDANCE: nesting would silently require both, and
+                leave approval is a separate purchase. */}
+            <Route element={<ModuleGate module="LEAVE" />}>
               <Route path="/leaves" element={<LeaveHome />} />
             </Route>
 
@@ -140,13 +162,21 @@ function App() {
               <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
             </Route>
 
-            {/* COMMUNICATION — notices, broadcasts, calendar */}
+            {/* COMMUNICATION — notices and the school calendar */}
             <Route element={<ModuleGate module="COMMUNICATION" />}>
               <Route path="/notices" element={<NoticeBoardHome />} />
               <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
               <Route path="/events" element={<Navigate to="/calendar" replace />} />
               <Route path="/calendar" element={<CalendarPage />} />
+            </Route>
+
+            {/* BROADCAST — bulk email, split from COMMUNICATION in 0127/0128.
+                A school can publish notices without buying email blasts. */}
+            <Route element={<ModuleGate module="BROADCAST" />}>
               <Route path="/communication" element={<CommunicationPage />} />
+            </Route>
+
+            <Route element={<ModuleGate module="PUBLICATIONS" />}>
               <Route path="/publications" element={<PublicationsPage />} />
             </Route>
 
@@ -175,10 +205,22 @@ function App() {
               <Route path="/sports/events/:eventId" element={<SportsEventDetail />} />
             </Route>
 
-            {/* INVENTORY — item master, procurement, consumption ledger */}
+            {/* INVENTORY — item master, procurement, consumption ledger.
+                `/hr` and `/pantry` used to be nested in here, which meant a
+                school owning PANTRY but not INVENTORY could not reach its own
+                canteen, and payroll was gated on the stock module. Both now
+                gate on what they actually are. */}
             <Route element={<ModuleGate module="INVENTORY" />}>
               <Route path="/inventory" element={<InventoryHub />} />
+            </Route>
+
+            {/* HR_PAYROLL — split from core TEACHERS in 0127/0128 */}
+            <Route element={<ModuleGate module="HR_PAYROLL" />}>
               <Route path="/hr" element={<PayrollHub />} />
+            </Route>
+
+            {/* PANTRY */}
+            <Route element={<ModuleGate module="PANTRY" />}>
               <Route path="/pantry" element={<PantryHub />} />
             </Route>
 
@@ -198,7 +240,9 @@ function App() {
               <Route path="/platform-bills" element={<PlatformBillsPage />} />
               <Route path="/support" element={<SupportCenter />} />
               <Route path="/activity" element={<ActivityPage />} />
+            <Route element={<ModuleGate module="GRIEVANCE" />}>
               <Route path="/grievances" element={<GrievancesPage />} />
+            </Route>
               <Route path="/ptm" element={<PtmPage />} />
               <Route path="/feedback" element={<FeedbackPage />} />
             </Route>
