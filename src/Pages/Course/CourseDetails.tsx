@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeft, Plus, Trash2, BookOpen, GraduationCap,
-    Calendar, Layers, Hash, School, ChevronRight, Loader2
+    Calendar, Layers, Hash, School, ChevronRight
 } from "lucide-react";
 import api from "../../api/api";
+import { EmptyState, ErrorState, Skeleton } from "../../components/ui";
 import AddSubjectToCourseModal from "../../components/Courses/AddSubjectToCourseModal";
 import ConfirmModal from "../../components/common/ConfirmModal.tsx";
 
@@ -40,11 +41,20 @@ const CourseDetails = () => {
 
     const isCourseInUse = course?.subjects?.length > 0;
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const fetchCourse = async () => {
+        setLoadError(null);
         try {
             const data = await api.getCourseById(courseId);
             setCourse(data);
-        } catch {
+        } catch (e: unknown) {
+            // The message below auto-dismisses after 2.5s, and the render
+            // reads `course.class?.id` — on null `course` the optional chain
+            // does not help, so a failed load threw a TypeError and left a
+            // white screen. The guard added below the loader is what actually
+            // fixes that; this just keeps the error for it to show.
+            setLoadError(e);
             showMessage("error", "Failed to load course");
         } finally {
             setIsLoading(false);
@@ -87,8 +97,25 @@ const CourseDetails = () => {
     };
 
     if (isLoading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <Loader2 className="animate-spin text-emerald-600" size={36} />
+        <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+            <div className="bg-white rounded-2xl border border-slate-100 p-6"><Skeleton rows={6} /></div>
+        </div>
+    );
+
+    // Everything below dereferences `course`, so this guard has to come first.
+    if (!course) return (
+        <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition text-sm font-medium mb-4"
+            >
+                <ArrowLeft size={16} /> Back
+            </button>
+            <div className="bg-white rounded-2xl border border-slate-100">
+                {loadError != null
+                    ? <ErrorState message="Could not load this course." error={loadError} onRetry={fetchCourse} testId="course-detail-error" />
+                    : <EmptyState title="Course not found" message="It may have been deleted." testId="course-detail-missing" />}
+            </div>
         </div>
     );
 

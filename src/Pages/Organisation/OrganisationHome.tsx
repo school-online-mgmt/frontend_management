@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import api, { type Wing, type Department } from '../../api/api';
+import { ErrorState, Skeleton } from '../../components/ui';
 import { Layers, Building2, Plus, Trash2, Pencil, X, UserCheck } from 'lucide-react';
 
 /**
@@ -159,7 +160,14 @@ export default function OrganisationHome() {
             {notice && <div data-testid="org-notice" className="mb-4 p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm">{notice}</div>}
 
             {loading ? (
-                <p className="text-slate-500 text-sm">Loading…</p>
+                <Skeleton rows={4} />
+            ) : error ? (
+                /* The banner above already names the failure. Without this
+                   branch the empty state ALSO rendered underneath it, inviting
+                   the admin to create wings that may already exist. */
+                <div className="border border-slate-200 rounded-2xl">
+                    <ErrorState message={error} onRetry={() => void load()} testId="org-load-error" />
+                </div>
             ) : rows.length === 0 ? (
                 <div data-testid="org-empty" className="p-8 text-center border border-dashed border-slate-200 rounded-2xl">
                     <p className="text-slate-500 text-sm">

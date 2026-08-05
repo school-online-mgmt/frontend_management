@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-    ArrowLeft, Loader2, Layers, Users, User, BookOpen,
+    ArrowLeft, Layers, Users, User, BookOpen,
     School, Calendar, AlertTriangle, RefreshCcw, GraduationCap, Phone, UserX, Bell,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState, Metric, Skeleton } from "../../components/ui";
 import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
 import NoticeBoardsModal from "../../components/Classes/NoticeBoardsModal";
 
@@ -18,6 +19,7 @@ const SectionDetails = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<unknown>(null);
     const [showBoardsModal, setShowBoardsModal] = useState(false);
 
     const fetchSection = useCallback(async (refresh = false) => {
@@ -39,6 +41,9 @@ const SectionDetails = () => {
 
             if (sectionData.status === "rejected") {
                 setError("Failed to load section details.");
+                // Kept alongside the message so ErrorState can tell a module
+                // paywall (402) from a genuine failure and drop the retry.
+                setLoadError(sectionData.reason);
                 return;
             }
             setSection(sectionData.value.section);
@@ -47,8 +52,9 @@ const SectionDetails = () => {
                 const gaps: any[] = gapsData.value.subjectGaps ?? [];
                 setUnassignedSubjects(gaps.filter((g: any) => g.sectionId === sectionId));
             }
-        } catch {
+        } catch (e: unknown) {
             setError("Failed to load section details.");
+            setLoadError(e);
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
@@ -59,10 +65,9 @@ const SectionDetails = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="text-center">
-                    <Loader2 className="animate-spin mx-auto text-emerald-600 mb-3" size={36} />
-                    <p className="text-slate-500 text-sm">Loading section details...</p>
+            <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <Skeleton rows={6} />
                 </div>
             </div>
         );
@@ -70,14 +75,14 @@ const SectionDetails = () => {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="text-center max-w-sm">
-                    <AlertTriangle className="mx-auto text-amber-500 mb-3" size={36} />
-                    <p className="text-slate-700 font-semibold mb-1">Could not load section</p>
-                    <p className="text-slate-500 text-sm mb-4">{error}</p>
-                    <button data-testid="section-fetch-section-btn" onClick={() => fetchSection()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
-                        Retry
-                    </button>
+            <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+                <div className="bg-white rounded-2xl border border-slate-100">
+                    <ErrorState
+                        message={error}
+                        error={loadError}
+                        onRetry={() => fetchSection()}
+                        testId="section-detail-error"
+                    />
                 </div>
             </div>
         );
@@ -148,21 +153,29 @@ const SectionDetails = () => {
                     scopeLabel={`Boards visible to ${section.class?.name ?? ""} · ${section.name}`}
                 />
 
-                {/* Stats */}
+                {/* Stats. The unassigned-subjects tile carries a tone rather
+                    than only a colour: "3 subjects unassigned" is a gap someone
+                    has to close before the section can be taught. */}
                 <div className="grid grid-cols-3 gap-4 mt-6">
-                    {[
-                        { icon: <Users size={18} className="text-emerald-500" />, value: section.studentCount ?? 0, label: "Students Enrolled", bg: "bg-emerald-50" },
-                        { icon: <BookOpen size={18} className="text-amber-500" />, value: section.subjectAssignments?.length ?? 0, label: "Subject Incharges", bg: "bg-amber-50" },
-                        { icon: <AlertTriangle size={18} className="text-rose-500" />, value: unassignedSubjects.length, label: unassignedSubjects.length === 0 ? "All Covered" : "Subjects Unassigned", bg: unassignedSubjects.length === 0 ? "bg-emerald-50" : "bg-rose-50" },
-                    ].map(stat => (
-                        <div key={stat.label} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center flex-shrink-0`}>{stat.icon}</div>
-                            <div>
-                                <p className="text-xl font-bold text-slate-900">{stat.value}</p>
-                                <p className="text-xs text-slate-500">{stat.label}</p>
-                            </div>
-                        </div>
-                    ))}
+                    <Metric
+                        label="Students Enrolled"
+                        value={section.studentCount ?? 0}
+                        icon={<Users size={12} />}
+                        testId="section-metric-students"
+                    />
+                    <Metric
+                        label="Subject Incharges"
+                        value={section.subjectAssignments?.length ?? 0}
+                        icon={<BookOpen size={12} />}
+                        testId="section-metric-incharges"
+                    />
+                    <Metric
+                        label={unassignedSubjects.length === 0 ? "All Covered" : "Subjects Unassigned"}
+                        value={unassignedSubjects.length}
+                        icon={<AlertTriangle size={12} />}
+                        tone={unassignedSubjects.length === 0 ? "good" : "bad"}
+                        testId="section-metric-unassigned"
+                    />
                 </div>
             </div>
 
