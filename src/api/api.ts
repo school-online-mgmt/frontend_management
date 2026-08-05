@@ -3184,7 +3184,218 @@ lookupParent = async (phone: string): Promise<{
         (await apiClient.put(`/management/org/departments/${id}/hod`, { hodTeacherId })).data as { message: string; department: Department };
     assignSubjectsToDepartment = async (id: string, subjectIds: string[]) =>
         (await apiClient.put(`/management/org/departments/${id}/subjects`, { subjectIds })).data as { message: string; assigned: number };
+
+    // ── Readmission (year-end rollover) ───────────────────────────────────────
+    //
+    // After a session is finalised every continuing student appears on the
+    // applicants page for the next year. Each gets one of three outcomes:
+    // admitted, marked alumni, or marked abandoned.
+
+    getReadmissionApplicants = async (params: {
+        sessionId: string;
+        kind?: 'ALL' | 'RETURNING' | 'NEW';
+        status?: string;
+    }) =>
+        (await apiClient.get('/management/readmission/applicants', { params }))
+            .data as { applicants: ReadmissionApplicant[]; unresolved: UnresolvedCount };
+
+    getAdmitContext = async (applicantId: string) =>
+        (await apiClient.get(`/management/readmission/applicants/${applicantId}/admit-context`))
+            .data as AdmitContext;
+
+    generateReadmissionApplicants = async (finishedSessionId: string, targetSessionId?: string) =>
+        (await apiClient.post('/management/readmission/generate', { finishedSessionId, targetSessionId }))
+            .data as { message: string; created: number; skipped: number; targetSessionId: string | null };
+
+    /**
+     * Dues are WARNED about, not blocking. The first call without
+     * `acknowledgeDues` returns 409 + the amount so the UI can show it; the
+     * second call carries the acknowledgement. That round trip is deliberate —
+     * nobody should record a leaver without seeing what they owe.
+     */
+    markApplicantAlumni = async (applicantId: string, body: { acknowledgeDues?: boolean; note?: string } = {}) =>
+        (await apiClient.post(`/management/readmission/applicants/${applicantId}/mark-alumni`, body))
+            .data as { message: string; batchYear: number; duesAtExit: OutstandingDues | null };
+
+    markApplicantAbandoned = async (applicantId: string, body: { acknowledgeDues?: boolean; note?: string } = {}) =>
+        (await apiClient.post(`/management/readmission/applicants/${applicantId}/mark-abandoned`, body))
+            .data as { message: string; wasReturningStudent: boolean; duesAtExit: OutstandingDues | null };
+
+    // ── Alumni ────────────────────────────────────────────────────────────────
+
+    getAlumni = async (params: { batchYear?: number; search?: string; limit?: number; offset?: number } = {}) =>
+        (await apiClient.get('/management/alumni', { params })).data as { alumni: AlumnusRow[] };
+
+    getAlumniBatches = async () =>
+        (await apiClient.get('/management/alumni/batches'))
+            .data as { batches: Array<{ batchYear: number | null; count: number }> };
+
+    getUnresolvedReadmissions = async (sessionId: string) =>
+        (await apiClient.get('/management/alumni/unresolved', { params: { sessionId } }))
+            .data as UnresolvedCount & { note?: string };
+
+    issueAlumniCredential = async (studentId: string, type: CredentialType) =>
+        (await apiClient.post(`/management/alumni/students/${studentId}/credentials`, { type }))
+            .data as { message: string; id: string; verificationToken: string };
+
+    revokeAlumniCredential = async (credentialId: string, reason: string) =>
+        (await apiClient.patch(`/management/alumni/credentials/${credentialId}/revoke`, { reason }))
+            .data as { message: string };
+
+    /** "Where are they now" — the number a prospectus is written from. */
+    getAlumniOutcomes = async () =>
+        (await apiClient.get('/management/alumni/outcomes')).data as AlumniOutcomes;
+
+    getReunions = async (upcoming = false) =>
+        (await apiClient.get('/management/alumni/reunions', { params: { upcoming } }))
+            .data as { reunions: ManagementReunion[] };
+
+    getAlumniBroadcastAudience = async (batchYear?: number) =>
+        (await apiClient.get('/management/alumni/broadcast-audience', { params: { batchYear } }))
+            .data as { count: number; recipients: Array<{ id: string; name: string; email: string }>; note: string };
+
+    setClassGraduating = async (classId: string, isGraduating: boolean) =>
+        (await apiClient.patch(`/management/alumni/classes/${classId}/graduating`, { isGraduating }))
+            .data as { class: { id: string; name: string; isGraduating: boolean } };
+
+    // ── WhatsApp channel settings ─────────────────────────────────────────────
+
+    getWhatsAppSettings = async () =>
+        (await apiClient.get('/management/settings/whatsapp')).data as WhatsAppSettings;
+
+    updateWhatsAppModules = async (moduleSettings: Record<string, boolean>) =>
+        (await apiClient.patch('/management/settings/whatsapp-modules', { moduleSettings }))
+            .data as { message: string; moduleSettings: Record<string, boolean> };
+
+    updateWhatsAppEnabled = async (enabled: boolean) =>
+        (await apiClient.patch('/management/settings/whatsapp', { enabled }))
+            .data as { message: string; enabled: boolean };
 }
+
+// ── Readmission & alumni types ────────────────────────────────────────────────
+
+export type CredentialType =
+    | 'TRANSFER_CERTIFICATE' | 'BONAFIDE' | 'CHARACTER_CERTIFICATE'
+    | 'MARKSHEET' | 'PROVISIONAL';
+
+export interface OutstandingDues {
+    amount: number;
+    invoiceCount: number;
+}
+
+export interface UnresolvedCount {
+    total: number;
+    promoted: number;
+    heldBack: number;
+}
+
+export interface ReadmissionApplicant {
+    id: string;
+    applicationNumber: string | null;
+    name: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    gender: string;
+    dateOfBirth: string | null;
+    status: string;
+    desiredCourseId: string | null;
+    transportOpted: boolean;
+    parentName: string | null;
+    parentPhone: string | null;
+    createdAt: string;
+    /** Null for a genuinely new applicant off the public form. */
+    sourceStudentId: string | null;
+    previousPromotionStatus: 'PENDING' | 'PROMOTE' | 'HOLD_BACK' | null;
+    previousClassName: string | null;
+    entranceExemptReason: string | null;
+    isReturningStudent: boolean;
+    /** Drives the red banner on the admit form. */
+    wasHeldBack: boolean;
+    outstandingDues: OutstandingDues | null;
+    entranceSkipped: boolean;
+}
+
+export interface AdmitContext {
+    applicantId: string;
+    studentId: string | null;
+    name: string;
+    isReturningStudent: boolean;
+    studentStatus: string | null;
+    previousClassName: string | null;
+    previousPromotionStatus: 'PENDING' | 'PROMOTE' | 'HOLD_BACK' | null;
+    desiredCourseId: string | null;
+    transportOpted: boolean;
+    entrance: {
+        skipped: boolean;
+        reason: string | null;
+        reasonLabel: string | null;
+        canOverride: boolean;
+    };
+    alert: { level: 'DANGER'; title: string; message: string } | null;
+    outstandingDues: OutstandingDues | null;
+}
+
+export interface AlumnusRow {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    batchYear: number | null;
+    graduationClassName: string | null;
+    graduatedAt: string | null;
+    listedInDirectory: boolean | null;
+    personalEmail: string | null;
+    employer: string | null;
+    higherEducationInstitution: string | null;
+}
+
+export interface AlumniOutcomes {
+    totalAlumni: number;
+    profilesCompleted: number;
+    inHigherEducation: number;
+    employed: number;
+    listedInDirectory: number;
+    byBatch: Array<{ batchYear: number | null; total: number; withOutcome: number }>;
+    /**
+     * Suppressed below a small-group threshold server-side: "1 alumnus at
+     * Google" plus a batch list identifies a person, which per-field privacy
+     * exists to prevent.
+     */
+    topInstitutions: Array<{ name: string; count: number }>;
+    topEmployers: Array<{ name: string; count: number }>;
+    note?: string;
+}
+
+export interface ManagementReunion {
+    id: string;
+    title: string;
+    description: string | null;
+    date: string;
+    endDate: string | null;
+    goingCount: number;
+    /** Replies PLUS their guests — what to cater for. */
+    headcount: number;
+    maybeCount: number;
+}
+
+export interface WhatsAppSettings {
+    enabled: boolean;
+    configured: boolean;
+    useOwnCredentials: boolean;
+    displayName: string | null;
+    senderNumber: string | null;
+    pricePer100: number;
+    monthlyCap: number | null;
+    usedThisMonth: number;
+    quietHours: { start: number; end: number };
+    moduleSettings: Record<string, boolean>;
+    modules: string[];
+    /** Shared mode sends under the platform's number — schools must be told. */
+    senderIdentityNote: string;
+}
+
 export default new API();
 
 // ── Entrance exam types (FR-012) ────────────────────────────────────────────

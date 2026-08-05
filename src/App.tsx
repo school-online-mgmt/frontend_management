@@ -19,6 +19,9 @@ import TeacherDetails from './Pages/Teacher/Teacher_details.tsx';
 import AssignmentsPage from './Pages/Teacher/AssignmentsPage.tsx';
 import ClassDetails from "./Pages/Class/ClassDetails.tsx";
 import ApplicantsHome from "./Pages/Applicants/ApplicantsHome.tsx";
+import ReadmissionHome from "./Pages/Applicants/ReadmissionHome.tsx";
+import ReadmissionAdmit from "./Pages/Applicants/ReadmissionAdmit.tsx";
+import AlumniHome from "./Pages/Alumni/AlumniHome.tsx";
 import StudentsHome from "./Pages/Students/StudentsHome.tsx";
 import ApplicantDetails from "./Pages/Applicants/ApplicantDetails.tsx";
 import StudentDetails from "./Pages/Students/StudentDetails.tsx";
@@ -85,6 +88,15 @@ function App() {
 
             {/* PEOPLE — students, applicants, staff (always-on bundled default) */}
             <Route path="/applicants-home" element={<ApplicantsHome />} />
+            {/* Readmission is deliberately NOT module-gated: getting your own
+                students back after finalising a year is how a school runs, not
+                a feature it buys. Only the alumni DIRECTORY and certificates
+                are paid — see the ALUMNI gate below. */}
+            <Route path="/readmission" element={<ReadmissionHome />} />
+            <Route path="/readmission/:applicantId/admit" element={<ReadmissionAdmit />} />
+            <Route element={<ModuleGate module="ALUMNI" />}>
+              <Route path="/alumni" element={<AlumniHome />} />
+            </Route>
             <Route path="/students-home" element={<StudentsHome />} />
             <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
             <Route path="/student/:id" element={<StudentDetails />} />

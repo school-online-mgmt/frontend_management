@@ -9,7 +9,7 @@ import {
   BookMarked, MessageSquare, Wallet, ChevronRight, Bus,
   KeyRound, Eye, EyeOff, Send, Trophy, Zap, Package, FileText, ScrollText,
   UtensilsCrossed, Activity, MessageSquareWarning, CalendarClock, Sigma,
-  Building2, MessagesSquare, Network,
+  Building2, MessagesSquare, Network, RefreshCcw, GraduationCap,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 import { useAuthContext, type AppModule } from "../context/AuthContext";
@@ -82,6 +82,10 @@ const NAV_SECTIONS: NavSection[] = [
     collapsible: true,
     items: [
       { path: "/applicants-home", label: "Applicants", icon: UserPlus, module: "PEOPLE" },
+      // Readmission sits in Admissions, not Students: at year end it IS the
+      // admissions job. Ungated — a school must be able to get its own students
+      // back whatever it has bought.
+      { path: "/readmission", label: "Readmission", icon: RefreshCcw, module: null },
       { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList, module: "ENTRANCE_EXAM" },
     ],
   },
@@ -92,6 +96,9 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/students-home", label: "Students", icon: Users, module: "PEOPLE" },
       { path: "/documents", label: "Certificates & TC", icon: FileText, module: "DOCUMENTS" },
+      // Former students. Sits under Students because that is who they are —
+      // the same records, after they have left.
+      { path: "/alumni", label: "Alumni", icon: GraduationCap, module: "ALUMNI" },
     ],
   },
   {

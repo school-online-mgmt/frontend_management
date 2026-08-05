@@ -4,11 +4,12 @@ import {
   AlertTriangle,
   Shield, Phone, Mail, ExternalLink, RefreshCw,
   Edit2, X, Check, MapPin, CreditCard,
-  AlertCircle, FileText, Settings2, UserCircle, GraduationCap, Loader2, BellRing, CalendarDays, CalendarClock,
+  AlertCircle, FileText, Settings2, UserCircle, GraduationCap, Loader2, BellRing, CalendarDays, CalendarClock, MessageCircle,
 } from "lucide-react";
 import api from "../../api/api";
 import PaymentSettingsTab from "./PaymentSettingsTab";
 import EmailServiceTab from "./EmailServiceTab";
+import WhatsAppServiceTab from "./WhatsAppServiceTab";
 import FeeReminderSettingsTab from "./FeeReminderSettingsTab";
 import SchoolOperationsTab from "./SchoolOperationsTab";
 import LeavePolicyTab from "./LeavePolicyTab";
@@ -584,7 +585,7 @@ function SchoolProfileTab({ user }: { user: any }) {
 
 // ── Main Account Page ─────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'operations' | 'leave-policy' | 'payments' | 'email' | 'fee-reminders';
+type Tab = 'profile' | 'operations' | 'leave-policy' | 'payments' | 'email' | 'whatsapp' | 'fee-reminders';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
   { key: 'profile',  label: 'School Profile', icon: Building2 },
@@ -592,6 +593,9 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: bool
   { key: 'leave-policy', label: 'Leave Policy', icon: CalendarClock, adminOnly: true },
   { key: 'payments', label: 'Payments',       icon: CreditCard, adminOnly: true },
   { key: 'email',    label: 'Email',          icon: Mail,       adminOnly: true },
+  // Next to Email on purpose — they are two delivery channels for the same
+  // notifications, and a school configuring one will want the other.
+  { key: 'whatsapp', label: 'WhatsApp',       icon: MessageCircle, adminOnly: true },
   { key: 'fee-reminders', label: 'Fee Reminders', icon: BellRing, adminOnly: true },
 ];
 
@@ -762,6 +766,7 @@ export default function AccountPage() {
             {isAdmin && <TabPanel tabKey="leave-policy"><LeavePolicyTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="payments"><PaymentSettingsTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="email"><EmailServiceTab /></TabPanel>}
+            {isAdmin && <TabPanel tabKey="whatsapp"><WhatsAppServiceTab /></TabPanel>}
             {isAdmin && <TabPanel tabKey="fee-reminders"><FeeReminderSettingsTab /></TabPanel>}
           </TabbedSection>
         </>
