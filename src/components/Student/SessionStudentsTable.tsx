@@ -165,7 +165,7 @@ const SessionStudentsTable: React.FC<Props> = ({
                                         data-student-id={s.id}
                                         data-student-name={`${s.firstName} ${s.lastName ?? ""}`.trim()}
                                         data-section-name={enr.sectionName ?? ""}
-                                        onClick={() => navigate(`/student/${s.id}`)}
+                                        onClick={() => navigate(`/students/${s.id}`)}
                                         className="hover:bg-slate-50 cursor-pointer transition-colors group">
                                         <td className="px-5 py-3 text-xs font-mono text-slate-500">
                                             {enr.rollNo

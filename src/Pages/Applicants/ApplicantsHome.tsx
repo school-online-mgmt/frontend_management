@@ -507,7 +507,7 @@ const ApplicantsHome: React.FC = () => {
                     const color = avatarColor(applicant.firstName);
                     const isPending = applicant.status === 'APPLIED';
                     return (
-                      <tr key={applicant.id} onClick={() => navigate(`/applicant/${applicant.id}`)}
+                      <tr key={applicant.id} onClick={() => navigate(`/admissions/applicants/${applicant.id}`)}
                         data-testid="applicant-row"
                         data-applicant-id={applicant.id}
                         data-applicant-name={`${applicant.firstName} ${applicant.lastName}`}

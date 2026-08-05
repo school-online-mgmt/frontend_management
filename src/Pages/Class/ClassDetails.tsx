@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, Layers, Plus, Users, User, BookOpen, ChevronRight, ArrowLeft, Calendar, Bell } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import AddSectionModal from "../../components/Structure/AddSectionModal";
 import CreateCourseInClassModal from "../../components/Courses/CreateCourseInClassModal.tsx";
 import SessionStudentsTable from "../../components/Student/SessionStudentsTable";
@@ -26,11 +27,19 @@ const ClassDetails = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const fetchClass = useCallback(async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getClassById(classId);
             setClassData(data.classData);
+        } catch (e: unknown) {
+            // There was no catch here at all: the rejection went unhandled,
+            // classData stayed null, and `if (!classData) return null` below
+            // rendered a completely blank page — no spinner, no message.
+            setLoadError(e);
         } finally {
             setIsLoading(false);
         }
@@ -44,7 +53,7 @@ const ClassDetails = () => {
             await api.deleteClass(classId);
             showToast("Class deleted", "success");
             setConfirmDeleteClass(false);
-            navigate("/class-Home");
+            navigate("/academics/classes");
         } catch (e: any) {
             showToast(e?.response?.data?.message || "Cannot delete this class", "error");
             setConfirmDeleteClass(false);
@@ -67,6 +76,23 @@ const ClassDetails = () => {
 
     if (isLoading && !classData) {
         return <div className="flex items-center justify-center min-h-[60vh]"><RefreshCcw size={28} className="animate-spin text-emerald-600" /></div>;
+    }
+    if (!classData && loadError != null) {
+        return (
+            <div className="p-6 max-w-3xl mx-auto">
+                <button onClick={() => navigate("/academics/classes")} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm mb-4">
+                    <ArrowLeft size={16} /> Back to classes
+                </button>
+                <div className="bg-white rounded-2xl border border-slate-200">
+                    <ErrorState
+                        message="Could not load this class."
+                        error={loadError}
+                        onRetry={fetchClass}
+                        testId="class-detail-error"
+                    />
+                </div>
+            </div>
+        );
     }
     if (!classData) return null;
 
@@ -223,7 +249,7 @@ const ClassDetails = () => {
                             <div
                                 key={section.id}
                                 data-testid={`section-row-${section.slug}`}
-                                onClick={() => navigate(`/section/${section.id}`)}
+                                onClick={() => navigate(`/academics/sections/${section.id}`)}
                                 className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 cursor-pointer transition-colors group"
                             >
                                 <div className="flex items-center gap-4">
@@ -303,7 +329,7 @@ const ClassDetails = () => {
                             <div
                                 key={course.id}
                                 data-testid={`course-row-${course.slug}`}
-                                onClick={() => navigate(`/course/${course.id}`)}
+                                onClick={() => navigate(`/academics/courses/${course.id}`)}
                                 className="px-6 py-4 hover:bg-slate-50/60 cursor-pointer transition-colors group"
                             >
                                 <div className="flex items-center justify-between">

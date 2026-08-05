@@ -386,7 +386,7 @@ const SubjectDetailsPage = () => {
                                 <p className="text-xs text-slate-400">{inchargeTeacher.qualification || 'Teacher'}{inchargeTeacher.phone ? ` · ${inchargeTeacher.phone}` : ''}</p>
                             </div>
                             <span className="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2 py-0.5 rounded-lg font-medium">Incharge</span>
-                            <button data-testid="subject-navigate-btn-2" onClick={() => navigate(`/teacher/${inchargeTeacher.id}`)}
+                            <button data-testid="subject-navigate-btn-2" onClick={() => navigate(`/staff/teachers/${inchargeTeacher.id}`)}
                                 className="p-2 text-slate-300 group-hover:text-violet-500 rounded-lg hover:bg-violet-50 transition-colors">
                                 <ChevronRight size={16} />
                             </button>
@@ -418,7 +418,7 @@ const SubjectDetailsPage = () => {
                                 <UserX size={24} className="text-amber-400" />
                             </div>
                             <p className="font-semibold text-slate-700">No teachers assigned yet</p>
-                            <p className="text-sm text-slate-400 mt-1">Assign teachers to this subject from the <button data-testid="subject-navigate-btn-3" onClick={() => navigate('/assignments')} className="text-emerald-600 hover:underline font-medium">Assignments page</button>.</p>
+                            <p className="text-sm text-slate-400 mt-1">Assign teachers to this subject from the <button data-testid="subject-navigate-btn-3" onClick={() => navigate('/staff/assignments')} className="text-emerald-600 hover:underline font-medium">Assignments page</button>.</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-50">
@@ -445,7 +445,7 @@ const SubjectDetailsPage = () => {
                                                 ))}
                                             </div>
                                         )}
-                                        <button data-testid="subject-navigate-btn-4" onClick={() => navigate(`/teacher/${t.id}`)}
+                                        <button data-testid="subject-navigate-btn-4" onClick={() => navigate(`/staff/teachers/${t.id}`)}
                                             className="p-2 text-slate-300 group-hover:text-emerald-500 rounded-lg hover:bg-emerald-50 transition-colors">
                                             <ChevronRight size={16} />
                                         </button>
@@ -479,7 +479,7 @@ const SubjectDetailsPage = () => {
                         <div className="divide-y divide-slate-50">
                             {subject.courseSubjects?.map((cs: any) => (
                                 <button data-testid="subject-navigate-btn-5" key={cs.course.id}
-                                    onClick={() => navigate(`/course/${cs.course.id}`)}
+                                    onClick={() => navigate(`/academics/courses/${cs.course.id}`)}
                                     className="w-full flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors group text-left">
                                     <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
                                         <BookOpen size={15} className="text-blue-500" />

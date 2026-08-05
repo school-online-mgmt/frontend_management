@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     BarChart3, TrendingUp, Users, Award, Trophy, Target,
     BookOpen, RefreshCw, ChevronRight, ChevronDown, Loader2,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../api/api";
 import PageHeader from "../../components/PageHeader";
+import { EmptyState, ErrorState, InlineError } from "../../components/ui";
 import { GRADE_COLORS, GRADE_ORDER, gradeFromPercent } from "../../utils/grades";
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -609,35 +610,54 @@ const ResultsPerformancePage: React.FC = () => {
         });
     }, []);
 
+    const [error, setError] = useState<unknown>(null);
+    const [sectionsError, setSectionsError] = useState<unknown>(null);
+    const [reportError, setReportError] = useState<unknown>(null);
+
     // Load sections when class changes
-    useEffect(() => {
-        if (classId) api.getSectionsByClass(classId).then((s: any) => setSections(Array.isArray(s) ? s : []));
-        else setSections([]);
-        setSectionId("");
+    const loadSections = useCallback(() => {
+        if (!classId) { setSections([]); return; }
+        setSectionsError(null);
+        // Had no .catch at all — a failure became an unhandled rejection and
+        // an empty section filter.
+        api.getSectionsByClass(classId)
+            .then((s: any) => setSections(Array.isArray(s) ? s : []))
+            .catch((e: unknown) => { setSections([]); setSectionsError(e); });
     }, [classId]);
+    useEffect(() => {
+        loadSections();
+        setSectionId("");
+    }, [loadSections]);
 
     // Fetch performance data
-    useEffect(() => {
+    const loadPerformance = useCallback(() => {
         if (!sessionId) return;
         setLoading(true);
+        setError(null);
         api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined })
             .then((d: any) => {
                 setData(d);
                 setPublishedExams(d?.exams ?? []);
             })
-            .catch(() => { setData(null); setPublishedExams([]); })
+            // Was `setData(null)`, which rendered "No published results found"
+            // — a statement about the school's exams rather than about the
+            // request that just failed.
+            .catch((e: unknown) => { setData(null); setPublishedExams([]); setError(e); })
             .finally(() => setLoading(false));
     }, [sessionId, classId, sectionId]);
+    useEffect(() => { loadPerformance(); }, [loadPerformance]);
 
     // Fetch individual exam report
-    useEffect(() => {
+    const loadExamReport = useCallback(() => {
         if (!selectedExamId) { setExamReport(null); return; }
         setReportLoading(true);
+        setReportError(null);
         api.getExamReport(selectedExamId)
             .then((d: ExamReportData) => setExamReport(d))
-            .catch(() => setExamReport(null))
+            .catch((e: unknown) => { setExamReport(null); setReportError(e); })
             .finally(() => setReportLoading(false));
     }, [selectedExamId]);
+    useEffect(() => { loadExamReport(); }, [loadExamReport]);
 
     const summary: SchoolSummary | null = data?.schoolSummary ?? null;
     const classBreakdown: ClassRow[] = data?.classBreakdown ?? [];
@@ -702,7 +722,11 @@ const ResultsPerformancePage: React.FC = () => {
                 gradient="from-indigo-600 via-blue-600 to-cyan-600"
                 subtitle="Comprehensive academic analytics, report cards & improvement insights"
                 actions={
-                    <button onClick={() => { if (sessionId) { setLoading(true); api.getPerformanceDashboard({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined }).then(d => { setData(d); setPublishedExams(d?.exams ?? []); }).catch(() => setData(null)).finally(() => setLoading(false)); } }}
+                    // Refresh calls the shared loader. It used to inline a
+                    // second copy of the fetch with its own swallowed catch, so
+                    // it could fail silently even once the initial load had
+                    // learned to report errors.
+                    <button onClick={loadPerformance}
                         disabled={loading || !sessionId}
                         className="px-3 py-2 bg-white/10 border border-white/20 rounded-xl flex gap-2 items-center text-sm hover:bg-white/20 disabled:opacity-40 transition-all backdrop-blur-sm">
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
@@ -743,6 +767,13 @@ const ResultsPerformancePage: React.FC = () => {
                                 </select>
                             </div>
                         )}
+                        {/* The section filter renders only when sections load,
+                            so a failure previously removed it with no notice. */}
+                        {sectionsError != null && (
+                            <div className="flex items-end pb-2">
+                                <InlineError message="Section list unavailable." onRetry={loadSections} testId="performance-sections-error" />
+                            </div>
+                        )}
 
                         {activeFilters > 0 && (
                             <button onClick={() => { setClassId(""); setSectionId(""); }}
@@ -780,11 +811,23 @@ const ResultsPerformancePage: React.FC = () => {
                             <p className="text-sm text-slate-500">Loading performance data…</p>
                         </div>
                     </div>
+                ) : error != null ? (
+                    <div className="bg-white rounded-2xl border border-slate-100">
+                        <ErrorState
+                            message="Could not load performance data. Published results are unaffected — this is a loading failure, not an empty result."
+                            error={error}
+                            onRetry={loadPerformance}
+                            testId="performance-error"
+                        />
+                    </div>
                 ) : !summary ? (
-                    <div className="bg-white rounded-2xl border border-slate-100 p-16 flex flex-col items-center gap-3 text-center">
-                        <BarChart3 size={40} className="text-slate-200" />
-                        <p className="font-semibold text-slate-500">No published results found</p>
-                        <p className="text-xs text-slate-400 max-w-md">Performance data appears once exam results are published. Create exams, conduct them, enter marks, and publish results to see analytics here.</p>
+                    <div className="bg-white rounded-2xl border border-slate-100">
+                        <EmptyState
+                            icon={<BarChart3 size={22} />}
+                            title="No published results found"
+                            message="Performance data appears once exam results are published. Create exams, conduct them, enter marks, and publish results to see analytics here."
+                            testId="performance-empty"
+                        />
                     </div>
                 ) : (
                     <>
@@ -1209,6 +1252,15 @@ const ResultsPerformancePage: React.FC = () => {
                                     reportLoading ? (
                                         <div className="bg-white rounded-2xl border border-slate-100 p-12 flex items-center justify-center">
                                             <Loader2 size={24} className="animate-spin text-indigo-600" />
+                                        </div>
+                                    ) : reportError != null ? (
+                                        <div className="bg-white rounded-2xl border border-slate-100">
+                                            <ErrorState
+                                                message="Could not load this exam's report card."
+                                                error={reportError}
+                                                onRetry={loadExamReport}
+                                                testId="exam-report-error"
+                                            />
                                         </div>
                                     ) : examReport ? (
                                         <div className="space-y-6">

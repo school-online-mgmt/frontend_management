@@ -149,7 +149,7 @@ const ClassesSections = () => {
                 primaryActions={
                     <div className="flex gap-2">
                         <button
-                            onClick={() => navigate("/structure/setup")}
+                            onClick={() => navigate("/academics/setup")}
                             disabled={!sessionId}
                             data-testid="classes-bulk-btn"
                             className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/20 disabled:opacity-40 transition backdrop-blur-sm shrink-0"
@@ -236,7 +236,7 @@ const ClassesSections = () => {
                                 </p>
                                 <div className="mt-5 flex gap-2 justify-center">
                                     <button
-                                        onClick={() => navigate("/structure/setup")}
+                                        onClick={() => navigate("/academics/setup")}
                                         data-testid="classes-empty-bulk-btn"
                                         className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 inline-flex items-center gap-2"
                                     >
@@ -317,7 +317,7 @@ const ClassesSections = () => {
                                                         <Plus size={12} /> Section
                                                     </button>
                                                     <button
-                                                        onClick={() => navigate(`/class/${cls.id}`)}
+                                                        onClick={() => navigate(`/academics/classes/${cls.id}`)}
                                                         data-testid="class-open-btn"
                                                         title="Open class details"
                                                         className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -347,7 +347,7 @@ const ClassesSections = () => {
                                                             {cls.sections.map((s) => (
                                                                 <button
                                                                     key={s.id}
-                                                                    onClick={() => navigate(`/section/${s.id}`)}
+                                                                    onClick={() => navigate(`/academics/sections/${s.id}`)}
                                                                     data-testid={`section-row-${s.slug}`}
                                                                     className="w-full px-5 py-2.5 flex items-center gap-3 hover:bg-white text-left"
                                                                 >

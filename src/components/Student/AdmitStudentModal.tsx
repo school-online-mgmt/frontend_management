@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Bus, MapPin, Tag, AlertCircle } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../ui";
 
 type AdmitStudentModalProps = {
     student: any;
@@ -31,10 +32,15 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    /* The admission ID and roll number are auto-filled — the operator never
+       types them. Swallowed, a failure admitted the student with a blank ID,
+       and a blank read-only field looks like one not filled in yet. */
+    const [generateError, setGenerateError] = useState<unknown>(null);
+
     useEffect(() => {
         api.generateAdmissionInfo().then((data: any) => {
             setForm(prev => ({ ...prev, admissionId: data.admissionId }));
-        }).catch(() => {});
+        }).catch((e: unknown) => setGenerateError(e));
         api.getSessions().then((data: any) => {
             // Only offer sessions this school can actually admit into:
             //   - not finalised (status !== 'ENDED')
@@ -58,7 +64,7 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
         if (form.sectionId) {
             api.generateAdmissionInfo(form.sectionId).then((data: any) => {
                 setForm(prev => ({ ...prev, rollNo: data.rollNo }));
-            }).catch(() => {});
+            }).catch((e: unknown) => setGenerateError(e));
         }
     }, [form.sectionId]);
 
@@ -201,6 +207,14 @@ const AdmitStudentModal = ({ student, onClose, onAdmit, preselectedSessionId }: 
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Admission ID</label>
                                 <input data-testid="admit-student-modal-admission-id-input" type="text" name="admissionId" value={form.admissionId} readOnly
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
+                                {generateError != null && (
+                                    <div className="mt-1">
+                                        <InlineError
+                                            message="Admission ID / roll number could not be generated — do not admit until this succeeds."
+                                            testId="admit-modal-generate-error"
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Roll Number</label>

@@ -51,7 +51,7 @@ const StructureOverviewPage = () => {
                 title: "Classes with no sections",
                 why: "A student cannot be admitted into a class that has no section.",
                 items: d.gaps.classesWithoutSections,
-                fix: (g: StructureGapRef) => navigate(`/structure/classes?open=${g.id}`),
+                fix: (g: StructureGapRef) => navigate(`/academics/classes?open=${g.id}`),
                 cta: "Add sections",
             },
             {
@@ -60,7 +60,7 @@ const StructureOverviewPage = () => {
                 title: "Sections with no class teacher",
                 why: "Attendance, feedback and promotion decisions all need a section teacher.",
                 items: d.gaps.sectionsWithoutTeacher,
-                fix: (g: StructureGapRef) => navigate(`/structure/classes?open=${g.classId}`),
+                fix: (g: StructureGapRef) => navigate(`/academics/classes?open=${g.classId}`),
                 cta: "Assign a teacher",
             },
             {
@@ -69,7 +69,7 @@ const StructureOverviewPage = () => {
                 title: "Courses with no subjects",
                 why: "Timetables and report cards come out empty for these courses.",
                 items: d.gaps.coursesWithoutSubjects,
-                fix: (g: StructureGapRef) => navigate(`/course/${g.id}`),
+                fix: (g: StructureGapRef) => navigate(`/academics/courses/${g.id}`),
                 cta: "Add subjects",
             },
             {
@@ -78,7 +78,7 @@ const StructureOverviewPage = () => {
                 title: "Classes with no class teacher",
                 why: "Not blocking — the section teacher usually covers this.",
                 items: d.gaps.classesWithoutTeacher,
-                fix: (g: StructureGapRef) => navigate(`/structure/classes?open=${g.id}`),
+                fix: (g: StructureGapRef) => navigate(`/academics/classes?open=${g.id}`),
                 cta: "Assign",
             },
             {
@@ -87,7 +87,7 @@ const StructureOverviewPage = () => {
                 title: "Sections with no students yet",
                 why: "Expected before admissions open. Worth a look once the year starts.",
                 items: d.gaps.emptySections,
-                fix: (g: StructureGapRef) => navigate(`/structure/classes?open=${g.classId}`),
+                fix: (g: StructureGapRef) => navigate(`/academics/classes?open=${g.classId}`),
                 cta: "View",
             },
         ].filter((i) => i.items.length > 0);
@@ -104,7 +104,7 @@ const StructureOverviewPage = () => {
                 refreshing={q.isFetching}
                 primaryActions={
                     <button
-                        onClick={() => navigate("/structure/setup")}
+                        onClick={() => navigate("/academics/setup")}
                         disabled={!sessionId}
                         data-testid="structure-quick-setup-btn"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 disabled:opacity-40 transition backdrop-blur-sm shrink-0"
@@ -145,7 +145,7 @@ const StructureOverviewPage = () => {
                             A to D takes about a minute.
                         </p>
                         <button
-                            onClick={() => navigate("/structure/setup")}
+                            onClick={() => navigate("/academics/setup")}
                             data-testid="structure-empty-setup-btn"
                             className="mt-5 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 inline-flex items-center gap-2"
                         >
@@ -153,7 +153,7 @@ const StructureOverviewPage = () => {
                         </button>
                         <p className="text-xs text-slate-400 mt-3">
                             Or add them one at a time from{" "}
-                            <button onClick={() => navigate("/structure/classes")} className="text-indigo-600 hover:underline">
+                            <button onClick={() => navigate("/academics/classes")} className="text-indigo-600 hover:underline">
                                 Classes &amp; Sections
                             </button>
                         </p>
@@ -202,13 +202,13 @@ const StructureOverviewPage = () => {
                         {/* Totals — each one navigates to the page that owns it. */}
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                             <Tile icon={<Layers size={20} className="text-indigo-500" />} bg="bg-indigo-50"
-                                  value={d.totals.classes}  label="Classes"  onClick={() => navigate("/structure/classes")} testId="tile-classes" />
+                                  value={d.totals.classes}  label="Classes"  onClick={() => navigate("/academics/classes")} testId="tile-classes" />
                             <Tile icon={<Network size={20} className="text-violet-500" />} bg="bg-violet-50"
-                                  value={d.totals.sections} label="Sections" onClick={() => navigate("/structure/classes")} testId="tile-sections" />
+                                  value={d.totals.sections} label="Sections" onClick={() => navigate("/academics/classes")} testId="tile-sections" />
                             <Tile icon={<BookMarked size={20} className="text-sky-500" />} bg="bg-sky-50"
-                                  value={d.totals.courses}  label="Courses"  onClick={() => navigate("/course-Home")} testId="tile-courses" />
+                                  value={d.totals.courses}  label="Courses"  onClick={() => navigate("/academics/courses")} testId="tile-courses" />
                             <Tile icon={<BookOpen size={20} className="text-teal-500" />} bg="bg-teal-50"
-                                  value={d.totals.subjects} label="Subjects" onClick={() => navigate("/subject-Home")} testId="tile-subjects" />
+                                  value={d.totals.subjects} label="Subjects" onClick={() => navigate("/academics/subjects")} testId="tile-subjects" />
                             <Tile icon={<Users size={20} className="text-emerald-500" />} bg="bg-emerald-50"
                                   value={d.totals.students} label="Students" testId="tile-students" />
                         </div>

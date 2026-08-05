@@ -410,7 +410,7 @@ const ReadmissionHome: React.FC = () => {
                                             key={a.id}
                                             a={a}
                                             busy={resolve.isPending}
-                                            onAdmit={() => navigate(`/readmission/${a.id}/admit`)}
+                                            onAdmit={() => navigate(`/admissions/readmission/${a.id}/admit`)}
                                             onAlumni={() => attempt(a, 'alumni')}
                                             onAbandon={() => attempt(a, 'abandoned')}
                                         />

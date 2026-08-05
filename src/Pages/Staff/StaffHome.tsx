@@ -148,7 +148,7 @@ export default function StaffHome() {
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
                         Who can sign in to the school portal. What each person is allowed to do
-                        lives on <Link to="/permissions" className="text-emerald-600 hover:underline">Permissions</Link>.
+                        lives on <Link to="/staff/permissions" className="text-emerald-600 hover:underline">Permissions</Link>.
                     </p>
                 </div>
                 <button
@@ -221,7 +221,7 @@ export default function StaffHome() {
                                 ) : (s.groups ?? []).length === 0 ? (
                                     <span data-testid={`staff-noroles-${s.id}`} className="text-xs text-slate-400">
                                         No permission roles yet — they can sign in but can't do anything.{' '}
-                                        <Link to="/permissions" className="text-emerald-600 hover:underline">Assign one</Link>
+                                        <Link to="/staff/permissions" className="text-emerald-600 hover:underline">Assign one</Link>
                                     </span>
                                 ) : (
                                     (s.groups ?? []).map(g => (

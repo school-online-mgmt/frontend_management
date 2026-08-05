@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Activity, Loader2, Search, RefreshCw } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 
 /**
@@ -32,8 +33,12 @@ export default function ActivityPage() {
     const [nextBefore, setNextBefore] = useState<string | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+    const [modulesError, setModulesError] = useState<unknown>(null);
+
     const load = useCallback(async (reset = true) => {
         reset ? setLoading(true) : setLoadingMore(true);
+        setLoadError(null);
         try {
             const res = await api.getActivity({
                 module: module || undefined,
@@ -43,11 +48,21 @@ export default function ActivityPage() {
             });
             setRows(prev => reset ? res.activities : [...prev, ...res.activities]);
             setNextBefore(res.nextBefore);
-        } catch { /* surfaced by empty state */ }
+        }
+        // The old comment here said "surfaced by empty state" — which is the
+        // bug, not the handling. On an audit log, "no activity recorded" and
+        // "we could not read the audit log" are opposite claims.
+        catch (e: unknown) { setLoadError(e); }
         finally { reset ? setLoading(false) : setLoadingMore(false); }
     }, [module, q, nextBefore]);
 
-    useEffect(() => { api.getActivityModules().then(r => setModules(r.modules)).catch(() => {}); }, []);
+    const loadModules = useCallback(() => {
+        setModulesError(null);
+        api.getActivityModules()
+            .then(r => setModules(r.modules))
+            .catch((e: unknown) => setModulesError(e));
+    }, []);
+    useEffect(() => { loadModules(); }, [loadModules]);
     // Reload from the top whenever a filter changes.
     useEffect(() => { load(true); /* eslint-disable-next-line */ }, [module]);
 
@@ -68,6 +83,7 @@ export default function ActivityPage() {
                     className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
                     <option value="">All modules</option>
                     {modules.map(m => <option key={m} value={m}>{m}</option>)}
+                    {modulesError != null && <option disabled value="">(module filter unavailable)</option>}
                 </select>
                 <button data-testid="activity-refresh-btn" onClick={() => load(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
@@ -77,6 +93,13 @@ export default function ActivityPage() {
 
             {loading ? (
                 <div className="flex justify-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div>
+            ) : loadError != null ? (
+                <ErrorState
+                    message="Could not read the activity log. This does not mean nothing happened — the records could not be fetched."
+                    error={loadError}
+                    onRetry={() => load(true)}
+                    testId="activity-error"
+                />
             ) : rows.length === 0 ? (
                 <p className="py-16 text-center text-sm text-slate-400" data-testid="activity-empty">
                     No activity recorded yet.

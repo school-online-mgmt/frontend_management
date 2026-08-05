@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { InlineError } from "../ui";
 import EntranceQuestionsField, { MIN_QUESTIONS } from "../Entrance/EntranceQuestionsField";
 import type { EntranceQuestionInput } from "../../api/api";
 
@@ -35,20 +36,29 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
     const [fieldErrors, setFieldErrors]   = useState<Record<string, string>>({});
     const [globalError, setGlobalError]   = useState("");
 
-    useEffect(() => {
-        api.getClasses().then((d: any) => setClasses(d || [])).catch(() => {});
-        api.getSessions().then((d: any) => {
-            const list = d || [];
-            setSessions(list);
-            // Default-select a session so a quick submit can't fire before the
-            // dropdown populates and fail "Please select an academic session"
-            // on a form the user did fill in (BUG-004).
-            if (list.length > 0) {
-                const preferred = list.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? list[0];
-                setSessionId(prev => prev || preferred.id);
-            }
-        }).catch(() => {});
+    /* Both dropdowns are required to submit. Swallowed, a failure left them
+       empty and the form rejected a submission the user had filled in
+       correctly — the same class of confusion as BUG-004 below, but with no
+       message explaining it. */
+    const [pickersError, setPickersError] = useState<unknown>(null);
+    const loadPickers = useCallback(() => {
+        setPickersError(null);
+        Promise.all([
+            api.getClasses().then((d: any) => setClasses(d || [])),
+            api.getSessions().then((d: any) => {
+                const list = d || [];
+                setSessions(list);
+                // Default-select a session so a quick submit can't fire before
+                // the dropdown populates and fail "Please select an academic
+                // session" on a form the user did fill in (BUG-004).
+                if (list.length > 0) {
+                    const preferred = list.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? list[0];
+                    setSessionId(prev => prev || preferred.id);
+                }
+            }),
+        ]).catch((e: unknown) => setPickersError(e));
     }, []);
+    useEffect(() => { loadPickers(); }, [loadPickers]);
 
     const handleNameChange = (value: string) => {
         setName(value);
@@ -134,6 +144,14 @@ const CreateCourse = ({ onClose, onRefresh, setMessage, setMessageType }: any) =
                             <AlertTriangle size={15} className="text-red-500 shrink-0 mt-0.5" />
                             <p className="text-sm text-red-700 font-medium">{globalError}</p>
                         </div>
+                    )}
+
+                    {pickersError != null && (
+                        <InlineError
+                            message="Class and session lists could not be loaded — this form cannot be submitted until they do."
+                            onRetry={loadPickers}
+                            testId="create-course-pickers-error"
+                        />
                     )}
 
                     {/* Name */}

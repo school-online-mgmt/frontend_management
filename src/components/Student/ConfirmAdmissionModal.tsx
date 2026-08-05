@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/api";
+import { InlineError } from "../ui";
 
 type ConfirmAdmissionModalProps = {
     applicant: any;
@@ -24,11 +25,16 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
     const [courses, setCourses] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
+    /* Auto-filled identifiers the operator never types. Swallowed, a failure
+       confirmed the admission with a blank ID — and a blank read-only field
+       looks like one not filled in yet, not one that failed. */
+    const [generateError, setGenerateError] = useState<unknown>(null);
+
     // Auto-generate admission ID on mount
     useEffect(() => {
         api.generateAdmissionInfo().then((data: any) => {
             setForm(prev => ({ ...prev, admissionId: data.admissionId }));
-        }).catch(() => {});
+        }).catch((e: unknown) => setGenerateError(e));
     }, []);
 
     // Auto-generate roll number when section changes
@@ -36,7 +42,7 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
         if (form.sectionId) {
             api.generateAdmissionInfo(form.sectionId).then((data: any) => {
                 setForm(prev => ({ ...prev, rollNo: data.rollNo }));
-            }).catch(() => {});
+            }).catch((e: unknown) => setGenerateError(e));
         }
     }, [form.sectionId]);
 
@@ -117,6 +123,14 @@ const ConfirmAdmissionModal = ({ applicant, onClose, onConfirm }: ConfirmAdmissi
                     <div>
                         <label className="block text-sm font-medium">Admission ID</label>
                         <input data-testid="confirm-admission-modal-change-input" type="text" name="admissionId" value={form.admissionId} onChange={handleChange} required readOnly className="w-full p-2 border rounded bg-slate-50 cursor-not-allowed" />
+                        {generateError != null && (
+                            <div className="mt-1">
+                                <InlineError
+                                    message="Admission ID / roll number could not be generated — do not confirm until this succeeds."
+                                    testId="confirm-admission-generate-error"
+                                />
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium">Roll No</label>

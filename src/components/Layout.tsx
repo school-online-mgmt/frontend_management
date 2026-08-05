@@ -21,6 +21,7 @@ import DesktopOnlyGate from "./DesktopOnlyGate";
 import PageFooter from "./PageFooter";
 import OverdueBillsBanner from "./OverdueBillsBanner";
 import EndedSessionBanner from "./EndedSessionBanner";
+import { ROUTES } from "../config/routes";
 
 /* ── Nav configuration ─────────────────────────────────────────────────────
  *
@@ -44,8 +45,11 @@ import EndedSessionBanner from "./EndedSessionBanner";
  *      on its own. A BASIC school that bought only Library still sees Campus,
  *      with just Library inside it.
  *
- * `module: null` = always visible. Paths are unchanged from the module-grouped
- * version, so bookmarks, deep links and the E2E suite are unaffected.
+ * `module: null` = always visible.
+ *
+ * Paths come from `config/routes.ts` rather than being written here, so a
+ * renamed route cannot leave a dead nav entry behind. Every path this portal
+ * has ever served still resolves — see LEGACY_REDIRECTS in that file.
  */
 /** Lucide icons also take `strokeWidth`, so keep this permissive. */
 type NavIcon = React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
@@ -73,7 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
     icon: LayoutDashboard,
     collapsible: false,
     items: [
-      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: null },
+      { path: ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard, module: null },
     ],
   },
   {
@@ -81,12 +85,12 @@ const NAV_SECTIONS: NavSection[] = [
     icon: UserPlus,
     collapsible: true,
     items: [
-      { path: "/applicants-home", label: "Applicants", icon: UserPlus, module: "PEOPLE" },
+      { path: ROUTES.admissions.applicants, label: "Applicants", icon: UserPlus, module: "PEOPLE" },
       // Readmission sits in Admissions, not Students: at year end it IS the
       // admissions job. Ungated — a school must be able to get its own students
       // back whatever it has bought.
-      { path: "/readmission", label: "Readmission", icon: RefreshCcw, module: null },
-      { path: "/entrance-papers", label: "Entrance Papers", icon: ClipboardList, module: "ENTRANCE_EXAM" },
+      { path: ROUTES.admissions.readmission, label: "Readmission", icon: RefreshCcw, module: null },
+      { path: ROUTES.admissions.entrancePapers, label: "Entrance Papers", icon: ClipboardList, module: "ENTRANCE_EXAM" },
     ],
   },
   {
@@ -94,11 +98,11 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Users,
     collapsible: true,
     items: [
-      { path: "/students-home", label: "Students", icon: Users, module: "PEOPLE" },
-      { path: "/documents", label: "Certificates & TC", icon: FileText, module: "DOCUMENTS" },
+      { path: ROUTES.students.root, label: "Students", icon: Users, module: "PEOPLE" },
+      { path: ROUTES.students.documents, label: "Certificates & TC", icon: FileText, module: "DOCUMENTS" },
       // Former students. Sits under Students because that is who they are —
       // the same records, after they have left.
-      { path: "/alumni", label: "Alumni", icon: GraduationCap, module: "ALUMNI" },
+      { path: ROUTES.students.alumni, label: "Alumni", icon: GraduationCap, module: "ALUMNI" },
     ],
   },
   {
@@ -109,12 +113,12 @@ const NAV_SECTIONS: NavSection[] = [
     icon: UserCog,
     collapsible: true,
     items: [
-      { path: "/teacher-home", label: "Teachers", icon: UserCog, module: "TEACHERS" },
-      { path: "/assignments", label: "Class Assignments", icon: ClipboardList, module: "TEACHERS" },
-      { path: "/teacher-attendance", label: "Staff Attendance", icon: UserCheck, module: "STAFF_ATTENDANCE" },
-      { path: "/hr", label: "Salaries & Payroll", icon: Wallet, module: "HR_PAYROLL" },
-      { path: "/staff", label: "Staff Accounts", icon: Settings, module: "TEACHERS" },
-      { path: "/permissions", label: "Roles & Permissions", icon: KeyRound, module: "TEACHERS" },
+      { path: ROUTES.staff.teachers, label: "Teachers", icon: UserCog, module: "TEACHERS" },
+      { path: ROUTES.staff.assignments, label: "Class Assignments", icon: ClipboardList, module: "TEACHERS" },
+      { path: ROUTES.staff.attendance, label: "Staff Attendance", icon: UserCheck, module: "STAFF_ATTENDANCE" },
+      { path: ROUTES.staff.payroll, label: "Salaries & Payroll", icon: Wallet, module: "HR_PAYROLL" },
+      { path: ROUTES.staff.accounts, label: "Staff Accounts", icon: Settings, module: "TEACHERS" },
+      { path: ROUTES.staff.permissions, label: "Roles & Permissions", icon: KeyRound, module: "TEACHERS" },
     ],
   },
   {
@@ -123,14 +127,14 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Network,
     collapsible: true,
     items: [
-      { path: "/structure", label: "Overview", icon: LayoutDashboard, module: "ACADEMICS" },
-      { path: "/structure/classes", label: "Classes & Sections", icon: Layers, module: "ACADEMICS" },
-      { path: "/subject-Home", label: "Subjects", icon: BookOpen, module: "ACADEMICS" },
-      { path: "/course-Home", label: "Courses", icon: BookMarked, module: "ACADEMICS" },
-      { path: "/timetable", label: "Timetable", icon: CalendarDays, module: "TIMETABLE" },
-      { path: "/homework", label: "Homework", icon: BookMarked, module: "HOMEWORK" },
-      { path: "/sessions", label: "Sessions", icon: CalendarDays, module: "ACADEMICS" },
-      { path: "/organisation", label: "Organisation", icon: Building2, module: "ACADEMICS" },
+      { path: ROUTES.academics.root, label: "Overview", icon: LayoutDashboard, module: "ACADEMICS" },
+      { path: ROUTES.academics.classes, label: "Classes & Sections", icon: Layers, module: "ACADEMICS" },
+      { path: ROUTES.academics.subjects, label: "Subjects", icon: BookOpen, module: "ACADEMICS" },
+      { path: ROUTES.academics.courses, label: "Courses", icon: BookMarked, module: "ACADEMICS" },
+      { path: ROUTES.academics.timetable, label: "Timetable", icon: CalendarDays, module: "TIMETABLE" },
+      { path: ROUTES.academics.homework, label: "Homework", icon: BookMarked, module: "HOMEWORK" },
+      { path: ROUTES.academics.sessions, label: "Sessions", icon: CalendarDays, module: "ACADEMICS" },
+      { path: ROUTES.academics.organisation, label: "Organisation", icon: Building2, module: "ACADEMICS" },
     ],
   },
   {
@@ -139,9 +143,9 @@ const NAV_SECTIONS: NavSection[] = [
     icon: ClipboardList,
     collapsible: true,
     items: [
-      { path: "/exam-home", label: "Exams", icon: ClipboardList, module: "STUDIES" },
-      { path: "/consolidated-results", label: "Consolidated Results", icon: Sigma, module: "REPORT_CARDS" },
-      { path: "/performance", label: "Performance", icon: BarChart3, module: "ANALYTICS" },
+      { path: ROUTES.assessment.exams, label: "Exams", icon: ClipboardList, module: "STUDIES" },
+      { path: ROUTES.assessment.consolidatedResults, label: "Consolidated Results", icon: Sigma, module: "REPORT_CARDS" },
+      { path: ROUTES.assessment.performance, label: "Performance", icon: BarChart3, module: "ANALYTICS" },
     ],
   },
   {
@@ -149,8 +153,8 @@ const NAV_SECTIONS: NavSection[] = [
     icon: ClipboardCheck,
     collapsible: true,
     items: [
-      { path: "/attendance", label: "Student Attendance", icon: ClipboardCheck, module: "ATTENDANCE" },
-      { path: "/leaves", label: "Leave Management", icon: CalendarDays, module: "LEAVE" },
+      { path: ROUTES.attendance.root, label: "Student Attendance", icon: ClipboardCheck, module: "ATTENDANCE" },
+      { path: ROUTES.attendance.leaves, label: "Leave Management", icon: CalendarDays, module: "LEAVE" },
     ],
   },
   {
@@ -160,8 +164,8 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Wallet,
     collapsible: true,
     items: [
-      { path: "/fees", label: "Fee Management", icon: CreditCard, module: "FINANCE" },
-      { path: "/platform-bills", label: "Platform Bills", icon: Wallet, module: null, adminOnly: true },
+      { path: ROUTES.finance.fees, label: "Fee Management", icon: CreditCard, module: "FINANCE" },
+      { path: ROUTES.finance.platformBills, label: "Platform Bills", icon: Wallet, module: null, adminOnly: true },
     ],
   },
   {
@@ -170,12 +174,12 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Megaphone,
     collapsible: true,
     items: [
-      { path: "/notices", label: "Notice Board", icon: Megaphone, module: "COMMUNICATION" },
-      { path: "/communication", label: "Email Broadcast", icon: Send, module: "BROADCAST" },
-      // No separate "Events" entry: /events is a redirect to /calendar, so
+      { path: ROUTES.communication.notices, label: "Notice Board", icon: Megaphone, module: "COMMUNICATION" },
+      { path: ROUTES.communication.broadcast, label: "Email Broadcast", icon: Send, module: "BROADCAST" },
+      // No separate "Events" entry: /events is a redirect to the calendar, so
       // listing both would be the same page under two names.
-      { path: "/calendar", label: "Calendar & Events", icon: Calendar, module: "COMMUNICATION" },
-      { path: "/publications", label: "School Documents", icon: ScrollText, module: "PUBLICATIONS" },
+      { path: ROUTES.communication.calendar, label: "Calendar & Events", icon: Calendar, module: "COMMUNICATION" },
+      { path: ROUTES.communication.publications, label: "School Documents", icon: ScrollText, module: "PUBLICATIONS" },
     ],
   },
   {
@@ -186,9 +190,17 @@ const NAV_SECTIONS: NavSection[] = [
     icon: MessagesSquare,
     collapsible: true,
     items: [
-      { path: "/ptm", label: "Parent Meetings", icon: CalendarClock, module: "FEEDBACK" },
-      { path: "/feedback", label: "Feedback", icon: MessagesSquare, module: "FEEDBACK" },
-      { path: "/grievances", label: "Grievances", icon: MessageSquareWarning, module: "GRIEVANCE" },
+      // All three are adminOnly to match the AdminRoute guard they sit behind
+      // in App.tsx. Without the flag the sidebar advertised them to every
+      // MANAGEMENT_STAFF user and then bounced them on click.
+      //
+      // Whether that guard is RIGHT is a separate question: RBAC defines
+      // `ptm:manage` as a grantable permission, which only makes sense if a
+      // non-admin can hold it. Widening access is an authorisation decision,
+      // not something to change as a side effect of renaming routes.
+      { path: ROUTES.parents.ptm, label: "Parent Meetings", icon: CalendarClock, module: "FEEDBACK", adminOnly: true },
+      { path: ROUTES.parents.feedback, label: "Feedback", icon: MessagesSquare, module: "FEEDBACK", adminOnly: true },
+      { path: ROUTES.parents.grievances, label: "Grievances", icon: MessageSquareWarning, module: "GRIEVANCE", adminOnly: true },
     ],
   },
   {
@@ -199,11 +211,11 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Building2,
     collapsible: true,
     items: [
-      { path: "/library", label: "Library", icon: Library, module: "LIBRARY" },
-      { path: "/sports", label: "Sports", icon: Trophy, module: "SPORTS" },
-      { path: "/transport", label: "Transport", icon: Bus, module: "TRANSPORT" },
-      { path: "/pantry", label: "Pantry & Canteen", icon: UtensilsCrossed, module: "PANTRY" },
-      { path: "/inventory", label: "Inventory", icon: Package, module: "INVENTORY" },
+      { path: ROUTES.campus.library, label: "Library", icon: Library, module: "LIBRARY" },
+      { path: ROUTES.campus.sports, label: "Sports", icon: Trophy, module: "SPORTS" },
+      { path: ROUTES.campus.transport, label: "Transport", icon: Bus, module: "TRANSPORT" },
+      { path: ROUTES.campus.pantry, label: "Pantry & Canteen", icon: UtensilsCrossed, module: "PANTRY" },
+      { path: ROUTES.campus.inventory, label: "Inventory", icon: Package, module: "INVENTORY" },
     ],
   },
 ];
@@ -217,10 +229,10 @@ const NAV_SECTIONS: NavSection[] = [
  * ADMIN-only, matching the AdminRoute guard.
  */
 const ADMIN_MENU_ITEMS: Array<{ path: string; label: string; icon: NavIcon }> = [
-  { path: "/account", label: "School Settings", icon: School },
-  { path: "/jobs", label: "Scheduled Jobs", icon: Zap },
-  { path: "/activity", label: "Activity Log", icon: Activity },
-  { path: "/support", label: "Support Center", icon: MessageSquare },
+  { path: ROUTES.admin.settings, label: "School Settings", icon: School },
+  { path: ROUTES.admin.jobs, label: "Scheduled Jobs", icon: Zap },
+  { path: ROUTES.admin.activity, label: "Activity Log", icon: Activity },
+  { path: ROUTES.admin.support, label: "Support Center", icon: MessageSquare },
 ];
 
 const getInitials = (first?: string, last?: string) =>
@@ -369,6 +381,10 @@ const Layout = () => {
           setSchoolName(name);
         }
       })
+      // Deliberately swallowed: this only upgrades the sidebar heading from
+      // the cached/default school name to the configured one. There is a
+      // working fallback on screen, so surfacing an error here would report a
+      // problem the user has no reason to care about and cannot act on.
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -446,14 +462,14 @@ const Layout = () => {
   // a detail route `/<entity>/:id`. Crucially, we do NOT treat other
   // dashed routes (like `/teacher-attendance`) as variants of `/teacher`,
   // which the old prefix-on-first-dash heuristic did and caused two nav
-  // items to highlight when on `/teacher-home`.
+  // items to highlight when on `/staff/teachers`.
   const isActive = (path: string) => {
     const p = location.pathname;
     if (p === path) return true;
     if (path === "/dashboard" && p === "/") return true;
     const dash = path.indexOf("-");
     if (dash > 0) {
-      const base   = path.slice(0, dash);            // "/teacher" from "/teacher-home"
+      const base   = path.slice(0, dash);            // "/teacher" from "/staff/teachers"
       const suffix = path.slice(dash + 1).toLowerCase(); // "home"
       // Only the *-home / *-Home list page claims its `/<base>/:id`
       // detail route. Sibling dashed routes (teacher-attendance, etc.)

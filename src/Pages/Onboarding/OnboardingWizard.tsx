@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { EntranceQuestionInput } from '../../api/api';
+import { InlineError } from '../../components/ui';
 import {
     School, CalendarDays, Layers, BookOpen, Bus, Library,
     Bell, Loader2, AlertTriangle, Plus, Trash2, CheckCircle2,
@@ -811,8 +812,10 @@ const CourseFeeStep: React.FC<{
 const AppDevFeeCard: React.FC<{
     amount: string; onAmount: (v: string) => void;
     appFee: { annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null;
+    /** The recommended-amount lookup failed, so there is nothing to prefill. */
+    appFeeError?: unknown;
     showErrors: boolean;
-}> = ({ amount, onAmount, appFee, showErrors }) => {
+}> = ({ amount, onAmount, appFee, appFeeError, showErrors }) => {
     const amtErr = showErrors && (amount === '' || Number(amount) < 0);
     return (
         <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-5">
@@ -825,6 +828,14 @@ const AppDevFeeCard: React.FC<{
                         Recommended = your subscription's yearly cost per student{appFee ? <> (₹{appFee.monthlyPerSeat}/mo × 12)</> : ''}.
                         You can change this amount.
                     </p>
+                    {appFeeError != null && (
+                        <div className="mt-1.5">
+                            <InlineError
+                                message="Recommended amount could not be loaded — the figure below is not prefilled from your plan."
+                                testId="onboarding-appfee-error"
+                            />
+                        </div>
+                    )}
                     {appFee && (appFee.plan || appFee.addOns.length > 0) && (
                         <div className="flex flex-wrap gap-1.5 mt-2">
                             {appFee.plan && (
@@ -863,7 +874,8 @@ const GlobalFeeStep: React.FC<{
     appDevAmount: string;
     onAppDevAmount: (v: string) => void;
     appFee: { annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null;
-}> = ({ items, update, showErrors, appDevAmount, onAppDevAmount, appFee }) => {
+    appFeeError?: unknown;
+}> = ({ items, update, showErrors, appDevAmount, onAppDevAmount, appFee, appFeeError }) => {
     const add    = () => update([...items, mkGlobalFeeItem()]);
     const remove = (i: number) => update(items.filter((_, idx) => idx !== i));
     const patch  = (i: number, item: GlobalFeeItem) => { const arr = [...items]; arr[i] = item; update(arr); };
@@ -877,7 +889,7 @@ const GlobalFeeStep: React.FC<{
                     <p className="text-xs text-blue-600 mt-0.5">These fees apply to all students regardless of course — e.g. Development Fund, Smart Class, Sports Day charges.</p>
                 </div>
             </div>
-            <AppDevFeeCard amount={appDevAmount} onAmount={onAppDevAmount} appFee={appFee} showErrors={showErrors} />
+            <AppDevFeeCard amount={appDevAmount} onAmount={onAppDevAmount} appFee={appFee} appFeeError={appFeeError} showErrors={showErrors} />
         </>
     );
 
@@ -1424,12 +1436,17 @@ const OnboardingWizard: React.FC = () => {
     const setClasses  = (classes: ClassInput[]) => setState(p => ({ ...p, classes }));
     // Recommended annual App Development Fee (platform module cost × 12) + breakdown.
     const [appFee, setAppFee] = useState<{ annualPerStudent: number; monthlyPerSeat: number; plan: { code: string; name: string; pricePerSeat: number; minBillableSeats: number } | null; addOns: { module: string; label: string; pricePerSeat: number }[] } | null>(null);
+    /* This prefills a fee the school will actually charge parents. Swallowed,
+       the field stayed blank and looked like one nobody had filled in — so the
+       recommended amount silently never arrived and whatever was typed
+       instead went unchallenged. */
+    const [appFeeError, setAppFeeError] = useState<unknown>(null);
     useEffect(() => {
         api.getAppDevFee().then(r => {
             setAppFee(r);
             // Prefill the editable amount once (management can still override it).
             setState(p => p.appDevFeeAmount === '' ? { ...p, appDevFeeAmount: String(r.annualPerStudent) } : p);
-        }).catch(() => {});
+        }).catch((e: unknown) => setAppFeeError(e));
     }, []);
 
     // ── Validation ─────────────────────────────────────────────────────────────
@@ -1768,6 +1785,9 @@ const OnboardingWizard: React.FC = () => {
             setDone(true);
             // Onboarding is complete — clear the saved draft so it can't
             // resurface if the school is ever reset and re-onboarded.
+            // Deliberately swallowed: onboarding has already succeeded at this
+            // point, and this is only housekeeping. Failing it in front of the
+            // user would report an error about work that is finished.
             api.saveOnboardingDraft({}, 1).catch(() => {});
             // The wizard just bulk-created sessions / classes / teachers /
             // fees / etc. None of that data is in any React Query cache
@@ -1951,6 +1971,7 @@ const OnboardingWizard: React.FC = () => {
                             appDevAmount={state.appDevFeeAmount}
                             onAppDevAmount={v => setState(p => ({ ...p, appDevFeeAmount: v }))}
                             appFee={appFee}
+                            appFeeError={appFeeError}
                         />
                     )}
                     {step === 7 && <TransportStep zones={state.zones} update={zs => setState(p => ({ ...p, zones: zs }))} />}

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, useCallback, Fragment } from "react";
-import { Sigma, Loader2, ChevronRight, ChevronDown, Trophy } from "lucide-react";
+import { Sigma, ChevronRight, ChevronDown, Trophy } from "lucide-react";
 import api from "../../api/api";
 import type { ExamAggregateRow } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { GRADE_COLORS } from "../../utils/grades";
+import { EmptyState, ErrorState, InlineError, Skeleton } from "../../components/ui";
 
 const FALLBACK = { bg: "bg-slate-100", text: "text-slate-600" };
 const gradeBadge = (g: string) => {
@@ -27,33 +28,59 @@ const AggregatePage = () => {
     const [term, setTerm] = useState("");
     const [rows, setRows] = useState<ExamAggregateRow[]>([]);
     const [examCount, setExamCount] = useState(0);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [expanded, setExpanded] = useState<string | null>(null);
 
+    /* Three loads, three independent failure modes. They are tracked
+       separately because they do not mean the same thing: without sessions the
+       page cannot function at all, without classes only the filter degrades,
+       and a failed aggregate must never be shown as "no results". */
+    const [sessionsError, setSessionsError] = useState<unknown>(null);
+    const [classesError, setClassesError] = useState<unknown>(null);
+    const [error, setError] = useState<unknown>(null);
+
     // Sessions once; classes follow the chosen session.
-    useEffect(() => {
+    const loadSessions = useCallback(() => {
+        setSessionsError(null);
         api.getSessions().then((s: any) => {
             const list = Array.isArray(s) ? s : (s?.sessions ?? []);
             setSessions(list);
             if (list[0]) setSessionId(list[0].id);
-        }).catch(() => {});
+            // No sessions at all is a real (if unusual) state, not a failure —
+            // but nothing further will load, so stop showing a spinner.
+            if (!list[0]) setLoading(false);
+        }).catch((e: unknown) => { setSessionsError(e); setLoading(false); });
     }, []);
-    useEffect(() => {
+    useEffect(() => { loadSessions(); }, [loadSessions]);
+
+    const loadClasses = useCallback(() => {
         if (!sessionId) return;
-        api.getClasses(sessionId).then((c: any) => setClasses(Array.isArray(c) ? c : (c?.classes ?? []))).catch(() => setClasses([]));
-        setClassId(""); setSectionId("");
+        setClassesError(null);
+        api.getClasses(sessionId)
+            .then((c: any) => setClasses(Array.isArray(c) ? c : (c?.classes ?? [])))
+            .catch((e: unknown) => { setClasses([]); setClassesError(e); });
     }, [sessionId]);
+    useEffect(() => {
+        loadClasses();
+        setClassId(""); setSectionId("");
+    }, [loadClasses]);
 
     const sections = useMemo(() => classes.find((c) => c.id === classId)?.sections ?? [], [classes, classId]);
 
     const load = useCallback(async () => {
         if (!sessionId) return;
         setLoading(true);
+        setError(null);
         try {
             const res = await api.getExamAggregate({ sessionId, classId: classId || undefined, sectionId: sectionId || undefined, term: term || undefined });
             setRows(res.students);
             setExamCount(res.examCount);
-        } catch { setRows([]); setExamCount(0); }
+        } catch (e: unknown) {
+            // Previously `setRows([])`, which rendered "No published results
+            // for this selection yet." A teacher reads that as marks not having
+            // been entered and goes off to enter them again.
+            setRows([]); setExamCount(0); setError(e);
+        }
         finally { setLoading(false); }
     }, [sessionId, classId, sectionId, term]);
     useEffect(() => { void load(); }, [load]);
@@ -70,10 +97,13 @@ const AggregatePage = () => {
                 <select data-testid="agg-session" className={select} value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
                     {sessions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <select className={select} value={classId} onChange={(e) => { setClassId(e.target.value); setSectionId(""); }}>
+                <select className={select} value={classId} disabled={!!classesError} onChange={(e) => { setClassId(e.target.value); setSectionId(""); }}>
                     <option value="">All classes</option>
                     {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+                {classesError != null && (
+                    <InlineError message="Class list unavailable." onRetry={loadClasses} testId="agg-classes-error" />
+                )}
                 <select className={select} value={sectionId} disabled={!classId} onChange={(e) => setSectionId(e.target.value)}>
                     <option value="">All sections</option>
                     {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -83,12 +113,34 @@ const AggregatePage = () => {
                 </select>
             </div>
 
-            {loading ? (
-                <div className="flex justify-center py-16"><Loader2 className="animate-spin text-slate-400" /></div>
+            {sessionsError != null ? (
+                <div className="bg-white rounded-xl border border-slate-200">
+                    <ErrorState
+                        message="Could not load the academic sessions this page is built from."
+                        error={sessionsError}
+                        onRetry={loadSessions}
+                        testId="agg-sessions-error"
+                    />
+                </div>
+            ) : loading ? (
+                <div className="bg-white rounded-xl border border-slate-200 p-4"><Skeleton rows={6} /></div>
+            ) : error != null ? (
+                <div className="bg-white rounded-xl border border-slate-200">
+                    <ErrorState
+                        message="Could not load consolidated results. This is a loading failure, not an empty result — marks already entered are safe."
+                        error={error}
+                        onRetry={load}
+                        testId="agg-error"
+                    />
+                </div>
             ) : rows.length === 0 ? (
-                <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-                    <Sigma size={38} className="mx-auto mb-3 opacity-40" />
-                    <p className="text-sm">No published results for this selection yet.</p>
+                <div className="bg-white rounded-xl border border-slate-200">
+                    <EmptyState
+                        icon={<Sigma size={22} />}
+                        title="No published results for this selection yet"
+                        message="Results appear here once an exam has been conducted and its results published."
+                        testId="agg-empty"
+                    />
                 </div>
             ) : (
                 <>

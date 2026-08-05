@@ -9,6 +9,7 @@ import {
   Clock, CheckCheck, Ban, Star, MessageSquare, Calculator,
 } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../../components/ui";
 import TeacherOnboardingModal from "./TeacherOnboardingModal";
 import TeacherCalculatorModal from "../../components/Teacher/TeacherCalculatorModal";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
@@ -144,9 +145,17 @@ const ApplicationCard = ({
 
   const meta = STATUS_META[app.status];
 
+  const [actError, setActError] = useState<unknown>(null);
+
   const act = async (status: AppStatus) => {
     setUpdating(true);
+    setActError(null);
     try { await onUpdate(app.id, status, comments || undefined); }
+    // There was no catch here, and none in handleUpdateApplication either. The
+    // optimistic cache patch there runs AFTER the await, so a failed
+    // approve/reject left the card exactly as it was: spinner stops, nothing
+    // moves, no error. The operator reads that as "done".
+    catch (e: unknown) { setActError(e); }
     finally { setUpdating(false); }
   };
 
@@ -206,6 +215,13 @@ const ApplicationCard = ({
 
       {expanded && (
         <div className="px-5 pb-5 space-y-4 border-t border-slate-100 pt-4">
+          {actError != null && (
+            <InlineError
+              message="That decision was not saved — this application is unchanged. Try again."
+              testId="teacher-application-action-error"
+            />
+          )}
+
           {app.message && (
             <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 border border-slate-100">
               <p className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
@@ -587,7 +603,7 @@ const TeacherHome = () => {
                   <TeacherCard
                     key={teacher.id}
                     teacher={teacher}
-                    onClick={() => navigate(`/teacher/${teacher.id}`)}
+                    onClick={() => navigate(`/staff/teachers/${teacher.id}`)}
                   />
                 ))}
               </div>
@@ -615,7 +631,7 @@ const TeacherHome = () => {
                           <tr
                             key={teacher.id}
                             data-testid={`teacher-row-${teacher.phone}`}
-                            onClick={() => navigate(`/teacher/${teacher.id}`)}
+                            onClick={() => navigate(`/staff/teachers/${teacher.id}`)}
                             className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                           >
                             <td className="px-5 py-4">

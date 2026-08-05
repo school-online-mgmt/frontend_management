@@ -250,7 +250,7 @@ const StaffAssignmentWidget = () => {
                       ? <AssignedBadge teacher={cls.teacher} />
                       : <UnassignedBadge onAssign={() => setAssignTarget({ type: "class", id: cls.id, label: `Class: ${cls.name}` })} />
                     }
-                    <button onClick={() => navigate(`/class/${cls.id}`)}
+                    <button onClick={() => navigate(`/academics/classes/${cls.id}`)}
                       className="p-1 text-slate-300 group-hover:text-slate-500 transition-colors rounded">
                       <ChevronRight size={14} />
                     </button>
@@ -281,7 +281,7 @@ const StaffAssignmentWidget = () => {
                       ? <AssignedBadge teacher={sec.teacher} />
                       : <UnassignedBadge onAssign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section: ${sec.name} (${sec.className})` })} />
                     }
-                    <button onClick={() => navigate(`/section/${sec.id}`)}
+                    <button onClick={() => navigate(`/academics/sections/${sec.id}`)}
                       className="p-1 text-slate-300 group-hover:text-slate-500 transition-colors rounded">
                       <ChevronRight size={14} />
                     </button>
@@ -317,7 +317,7 @@ const StaffAssignmentWidget = () => {
                       type: "subject", subjectId: sg.subjectId, sectionId: sg.sectionId,
                       label: `${sg.subjectName} in ${sg.sectionName} (${sg.className})`,
                     })} />
-                    <button onClick={() => navigate(`/section/${sg.sectionId}`)}
+                    <button onClick={() => navigate(`/academics/sections/${sg.sectionId}`)}
                       className="p-1 text-slate-300 group-hover:text-slate-500 transition-colors rounded">
                       <ChevronRight size={14} />
                     </button>
@@ -333,7 +333,7 @@ const StaffAssignmentWidget = () => {
           <p className="text-[10px] text-slate-400">
             Click <strong className="text-amber-600">Unassigned</strong> on any row to assign a teacher instantly.
           </p>
-          <button onClick={() => navigate("/teacher-home")}
+          <button onClick={() => navigate("/staff/teachers")}
             className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-0.5">
             All teachers <ChevronRight size={10} />
           </button>

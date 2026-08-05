@@ -192,14 +192,21 @@ const CalendarPage = () => {
         });
     };
 
+    const [allEventsError, setAllEventsError] = useState<unknown>(null);
+
     const toggleAllEvents = async () => {
         if (showAllEvents) { setShowAllEvents(false); return; }
         setShowAllEvents(true);
         setAllEventsLoading(true);
+        setAllEventsError(null);
         try {
             const res = await api.getSchoolEvents();
             setAllEvents(res.events ?? res ?? []);
-        } finally { setAllEventsLoading(false); }
+        }
+        // No catch: the rejection went unhandled and the expanded list stayed
+        // empty, which reads as "this school has no events on the calendar".
+        catch (e: unknown) { setAllEvents([]); setAllEventsError(e); }
+        finally { setAllEventsLoading(false); }
     };
 
     return (
@@ -328,6 +335,13 @@ const CalendarPage = () => {
                             </div>
                             {allEventsLoading ? (
                                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-slate-400" size={32} /></div>
+                            ) : allEventsError != null ? (
+                                <ErrorState
+                                    message="Could not load the school's events."
+                                    error={allEventsError}
+                                    onRetry={() => { setShowAllEvents(false); void toggleAllEvents(); }}
+                                    testId="calendar-all-events-error"
+                                />
                             ) : allEvents.length === 0 ? (
                                 <p className="text-center text-slate-400 py-8">No events found</p>
                             ) : (

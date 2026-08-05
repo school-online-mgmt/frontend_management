@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InlineError } from "../components/ui";
 import {
   Users, FileCheck, UserPlus, CheckCircle, XCircle, AlertCircle,
   Mail, Phone, Calendar, Search, Filter, Loader2, Eye, X,
@@ -65,6 +66,8 @@ const StudentAdmission = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [allCourses, setAllCourses] = useState<any[]>([]);
   const [transportZones, setTransportZones] = useState<any[]>([]);
+  /** Auto-generated admission ID / roll number failed to come back. */
+  const [generateError, setGenerateError] = useState<unknown>(null);
 
   useEffect(() => {
     fetchApplicants();
@@ -74,16 +77,20 @@ const StudentAdmission = () => {
     api.getTransportZones().then((data: any) => {
       setTransportZones(Array.isArray(data) ? data : data?.zones ?? []);
     }).catch(() => setTransportZones([]));
+    // Both of these auto-fill identifiers the operator does not type. Swallowed,
+    // a failure left the field blank and the student was admitted without an
+    // admission ID or roll number — which is not recoverable by looking at the
+    // screen, because a blank field looks like one nobody filled in yet.
     api.generateAdmissionInfo().then((data: any) => {
       setAdmissionData(prev => ({ ...prev, admissionId: data.admissionId }));
-    }).catch(() => {});
+    }).catch((e: unknown) => setGenerateError(e));
   }, []);
 
   useEffect(() => {
     if (admissionData.sectionId) {
       api.generateAdmissionInfo(admissionData.sectionId).then((data: any) => {
         setAdmissionData(prev => ({ ...prev, rollNo: data.rollNo }));
-      }).catch(() => {});
+      }).catch((e: unknown) => setGenerateError(e));
     }
   }, [admissionData.sectionId]);
 
@@ -504,6 +511,14 @@ const StudentAdmission = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Admission ID</label>
                     <input id="admission-id" data-testid="admission-id" type="text" value={admissionData.admissionId} readOnly
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
+                    {generateError != null && (
+                      <div className="mt-1">
+                        <InlineError
+                          message="Admission ID / roll number could not be generated — do not admit until this succeeds."
+                          testId="admission-generate-error"
+                        />
+                      </div>
+                    )}
                   </div>
                   {/* Roll No */}
                   <div>

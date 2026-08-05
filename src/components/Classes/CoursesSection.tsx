@@ -50,7 +50,7 @@ const CoursesSection = ({ courses, onCreateCourse }: { courses: any[]; onCreateC
 
                     <React.Fragment key={course.id}>
                         <tr
-                            onClick={() => navigate(`/course/${course.id}`)}
+                            onClick={() => navigate(`/academics/courses/${course.id}`)}
                             className="cursor-pointer hover:bg-slate-50"
                         >
 

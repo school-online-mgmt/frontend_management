@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { InlineError } from "../../components/ui";
 import { useNavigate } from "react-router-dom";
 import {
     BookOpen, Plus, RefreshCcw, Search, ToggleLeft, ToggleRight,
@@ -346,7 +347,7 @@ const LibraryHome = () => {
                                 <tr key={book.id} data-testid="library-book-row" data-book-id={book.id} data-title={book.title} className="hover:bg-slate-50">
                                     <td className="p-4">
                                         <button
-                                            onClick={() => navigate(`/library/books/${book.id}`)}
+                                            onClick={() => navigate(`/campus/library/books/${book.id}`)}
                                             className="font-semibold text-slate-800 hover:text-indigo-600 text-left"
                                         >
                                             {book.title}
@@ -378,7 +379,7 @@ const LibraryHome = () => {
                                     </td>
                                     <td className="p-4 text-center">
                                         <button
-                                            onClick={() => navigate(`/library/books/${book.id}`)}
+                                            onClick={() => navigate(`/campus/library/books/${book.id}`)}
                                             className="text-xs text-indigo-600 hover:underline"
                                         >
                                             View / Issue
@@ -791,9 +792,18 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        api.getClasses().then((c) => setClasses(c || [])).catch(() => {});
+    /* These chips are how a book gets restricted to particular classes. An
+       empty list looks like "this school has no classes", so the book would be
+       saved unrestricted — readable by everyone — with nothing on screen to
+       say the list simply failed to load. */
+    const [classesError, setClassesError] = useState<unknown>(null);
+    const loadClasses = useCallback(() => {
+        setClassesError(null);
+        api.getClasses()
+            .then((c) => setClasses(c || []))
+            .catch((e: unknown) => { setClasses([]); setClassesError(e); });
     }, []);
+    useEffect(() => { loadClasses(); }, [loadClasses]);
 
     const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -865,6 +875,15 @@ const AddBookModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                         </div>
                         <div className="col-span-2">
                             <label className="text-xs font-semibold text-slate-600 block mb-2">Class Restrictions <span className="font-normal text-slate-400">(leave empty = no restriction)</span></label>
+                            {classesError != null && (
+                                <div className="mb-2">
+                                    <InlineError
+                                        message="Class list unavailable — saving now would leave this book unrestricted."
+                                        onRetry={loadClasses}
+                                        testId="library-classes-error"
+                                    />
+                                </div>
+                            )}
                             <div className="flex flex-wrap gap-2">
                                 {classes.map((cls) => (
                                     <button key={cls.id} type="button"

@@ -731,7 +731,7 @@ export default function AccountPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                     <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><CreditCard size={15} className="text-violet-500" /> Subscription &amp; Contract</p>
-                    <a href="/platform-bills" className="text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1">
+                    <a href="/finance/platform-bills" className="text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1">
                       View bills <ExternalLink size={11} />
                     </a>
                   </div>

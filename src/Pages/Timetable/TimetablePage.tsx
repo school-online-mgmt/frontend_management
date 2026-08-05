@@ -4,6 +4,7 @@ import {
     Clock, MapPin, School, ChevronDown, Check, CircleAlert,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import { useSessionId } from "../../context/SessionContext";
@@ -256,11 +257,24 @@ const TimetablePage = () => {
     const [modal, setModal] = useState<{ dayOfWeek: number; periodNumber: number; entry?: Entry } | null>(null);
     const [tab, setTab] = useState<"grid" | "config">("grid");
     const [periodConfig, setPeriodConfig] = useState<PeriodSlot[]>([]);
+    const [periodConfigError, setPeriodConfigError] = useState<unknown>(null);
 
     const selectedSection = useMemo(() => {
         for (const c of classes) { const s = c.sections.find(x => x.id === sectionId); if (s) return { section: s, cls: c }; }
         return null;
     }, [classes, sectionId]);
+
+    /* Without the period config the grid has no rows to draw, so a swallowed
+       failure here was indistinguishable from "this school has not set up its
+       periods yet" — and the screen shown for that invites the admin to build
+       a bell schedule they already have. */
+    const loadPeriodConfig = useCallback(() => {
+        if (!sessionId) return;
+        setPeriodConfigError(null);
+        api.getTimetablePeriodConfig(sessionId)
+            .then(r => setPeriodConfig(r.slots ?? []))
+            .catch((e: unknown) => { setPeriodConfig([]); setPeriodConfigError(e); });
+    }, [sessionId]);
 
     // Load classes + subjects + teachers + conflict count once per session.
     useEffect(() => {
@@ -275,7 +289,7 @@ const TimetablePage = () => {
                 setConflicts(cf.status === "fulfilled" ? (cf.value.conflictCount ?? 0) : 0);
                 if (!sectionId && cls[0]?.sections[0]) setSectionId(cls[0].sections[0].id);
             });
-        api.getTimetablePeriodConfig(sessionId).then(r => setPeriodConfig(r.slots ?? [])).catch(() => {});
+        loadPeriodConfig();
     }, [sessionId]);  // eslint-disable-line react-hooks/exhaustive-deps
 
     const loadGrid = useCallback(async () => {
@@ -320,6 +334,19 @@ const TimetablePage = () => {
 
                 {tab === "config" ? (
                     <PeriodConfigTab sessionId={sessionId} initial={periodConfig} onSaved={setPeriodConfig} />
+                ) : periodConfigError != null ? (
+                    /* Must precede the config-first gate below. That gate says
+                       "set up your bell schedule", which on a failed load would
+                       invite an admin to rebuild a schedule that already
+                       exists. */
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm max-w-2xl mx-auto">
+                        <ErrorState
+                            message="Could not load the period configuration. Your existing bell schedule is unaffected — do not re-create it."
+                            error={periodConfigError}
+                            onRetry={loadPeriodConfig}
+                            testId="timetable-config-error"
+                        />
+                    </div>
                 ) : periodConfig.length === 0 ? (
                     /* Config-first gate: no bell schedule → nothing can be assigned yet. */
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center max-w-2xl mx-auto">

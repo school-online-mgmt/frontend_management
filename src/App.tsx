@@ -69,6 +69,8 @@ import PayrollHub from "./Pages/HR/PayrollHub.tsx";
 import PantryHub from "./Pages/Pantry/PantryHub.tsx";
 import ModuleGate from "./components/ModuleGate.tsx";
 import AdminRoute from "./components/AdminRoute.tsx";
+import LegacyRedirect from "./components/LegacyRedirect.tsx";
+import { ROUTES, PATTERNS, LEGACY_REDIRECTS } from "./config/routes.ts";
 
 function App() {
   return (
@@ -76,194 +78,188 @@ function App() {
       <AuthProvider>
         <OnboardingProvider>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/teacher-apply" element={<TeacherApply />} />
-          <Route path="/entrance-exam" element={<EntranceExamPage />} />
+          <Route path={ROUTES.login} element={<LoginPage />} />
+          <Route path={ROUTES.teacherApply} element={<TeacherApply />} />
+          <Route path={ROUTES.entranceExam} element={<EntranceExamPage />} />
+
+          {/* Retired paths, generated from the one table in config/routes.ts.
+              Mounted OUTSIDE ProtectedRoute so the forward happens before the
+              auth check — otherwise an expired session on an old bookmark
+              lands on /login and loses the destination entirely. */}
+          {LEGACY_REDIRECTS.map(([from, to]) => (
+            <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
+          ))}
 
         <Route element={<ProtectedRoute />}>
           <Route element={<OnboardingGate />}>
           <Route element={<Layout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to={ROUTES.dashboard} replace />} />
+            <Route path={ROUTES.dashboard} element={<Dashboard />} />
 
-            {/* PEOPLE — students, applicants, staff (always-on bundled default) */}
-            <Route path="/applicants-home" element={<ApplicantsHome />} />
-            {/* Readmission is deliberately NOT module-gated: getting your own
-                students back after finalising a year is how a school runs, not
-                a feature it buys. Only the alumni DIRECTORY and certificates
-                are paid — see the ALUMNI gate below. */}
-            <Route path="/readmission" element={<ReadmissionHome />} />
-            <Route path="/readmission/:applicantId/admit" element={<ReadmissionAdmit />} />
-            <Route element={<ModuleGate module="ALUMNI" />}>
-              <Route path="/alumni" element={<AlumniHome />} />
-            </Route>
-            <Route path="/students-home" element={<StudentsHome />} />
-            <Route path="/applicant/:applicantId" element={<ApplicantDetails />} />
-            <Route path="/student/:id" element={<StudentDetails />} />
-            <Route path="/staff" element={<StaffHome />} />
-            <Route path="/permissions" element={<PermissionsHome />} />
+            {/* ── Admissions ────────────────────────────────────────────── */}
+            {/* PEOPLE is a bundled default, so applicants and readmission are
+                ungated. Readmission especially: getting your own students back
+                after finalising a year is how a school runs, not a feature it
+                buys. Only the alumni DIRECTORY and certificates are paid. */}
+            <Route path={ROUTES.admissions.applicants} element={<ApplicantsHome />} />
+            <Route path={PATTERNS.applicantDetail} element={<ApplicantDetails />} />
+            <Route path={ROUTES.admissions.readmission} element={<ReadmissionHome />} />
+            <Route path={PATTERNS.readmissionAdmit} element={<ReadmissionAdmit />} />
             <Route element={<ModuleGate module="ENTRANCE_EXAM" />}>
-              <Route path="/entrance-papers" element={<EntrancePapersHome />} />
+              <Route path={ROUTES.admissions.entrancePapers} element={<EntrancePapersHome />} />
             </Route>
+
+            {/* ── Students ──────────────────────────────────────────────── */}
+            <Route path={ROUTES.students.root} element={<StudentsHome />} />
             <Route element={<ModuleGate module="DOCUMENTS" />}>
-              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path={ROUTES.students.documents} element={<DocumentsPage />} />
             </Route>
+            <Route element={<ModuleGate module="ALUMNI" />}>
+              <Route path={ROUTES.students.alumni} element={<AlumniHome />} />
+            </Route>
+            {/* Last in the group: static siblings above outrank this under v6
+                path ranking, so /students/documents is not read as an id. */}
+            <Route path={PATTERNS.studentDetail} element={<StudentDetails />} />
 
-            {/* TEACHERS — teacher onboarding & directory (always-on bundled default) */}
-            <Route path="/teacher-home" element={<TeacherHome />} />
-            <Route path="/teacher/:id" element={<TeacherDetails />} />
-
-            {/* ACADEMICS — sessions, classes, sections, courses, subjects */}
+            {/* ── Staff ─────────────────────────────────────────────────── */}
+            <Route path={ROUTES.staff.teachers} element={<TeacherHome />} />
+            <Route path={PATTERNS.teacherDetail} element={<TeacherDetails />} />
+            <Route path={ROUTES.staff.accounts} element={<StaffHome />} />
+            <Route path={ROUTES.staff.permissions} element={<PermissionsHome />} />
+            {/* Class assignments moved to the Staff domain to match the nav,
+                but keeps its ACADEMICS gate — this is a routing change, not a
+                change to what a school must own to reach the page. */}
             <Route element={<ModuleGate module="ACADEMICS" />}>
-              <Route path="/subject-Home" element={<SubjectHomePage />} />
-              <Route path="/organisation" element={<OrganisationHome />} />
-              <Route path="/subject/:slug" element={<SubjectDetails />} />
-              <Route path="/course-Home" element={<CourseHome />} />
-              <Route path="/course/:courseId" element={<CourseDetails />} />
-              {/* Academic Structure (FR-018) — overview, the merged
-                  Classes & Sections page, and the bulk builder. */}
-              <Route path="/structure" element={<StructureOverviewPage />} />
-              <Route path="/structure/classes" element={<ClassesSections />} />
-              <Route path="/structure/setup" element={<QuickSetup />} />
-              {/* Kept so old links and bookmarks still resolve. */}
-              <Route path="/class-Home" element={<ClassesSections />} />
-              <Route path="/class/:classId" element={<ClassDetails />} />
-              <Route path="/section/:sectionId" element={<SectionDetails />} />
-              <Route path="/sessions" element={<SessionsPage />} />
-              <Route path="/assignments" element={<AssignmentsPage />} />
+              <Route path={ROUTES.staff.assignments} element={<AssignmentsPage />} />
+            </Route>
+            <Route element={<ModuleGate module="STAFF_ATTENDANCE" />}>
+              <Route path={ROUTES.staff.attendance} element={<TeacherAttendanceHome />} />
+            </Route>
+            <Route element={<ModuleGate module="HR_PAYROLL" />}>
+              <Route path={ROUTES.staff.payroll} element={<PayrollHub />} />
             </Route>
 
-            {/* STUDIES — the exam cycle itself: papers, admit cards, marks */}
+            {/* ── Academics ─────────────────────────────────────────────── */}
+            <Route element={<ModuleGate module="ACADEMICS" />}>
+              <Route path={ROUTES.academics.root} element={<StructureOverviewPage />} />
+              <Route path={ROUTES.academics.classes} element={<ClassesSections />} />
+              <Route path={ROUTES.academics.setup} element={<QuickSetup />} />
+              <Route path={PATTERNS.classDetail} element={<ClassDetails />} />
+              <Route path={PATTERNS.sectionDetail} element={<SectionDetails />} />
+              <Route path={ROUTES.academics.subjects} element={<SubjectHomePage />} />
+              <Route path={PATTERNS.subjectDetail} element={<SubjectDetails />} />
+              <Route path={ROUTES.academics.courses} element={<CourseHome />} />
+              <Route path={PATTERNS.courseDetail} element={<CourseDetails />} />
+              <Route path={ROUTES.academics.sessions} element={<SessionsPage />} />
+              <Route path={ROUTES.academics.organisation} element={<OrganisationHome />} />
+            </Route>
+            <Route element={<ModuleGate module="TIMETABLE" />}>
+              <Route path={ROUTES.academics.timetable} element={<TimetablePage />} />
+            </Route>
+            <Route element={<ModuleGate module="HOMEWORK" />}>
+              <Route path={ROUTES.academics.homework} element={<HomeworkPage />} />
+            </Route>
+
+            {/* ── Assessment ────────────────────────────────────────────── */}
             <Route element={<ModuleGate module="STUDIES" />}>
-              <Route path="/exam-home" element={<ExamHome />} />
-              <Route path="/exam/:examId" element={<ExamDetails />} />
-              <Route path="/exam/admit-cards" element={<AdmitCardsPage />} />
+              <Route path={ROUTES.assessment.exams} element={<ExamHome />} />
+              <Route path={PATTERNS.examDetail} element={<ExamDetails />} />
+              {/* Lifted out of /exam/:examId, where it only resolved because
+                  static segments outrank dynamic ones. */}
+              <Route path={ROUTES.assessment.admitCards} element={<AdmitCardsPage />} />
             </Route>
 
             {/* Extensions of STUDIES, each sold on its own. Kept OUTSIDE the
                 STUDIES block so the 402 names the module actually missing —
                 nesting would report "STUDIES" for a school that has it. */}
             <Route element={<ModuleGate module="ANALYTICS" />}>
-              <Route path="/performance" element={<ResultsPerformancePage />} />
+              <Route path={ROUTES.assessment.performance} element={<ResultsPerformancePage />} />
             </Route>
             <Route element={<ModuleGate module="REPORT_CARDS" />}>
-              <Route path="/consolidated-results" element={<AggregatePage />} />
+              <Route path={ROUTES.assessment.consolidatedResults} element={<AggregatePage />} />
             </Route>
 
-            {/* ATTENDANCE — daily STUDENT roll-call */}
+            {/* ── Attendance ────────────────────────────────────────────── */}
             <Route element={<ModuleGate module="ATTENDANCE" />}>
-              <Route path="/attendance" element={<AttendanceHome />} />
-              <Route path="/attendance/jobs" element={<JobsPage />} />
+              <Route path={ROUTES.attendance.root} element={<AttendanceHome />} />
+              <Route path={ROUTES.attendance.jobs} element={<JobsPage />} />
             </Route>
-
-            {/* STAFF_ATTENDANCE — the staff muster, split from ATTENDANCE */}
-            <Route element={<ModuleGate module="STAFF_ATTENDANCE" />}>
-              <Route path="/teacher-attendance" element={<TeacherAttendanceHome />} />
-            </Route>
-
-            {/* LEAVE — its own module since 0125/0126. Deliberately NOT nested
-                inside ATTENDANCE: nesting would silently require both, and
-                leave approval is a separate purchase. */}
+            {/* LEAVE is deliberately NOT nested inside ATTENDANCE: nesting
+                would silently require both, and leave approval is a separate
+                purchase. */}
             <Route element={<ModuleGate module="LEAVE" />}>
-              <Route path="/leaves" element={<LeaveHome />} />
+              <Route path={ROUTES.attendance.leaves} element={<LeaveHome />} />
             </Route>
 
-            {/* LIBRARY */}
-            <Route element={<ModuleGate module="LIBRARY" />}>
-              <Route path="/library" element={<LibraryHome />} />
-              <Route path="/library/books/:bookId" element={<BookDetailsPage />} />
-            </Route>
-
-            {/* COMMUNICATION — notices and the school calendar */}
-            <Route element={<ModuleGate module="COMMUNICATION" />}>
-              <Route path="/notices" element={<NoticeBoardHome />} />
-              <Route path="/notices/:boardId" element={<NoticeBoardDetails />} />
-              <Route path="/events" element={<Navigate to="/calendar" replace />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-            </Route>
-
-            {/* BROADCAST — bulk email, split from COMMUNICATION in 0127/0128.
-                A school can publish notices without buying email blasts. */}
-            <Route element={<ModuleGate module="BROADCAST" />}>
-              <Route path="/communication" element={<CommunicationPage />} />
-            </Route>
-
-            <Route element={<ModuleGate module="PUBLICATIONS" />}>
-              <Route path="/publications" element={<PublicationsPage />} />
-            </Route>
-
-            {/* FINANCE — fees & invoices */}
+            {/* ── Finance ───────────────────────────────────────────────── */}
             <Route element={<ModuleGate module="FINANCE" />}>
-              <Route path="/fees" element={<FeesHub />} />
-              <Route path="/fees/invoice/:id" element={<FeeInvoiceDetails />} />
-              <Route path="/fees/jobs" element={<JobsPage />} />
+              <Route path={ROUTES.finance.fees} element={<FeesHub />} />
+              <Route path={PATTERNS.feeInvoice} element={<FeeInvoiceDetails />} />
+              <Route path={ROUTES.finance.jobs} element={<JobsPage />} />
             </Route>
 
-            {/* Automated jobs — the standalone /jobs hub is ADMIN-only.
-                Module-scoped job views (/attendance/jobs, /fees/jobs) stay open
-                to those module's users above. */}
-            <Route element={<AdminRoute />}>
-              <Route path="/jobs" element={<JobsPage />} />
+            {/* ── Communication ─────────────────────────────────────────── */}
+            <Route element={<ModuleGate module="COMMUNICATION" />}>
+              <Route path={ROUTES.communication.notices} element={<NoticeBoardHome />} />
+              <Route path={PATTERNS.noticeBoard} element={<NoticeBoardDetails />} />
+              <Route path={ROUTES.communication.calendar} element={<CalendarPage />} />
+            </Route>
+            {/* BROADCAST split from COMMUNICATION in 0127/0128 — a school can
+                publish notices without buying email blasts. */}
+            <Route element={<ModuleGate module="BROADCAST" />}>
+              <Route path={ROUTES.communication.broadcast} element={<CommunicationPage />} />
+            </Route>
+            <Route element={<ModuleGate module="PUBLICATIONS" />}>
+              <Route path={ROUTES.communication.publications} element={<PublicationsPage />} />
             </Route>
 
-            {/* TRANSPORT */}
-            <Route element={<ModuleGate module="TRANSPORT" />}>
-              <Route path="/transport" element={<TransportHub />} />
+            {/* ── Campus ────────────────────────────────────────────────── */}
+            <Route element={<ModuleGate module="LIBRARY" />}>
+              <Route path={ROUTES.campus.library} element={<LibraryHome />} />
+              <Route path={PATTERNS.libraryBook} element={<BookDetailsPage />} />
             </Route>
-
-            {/* SPORTS */}
             <Route element={<ModuleGate module="SPORTS" />}>
-              <Route path="/sports" element={<SportsHome />} />
-              <Route path="/sports/events/:eventId" element={<SportsEventDetail />} />
+              <Route path={ROUTES.campus.sports} element={<SportsHome />} />
+              <Route path={PATTERNS.sportsEvent} element={<SportsEventDetail />} />
             </Route>
-
-            {/* INVENTORY — item master, procurement, consumption ledger.
-                `/hr` and `/pantry` used to be nested in here, which meant a
-                school owning PANTRY but not INVENTORY could not reach its own
-                canteen, and payroll was gated on the stock module. Both now
-                gate on what they actually are. */}
-            <Route element={<ModuleGate module="INVENTORY" />}>
-              <Route path="/inventory" element={<InventoryHub />} />
+            <Route element={<ModuleGate module="TRANSPORT" />}>
+              <Route path={ROUTES.campus.transport} element={<TransportHub />} />
             </Route>
-
-            {/* HR_PAYROLL — split from core TEACHERS in 0127/0128 */}
-            <Route element={<ModuleGate module="HR_PAYROLL" />}>
-              <Route path="/hr" element={<PayrollHub />} />
-            </Route>
-
-            {/* PANTRY */}
             <Route element={<ModuleGate module="PANTRY" />}>
-              <Route path="/pantry" element={<PantryHub />} />
+              <Route path={ROUTES.campus.pantry} element={<PantryHub />} />
+            </Route>
+            {/* /staff/payroll and /campus/pantry used to be nested in here,
+                which meant a school owning PANTRY but not INVENTORY could not
+                reach its own canteen, and payroll was gated on the stock
+                module. Both now gate on what they actually are. */}
+            <Route element={<ModuleGate module="INVENTORY" />}>
+              <Route path={ROUTES.campus.inventory} element={<InventoryHub />} />
             </Route>
 
-            {/* HOMEWORK — school-wide oversight */}
-            <Route element={<ModuleGate module="HOMEWORK" />}>
-              <Route path="/homework" element={<HomeworkPage />} />
-            </Route>
-
-            {/* TIMETABLE — weekly class timetable editor */}
-            <Route element={<ModuleGate module="TIMETABLE" />}>
-              <Route path="/timetable" element={<TimetablePage />} />
-            </Route>
-
-            {/* Account / billing / support — ADMIN-only (not module-gated). */}
+            {/* ── Parent relations & administration — ADMIN-only ────────── */}
             <Route element={<AdminRoute />}>
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/platform-bills" element={<PlatformBillsPage />} />
-              <Route path="/support" element={<SupportCenter />} />
-              <Route path="/activity" element={<ActivityPage />} />
-            <Route element={<ModuleGate module="GRIEVANCE" />}>
-              <Route path="/grievances" element={<GrievancesPage />} />
+              <Route path={ROUTES.parents.ptm} element={<PtmPage />} />
+              <Route path={ROUTES.parents.feedback} element={<FeedbackPage />} />
+              <Route element={<ModuleGate module="GRIEVANCE" />}>
+                <Route path={ROUTES.parents.grievances} element={<GrievancesPage />} />
+              </Route>
+
+              <Route path={ROUTES.admin.settings} element={<AccountPage />} />
+              <Route path={ROUTES.finance.platformBills} element={<PlatformBillsPage />} />
+              <Route path={ROUTES.admin.support} element={<SupportCenter />} />
+              <Route path={ROUTES.admin.activity} element={<ActivityPage />} />
+              {/* The standalone jobs hub is ADMIN-only; the module-scoped views
+                  (/attendance/jobs, /finance/jobs) stay open to those modules'
+                  users above. */}
+              <Route path={ROUTES.admin.jobs} element={<JobsPage />} />
             </Route>
-              <Route path="/ptm" element={<PtmPage />} />
-              <Route path="/feedback" element={<FeedbackPage />} />
-            </Route>
-            <Route path="/onboarding" element={<OnboardingPage />} />
+
+            <Route path={ROUTES.onboarding} element={<OnboardingPage />} />
             </Route>
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to={ROUTES.login} />} />
         </Routes>
         </OnboardingProvider>
       </AuthProvider>

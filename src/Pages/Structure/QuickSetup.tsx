@@ -124,7 +124,7 @@ const QuickSetup = () => {
                 gradient={MODULE_THEMES.classes}
                 primaryActions={
                     <button
-                        onClick={() => navigate("/structure")}
+                        onClick={() => navigate("/academics")}
                         className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/20 transition backdrop-blur-sm"
                     >
                         <ArrowLeft size={15} /> Back to Structure
@@ -173,7 +173,7 @@ const QuickSetup = () => {
 
                         <div className="mt-6 flex gap-2 justify-center">
                             <button
-                                onClick={() => navigate("/structure/classes")}
+                                onClick={() => navigate("/academics/classes")}
                                 data-testid="quick-setup-view-btn"
                                 className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700"
                             >
