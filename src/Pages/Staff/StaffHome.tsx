@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api, { type StaffAccount } from '../../api/api';
+import { ErrorState, Skeleton } from '../../components/ui';
 import { UserCog, Plus, Trash2, Pencil, X, Search, ShieldCheck, KeyRound, Wallet } from 'lucide-react';
 
 /**
@@ -171,7 +172,14 @@ export default function StaffHome() {
             </div>
 
             {loading ? (
-                <p className="text-slate-500 text-sm">Loading…</p>
+                <Skeleton rows={4} />
+            ) : error ? (
+                /* The banner above already names the failure. Without this
+                   branch "No staff accounts yet." rendered underneath it,
+                   telling an admin their staff list is empty when it is not. */
+                <div className="border border-slate-200 rounded-2xl">
+                    <ErrorState message={error} onRetry={() => void load()} testId="staff-load-error" />
+                </div>
             ) : filtered.length === 0 ? (
                 <div data-testid="staff-empty" className="p-8 text-center border border-dashed border-slate-200 rounded-2xl">
                     <p className="text-slate-500 text-sm">No staff accounts yet.</p>

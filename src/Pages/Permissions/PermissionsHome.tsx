@@ -205,7 +205,10 @@ export default function PermissionsHome() {
                     className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${tab === 'groups' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 ><ShieldCheck size={16} /> Roles ({groups.length})</button>
                 <div className="flex-1" />
-                {groups.length === 0 && (
+                {/* `!error` matters: on a failed load `groups` is empty, so
+                    this offered "Set up the standard roles" to a school that
+                    may already have them — seeding on top of its real ones. */}
+                {groups.length === 0 && !error && (
                     <button
                         data-testid="perm-seed-btn" disabled={busy} onClick={() => void seed()}
                         className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-medium disabled:opacity-50"

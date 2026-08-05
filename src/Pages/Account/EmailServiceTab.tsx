@@ -7,6 +7,7 @@ import {
   Bus, FileSpreadsheet, ClipboardList, Megaphone,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import { useToast } from "../../context/ToastContext";
 import Switch from "../../components/common/Switch";
 
@@ -61,6 +62,7 @@ export default function EmailServiceTab() {
   const [moduleAddrs, setModuleAddrs] = useState<ModuleAddrs | null>(null);
   const [moduleGates, setModuleGates] = useState<EmailModulesGates | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   // Self-service config form (BYO/shared, auth key, domain, from-name)
   const [mode, setMode]             = useState<"shared" | "byo">("shared");
@@ -97,7 +99,10 @@ export default function EmailServiceTab() {
       setEmailDomain(s.email.emailDomain ?? "");
       setFromName(s.email.emailFromName ?? "");
       setEmailAuthKey("");
-    } catch {
+    } catch (e: unknown) {
+      // The toast auto-dismisses and the guard below returns null, so this
+      // rendered a permanently blank Email Service tab.
+      setLoadError(e);
       addToast("Failed to load email settings", "error");
     } finally {
       setLoading(false);
@@ -222,7 +227,14 @@ export default function EmailServiceTab() {
         <RefreshCw size={18} className="animate-spin mr-2" /> Loading email settings…
       </div>
     );
-  if (!settings || !usage || !moduleAddrs || !moduleGates) return null;
+  if (!settings || !usage || !moduleAddrs || !moduleGates) return (
+    <ErrorState
+      message="Could not load your email settings. Your existing configuration is unchanged."
+      error={loadError}
+      onRetry={() => void load()}
+      testId="email-settings-error"
+    />
+  );
 
   // BYO is "ready" if the form has both fields OR the tenant already had them
   const byoReady = mode === "byo"

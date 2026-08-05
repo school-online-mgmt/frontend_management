@@ -3,6 +3,7 @@ import api, {
     type EntrancePaper, type EntranceQuestion, type EntranceQuestionInput, type EntranceQuestionType,
 } from '../../api/api';
 import { FileQuestion, Plus, Trash2, X, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { ErrorState, Skeleton } from '../../components/ui';
 
 /**
  * Entrance paper authoring (FR-012).
@@ -177,7 +178,15 @@ export default function EntrancePapersHome() {
             )}
 
             {loading ? (
-                <p className="text-slate-500 text-sm">Loading…</p>
+                <Skeleton rows={4} />
+            ) : error ? (
+                /* The banner above (data-testid="entrance-papers-error", which
+                   the BDD suite asserts on) names the failure. Without this
+                   branch the empty state ALSO rendered, telling the office to
+                   create papers that may already exist. */
+                <div className="border border-slate-200 rounded-2xl">
+                    <ErrorState message={error} onRetry={() => void load()} testId="entrance-papers-load-error" />
+                </div>
             ) : papers.length === 0 ? (
                 <div data-testid="entrance-papers-empty" className="p-8 text-center border border-dashed border-slate-200 rounded-2xl">
                     <p className="text-slate-500 text-sm">

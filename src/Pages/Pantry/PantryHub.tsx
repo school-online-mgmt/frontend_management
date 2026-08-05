@@ -7,6 +7,7 @@ import {
     Users, ReceiptText,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import type { PantryItem, PantryWalletRow, PantryInsights } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
@@ -129,6 +130,16 @@ function PosTab() {
                 </div>
                 {itemsQ.isLoading ? (
                     <div className="flex justify-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div>
+                ) : itemsQ.isError ? (
+                    /* At a counter with a queue, "No items — add some in the
+                       Menu tab" says the menu is empty. It sends the operator
+                       to rebuild a menu that is already there. */
+                    <ErrorState
+                        message="Could not load the menu. Items already on it are unaffected — do not re-add them."
+                        error={itemsQ.error}
+                        onRetry={() => void itemsQ.refetch()}
+                        testId="pantry-pos-items-error"
+                    />
                 ) : filteredItems.length === 0 ? (
                     <p className="text-center text-sm text-slate-400 py-16">No items — add some in the Menu tab.</p>
                 ) : (
@@ -323,6 +334,13 @@ function MenuTab() {
             </div>
             {itemsQ.isLoading ? (
                 <div className="flex justify-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div>
+            ) : itemsQ.isError ? (
+                <ErrorState
+                    message="Could not load the menu."
+                    error={itemsQ.error}
+                    onRetry={() => void itemsQ.refetch()}
+                    testId="pantry-menu-error"
+                />
             ) : items.length === 0 ? (
                 <p className="text-center text-sm text-slate-400 py-16">No menu items yet — add your first snack.</p>
             ) : (

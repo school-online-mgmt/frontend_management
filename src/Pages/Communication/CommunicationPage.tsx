@@ -4,6 +4,7 @@ import {
   AlertCircle, CheckCircle2, Sparkles, Filter,
 } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
@@ -46,6 +47,7 @@ export default function CommunicationPage() {
   // Option lists for the picker
   const [options, setOptions] = useState<SimpleOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsError, setOptionsError] = useState<unknown>(null);
 
   // Preview state
   const [previewing, setPreviewing] = useState(false);
@@ -96,6 +98,11 @@ export default function CommunicationPage() {
             return [];
         }
       } catch (err) {
+        // The toast auto-dismisses and the picker then reads "No options
+        // found." — which says this school has no classes/courses/zones,
+        // rather than that the list failed to load. On a broadcast form that
+        // is the difference between "nothing to target" and "cannot target".
+        setOptionsError(err);
         addToast("Failed to load options", "error");
         return [];
       }
@@ -286,7 +293,9 @@ export default function CommunicationPage() {
               ) : (
                 <div className="max-h-44 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-slate-50/40">
                   {options.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-3">No options found.</p>
+                    optionsError != null
+                      ? <div className="py-3 text-center"><InlineError message="Audience list unavailable — this broadcast cannot be targeted yet." testId="communication-options-error" /></div>
+                      : <p className="text-xs text-slate-400 text-center py-3">No options found.</p>
                   )}
                   {options.map((o) => (
                     <label

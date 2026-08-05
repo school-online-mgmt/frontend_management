@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, User, CheckCircle, AlertTriangle, Printer, AlertCircle, GraduationCap, Calendar } from 'lucide-react';
 import api from '../../api/api';
+import { EmptyState, ErrorState } from '../../components/ui';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`;
@@ -46,17 +47,21 @@ export default function FeeInvoiceDetails() {
     const [showCancel, setShowCancel] = useState(false);
     const [actionRemarks, setActionRemarks] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    /** Persistent, unlike errorMsg — which clears itself after 5 seconds. */
+    const [loadError, setLoadError] = useState<unknown>(null);
 
     const showError = (msg: string) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(null), 5000); };
 
     const reload = async () => {
         if (!id) return;
         setLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getFeeInvoiceById(id);
             setInvoice(data.invoice); setItems(data.items); setPayments(data.payments);
             setAdmissionCharge(data.admissionCharge ?? null);
         } catch (err: any) {
+            setLoadError(err);
             showError(err?.response?.data?.message || 'Failed to load invoice.');
         }
         finally { setLoading(false); }
@@ -170,7 +175,22 @@ ${payments.length > 0 ? `
     };
 
     if (loading) return <div className="p-8 flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full"/></div>;
-    if (!invoice) return null;
+    // Was `return null` — a blank page. The only signal was a 5-second error
+    // toast, so anyone who looked away saw an empty screen and no reason for it.
+    if (!invoice) return (
+        <div className="p-8 max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl border border-slate-200">
+                {loadError != null
+                    ? <ErrorState
+                        message="Could not load this invoice. Nothing about it has changed — this is a loading failure."
+                        error={loadError}
+                        onRetry={reload}
+                        testId="invoice-load-error"
+                      />
+                    : <EmptyState title="Invoice not found" message="It may have been cancelled or removed." testId="invoice-missing" />}
+            </div>
+        </div>
+    );
 
     const balance = invoice.totalAmount - invoice.paidAmount;
     const canPay = !['PAID', 'WAIVED', 'CANCELLED'].includes(invoice.status);
