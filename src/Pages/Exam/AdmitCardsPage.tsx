@@ -10,6 +10,7 @@ import {
     X,
 } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../../components/ui";
 import PageHeader from "../../components/PageHeader";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import { useToast } from "../../context/ToastContext";
@@ -70,12 +71,19 @@ export default function AdmitCardsPage() {
     }, []);
 
     useEffect(() => { reload(); }, [reload]);
-    useEffect(() => {
+
+    /* Sessions are only a name lookup for the rows below, so a failure here
+       does not stop the page — but it silently blanks every session name,
+       which reads as data loss rather than a lookup that did not load. */
+    const [sessionsError, setSessionsError] = useState<unknown>(null);
+    const loadSessions = useCallback(() => {
+        setSessionsError(null);
         api
             .getSessions()
             .then((d: any) => setSessions(Array.isArray(d) ? d : d?.sessions ?? []))
-            .catch(() => setSessions([]));
+            .catch((e: unknown) => { setSessions([]); setSessionsError(e); });
     }, []);
+    useEffect(() => { loadSessions(); }, [loadSessions]);
 
     const sessionNameById = useMemo(() => {
         const map = new Map<string, string>();
@@ -178,6 +186,13 @@ export default function AdmitCardsPage() {
             />
 
             <div className="flex-1 p-4 md:p-6 max-w-6xl mx-auto w-full space-y-4">
+                {sessionsError != null && (
+                    <InlineError
+                        message="Session names could not be loaded, so releases below may show a blank session."
+                        onRetry={loadSessions}
+                        testId="admit-sessions-error"
+                    />
+                )}
                 {loadError && (
                     <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                         <AlertTriangle size={16} />

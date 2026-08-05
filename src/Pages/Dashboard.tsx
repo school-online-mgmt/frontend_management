@@ -67,7 +67,7 @@ const Dashboard = () => {
   // staleTime, etc). We mark them all as `notifyOnChangeProps: ["data"]`
   // so the dashboard doesn't re-render on every fetching/error tick.
   // Share query keys with the per-module pages so cache is reused on
-  // navigation: visiting `/teacher-home` after the dashboard loads its
+  // navigation: visiting `/staff/teachers` after the dashboard loads its
   // teachers list takes 0ms — the data is already in cache.
   const studentsQ = useQuery({ queryKey: ["students", "list", undefined] as const, queryFn: () => api.getStudents() });
   const teachersQ = useQuery({ queryKey: ["teachers", "list"]            as const, queryFn: () => api.getTeachers(), select: (res: any) => Array.isArray(res) ? res : (res?.teachers ?? []) });
@@ -222,39 +222,39 @@ const Dashboard = () => {
     },
     pendingNotices.length > 0 && {
       key: "notices", label: "Notices pending approval", count: pendingNotices.length, tone: "blue" as const,
-      icon: Bell, to: "/notices", description: "Teachers waiting on publication",
+      icon: Bell, to: "/communication/notices", description: "Teachers waiting on publication",
     },
     feeSummary && feeSummary.overdue > 0 && {
       key: "fee-overdue", label: "Overdue fee invoices", count: feeSummary.overdue, tone: "rose" as const,
-      icon: AlertCircle, to: "/fees?tab=invoices", description: "Past due date — follow up",
+      icon: AlertCircle, to: "/finance/fees?tab=invoices", description: "Past due date — follow up",
     },
     overdueIssues > 0 && {
       key: "library-overdue", label: "Overdue library books", count: overdueIssues, tone: "rose" as const,
-      icon: Library, to: "/library?tab=issues", description: "Books not returned on time",
+      icon: Library, to: "/campus/library?tab=issues", description: "Books not returned on time",
     },
     pendingRequests > 0 && {
       key: "library-requests", label: "Library issue requests", count: pendingRequests, tone: "violet" as const,
-      icon: BookOpen, to: "/library?tab=requests", description: "Students requesting books",
+      icon: BookOpen, to: "/campus/library?tab=requests", description: "Students requesting books",
     },
     pendingRenewals > 0 && {
       key: "library-renewals", label: "Library renewal requests", count: pendingRenewals, tone: "violet" as const,
-      icon: Library, to: "/library?tab=renewals", description: "Students requesting extra time",
+      icon: Library, to: "/campus/library?tab=renewals", description: "Students requesting extra time",
     },
     classGapCount > 0 && {
       key: "class-gaps", label: "Classes without a class teacher", count: classGapCount, tone: "amber" as const,
-      icon: School, to: "/assignments", description: "Assign a class teacher",
+      icon: School, to: "/staff/assignments", description: "Assign a class teacher",
     },
     sectionGapCount > 0 && {
       key: "section-gaps", label: "Sections without a section teacher", count: sectionGapCount, tone: "amber" as const,
-      icon: Layers, to: "/assignments", description: "Assign a section teacher",
+      icon: Layers, to: "/staff/assignments", description: "Assign a section teacher",
     },
     subjectGapCount > 0 && {
       key: "subject-gaps", label: "Subject-section pairs without a teacher", count: subjectGapCount, tone: "amber" as const,
-      icon: BookOpen, to: "/assignments?tab=section-teaching", description: "Assign teachers to subject mappings",
+      icon: BookOpen, to: "/staff/assignments?tab=section-teaching", description: "Assign teachers to subject mappings",
     },
     subjectInchargeMissing > 0 && {
       key: "incharge-missing", label: "Subjects without an incharge", count: subjectInchargeMissing, tone: "amber" as const,
-      icon: Shield, to: "/assignments?tab=subject-incharge", description: "Subject ownership unassigned",
+      icon: Shield, to: "/staff/assignments?tab=subject-incharge", description: "Subject ownership unassigned",
     },
   ].filter(Boolean) as Action[];
 
@@ -262,14 +262,14 @@ const Dashboard = () => {
 
   const QUICK_LINKS = [
     { to: "/sessions",       label: "Sessions",   icon: CalendarRange, bg: "bg-violet-50", text: "text-violet-700", desc: "Academic year setup" },
-    { to: "/applicants-home", label: "Applicants", icon: UserPlus, bg: "bg-blue-50", text: "text-blue-700", desc: "Review applications" },
-    { to: "/students-home", label: "Students", icon: Users, bg: "bg-indigo-50", text: "text-indigo-700", desc: "Manage students" },
-    { to: "/teacher-home", label: "Teachers", icon: GraduationCap, bg: "bg-purple-50", text: "text-purple-700", desc: "Staff management" },
-    { to: "/exam-home", label: "Exams", icon: BookMarked, bg: "bg-violet-50", text: "text-violet-700", desc: "Papers & results" },
+    { to: "/admissions/applicants", label: "Applicants", icon: UserPlus, bg: "bg-blue-50", text: "text-blue-700", desc: "Review applications" },
+    { to: "/students", label: "Students", icon: Users, bg: "bg-indigo-50", text: "text-indigo-700", desc: "Manage students" },
+    { to: "/staff/teachers", label: "Teachers", icon: GraduationCap, bg: "bg-purple-50", text: "text-purple-700", desc: "Staff management" },
+    { to: "/assessment/exams", label: "Exams", icon: BookMarked, bg: "bg-violet-50", text: "text-violet-700", desc: "Papers & results" },
     { to: "/attendance", label: "Attendance", icon: ClipboardCheck, bg: "bg-teal-50", text: "text-teal-700", desc: "Mark attendance" },
-    { to: "/fees", label: "Fees", icon: Wallet, bg: "bg-amber-50", text: "text-amber-700", desc: "Fee management" },
-    { to: "/library", label: "Library", icon: Library, bg: "bg-rose-50", text: "text-rose-700", desc: "Books & issues" },
-    { to: "/notices", label: "Notices", icon: Bell, bg: "bg-pink-50", text: "text-pink-700", desc: "Announcements" },
+    { to: "/finance/fees", label: "Fees", icon: Wallet, bg: "bg-amber-50", text: "text-amber-700", desc: "Fee management" },
+    { to: "/campus/library", label: "Library", icon: Library, bg: "bg-rose-50", text: "text-rose-700", desc: "Books & issues" },
+    { to: "/communication/notices", label: "Notices", icon: Bell, bg: "bg-pink-50", text: "text-pink-700", desc: "Announcements" },
     { to: "/calendar", label: "Calendar", icon: Calendar, bg: "bg-cyan-50", text: "text-cyan-700", desc: "Events & schedule" },
     { to: "/leaves", label: "Leaves", icon: CalendarDays, bg: "bg-orange-50", text: "text-orange-700", desc: "Leave requests" },
   ];
@@ -345,10 +345,10 @@ const Dashboard = () => {
           {/* Hero stat pills — clickable, drill down to the relevant module */}
           <div className="flex flex-wrap gap-2 mt-4">
             {[
-              { icon: Users,         label: "Students",   value: students.length,    color: "text-blue-400",    to: "/students-home" },
-              { icon: GraduationCap, label: "Teachers",   value: activeTeachers,     color: "text-purple-400",  to: "/teacher-home" },
-              { icon: Layers,        label: "Classes",    value: classes.length,     color: "text-teal-400",    to: "/class-Home" },
-              { icon: BookOpen,      label: "Subjects",   value: subjects.length,    color: "text-emerald-400", to: "/subject-Home" },
+              { icon: Users,         label: "Students",   value: students.length,    color: "text-blue-400",    to: "/students" },
+              { icon: GraduationCap, label: "Teachers",   value: activeTeachers,     color: "text-purple-400",  to: "/staff/teachers" },
+              { icon: Layers,        label: "Classes",    value: classes.length,     color: "text-teal-400",    to: "/academics/classes" },
+              { icon: BookOpen,      label: "Subjects",   value: subjects.length,    color: "text-emerald-400", to: "/academics/subjects" },
             ].map(({ icon: Icon, label, value, color, to }) => (
               <button data-testid="dashboard-navigate-btn"
                 key={label}
@@ -463,7 +463,7 @@ const Dashboard = () => {
         </button>
 
         {/* Fee collection — this month with trend */}
-        <button onClick={() => navigate("/fees")}
+        <button onClick={() => navigate("/finance/fees")}
           className="text-left bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-4 group">
           <div className="flex items-start justify-between mb-2">
             <div>
@@ -497,7 +497,7 @@ const Dashboard = () => {
         </button>
 
         {/* New admissions / growth */}
-        <button onClick={() => navigate("/students-home")}
+        <button onClick={() => navigate("/students")}
           className="text-left bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-4 group">
           <div className="flex items-start justify-between mb-2">
             <div>
@@ -525,37 +525,37 @@ const Dashboard = () => {
 
       {/* Stat Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <button onClick={() => navigate("/students-home")}
+        <button onClick={() => navigate("/students")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-blue-700 bg-blue-50 border-blue-100">
           <Users size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{students.length}</p>
           <p className="text-[10px] font-medium opacity-70">Students</p>
         </button>
-        <button onClick={() => navigate("/teacher-home")}
+        <button onClick={() => navigate("/staff/teachers")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-purple-700 bg-purple-50 border-purple-100">
           <GraduationCap size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{activeTeachers}</p>
           <p className="text-[10px] font-medium opacity-70">Active Teachers</p>
         </button>
-        <button onClick={() => navigate("/subject-Home")}
+        <button onClick={() => navigate("/academics/subjects")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-emerald-700 bg-emerald-50 border-emerald-100">
           <BookOpen size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{subjects.length}</p>
           <p className="text-[10px] font-medium opacity-70">Subjects</p>
         </button>
-        <button onClick={() => navigate("/class-Home")}
+        <button onClick={() => navigate("/academics/classes")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-teal-700 bg-teal-50 border-teal-100">
           <Layers size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{classes.length}</p>
           <p className="text-[10px] font-medium opacity-70">Classes</p>
         </button>
-        <button onClick={() => navigate("/library")}
+        <button onClick={() => navigate("/campus/library")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-rose-700 bg-rose-50 border-rose-100">
           <Library size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{library?.totalBooks ?? 0}</p>
           <p className="text-[10px] font-medium opacity-70">Library Books</p>
         </button>
-        <button onClick={() => navigate("/fees")}
+        <button onClick={() => navigate("/finance/fees")}
           className="text-left border rounded-xl p-3 transition-all hover:shadow-md cursor-pointer text-amber-700 bg-amber-50 border-amber-100">
           <CreditCard size={14} className="mb-1.5 opacity-70" />
           <p className="text-xl font-bold">{feeSummary?.totalInvoices ?? 0}</p>
@@ -566,7 +566,7 @@ const Dashboard = () => {
       {/* ── Staff Coverage + Finance Health row ─────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Staff coverage card */}
-        <button onClick={() => navigate("/assignments")}
+        <button onClick={() => navigate("/staff/assignments")}
           className="group text-left bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
@@ -595,7 +595,7 @@ const Dashboard = () => {
         </button>
 
         {/* Fee invoice status breakdown */}
-        <button onClick={() => navigate("/fees?tab=invoices")}
+        <button onClick={() => navigate("/finance/fees?tab=invoices")}
           className="group text-left bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
@@ -631,7 +631,7 @@ const Dashboard = () => {
             <h3 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
               <Library size={13} className="text-rose-500" /> Library Health
             </h3>
-            <button onClick={() => navigate("/library")}
+            <button onClick={() => navigate("/campus/library")}
               className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-0.5">
               View <ChevronRight size={10} />
             </button>

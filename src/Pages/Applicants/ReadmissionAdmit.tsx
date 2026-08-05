@@ -83,7 +83,7 @@ const ReadmissionAdmit: React.FC = () => {
             }),
         onSuccess: () => {
             void qc.invalidateQueries({ queryKey: ['readmission'] });
-            navigate('/readmission');
+            navigate('/admissions/readmission');
         },
     });
 
@@ -113,7 +113,7 @@ const ReadmissionAdmit: React.FC = () => {
 
             <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
                 <button
-                    onClick={() => navigate('/readmission')}
+                    onClick={() => navigate('/admissions/readmission')}
                     className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"
                 >
                     <ArrowLeft size={15} /> Back to readmission
@@ -157,7 +157,7 @@ const ReadmissionAdmit: React.FC = () => {
                                     {d.outstandingDues!.invoiceCount === 1 ? '' : 's'} still open.
                                 </p>
                                 <button
-                                    onClick={() => navigate(`/fees?studentId=${d.studentId}`)}
+                                    onClick={() => navigate(`/finance/fees?studentId=${d.studentId}`)}
                                     className="mt-3 px-3.5 py-2 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700"
                                 >
                                     Open their fees
@@ -318,7 +318,7 @@ const ReadmissionAdmit: React.FC = () => {
 
                 <div className="flex items-center justify-end gap-3 pb-8">
                     <button
-                        onClick={() => navigate('/readmission')}
+                        onClick={() => navigate('/admissions/readmission')}
                         className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
                     >
                         Cancel

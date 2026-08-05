@@ -4,6 +4,7 @@ import {
     Download, Eye, FileCheck2, FileClock, Send,
 } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useToast } from "../../context/ToastContext";
 
@@ -187,13 +188,18 @@ function BoardReturnsPanel() {
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    useEffect(() => {
+    /* Everything below keys off sessionId, so a swallowed failure here left
+       the page blank forever with no spinner and no error. */
+    const [sessionsError, setSessionsError] = useState<unknown>(null);
+    const loadSessions = useCallback(() => {
+        setSessionsError(null);
         api.getSessions().then((s: any) => {
             const list = Array.isArray(s) ? s : (s?.sessions ?? []);
             setSessions(list);
             if (list[0]) setSessionId(list[0].id);
-        }).catch(() => {});
+        }).catch((e: unknown) => setSessionsError(e));
     }, []);
+    useEffect(() => { loadSessions(); }, [loadSessions]);
     useEffect(() => {
         if (!sessionId) { setData(null); return; }
         setLoading(true);
@@ -215,9 +221,13 @@ function BoardReturnsPanel() {
                     <p className="text-[11px] text-slate-400">Class-wise enrolment + staff summary for annual filing. Downloads as CSV.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <select value={sessionId} onChange={e => setSessionId(e.target.value)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                        {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    {sessionsError != null
+                        ? <InlineError message="Sessions unavailable — the return cannot be built." onRetry={loadSessions} testId="board-returns-sessions-error" />
+                        : (
+                            <select value={sessionId} onChange={e => setSessionId(e.target.value)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                                {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        )}
                     <button data-testid="board-returns-download" onClick={download} disabled={busy || !data}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                         {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} CSV

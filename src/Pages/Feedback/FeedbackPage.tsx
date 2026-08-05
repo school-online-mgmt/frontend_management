@@ -4,6 +4,7 @@ import {
     TrendingDown, Users, CheckCircle2, AlertCircle, Search, X, Lock, Save,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import type {
     FeedbackDashboard, FeedbackEventStudent, ManagementFeedbackEntry,
     TeacherReviewSummary, AppraisalEntry, PtmEvent,
@@ -243,6 +244,8 @@ const PtmTab = () => {
     const [onlyMissing, setOnlyMissing] = useState(false);
     const [historyFor, setHistoryFor] = useState<FeedbackEventStudent | null>(null);
 
+    const [eventsError, setEventsError] = useState<unknown>(null);
+
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -252,7 +255,12 @@ const PtmTab = () => {
                 setEvents(list);
                 const first = list.find((e) => e.status === "PUBLISHED" || e.status === "COMPLETED") ?? list[0];
                 if (first) setEventId(first.id);
-            } finally {
+            }
+            // No catch: the rejection went unhandled and the meeting list
+            // stayed empty, so a failed load read as "no parent meetings have
+            // been held" — on the page a principal uses to check exactly that.
+            catch (e: unknown) { if (!cancelled) setEventsError(e); }
+            finally {
                 if (!cancelled) setLoading(false);
             }
         })();
@@ -286,6 +294,17 @@ const PtmTab = () => {
     }, [rows, q, onlyMissing]);
 
     if (loading) return <Spinner />;
+    if (eventsError != null) {
+        return (
+            <div className="bg-white border border-slate-200 rounded-xl">
+                <ErrorState
+                    message="Could not load parent-teacher meetings. Meetings already held are unaffected — this is a loading failure."
+                    error={eventsError}
+                    testId="feedback-events-error"
+                />
+            </div>
+        );
+    }
     if (events.length === 0) {
         return (
             <div className="text-center py-16 text-slate-400 bg-white border border-slate-200 rounded-xl">

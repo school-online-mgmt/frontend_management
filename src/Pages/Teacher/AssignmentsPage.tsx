@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { InlineError } from "../../components/ui";
 import {
   AlertTriangle, CheckCircle2, Loader2, X,
   ChevronRight, School, BookOpen, UserCheck,
@@ -406,6 +407,8 @@ const AssignmentsPage = () => {
   const [teachers, setTeachers]       = useState<TeacherRef[]>([]);
   const [allSubjects, setAllSubjects] = useState<SubjectEntry[]>([]);
   const [assignedPairs, setAssignedPairs] = useState<AssignedPair[]>([]);
+  /** Sections whose existing assignments could not be read — see loadAssignedPairs. */
+  const [partialLoadWarning, setPartialLoadWarning] = useState<string[]>([]);
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
   const [search, setSearch]           = useState("");
   const [gapsOnly, setGapsOnly]       = useState(false);
@@ -418,6 +421,11 @@ const AssignmentsPage = () => {
   /* ── load assigned pairs (per-section subject teaching) ──────────────────── */
   const loadAssignedPairs = useCallback(async (classList: ClassEntry[]) => {
     const pairs: AssignedPair[] = [];
+    /* Sections whose detail fetch failed. Their existing assignments are
+       missing from `pairs`, so those sections render as unassigned — and the
+       obvious response to "unassigned" is to assign someone, on top of the
+       teacher who is already there. */
+    const failedSections: string[] = [];
     await Promise.all(
       classList.flatMap(cls =>
         cls.sections.map(async sec => {
@@ -434,11 +442,12 @@ const AssignmentsPage = () => {
                 });
               }
             }
-          } catch { /* ignore */ }
+          } catch { failedSections.push(`${cls.name}-${sec.name}`); }
         })
       )
     );
     setAssignedPairs(pairs);
+    setPartialLoadWarning(failedSections);
   }, []);
 
   const load = useCallback(async () => {
@@ -590,6 +599,16 @@ const AssignmentsPage = () => {
         />
       )}
 
+      {partialLoadWarning.length > 0 && (
+        <div className="px-4 pt-4">
+          <InlineError
+            message={`Existing assignments could not be read for ${partialLoadWarning.join(", ")} — these may look unassigned when they are not. Reload before assigning.`}
+            onRetry={load}
+            testId="assignments-partial-load-error"
+          />
+        </div>
+      )}
+
       {loadError && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-red-600 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg max-w-lg">
           <AlertTriangle size={14} className="shrink-0" />{loadError}
@@ -604,7 +623,7 @@ const AssignmentsPage = () => {
         onRefresh={load}
         refreshing={loading}
         primaryActions={
-          <button onClick={() => navigate("/teacher-home")}
+          <button onClick={() => navigate("/staff/teachers")}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 border border-white/25 text-white text-sm font-semibold rounded-lg hover:bg-white/25 transition backdrop-blur-sm shrink-0">
             <Users size={14} /> Manage Teachers
           </button>
@@ -733,7 +752,7 @@ const AssignmentsPage = () => {
                               ? <AssignedChip teacher={sec.teacher} onReassign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section ${sec.name} (${cls.name})`, currentTeacherId: sec.teacher!.id })} />
                               : <UnassignedChip onAssign={() => setAssignTarget({ type: "section", id: sec.id, label: `Section ${sec.name} (${cls.name})` })} />
                             }
-                            <button onClick={() => navigate(`/section/${sec.id}`)}
+                            <button onClick={() => navigate(`/academics/sections/${sec.id}`)}
                               className="p-1.5 text-slate-300 hover:text-violet-500 rounded-lg hover:bg-violet-50 transition-colors shrink-0">
                               <ChevronRight size={15} />
                             </button>

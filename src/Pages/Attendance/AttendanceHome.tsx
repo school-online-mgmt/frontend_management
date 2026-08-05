@@ -7,6 +7,7 @@ import {
     AlertTriangle, Building2, Edit3, Loader2, CalendarDays, X, Calendar, FileDown
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState, InlineError } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
@@ -342,8 +343,11 @@ function CalendarTab() {
         return opts;
     }, [allClasses]);
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const load = useCallback(async () => {
         setLoading(true);
+        setLoadError(null);
         const mm  = String(month).padStart(2,"0");
         const ld  = new Date(year,month,0).getDate();
         const from = `${year}-${mm}-01`, to = `${year}-${mm}-${ld}`;
@@ -356,7 +360,12 @@ function CalendarTab() {
             ]);
             setAllRecs(a.records || []);
             setHolidays(h.holidays || []);
-        } finally { setLoading(false); }
+        }
+        // No catch here at all: the rejection went unhandled and the month
+        // grid kept its previous contents, so a failed load looked like a
+        // month nobody had marked.
+        catch (e: unknown) { setAllRecs([]); setLoadError(e); }
+        finally { setLoading(false); }
     }, [year, month, selSection]);
     useEffect(() => { load(); }, [load]);
 
@@ -432,6 +441,16 @@ function CalendarTab() {
                         </div>
                         {loading&&<Loader2 size={13} className="animate-spin text-emerald-400"/>}
                     </div>
+
+                    {loadError != null && (
+                        <div className="px-4 py-2 border-b border-slate-100">
+                            <InlineError
+                                message="This month's register could not be loaded — the grid below is empty because of the failure, not because the days are unmarked."
+                                onRetry={load}
+                                testId="attendance-month-error"
+                            />
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
                         {DAYS.map(d=><div key={d} className={`text-center py-2.5 text-[10px] font-bold uppercase tracking-wider ${d==="Sun"||d==="Sat"?"text-rose-400":"text-slate-400"}`}>{d}</div>)}
@@ -596,21 +615,32 @@ function ViewTab() {
     const [search,     setSearch]     = useState("");
     const sessionId = useAttendanceSession();
 
+    const [dayLoadError, setDayLoadError] = useState<unknown>(null);
+
     useEffect(() => {
         if (!sessionId) return;
-        api.getAttendanceSections(sessionId).then(r => setClasses(r.classes||[]));
+        // Had no .catch — an unhandled rejection left the class filter empty.
+        api.getAttendanceSections(sessionId)
+            .then(r => setClasses(r.classes||[]))
+            .catch(() => setClasses([]));
     }, [sessionId]);
     const sections = useMemo(() => classes.find(c=>c.id===selClass)?.sections||[], [classes,selClass]);
 
     const load = useCallback(async () => {
         setLoading(true);
+        setDayLoadError(null);
         try {
             const p: any ={date};
             if(selClass)   p.classId=selClass;
             if(selSection) p.sectionId=selSection;
             const r = await api.getAttendanceView(p);
             setRecords(r.records||[]); setSummary(r.summary||{});
-        } finally { setLoading(false); }
+        }
+        // Without this the day's roll kept its previous contents on failure —
+        // indistinguishable from a day nobody had marked, which invites
+        // marking it a second time.
+        catch (e: unknown) { setRecords([]); setSummary({}); setDayLoadError(e); }
+        finally { setLoading(false); }
     }, [date,selClass,selSection]);
     useEffect(()=>{ load(); },[load]);
 
@@ -652,6 +682,17 @@ function ViewTab() {
             )}
 
             {loading&&<div className="flex items-center justify-center py-14"><Loader2 className="animate-spin text-emerald-400" size={32}/></div>}
+
+            {!loading && dayLoadError != null && (
+                <div className="bg-white rounded-2xl border border-slate-200">
+                    <ErrorState
+                        message="Could not load this day's attendance. Records already marked are unaffected — do not re-mark."
+                        error={dayLoadError}
+                        onRetry={load}
+                        testId="attendance-day-error"
+                    />
+                </div>
+            )}
 
             {!loading&&grouped.map((g,gi)=>{
                 const t=g.recs.length,p=g.recs.filter(r=>r.status==="PRESENT").length,a=g.recs.filter(r=>r.status==="ABSENT").length,l=g.recs.filter(r=>r.status==="LATE").length;

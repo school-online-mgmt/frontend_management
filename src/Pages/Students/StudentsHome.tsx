@@ -485,7 +485,7 @@ const StudentsHome: React.FC = () => {
                         data-student-id={student.id}
                         data-student-name={`${student.firstName} ${student.lastName}`}
                         data-status={student.status}
-                        onClick={() => navigate(`/student/${student.id}`)}
+                        onClick={() => navigate(`/students/${student.id}`)}
                         className="hover:bg-slate-50 cursor-pointer transition-colors group"
                       >
                         {/* Name + gender — bigger text on mobile for readability */}

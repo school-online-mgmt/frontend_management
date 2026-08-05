@@ -320,11 +320,17 @@ const NoticeBoardDetails = () => {
 
     useEffect(() => { load(); }, [load]);
 
+    /* These had no catch. On failure the rejection went unhandled, the list
+       reloaded unchanged and the spinner simply stopped — so approve and
+       reject looked like they had landed when they had not. A notice the
+       office believes it published is one nobody will chase. */
     const handleApprove = async (noticeId: string) => {
         setActionSaving(true);
         try {
             await api.approveNotice(noticeId);
             await load();
+        } catch (e: any) {
+            addToast(e?.response?.data?.message || "The notice was NOT approved — please try again.", "error");
         } finally { setActionSaving(false); }
     };
 
@@ -335,6 +341,8 @@ const NoticeBoardDetails = () => {
             await api.rejectNotice(rejectTarget.id, reason);
             setRejectTarget(null);
             await load();
+        } catch (e: any) {
+            addToast(e?.response?.data?.message || "The notice was NOT rejected — please try again.", "error");
         } finally { setActionSaving(false); }
     };
 
@@ -343,6 +351,8 @@ const NoticeBoardDetails = () => {
         try {
             await api.archiveNotice(noticeId);
             await load();
+        } catch (e: any) {
+            addToast(e?.response?.data?.message || "The notice was NOT archived — please try again.", "error");
         } finally { setActionSaving(false); }
     };
 

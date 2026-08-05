@@ -367,12 +367,13 @@ const TeacherDetails = () => {
                         </div>
 
                         <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => navigate(`/teacher-home/edit/${teacher.id}`)}
-                                className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
-                            >
-                                Edit Profile
-                            </button>
+                            {/* "Edit Profile" used to live here, pointing at
+                                /teacher-home/edit/:id — a route that has never
+                                existed in App.tsx. It fell through to the
+                                catch-all and dropped the user on the login
+                                screen. Removed rather than repointed: there is
+                                no teacher edit form anywhere in the portal to
+                                send them to. */}
                             <button
                                 onClick={() => setShowResetPasswordDialog(true)}
                                 className="w-full sm:w-auto px-8 py-3.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-2xl font-black text-sm hover:bg-amber-100 transition flex items-center justify-center gap-2"

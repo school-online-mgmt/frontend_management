@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { InlineError } from '../../components/ui';
 import {
     CreditCard, AlertCircle, Plus, Trash2, Edit3, CheckCircle, CheckCircle2,
     TrendingUp, AlertTriangle, RefreshCw, Save, Eye, Wallet, Download, RotateCcw,
@@ -1051,11 +1052,22 @@ function FeeStructureTab() {
     const [structureName, setStructureName] = useState('Main Fee Structure');
     const [creatingStructure, setCreatingStructure] = useState(false);
 
-    useEffect(() => {
-        api.getCourses().then((c: Course[]) => setCourses(Array.isArray(c) ? c : [])).catch(() => {});
-        if (!sessionId) { setClasses([]); return; }
-        api.getClasses(sessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setClasses(Array.isArray(d) ? d : d.classes ?? [])).catch(() => {});
+    /* These drive who a fee component applies to. An empty picker reads as
+       "this school has no classes", and a fee saved against an empty target
+       silently applies to nobody — or to everybody, depending on the rule. */
+    const [targetsError, setTargetsError] = useState<unknown>(null);
+    const loadTargets = useCallback(() => {
+        setTargetsError(null);
+        const jobs: Promise<unknown>[] = [
+            api.getCourses().then((c: Course[]) => setCourses(Array.isArray(c) ? c : [])),
+        ];
+        if (!sessionId) setClasses([]);
+        else jobs.push(
+            api.getClasses(sessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setClasses(Array.isArray(d) ? d : d.classes ?? [])),
+        );
+        Promise.all(jobs).catch((e: unknown) => setTargetsError(e));
     }, [sessionId]);
+    useEffect(() => { loadTargets(); }, [loadTargets]);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -1403,6 +1415,11 @@ function FeeStructureTab() {
                                             <option value="">Select class…</option>
                                             {classes.map((c: ClassInfo) => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
+                                        {targetsError != null && (
+                                            <div className="mt-1">
+                                                <InlineError message="Class list unavailable." onRetry={loadTargets} testId="fees-targets-error" />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {form.scope === 'COURSE' && (
@@ -1910,7 +1927,7 @@ function PaymentsTab() {
                             <tr key={p.id} data-testid="fees-payment-row" data-payment-status={p.paymentStatus} className="hover:bg-slate-50">
                                 <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{new Date(p.paymentDate).toLocaleDateString('en-IN')}</td>
                                 <td className="px-3 py-3">
-                                    <button data-testid={`fees-payment-invoice-link-${p.invoiceId}`} onClick={() => navigate(`/fees/invoice/${p.invoiceId}`)} className="font-mono text-xs text-blue-600 hover:underline">
+                                    <button data-testid={`fees-payment-invoice-link-${p.invoiceId}`} onClick={() => navigate(`/finance/fees/invoice/${p.invoiceId}`)} className="font-mono text-xs text-blue-600 hover:underline">
                                         {p.invoiceNo}
                                     </button>
                                 </td>
@@ -2025,20 +2042,32 @@ function ExtraChargesTab() {
         }).catch(() => setStudentAcademics([]));
     }, [singleForm.studentId]);
 
+    /* Bulk mode bills every student matching these filters. A silently empty
+       section list means the narrowing the operator thinks they applied is not
+       applied at all — the difference between invoicing one section and
+       invoicing the whole class. */
+    const [bulkTargetsError, setBulkTargetsError] = useState<unknown>(null);
+
     // Load classes/courses for bulk mode (sessions come from context).
-    useEffect(() => {
-        if (mode === 'bulk' && showBulkForm) {
-            if (bulkClasses.length === 0 && pageSessionId) api.getClasses(pageSessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setBulkClasses(Array.isArray(d) ? d : d.classes || [])).catch(() => {});
-            if (bulkCourses.length === 0) api.getCourses().then((c: Course[]) => setBulkCourses(Array.isArray(c) ? c : [])).catch(() => {});
-        }
+    const loadBulkTargets = useCallback(() => {
+        if (!(mode === 'bulk' && showBulkForm)) return;
+        setBulkTargetsError(null);
+        const jobs: Promise<unknown>[] = [];
+        if (bulkClasses.length === 0 && pageSessionId) jobs.push(api.getClasses(pageSessionId).then((d: { classes?: ClassInfo[] } | ClassInfo[]) => setBulkClasses(Array.isArray(d) ? d : d.classes || [])));
+        if (bulkCourses.length === 0) jobs.push(api.getCourses().then((c: Course[]) => setBulkCourses(Array.isArray(c) ? c : [])));
+        if (jobs.length) Promise.all(jobs).catch((e: unknown) => setBulkTargetsError(e));
     }, [mode, showBulkForm, bulkClasses.length, bulkCourses.length, pageSessionId]);
+    useEffect(() => { loadBulkTargets(); }, [loadBulkTargets]);
 
     // Load sections when class changes
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+    const loadBulkSections = useCallback(() => {
         if (!bulkFilters.classId) { setBulkSections([]); return; }
-        api.getSectionsByClass(bulkFilters.classId).then((d: { sections?: SectionInfo[] } | SectionInfo[]) => setBulkSections(Array.isArray(d) ? d : d.sections || [])).catch(() => {});
+        setBulkTargetsError(null);
+        api.getSectionsByClass(bulkFilters.classId)
+            .then((d: { sections?: SectionInfo[] } | SectionInfo[]) => setBulkSections(Array.isArray(d) ? d : d.sections || []))
+            .catch((e: unknown) => { setBulkSections([]); setBulkTargetsError(e); });
     }, [bulkFilters.classId]);
+    useEffect(() => { loadBulkSections(); }, [loadBulkSections]);
 
     // Preview students when filters change
     useEffect(() => {
@@ -2215,6 +2244,13 @@ function ExtraChargesTab() {
                             <p className="text-xs text-slate-500">Apply a fine/charge to multiple students at once using scope filters</p>
                         </div>
                     </div>
+                    {bulkTargetsError != null && (
+                        <InlineError
+                            message="Scope filters failed to load — check the student preview below before applying, as the charge may be wider than intended."
+                            onRetry={() => { loadBulkTargets(); loadBulkSections(); }}
+                            testId="fees-bulk-targets-error"
+                        />
+                    )}
 
                     {/* Scope filters — session is locked to the page-level
                         selection (above the tabs), so only refinement filters
@@ -2697,7 +2733,7 @@ function InvoicesTab() {
                                     <td className="px-3 py-3 text-red-600 font-semibold">{fmt(inv.totalAmount - inv.paidAmount)}</td>
                                     <td className="px-3 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[inv.status]}`}>{inv.status.replaceAll('_', ' ')}</span></td>
                                     <td className="px-3 py-3">
-                                        <button onClick={() => navigate(`/fees/invoice/${inv.id}`)} className="p-1.5 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600 transition-colors">
+                                        <button onClick={() => navigate(`/finance/fees/invoice/${inv.id}`)} className="p-1.5 hover:bg-blue-50 rounded text-slate-400 hover:text-blue-600 transition-colors">
                                             <Eye size={14}/>
                                         </button>
                                     </td>

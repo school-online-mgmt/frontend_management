@@ -4,6 +4,7 @@ import {
   Send, X, Lightbulb, ArrowLeft, LifeBuoy,
 } from "lucide-react";
 import api from "../../api/api";
+import { InlineError } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 
@@ -248,11 +249,20 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
 
+  /* None of the three below had a catch. The thread reloaded unchanged and the
+     spinner stopped, so a failed reply looked exactly like a sent one — on a
+     support ticket, where the whole point is that somebody is waiting for an
+     answer. */
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const load = useCallback(() => {
+    setActionError(null);
     api.getSupportTicket(ticket.id).then(d => {
       setTicket(d.ticket);
       setReplies(d.replies ?? []);
-    }).finally(() => setLoading(false));
+    })
+      .catch(() => setActionError("Could not load this ticket's replies."))
+      .finally(() => setLoading(false));
   }, [ticket.id]);
 
   useEffect(() => { load(); }, [load]);
@@ -260,18 +270,26 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
   const sendReply = async () => {
     if (!reply.trim() || sending) return;
     setSending(true);
+    setActionError(null);
     try {
       await api.replyToTicket(ticket.id, reply.trim());
       setReply("");
       load();
+    } catch (e: any) {
+      // The draft is deliberately left in the box — clearing it on failure
+      // would lose what they wrote.
+      setActionError(e?.response?.data?.message || "Your reply was NOT sent. The text above has been kept.");
     } finally { setSending(false); }
   };
 
   const closeTicket = async () => {
     setClosing(true);
+    setActionError(null);
     try {
       await api.closeTicket(ticket.id);
       load();
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || "The ticket was NOT closed — please try again.");
     } finally { setClosing(false); }
   };
 
@@ -334,6 +352,12 @@ function TicketDetail({ ticket: initialTicket, onBack }: { ticket: Ticket; onBac
               </div>
             );
           })}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="bg-white rounded-2xl border border-rose-200 px-4 py-3">
+          <InlineError message={actionError} onRetry={load} testId="support-action-error" />
         </div>
       )}
 

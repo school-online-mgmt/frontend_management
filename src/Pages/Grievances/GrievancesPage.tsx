@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MessageSquareWarning, Loader2, ChevronLeft, Send, Lock, CheckCircle2, Clock } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useToast } from "../../context/ToastContext";
 
@@ -30,10 +31,16 @@ const GrievancesPage = () => {
     const [internal, setInternal] = useState(false);
     const [busy, setBusy] = useState(false);
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const load = useCallback(async () => {
         setLoading(true);
+        setLoadError(null);
         try { const r = await api.getGrievances(filter || undefined); setList(r.grievances); setSummary(r.summary); }
-        catch { /* ignore */ } finally { setLoading(false); }
+        // Swallowing this showed an empty list and "0 open" — a school with
+        // unanswered parent complaints looked like a school with none.
+        catch (e: unknown) { setLoadError(e); }
+        finally { setLoading(false); }
     }, [filter]);
     useEffect(() => { void load(); }, [load]);
 
@@ -147,6 +154,7 @@ const GrievancesPage = () => {
                         </div>
 
                         {loading ? <div className="flex justify-center py-16"><Loader2 className="animate-spin text-slate-400" size={22} /></div>
+                        : loadError != null ? <div className="bg-white rounded-2xl border border-slate-100"><ErrorState message="Could not load parent complaints." error={loadError} onRetry={load} testId="grievances-error" /></div>
                         : list.length === 0 ? <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">No complaints{filter ? ` in "${STATUS_CFG[filter as Status].label}"` : ""}.</div>
                         : (
                             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">

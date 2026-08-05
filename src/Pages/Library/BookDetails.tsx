@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { ErrorState, InlineError } from "../../components/ui";
 import {
     ArrowLeft, Edit2, Trash2, BookOpen, Users, Clock,
     RotateCcw, X, Save,
@@ -43,26 +44,54 @@ const BookDetailsPage = () => {
         setTimeout(() => setMessage(null), 4000);
     };
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+    /* Students and classes only populate the issue-book picker. Their failure
+       does not stop the page, but an empty picker reads as "no students are
+       enrolled", so it has to say something. */
+    const [pickerError, setPickerError] = useState<unknown>(null);
+
     const fetchBook = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getLibraryBookById(bookId!);
             setBook(data.book);
             setActiveIssues(data.activeIssues || []);
             setIssueHistory(data.issueHistory || []);
             setPendingRequests(data.pendingRequests || []);
-        } catch { showMsg("error", "Failed to load book"); }
+        } catch (e: unknown) { setLoadError(e); showMsg("error", "Failed to load book"); }
         finally { setIsLoading(false); }
     };
 
+    const loadPickers = useCallback(() => {
+        setPickerError(null);
+        Promise.all([
+            api.getStudents().then((d) => setStudents(d?.students || d || [])),
+            api.getClasses().then((c) => setClasses(c || [])),
+        ]).catch((e: unknown) => setPickerError(e));
+    }, []);
+
     useEffect(() => {
         fetchBook();
-        api.getStudents().then((d) => setStudents(d?.students || d || [])).catch(() => {});
-        api.getClasses().then((c) => setClasses(c || [])).catch(() => {});
+        loadPickers();
         if (prefilledRequest) setShowIssueModal(true);
     }, [bookId]);
 
     if (isLoading) return <div className="p-10 text-slate-500">Loading…</div>;
+    // "Book not found" and "could not load" were the same screen. The first
+    // means the record is gone; the second means the network blinked.
+    if (!book && loadError != null) {
+        return (
+            <div className="p-10">
+                <ErrorState
+                    message="Could not load this book."
+                    error={loadError}
+                    onRetry={fetchBook}
+                    testId="book-detail-error"
+                />
+            </div>
+        );
+    }
     if (!book) return <div className="p-10 text-slate-500">Book not found</div>;
 
     return (
@@ -71,6 +100,14 @@ const BookDetailsPage = () => {
             <button data-testid="library-navigate-btn" onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm">
                 <ArrowLeft size={16} /> Back
             </button>
+
+            {pickerError != null && (
+                <InlineError
+                    message="Student and class lists could not be loaded — the issue-book picker will be empty."
+                    onRetry={loadPickers}
+                    testId="book-pickers-error"
+                />
+            )}
 
             {message && (
                 <div className={`p-3 rounded-lg text-sm ${message.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
@@ -130,7 +167,7 @@ const BookDetailsPage = () => {
                                         onConfirm: async () => {
                                             try {
                                                 await api.deleteLibraryBook(book.id);
-                                                navigate("/library");
+                                                navigate("/campus/library");
                                             } catch (e: any) {
                                                 showMsg("error", e?.response?.data?.message || "Failed to delete");
                                                 throw e;

@@ -6,6 +6,7 @@ import {
 import api from "../../api/api";
 import type { PtmEvent, PtmSlot, PtmEventStatus } from "../../api/api";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
+import { InlineError } from "../../components/ui";
 import { useToast } from "../../context/ToastContext";
 
 const STATUS_CFG: Record<PtmEventStatus, { bg: string; text: string; label: string }> = {
@@ -97,9 +98,16 @@ const CreateModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({
     const [classes, setClasses] = useState<Array<{ id: string; name: string; sections?: Array<{ id: string; name: string }> }>>([]);
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        api.getClasses().then((c: any) => setClasses(Array.isArray(c) ? c : (c?.classes ?? []))).catch(() => {});
+    const [classesError, setClassesError] = useState<unknown>(null);
+    const loadClasses = useCallback(() => {
+        setClassesError(null);
+        api.getClasses()
+            .then((c: any) => setClasses(Array.isArray(c) ? c : (c?.classes ?? [])))
+            // An empty class dropdown in a "schedule a meeting" form reads as
+            // "this school has no classes", not "the list did not load".
+            .catch((e: unknown) => { setClasses([]); setClassesError(e); });
     }, []);
+    useEffect(() => { loadClasses(); }, [loadClasses]);
     const sections = classes.find((c) => c.id === form.classId)?.sections ?? [];
 
     const submit = async () => {
@@ -159,6 +167,11 @@ const CreateModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({
                                 <option value="">All classes</option>
                                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
+                            {classesError != null && (
+                                <div className="mt-1">
+                                    <InlineError message="Class list unavailable." onRetry={loadClasses} testId="ptm-classes-error" />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-slate-600">Section (optional)</label>
@@ -321,9 +334,14 @@ const GenerateModal: React.FC<{ event: PtmEvent; onClose: () => void; onDone: (n
     const [endT, setEndT] = useState("12:00");
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        api.getTeachers().then((r: any) => setTeachers(Array.isArray(r) ? r : (r?.teachers ?? []))).catch(() => {});
+    const [teachersError, setTeachersError] = useState<unknown>(null);
+    const loadTeachers = useCallback(() => {
+        setTeachersError(null);
+        api.getTeachers()
+            .then((r: any) => setTeachers(Array.isArray(r) ? r : (r?.teachers ?? [])))
+            .catch((e: unknown) => { setTeachers([]); setTeachersError(e); });
     }, []);
+    useEffect(() => { loadTeachers(); }, [loadTeachers]);
 
     const toggle = (id: string) => setPicked((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -368,7 +386,9 @@ const GenerateModal: React.FC<{ event: PtmEvent; onClose: () => void; onDone: (n
                     <div>
                         <label className="text-xs font-semibold text-slate-600 block mb-1.5">Teachers</label>
                         <div className="border border-slate-200 rounded-lg max-h-56 overflow-y-auto divide-y divide-slate-50">
-                            {teachers.length === 0 && <p className="text-xs text-slate-400 p-3">No teachers found.</p>}
+                            {teachersError != null
+                                ? <div className="p-3"><InlineError message="Teacher list unavailable." onRetry={loadTeachers} testId="ptm-teachers-error" /></div>
+                                : teachers.length === 0 && <p className="text-xs text-slate-400 p-3">No teachers found.</p>}
                             {teachers.map((t) => (
                                 <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer">
                                     <input type="checkbox" checked={picked.has(t.id)} onChange={() => toggle(t.id)} className="accent-indigo-600" />

@@ -143,7 +143,7 @@ const CourseDetails = () => {
                             <div className="flex items-center gap-2 text-xs text-slate-400 font-medium mb-1">
                                 <span
                                     className="hover:text-slate-600 cursor-pointer transition"
-                                    onClick={() => course.class?.id && navigate(`/class/${course.class.id}`)}
+                                    onClick={() => course.class?.id && navigate(`/academics/classes/${course.class.id}`)}
                                 >
                                     {course.class?.name ?? "Class"}
                                 </span>
@@ -249,7 +249,7 @@ const CourseDetails = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => navigate(`/subject/${subject.slug}`)}
+                                        onClick={() => navigate(`/academics/subjects/${subject.slug}`)}
                                         className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 rounded-lg transition opacity-0 group-hover:opacity-100 bg-white"
                                     >
                                         View Details

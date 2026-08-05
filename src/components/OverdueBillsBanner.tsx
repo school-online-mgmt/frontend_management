@@ -46,7 +46,7 @@ const OverdueBillsBanner = () => {
                     <p className="text-sm text-rose-900">
                         <strong>{q.data.count} platform {q.data.count === 1 ? "invoice is" : "invoices are"} overdue</strong>
                         <span className="text-rose-700"> — ₹{q.data.totalAmountINR.toLocaleString("en-IN")} outstanding.</span>
-                        <Link to="/platform-bills" className="ml-2 underline font-semibold hover:text-rose-950">
+                        <Link to="/finance/platform-bills" className="ml-2 underline font-semibold hover:text-rose-950">
                             View &amp; pay
                         </Link>
                     </p>

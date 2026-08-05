@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
+// Aliased: this file already defines a local presentational `EmptyState`.
+import { ErrorState as KitErrorState } from "../../components/ui";
 import CreateExamModal from "../../components/Exam/CreateExamModal";
 import useAuth from "../../hooks/useAuth";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
@@ -111,6 +113,8 @@ const ExamHome = () => {
     const [allExams, setAllExams] = useState<any[]>([]);
     const [filterOptions, setFilterOptions] = useState<any>({ classes: [], courses: [], subjects: [], terms: [] });
     const [isLoading, setIsLoading] = useState(false);
+    /** Persistent, unlike the auto-dismissing `message` banner. */
+    const [loadError, setLoadError] = useState<unknown>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
 
     const [message, setMessage] = useState<string | null>(null);
@@ -124,12 +128,17 @@ const ExamHome = () => {
     const fetchOverview = async () => {
         if (!selectedSession) return;
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getExamOverview(selectedSession);
             setAllExams(data.exams || []);
             setFilterOptions(data.filters || { classes: [], courses: [], subjects: [], terms: [] });
         } catch (err: any) {
+            // The message banner auto-dismisses; the empty list does not. On
+            // its own that left "No exams found" on screen indefinitely for a
+            // school whose exams had merely failed to load.
             setAllExams([]);
+            setLoadError(err);
             setMessage(err?.response?.data?.message || "Failed to fetch exams");
             setMessageType("error");
         } finally {
@@ -321,6 +330,13 @@ const ExamHome = () => {
                             <EmptyState icon={BarChart3} title="Select a session" sub="Choose a session above to view the school-wide exam dashboard" />
                         ) : isLoading ? (
                             <LoadingSkeleton />
+                        ) : loadError != null ? (
+                            <KitErrorState
+                                message="Could not load exams for this session."
+                                error={loadError}
+                                onRetry={fetchOverview}
+                                testId="exam-dashboard-error"
+                            />
                         ) : allExams.length === 0 ? (
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers have been created for this session yet" />
                         ) : (
@@ -347,7 +363,7 @@ const ExamHome = () => {
                                         </p>
                                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                             {filteredExams.filter(e => e.status === "CREATED").slice(0, 6).map(e => (
-                                                <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
+                                                <div key={e.id} onClick={() => navigate(`/assessment/exams/${e.id}`)}
                                                     className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
                                                     <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
                                                         <AlertCircle size={14} className="text-white" />
@@ -390,7 +406,7 @@ const ExamHome = () => {
                                         </p>
                                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                             {filteredExams.filter(e => e.status === "READY_TO_CONDUCT").slice(0, 6).map(e => (
-                                                <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
+                                                <div key={e.id} onClick={() => navigate(`/assessment/exams/${e.id}`)}
                                                     className="flex items-center gap-3 bg-white/20 hover:bg-white/35 backdrop-blur-sm rounded-xl p-3 cursor-pointer transition-all group border border-white/25">
                                                     <div className="w-8 h-8 bg-white/25 rounded-lg flex items-center justify-center shrink-0">
                                                         <Users size={14} className="text-white" />
@@ -541,7 +557,7 @@ const ExamHome = () => {
                                                 .sort((a, b) => new Date(a.examDate).getTime() - new Date(b.examDate).getTime())
                                                 .slice(0, 8)
                                                 .map(e => (
-                                                    <div key={e.id} onClick={() => navigate(`/exam/${e.id}`)}
+                                                    <div key={e.id} onClick={() => navigate(`/assessment/exams/${e.id}`)}
                                                         className="flex items-center gap-4 py-3 cursor-pointer hover:bg-slate-50 rounded-lg px-2 -mx-2 transition-colors group">
                                                         <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                                                             <BookOpen size={16} />
@@ -574,6 +590,13 @@ const ExamHome = () => {
                             <EmptyState icon={ClipboardList} title="Select a session" sub="Choose a session above to view exam papers" />
                         ) : isLoading ? (
                             <LoadingSkeleton />
+                        ) : loadError != null ? (
+                            <KitErrorState
+                                message="Could not load exam papers for this session."
+                                error={loadError}
+                                onRetry={fetchOverview}
+                                testId="exam-list-error"
+                            />
                         ) : filteredExams.length === 0 ? (
                             <EmptyState icon={BookOpen} title="No exams found" sub="No exam papers match your current filters" />
                         ) : (
@@ -634,7 +657,7 @@ const ExamHome = () => {
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-50">
                                                             {termExams.map(exam => (
-                                                                <tr key={exam.id} onClick={() => navigate(`/exam/${exam.id}`)}
+                                                                <tr key={exam.id} onClick={() => navigate(`/assessment/exams/${exam.id}`)}
                                                                     data-testid="exam-row"
                                                                     data-exam-id={exam.id}
                                                                     data-exam-name={exam.examName}

@@ -459,7 +459,7 @@ const SubjectPage = () => {
                 subject={subject}
                 sessionName={sessionMap[subject.sessionId]}
                 teacherName={subject.teacherId ? teacherMap[subject.teacherId] : undefined}
-                onClick={() => navigate(`/subject/${subject.slug}`)}
+                onClick={() => navigate(`/academics/subjects/${subject.slug}`)}
               />
             ))}
           </div>
@@ -488,7 +488,7 @@ const SubjectPage = () => {
                       <tr
                         key={subject.id}
                         data-testid={`subject-row-${subject.slug}`}
-                        onClick={() => navigate(`/subject/${subject.slug}`)}
+                        onClick={() => navigate(`/academics/subjects/${subject.slug}`)}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                       >
                         <td className="px-5 py-4">

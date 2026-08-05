@@ -112,7 +112,7 @@ const SectionDetails = () => {
                                 <span className="text-xs font-mono text-slate-400 bg-white px-2 py-0.5 rounded-lg border border-slate-100">#{section.slug}</span>
                                 {section.class && (
                                     <button data-testid="section-navigate-btn-2"
-                                        onClick={() => navigate(`/class/${section.class.id}`)}
+                                        onClick={() => navigate(`/academics/classes/${section.class.id}`)}
                                         className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition flex items-center gap-1"
                                     >
                                         <School size={10} /> {section.class.name}
@@ -179,7 +179,7 @@ const SectionDetails = () => {
                     <button data-testid="section-navigate-btn-3"
                         type="button"
                         className="w-full flex items-center gap-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl cursor-pointer hover:bg-indigo-50 transition text-left"
-                        onClick={() => navigate(`/teacher/${section.teacher.id}`)}
+                        onClick={() => navigate(`/staff/teachers/${section.teacher.id}`)}
                     >
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                             {section.teacher.name.charAt(0).toUpperCase()}
@@ -245,7 +245,7 @@ const SectionDetails = () => {
                                 </div>
                                 {sa.teachers ? (
                                     <button data-testid="section-navigate-btn-4"
-                                        onClick={() => navigate(`/teacher/${sa.teachers.id}`)}
+                                        onClick={() => navigate(`/staff/teachers/${sa.teachers.id}`)}
                                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition"
                                     >
                                         <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
@@ -285,7 +285,7 @@ const SectionDetails = () => {
                                                 <UserX size={12} /> Unassigned
                                             </span>
                                             <button data-testid="section-navigate-btn-5"
-                                                onClick={() => navigate(`/assignments`)}
+                                                onClick={() => navigate(`/staff/assignments`)}
                                                 className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition"
                                             >
                                                 Assign →

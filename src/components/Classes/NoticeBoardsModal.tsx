@@ -76,7 +76,7 @@ const NoticeBoardsModal = ({ open, onClose, classId, sectionId, scopeLabel }: Pr
     const handleOpen = (boardId: string) => {
         onClose();
         // Each board has its own detail page at /notices/:boardId.
-        navigate(`/notices/${boardId}`);
+        navigate(`/communication/notices/${boardId}`);
     };
 
     return (

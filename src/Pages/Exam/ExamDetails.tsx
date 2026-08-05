@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -8,6 +8,7 @@ import {
     XCircle, FileDown, ShieldCheck, Zap, Users, ClipboardList, Scale,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import BackButton from "../../components/common/BackButton";
 import useAuth from "../../hooks/useAuth";
 import UpdateExamModal from "../../components/Exam/UpdateExamModal";
@@ -252,12 +253,23 @@ const ExamDetails = () => {
     const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
     const { prompt, dialog: promptDialog } = usePrompt();
 
+    /* An exam page shows three lists that all render as "nothing here" when
+       empty. Each therefore needs its own error flag: a failed results fetch
+       showing an empty mark sheet is the difference between "nobody has been
+       marked" and "we could not read the marks". */
+    const [examError, setExamError] = useState<unknown>(null);
+    const [enrolledError, setEnrolledError] = useState<unknown>(null);
+    const [resultsError, setResultsError] = useState<unknown>(null);
+    const [sectionsError, setSectionsError] = useState<unknown>(null);
+
     const fetchExam = async () => {
+        setExamError(null);
         try {
             const data = await api.getExamById(examId);
             setExam(data);
-        } catch {
+        } catch (e: unknown) {
             setExam(null);
+            setExamError(e);
         } finally {
             setLoading(false);
         }
@@ -266,41 +278,47 @@ const ExamDetails = () => {
     useEffect(() => { fetchExam(); }, [examId]);
 
     // Fetch enrolled students at stage 2 (READY_TO_CONDUCT — no result shells yet)
-    useEffect(() => {
+    const loadEnrolled = useCallback(() => {
         if (!exam) return;
         const stage = getStageIndex(exam.status);
         if (stage !== 2) { setEnrolledStudents([]); return; }
         setEnrolledLoading(true);
+        setEnrolledError(null);
         api.getExamEnrolledStudents(examId)
             .then((data: any) => setEnrolledStudents(data.students ?? []))
-            .catch(() => setEnrolledStudents([]))
+            .catch((e: unknown) => { setEnrolledStudents([]); setEnrolledError(e); })
             .finally(() => setEnrolledLoading(false));
     }, [exam?.status, examId]);
+    useEffect(() => { loadEnrolled(); }, [loadEnrolled]);
 
     // Fetch results for stages 3+
     const RESULTS_STAGES = [3, 4];
-    useEffect(() => {
+    const loadResults = useCallback(() => {
         if (!exam) return;
         const stage = getStageIndex(exam.status);
         if (!RESULTS_STAGES.includes(stage)) { setExamResults([]); return; }
         setResultsLoading(true);
+        setResultsError(null);
         api.getExamResults(examId)
             .then((data: any) => setExamResults(Array.isArray(data) ? data : (data.results ?? [])))
-            .catch(() => setExamResults([]))
+            .catch((e: unknown) => { setExamResults([]); setResultsError(e); })
             .finally(() => setResultsLoading(false));
     }, [exam?.status, examId, resultsReloadKey]);
+    useEffect(() => { loadResults(); }, [loadResults]);
 
     // Fetch sections summary for CONDUCTED stage
-    useEffect(() => {
+    const loadSections = useCallback(() => {
         if (!exam) return;
         const stage = getStageIndex(exam.status);
         if (stage !== 3) { setSections([]); return; }
         setSectionsLoading(true);
+        setSectionsError(null);
         api.getExamSections(examId)
             .then((data: any) => setSections(Array.isArray(data) ? data : (data.sections ?? [])))
-            .catch(() => setSections([]))
+            .catch((e: unknown) => { setSections([]); setSectionsError(e); })
             .finally(() => setSectionsLoading(false));
     }, [exam?.status, examId]);
+    useEffect(() => { loadSections(); }, [loadSections]);
 
     // Auto-dismiss messages
     useEffect(() => {
@@ -344,7 +362,7 @@ const ExamDetails = () => {
         try {
             setDeleteLoading(true);
             await api.deleteExam(examId);
-            navigate("/exam-home");
+            navigate("/assessment/exams");
         } catch (err: any) {
             setMessage(err?.response?.data?.message || "Failed to delete exam paper.");
             setMessageType("error");
@@ -365,10 +383,22 @@ const ExamDetails = () => {
     }
 
     if (!exam) {
+        // "Not found" and "could not load" were the same screen. The first
+        // means the paper is gone; the second means the network blinked and
+        // the paper is fine — opposite reactions from whoever is looking.
         return (
             <div className="p-8">
                 <BackButton />
-                <div className="mt-6 text-center text-slate-500">Exam paper not found.</div>
+                {examError != null ? (
+                    <ErrorState
+                        message="Could not load this exam paper."
+                        error={examError}
+                        onRetry={() => { setLoading(true); fetchExam(); }}
+                        testId="exam-detail-error"
+                    />
+                ) : (
+                    <div className="mt-6 text-center text-slate-500">Exam paper not found.</div>
+                )}
             </div>
         );
     }
@@ -687,6 +717,15 @@ const ExamDetails = () => {
                             <div className="flex items-center justify-center py-6">
                                 <Loader2 size={18} className="animate-spin text-slate-400" />
                             </div>
+                        ) : enrolledError != null ? (
+                            <div className="rounded-xl border border-rose-100 bg-rose-50/40">
+                                <ErrorState
+                                    message="Could not load the eligible students for this exam."
+                                    error={enrolledError}
+                                    onRetry={loadEnrolled}
+                                    testId="exam-enrolled-error"
+                                />
+                            </div>
                         ) : enrolledStudents.length === 0 ? (
                             <div className="rounded-xl border border-slate-100 bg-slate-50 py-6 text-center text-sm text-slate-400">
                                 No eligible students found for this exam.
@@ -822,6 +861,15 @@ const ExamDetails = () => {
                         <div className="flex items-center justify-center py-6">
                             <Loader2 size={20} className="animate-spin text-slate-400" />
                         </div>
+                    ) : sectionsError != null ? (
+                        <div className="rounded-xl border border-rose-100 bg-rose-50/40">
+                            <ErrorState
+                                message="Could not load per-section marking progress."
+                                error={sectionsError}
+                                onRetry={loadSections}
+                                testId="exam-sections-error"
+                            />
+                        </div>
                     ) : sections.length > 0 ? (
                         <div className="rounded-xl border overflow-hidden">
                             <table className="w-full text-sm">
@@ -865,6 +913,18 @@ const ExamDetails = () => {
                     ) : !resultsLoading && examResults.length > 0 ? (
                         <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-500">
                             {marksEntered.length} of {present.length} present students have marks entered.
+                        </div>
+                    ) : resultsError != null ? (
+                        // Without this the page rendered nothing at all when the
+                        // results fetch failed, so a conducted exam looked
+                        // unmarked.
+                        <div className="rounded-xl border border-rose-100 bg-rose-50/40">
+                            <ErrorState
+                                message="Could not load marks for this exam. Marks already entered are unaffected."
+                                error={resultsError}
+                                onRetry={loadResults}
+                                testId="exam-results-error"
+                            />
                         </div>
                     ) : null}
 

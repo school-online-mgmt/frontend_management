@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { X, BookOpen, Loader2 } from 'lucide-react';
 import api from '../api/api.ts';
+import { InlineError } from './ui';
 
 interface CreateSubjectProps {
   onClose: () => void;
@@ -23,28 +24,33 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchDropdowns = async () => {
-      try {
-        const [sessData, teachData] = await Promise.all([
-          api.getSessions(),
-          api.getTeachers(),
-        ]);
-        const sessList = Array.isArray(sessData) ? sessData : [];
-        setSessions(sessList);
-        // Default-select a session so a fast submit can't fire with an empty
-        // sessionId before the dropdown has populated (BUG-004). Prefer a
-        // current/active session if the API marks one, else the first.
-        if (sessList.length > 0) {
-          const preferred = sessList.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? sessList[0];
-          setSubjectData(prev => prev.sessionId ? prev : { ...prev, sessionId: preferred.id });
-        }
-        const tList = Array.isArray(teachData) ? teachData : teachData?.teachers ?? [];
-        setTeachers(tList.filter((t: any) => t.isActive !== false));
-      } catch { /* ignore */ }
-    };
-    fetchDropdowns();
+  /* The session dropdown is required to submit. Swallowed, a failure left it
+     empty and the form rejected an otherwise-correct submission with no
+     explanation — the BUG-004 confusion below, minus the message. */
+  const [dropdownsError, setDropdownsError] = useState<unknown>(null);
+
+  const fetchDropdowns = useCallback(async () => {
+    setDropdownsError(null);
+    try {
+      const [sessData, teachData] = await Promise.all([
+        api.getSessions(),
+        api.getTeachers(),
+      ]);
+      const sessList = Array.isArray(sessData) ? sessData : [];
+      setSessions(sessList);
+      // Default-select a session so a fast submit can't fire with an empty
+      // sessionId before the dropdown has populated (BUG-004). Prefer a
+      // current/active session if the API marks one, else the first.
+      if (sessList.length > 0) {
+        const preferred = sessList.find((s: any) => s.isCurrent || s.isActive || s.status === 'ACTIVE') ?? sessList[0];
+        setSubjectData(prev => prev.sessionId ? prev : { ...prev, sessionId: preferred.id });
+      }
+      const tList = Array.isArray(teachData) ? teachData : teachData?.teachers ?? [];
+      setTeachers(tList.filter((t: any) => t.isActive !== false));
+    } catch (e: unknown) { setDropdownsError(e); }
   }, []);
+
+  useEffect(() => { void fetchDropdowns(); }, [fetchDropdowns]);
 
   const autoSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -94,6 +100,13 @@ const CreateSubject: React.FC<CreateSubjectProps> = ({ onClose, onRefresh }) => 
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4" data-testid="create-subject-form">
+          {dropdownsError != null && (
+            <InlineError
+              message="Session and teacher lists could not be loaded — this form cannot be submitted until they do."
+              onRetry={() => void fetchDropdowns()}
+              testId="create-subject-dropdowns-error"
+            />
+          )}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Subject Name <span className="text-red-500">*</span></label>
             <input

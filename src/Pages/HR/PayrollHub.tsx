@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Wallet, Users, Plus, X, Loader2, Download, Banknote, Pencil,
@@ -106,13 +106,19 @@ function LeaveBalancesTab() {
     const [sessions, setSessions] = useState<Array<{ id: string; name: string }>>([]);
     const [sessionId, setSessionId] = useState("");
 
-    useEffect(() => {
+    /* The query below is `enabled: !!sessionId`, so a swallowed failure here
+       left the tab permanently blank — no spinner, no error, no way to tell
+       anything had gone wrong. */
+    const [sessionsError, setSessionsError] = useState<unknown>(null);
+    const loadSessions = useCallback(() => {
+        setSessionsError(null);
         api.getSessions().then((s: any) => {
             const list = Array.isArray(s) ? s : (s?.sessions ?? []);
             setSessions(list);
             if (list[0]) setSessionId(list[0].id);
-        }).catch(() => {});
+        }).catch((e: unknown) => setSessionsError(e));
     }, []);
+    useEffect(() => { loadSessions(); }, [loadSessions]);
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "leave-balances", sessionId],
@@ -134,7 +140,8 @@ function LeaveBalancesTab() {
                     </span>
                 )}
             </div>
-            {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
+            {sessionsError != null ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load academic sessions, so leave balances cannot be fetched." error={sessionsError} onRetry={loadSessions} testId="hr-balances-sessions-error" /></div>
+            : isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
             : isError ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load leave balances." onRetry={() => void refetch()} testId="hr-balances-error" /></div>
                         : !data || data.teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers / balances for this session.</div>
             : (
@@ -183,13 +190,19 @@ function AppraisalsTab() {
     const [expanded, setExpanded] = useState<string | null>(null);
     const [closing, setClosing] = useState<Appraisal | null>(null);
 
-    useEffect(() => {
+    /* The query below is `enabled: !!sessionId`, so a swallowed failure here
+       left the tab permanently blank — no spinner, no error, no way to tell
+       anything had gone wrong. */
+    const [sessionsError, setSessionsError] = useState<unknown>(null);
+    const loadSessions = useCallback(() => {
+        setSessionsError(null);
         api.getSessions().then((s: any) => {
             const list = Array.isArray(s) ? s : (s?.sessions ?? []);
             setSessions(list);
             if (list[0]) setSessionId(list[0].id);
-        }).catch(() => {});
+        }).catch((e: unknown) => setSessionsError(e));
     }, []);
+    useEffect(() => { loadSessions(); }, [loadSessions]);
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["hr", "appraisals", sessionId],
@@ -226,7 +239,8 @@ function AppraisalsTab() {
                 <span className="text-xs text-slate-500">Quarterly HR–teacher–management review. Close after all four quarters are filled.</span>
             </div>
 
-            {isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
+            {sessionsError != null ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load academic sessions, so appraisals cannot be fetched." error={sessionsError} onRetry={loadSessions} testId="hr-appraisals-sessions-error" /></div>
+            : isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-slate-400" /></div>
             : isError ? <div className="bg-white rounded-2xl border border-slate-200"><ErrorState message="Could not load appraisals." onRetry={() => void refetch()} testId="hr-appraisals-error" /></div>
                         : teachers.length === 0 ? <div className="py-14 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">No teachers.</div>
             : (
@@ -342,7 +356,14 @@ function CloseAppraisalModal({ appraisal, sessions, currentSessionId, onClose, o
                 const { draft } = await api.generateAppraisalSummary(appraisal.id);
                 setSummary(draft);
                 addToast("Draft generated — review and edit before closing", "success");
-            } finally { setGenerating(false); }
+            }
+            // No catch: this call is BILLED per use, so a silent failure left
+            // the user clicking Generate repeatedly against a charge that was
+            // accruing with nothing to show for it.
+            catch (e: any) {
+                addToast(e?.response?.data?.message || "Could not generate the draft — nothing was saved.", "error");
+            }
+            finally { setGenerating(false); }
         },
     });
 

@@ -307,6 +307,34 @@ export const ErrorState: React.FC<{
   );
 };
 
+/**
+ * Compact failure notice for a SECONDARY load — a filter's options, a picker's
+ * list, a side panel — where the page as a whole still works.
+ *
+ * These are the loads that were previously swallowed with `.catch(() => {})`,
+ * leaving an empty dropdown. An empty dropdown reads as "this school has no
+ * classes", which sends people off to create duplicates of records that already
+ * exist. One line of red beats that badly.
+ */
+export const InlineError: React.FC<{
+  message: string;
+  onRetry?: () => void;
+  testId?: string;
+}> = ({ message, onRetry, testId }) => (
+  <span
+    data-testid={testId ?? 'inline-error'}
+    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-rose-600"
+  >
+    <AlertTriangle size={12} className="shrink-0" />
+    {message}
+    {onRetry && (
+      <button onClick={onRetry} className="underline hover:text-rose-700 font-semibold">
+        Retry
+      </button>
+    )}
+  </span>
+);
+
 /* ── Metrics ────────────────────────────────────────────────────────────── */
 
 export type MetricTone = 'default' | 'good' | 'warn' | 'bad';

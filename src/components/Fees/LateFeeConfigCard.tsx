@@ -120,7 +120,7 @@ const LateFeeConfigCard = ({ structureId, initial, onSaved }: Props) => {
                         <h3 className="font-bold text-slate-800">Late Fees</h3>
                         <p className="text-xs text-slate-500">
                             Applied automatically once a month by the overdue sweep. See
-                            {' '}<Link to="/jobs" className="text-amber-700 hover:underline inline-flex items-center gap-0.5">Scheduled Jobs<ExternalLink size={9} /></Link>{' '}
+                            {' '}<Link to="/admin/jobs" className="text-amber-700 hover:underline inline-flex items-center gap-0.5">Scheduled Jobs<ExternalLink size={9} /></Link>{' '}
                             to trigger manually or view history.
                         </p>
                     </div>

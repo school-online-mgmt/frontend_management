@@ -124,7 +124,7 @@ const CourseHome = () => {
                                             <tr
                                                 key={course.id}
                                                 data-testid={`course-row-${course.slug}`}
-                                                onClick={() => navigate(`/course/${course.id}`)}
+                                                onClick={() => navigate(`/academics/courses/${course.id}`)}
                                                 className="hover:bg-slate-50 cursor-pointer transition"
                                             >
                                                 <td className="p-4 font-mono text-slate-500">#{course.slug}</td>
