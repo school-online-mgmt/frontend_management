@@ -6,6 +6,7 @@ import {
     AlertCircle, Receipt, IndianRupee, ChevronDown, ChevronUp,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useToast } from "../../context/ToastContext";
 
@@ -125,6 +126,7 @@ const AttendanceReportJobCard: React.FC = () => {
             }
             runs={runsQuery.data ?? []}
             loading={runsQuery.isLoading}
+            error={runsQuery.isError ? runsQuery.error : null}
             fetching={runsQuery.isFetching}
             onRefresh={() => qc.invalidateQueries({ queryKey: ["mgmt-attendance-report-runs"] })}
             renderRunStats={(slice) => slice ? (
@@ -199,6 +201,7 @@ const LateFeeSweepJobCard: React.FC = () => {
             }
             runs={runsQuery.data ?? []}
             loading={runsQuery.isLoading}
+            error={runsQuery.isError ? runsQuery.error : null}
             fetching={runsQuery.isFetching}
             onRefresh={() => qc.invalidateQueries({ queryKey: ["mgmt-late-fee-sweep-runs"] })}
             renderRunStats={(slice) => slice ? (
@@ -255,6 +258,8 @@ interface JobCardProps {
     actionRow: React.ReactNode;
     runs: AnyRun[];
     loading: boolean;
+    /** Run history could not be fetched — distinct from "the job never ran". */
+    error?: unknown;
     fetching: boolean;
     onRefresh: () => void;
     renderRunStats: (slice: any) => React.ReactNode;
@@ -263,7 +268,7 @@ interface JobCardProps {
 
 const JobCard: React.FC<JobCardProps> = ({
     icon: Icon, title, gradient, chipTone, chipLabel, description, infoNote,
-    actionRow, runs, loading, fetching, onRefresh, renderRunStats, renderRunTrailing,
+    actionRow, runs, loading, error, fetching, onRefresh, renderRunStats, renderRunTrailing,
 }) => {
     const [showHistory, setShowHistory] = useState(true);
     const chipBg = chipTone === "cyan" ? "bg-cyan-100 text-cyan-700"    : "bg-amber-100 text-amber-700";
@@ -318,7 +323,18 @@ const JobCard: React.FC<JobCardProps> = ({
                                 <Loader2 size={20} className="mx-auto animate-spin" />
                             </div>
                         )}
-                        {!loading && runs.length === 0 && (
+                        {/* Must precede the empty state: "No runs yet." on a
+                            failed fetch says the job never ran, which is the
+                            one thing this page exists to tell you. */}
+                        {!loading && error != null && (
+                            <ErrorState
+                                message="Could not load this job's run history. This does not mean the job has not run."
+                                error={error}
+                                onRetry={onRefresh}
+                                testId="jobs-runs-error"
+                            />
+                        )}
+                        {!loading && error == null && runs.length === 0 && (
                             <div className="py-12 text-center">
                                 <Calendar size={24} className="mx-auto text-slate-300 mb-2" />
                                 <p className="text-sm text-slate-500">No runs yet.</p>
