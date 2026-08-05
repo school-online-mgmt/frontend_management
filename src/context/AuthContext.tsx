@@ -50,6 +50,8 @@ export const ALL_MODULES = [
   'LEAVE', 'DOCUMENTS', 'PUBLICATIONS', 'GRIEVANCE', 'ENTRANCE_EXAM', 'COMPLIANCE',
   // Split out of a coarser parent 2026-08-04 (migrations 0127/0128).
   'HR_PAYROLL', 'STAFF_ATTENDANCE', 'ONLINE_PAYMENTS', 'REPORT_CARDS', 'ANALYTICS', 'BROADCAST',
+  // A delivery channel and a lifecycle stage 2026-08-05 (migrations 0130-0132).
+  'WHATSAPP', 'ALUMNI',
 ] as const;
 export type AppModule = typeof ALL_MODULES[number];
 
