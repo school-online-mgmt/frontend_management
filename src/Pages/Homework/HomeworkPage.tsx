@@ -4,10 +4,10 @@ import {
     FileText, TrendingUp, Layers, ChevronRight, School,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { EmptySessionState } from "../../components/common/SessionGate";
 import { useSessionId } from "../../context/SessionContext";
-import { useToast } from "../../context/ToastContext";
 
 const STATUS_PILL: Record<string, { bg: string; text: string; label: string }> = {
     PUBLISHED: { bg: "bg-emerald-50", text: "text-emerald-700", label: "Published" },
@@ -27,26 +27,33 @@ const StatTile = ({ icon: Icon, label, value, tint, tintText }: { icon: any; lab
 
 const HomeworkPage = () => {
     const sessionId = useSessionId();
-    const { addToast } = useToast();
     const [insights, setInsights] = useState<any>(null);
     const [rows, setRows] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const load = useCallback(async () => {
         if (!sessionId) { setRows([]); setInsights(null); return; }
         setLoading(true);
-        try {
-            const [ins, list] = await Promise.allSettled([
-                api.getHomeworkInsights(sessionId),
-                api.getHomeworkList({ sessionId, ...(statusFilter ? { status: statusFilter } : {}) }),
-            ]);
-            setInsights(ins.status === "fulfilled" ? ins.value : null);
-            setRows(list.status === "fulfilled" ? (list.value.homework ?? []) : []);
-        } catch { addToast("Failed to load homework.", "error"); }
-        finally { setLoading(false); }
-    }, [sessionId, statusFilter, addToast]);
+        setLoadError(null);
+        /* `Promise.allSettled` never rejects, so the catch that used to sit
+           here could not fire — the list silently became [] and the "Failed to
+           load homework" toast never appeared. The rejection has to be read off
+           the settled result instead. */
+        const [ins, list] = await Promise.allSettled([
+            api.getHomeworkInsights(sessionId),
+            api.getHomeworkList({ sessionId, ...(statusFilter ? { status: statusFilter } : {}) }),
+        ]);
+        setInsights(ins.status === "fulfilled" ? ins.value : null);
+        setRows(list.status === "fulfilled" ? (list.value.homework ?? []) : []);
+        // Only the LIST failing is worth blocking on — insights are a summary
+        // strip above it, and losing them does not misrepresent the homework.
+        if (list.status === "rejected") setLoadError(list.reason);
+        setLoading(false);
+    }, [sessionId, statusFilter]);
     useEffect(() => { load(); }, [load]);
 
     const q = search.trim().toLowerCase();
@@ -111,6 +118,18 @@ const HomeworkPage = () => {
                 {/* List */}
                 {loading ? (
                     <div className="flex items-center justify-center py-20"><Loader2 size={22} className="animate-spin text-slate-400" /></div>
+                ) : loadError != null ? (
+                    /* Ahead of the empty state: "No homework yet — teachers
+                       create homework from their portal" points the blame at
+                       teachers for a request that failed. */
+                    <div className="bg-white rounded-2xl border border-slate-100">
+                        <ErrorState
+                            message="Could not load homework."
+                            error={loadError}
+                            onRetry={() => void load()}
+                            testId="homework-error"
+                        />
+                    </div>
                 ) : filtered.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-slate-100 py-16 text-center text-slate-400 text-sm">
                         {search ? `No homework matching "${search}"` : "No homework yet — teachers create homework from their portal."}

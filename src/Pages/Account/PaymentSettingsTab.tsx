@@ -4,6 +4,7 @@ import {
   ExternalLink, Info,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import { useToast } from "../../context/ToastContext";
 import Switch from "../../components/common/Switch";
 
@@ -27,15 +28,22 @@ export default function PaymentSettingsTab() {
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const load = () =>
-    api
+  const [loadError, setLoadError] = useState<unknown>(null);
+
+  const load = () => {
+    setLoadError(null);
+    return api
       .getPaymentSettings()
       .then((r) => {
         setSettings(r.payments);
         setKeyId(r.payments.keyId ?? "");
       })
-      .catch(() => addToast("Failed to load payment settings", "error"))
+      // The toast auto-dismisses and the tab then returns null — so this
+      // rendered a permanently blank Payment Settings screen, on the tab a
+      // school uses to switch on online fee collection.
+      .catch((e: unknown) => { setLoadError(e); addToast("Failed to load payment settings", "error"); })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     load();
@@ -94,7 +102,14 @@ export default function PaymentSettingsTab() {
         <RefreshCw size={18} className="animate-spin mr-2" /> Loading payment settings…
       </div>
     );
-  if (!settings) return null;
+  if (!settings) return (
+    <ErrorState
+      message="Could not load your payment settings. Your existing Razorpay configuration is unchanged."
+      error={loadError}
+      onRetry={() => { setLoading(true); void load(); }}
+      testId="payment-settings-error"
+    />
+  );
 
   const envBadge = settings.keyIdEnvironment;
 

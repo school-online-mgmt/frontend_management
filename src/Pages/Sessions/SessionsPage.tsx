@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import Switch from "../../components/common/Switch";
 import { SESSIONS_QUERY_KEY } from "../../context/SessionContext";
@@ -1001,8 +1002,11 @@ const SessionsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
   }, [queryClient]);
 
+  const [loadError, setLoadError] = useState<unknown>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [list, insightsList] = await Promise.all([
         // api.getSessions() already returns response.data.sessions — the array
@@ -1028,6 +1032,11 @@ const SessionsPage: React.FC = () => {
       setInsights(map);
       invalidateSessionsCache();
     } catch (e: any) {
+      // The toast auto-dismisses; the empty state below does not, and it reads
+      // "Not subscribed to any session yet — contact your platform
+      // administrator to buy seats". Telling a school that on a failed request
+      // invites a support ticket, or a second purchase.
+      setLoadError(e);
       showToast(e?.response?.data?.message ?? "Failed to load sessions.", "error");
     } finally { setLoading(false); }
   }, [showToast, invalidateSessionsCache]);
@@ -1106,7 +1115,18 @@ const SessionsPage: React.FC = () => {
           </div>
         )}
 
-        {!loading && sessions.length === 0 && (
+        {!loading && loadError != null && (
+          <div className="bg-white border border-slate-200 rounded-2xl">
+            <ErrorState
+              message="Could not load your academic sessions. Any sessions and seats your school already has are unaffected — do not re-purchase."
+              error={loadError}
+              onRetry={() => void load()}
+              testId="sessions-load-error"
+            />
+          </div>
+        )}
+
+        {!loading && loadError == null && sessions.length === 0 && (
           <div className="text-center py-20 bg-white border border-slate-200 rounded-2xl">
             <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-100">
               <BookOpen size={28} className="text-indigo-300" />

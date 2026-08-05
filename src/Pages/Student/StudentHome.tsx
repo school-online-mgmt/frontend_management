@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { RefreshCcw, CheckCircle, Edit, Users, Mail, Phone } from "lucide-react";
 import api from "../../api/api";
+// Aliased: this file's EmptyState comes from FormComponents, not the kit.
+import { ErrorState as KitErrorState } from "../../components/ui";
 import UpdateStudentModal from "../../components/Student/UpdateStudentModal";
 import ConfirmAdmissionModal from "../../components/Student/ConfirmAdmissionModal";
 import Button from "../../components/common/Button";
@@ -18,12 +20,18 @@ const StudentHome = () => {
     const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
     const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
 
+    const [loadError, setLoadError] = useState<unknown>(null);
+
     const fetchStudents = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getAppliedStudents();
             setStudents(Array.isArray(data) ? data : []);
         } catch (error: any) {
+            // The toast auto-dismisses; "No Applications Yet" does not. On its
+            // own that told the office nobody had applied.
+            setLoadError(error);
             addToast(error?.response?.data?.message || "Failed to load applications. Please refresh.", "error");
             setStudents([]);
         } finally {
@@ -117,6 +125,13 @@ const StudentHome = () => {
                         <div className="flex items-center justify-center py-12">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
                         </div>
+                    ) : loadError != null ? (
+                        <KitErrorState
+                            message="Could not load student applications. This is a loading failure — applications already submitted are unaffected."
+                            error={loadError}
+                            onRetry={fetchStudents}
+                            testId="student-applications-error"
+                        />
                     ) : students.length === 0 ? (
                         <EmptyState
                             icon={<Users size={48} />}

@@ -6,6 +6,7 @@ import {
     Shield, Loader2, CheckCircle, AlertCircle, Info, ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import api from "../../api/api";
+import { ErrorState } from "../../components/ui";
 import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import TabbedSection, { TabPanel } from "../../components/common/TabbedSection";
 import useTabState from "../../hooks/useTabState";
@@ -26,7 +27,7 @@ function DashboardTab() {
     // the layout topbar). When no session is chosen, the dashboard shows
     // school-wide totals.
     const sessionId = useSessionId();
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: ["transport-dashboard", sessionId],
         queryFn: () => api.getTransportDashboard(sessionId ? { sessionId } : undefined),
         staleTime: 60_000,
@@ -38,6 +39,18 @@ function DashboardTab() {
         <div className="p-4 sm:p-5 md:p-6 space-y-6">
             {isLoading ? (
                 <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-500" size={28} /></div>
+            ) : isError ? (
+                /* Without this the dashboard fell through to "No transport
+                   zones configured — create zones from the Zones tab", which
+                   invites building a fleet the school already has. */
+                <div className="bg-white rounded-2xl border border-slate-200">
+                    <ErrorState
+                        message="Could not load the transport dashboard."
+                        error={error}
+                        onRetry={() => void refetch()}
+                        testId="transport-dashboard-error"
+                    />
+                </div>
             ) : (
                 <>
                     {/* ── KPI Cards ──────────────────────────────────────────── */}
@@ -225,7 +238,7 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
     const [assignZoneId, setAssignZoneId] = useState("");
     const [successId, setSuccessId] = useState<string | null>(null);
 
-    const { data, isLoading, refetch, isFetching } = useQuery({
+    const { data, isLoading, refetch, isFetching, isError: studentsError, error: studentsErrorObj } = useQuery({
         queryKey: ["transport-students", sessionId, zoneId, opted],
         queryFn: () => api.getTransportStudents({
             ...(sessionId && { sessionId }),
@@ -314,6 +327,15 @@ function StudentsTab({ sessions, zones }: { sessions: any[]; zones: any[] }) {
                 </div>
                 {isLoading ? (
                     <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-500" size={26} /></div>
+                ) : studentsError ? (
+                    /* "No students found — adjust your filters" sent people
+                       hunting a filter problem that did not exist. */
+                    <ErrorState
+                        message="Could not load transport students."
+                        error={studentsErrorObj}
+                        onRetry={() => void refetch()}
+                        testId="transport-students-error"
+                    />
                 ) : filtered.length === 0 ? (
                     <div className="py-16 text-center">
                         <Users size={32} className="mx-auto text-slate-200 mb-3" />
