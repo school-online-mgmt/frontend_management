@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    Award, Briefcase, Copy, ExternalLink, GraduationCap, Search,
-    ShieldCheck, X, School, Check, TrendingUp,
+    Briefcase, GraduationCap, HandCoins, PartyPopper, Search, School, TrendingUp,
 } from 'lucide-react';
+import ReunionsTab from './ReunionsTab';
+import CampaignsTab from './CampaignsTab';
 import api from '../../api/api';
-import type { AlumnusRow, CredentialType } from '../../api/api';
 import PageHeader, { MODULE_THEMES } from '../../components/PageHeader';
 import { EmptyState, ErrorState, Skeleton, dateStr } from '../../components/ui';
+import { useSession } from '../../context/SessionContext';
 
 /**
  * The school's own alumni register.
@@ -17,160 +18,12 @@ import { EmptyState, ErrorState, Skeleton, dateStr } from '../../components/ui';
  * listed. Per-field privacy governs what alumni show EACH OTHER — not what the
  * school knows about its own former students.
  *
- * The certificate tooling is here because the office still issues most of them.
- * An alumnus can self-serve a bonafide or marksheet, but a character
- * certificate is a judgement the school makes rather than a fact it holds, so
- * it is only ever issued from this screen.
- */
-
-const CREDENTIAL_LABELS: Record<CredentialType, string> = {
-    TRANSFER_CERTIFICATE: 'Transfer Certificate',
-    BONAFIDE: 'Bonafide Certificate',
-    CHARACTER_CERTIFICATE: 'Character Certificate',
-    MARKSHEET: 'Marksheet',
-    PROVISIONAL: 'Provisional Certificate',
-};
-
-const IssueCertificateModal: React.FC<{
-    alumnus: AlumnusRow;
-    onClose: () => void;
-}> = ({ alumnus, onClose }) => {
-    const [type, setType] = useState<CredentialType>('BONAFIDE');
-    const [issued, setIssued] = useState<{ verificationToken: string } | null>(null);
-    const [copied, setCopied] = useState(false);
-
-    const issue = useMutation({
-        mutationFn: async () => api.issueAlumniCredential(alumnus.id, type),
-        onSuccess: (res) => setIssued({ verificationToken: res.verificationToken }),
-    });
-
-    const verifyUrl = issued
-        ? `${window.location.origin.replace(/\/$/, '')}/verify/${issued.verificationToken}`
-        : '';
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6" data-testid="issue-certificate-modal">
-                <div className="flex items-start justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center">
-                            <Award className="text-violet-600" size={20} />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-slate-900">Issue a certificate</h3>
-                            <p className="text-sm text-slate-500">
-                                {alumnus.firstName} {alumnus.lastName}
-                                {alumnus.batchYear ? ` · Batch of ${alumnus.batchYear}` : ''}
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                        <X size={18} />
-                    </button>
-                </div>
-
-                {!issued ? (
-                    <>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Certificate type</label>
-                        <select
-                            value={type}
-                            onChange={(e) => setType(e.target.value as CredentialType)}
-                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                            data-testid="certificate-type"
-                        >
-                            {Object.entries(CREDENTIAL_LABELS).map(([k, label]) => (
-                                <option key={k} value={k}>{label}</option>
-                            ))}
-                        </select>
-
-                        <p className="mt-3 text-xs text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
-                            The certificate records what is true today and never changes afterwards, even
-                            if the student record is later edited. It carries a verification link anyone
-                            can check without an account.
-                        </p>
-
-                        {issue.error && <div className="mt-3"><ErrorState error={issue.error} /></div>}
-
-                        <div className="mt-5 flex gap-3">
-                            <button
-                                onClick={onClose}
-                                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => issue.mutate()}
-                                disabled={issue.isPending}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
-                                data-testid="issue-certificate-btn"
-                            >
-                                {issue.isPending ? 'Issuing…' : 'Issue certificate'}
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3">
-                            <ShieldCheck className="text-emerald-600 shrink-0" size={20} />
-                            <div>
-                                <p className="text-sm font-medium text-emerald-900">Certificate issued</p>
-                                <p className="text-xs text-emerald-800/80 mt-0.5">
-                                    Print this link or its QR code on the document. Anyone can check it —
-                                    no account needed.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="mt-4">
-                            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
-                                Verification link
-                            </label>
-                            <div className="flex gap-2">
-                                <input
-                                    readOnly
-                                    value={verifyUrl}
-                                    className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono text-slate-700"
-                                    data-testid="verification-url"
-                                />
-                                <button
-                                    onClick={() => {
-                                        void navigator.clipboard.writeText(verifyUrl);
-                                        setCopied(true);
-                                        setTimeout(() => setCopied(false), 1800);
-                                    }}
-                                    className="px-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                                    title="Copy link"
-                                >
-                                    {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
-                                </button>
-                                <a
-                                    href={verifyUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="px-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center"
-                                    title="Open"
-                                >
-                                    <ExternalLink size={15} />
-                                </a>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={onClose}
-                            className="mt-5 w-full px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
-                        >
-                            Done
-                        </button>
-                    </>
-                )}
-            </div>
-        </div>
-    );
-};
-
-/**
- * "Where are they now" — the headline a school writes its prospectus from and
- * answers on an admissions tour.
+ * There is deliberately NO certificate issuance here. Certificates live on the
+ * **Documents** page, which runs the school's real flow: the student (or
+ * alumnus) requests, the office publishes, and a PDF is rendered and stored.
+ * A button here briefly created certificates through a parallel path that had
+ * no PDF and no approval — it was removed in the same change that consolidated
+ * the two systems.
  *
  * The institution and employer lists are suppressed server-side below a
  * small-group threshold: "1 alumnus at Google" combined with a batch list
@@ -254,11 +107,82 @@ const OutcomesPanel: React.FC = () => {
     );
 };
 
-const AlumniHome: React.FC = () => {
+/**
+ * Which classes mean "leaving".
+ *
+ * The terminal class is a property of the SCHOOL, not of the grade list — a
+ * primary ends at 5, a secondary at 10, a senior secondary at 12. It cannot be
+ * inferred, so it has to be told to us.
+ *
+ * It does not graduate anyone by itself: every continuing student goes through
+ * the readmission page and an office decision. This flag only pre-selects
+ * "Mark as alumni" there, because that is overwhelmingly what happens to a
+ * Class 12 leaver — while still letting the office admit a repeating student,
+ * or mark a Class 10 leaver alumni from a non-terminal class.
+ */
+const GraduatingClasses: React.FC = () => {
     const qc = useQueryClient();
+    const { selectedSessionId } = useSession();
+
+    const classes = useQuery({
+        queryKey: ['classes', selectedSessionId],
+        queryFn: () => api.getClasses(selectedSessionId!),
+        enabled: !!selectedSessionId,
+    });
+
+    const toggle = useMutation({
+        mutationFn: (c: { id: string; isGraduating: boolean }) =>
+            api.setClassGraduating(c.id, !c.isGraduating),
+        onSuccess: () => void qc.invalidateQueries({ queryKey: ['classes'] }),
+    });
+
+    if (!selectedSessionId || classes.isLoading) return null;
+
+    const rows = (classes.data ?? []) as Array<{ id: string; name: string; isGraduating?: boolean }>;
+    if (rows.length === 0) return null;
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="graduating-classes">
+            <div className="flex items-center gap-2 mb-1">
+                <GraduationCap size={16} className="text-violet-600" />
+                <h3 className="text-sm font-semibold text-slate-900">Classes that finish here</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+                Students leaving these classes are pre-selected as alumni on the readmission page.
+                You can still decide otherwise for any individual student.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+                {rows.map((c) => (
+                    <button
+                        key={c.id}
+                        onClick={() => toggle.mutate({ id: c.id, isGraduating: !!c.isGraduating })}
+                        disabled={toggle.isPending}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 ${
+                            c.isGraduating
+                                ? 'bg-violet-600 text-white border-violet-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        data-testid={`graduating-${c.id}`}
+                    >
+                        {c.name}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const TABS = [
+    { key: 'directory', label: 'Alumni', icon: GraduationCap },
+    { key: 'reunions', label: 'Reunions', icon: PartyPopper },
+    { key: 'giving', label: 'Giving', icon: HandCoins },
+] as const;
+type Tab = typeof TABS[number]['key'];
+
+const DirectoryTab: React.FC = () => {
     const [batchYear, setBatchYear] = useState<number | undefined>();
     const [search, setSearch] = useState('');
-    const [issuing, setIssuing] = useState<AlumnusRow | null>(null);
 
     const batches = useQuery({ queryKey: ['alumni-batches'], queryFn: () => api.getAlumniBatches() });
     const { data, isLoading, error, refetch } = useQuery({
@@ -274,16 +198,10 @@ const AlumniHome: React.FC = () => {
     }, [data, search]);
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            <PageHeader
-                icon={GraduationCap}
-                title="Alumni"
-                subtitle="Everyone your school has taught — and the certificates they can prove it with"
-                gradient={MODULE_THEMES.admin}
-            />
-
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        <>
+            <div className="space-y-5">
                 <OutcomesPanel />
+                <GraduatingClasses />
 
                 <div className="flex flex-wrap items-center gap-3">
                     <select
@@ -381,15 +299,6 @@ const AlumniHome: React.FC = () => {
                                                     <span className="text-xs text-slate-400">Private</span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => setIssuing(a)}
-                                                    className="px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 text-xs font-medium hover:bg-violet-100 inline-flex items-center gap-1.5"
-                                                    data-testid={`issue-cert-${a.id}`}
-                                                >
-                                                    <Award size={13} /> Issue
-                                                </button>
-                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -399,15 +308,50 @@ const AlumniHome: React.FC = () => {
                 </div>
             </div>
 
-            {issuing && (
-                <IssueCertificateModal
-                    alumnus={issuing}
-                    onClose={() => {
-                        setIssuing(null);
-                        void qc.invalidateQueries({ queryKey: ['alumni'] });
-                    }}
-                />
-            )}
+        </>
+    );
+};
+
+/**
+ * Three jobs, three tabs.
+ *
+ * They were one page until reunions and giving arrived. Keeping them stacked
+ * would have put a donation ledger below an alumni register below a reunion
+ * list — three unrelated tables the office visits for different reasons on
+ * different days.
+ */
+const AlumniHome: React.FC = () => {
+    const [tab, setTab] = useState<Tab>('directory');
+
+    return (
+        <div className="min-h-screen bg-slate-50">
+            <PageHeader
+                icon={GraduationCap}
+                title="Alumni"
+                subtitle="Everyone your school has taught — their records, reunions and giving"
+                gradient={MODULE_THEMES.admin}
+            />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 mb-6">
+                    {TABS.map(({ key, label, icon: Icon }) => (
+                        <button
+                            key={key}
+                            onClick={() => setTab(key)}
+                            className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+                                tab === key ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                            }`}
+                            data-testid={`alumni-tab-${key}`}
+                        >
+                            <Icon size={14} /> {label}
+                        </button>
+                    ))}
+                </div>
+
+                {tab === 'directory' && <DirectoryTab />}
+                {tab === 'reunions' && <ReunionsTab />}
+                {tab === 'giving' && <CampaignsTab />}
+            </div>
         </div>
     );
 };

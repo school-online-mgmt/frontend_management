@@ -8,7 +8,9 @@ import PageHeader, { MODULE_THEMES } from "../../components/PageHeader";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../context/ToastContext";
 
-type AudienceType = "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+type AudienceType =
+  | "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT"
+  | "TRANSPORT_ZONE" | "INDIVIDUAL" | "ALUMNI";
 type RecipientType = "STUDENTS" | "TEACHERS" | "BOTH";
 
 interface SimpleOption { id: string; name: string; }
@@ -22,6 +24,11 @@ const AUDIENCE_TYPES: Array<{ key: AudienceType; label: string; needsIds: boolea
   { key: "SUBJECT",        label: "By subject",        needsIds: true,  description: "Subject teachers; students whose course includes the subject" },
   { key: "TRANSPORT_ZONE", label: "By transport zone", needsIds: true,  description: "Students who opted into the selected transport zones" },
   { key: "INDIVIDUAL",     label: "Individual people", needsIds: true,  description: "Pick specific students or teachers by id" },
+  // Alumni are never in the other options — those all resolve through a current
+  // enrolment, which by definition a leaver has none of. `needsIds: false`
+  // because the audience is "everyone who opted in", optionally narrowed by
+  // batch year rather than by picking people.
+  { key: "ALUMNI",         label: "Alumni",            needsIds: false, description: "Former students who opted in to hear from the school" },
 ];
 
 const inp = "w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white placeholder:text-slate-400 transition-colors";

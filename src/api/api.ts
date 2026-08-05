@@ -2307,7 +2307,9 @@ lookupParent = async (phone: string): Promise<{
 
     // ── Communication broadcast ─────────────────────────────────────────────
     previewEmailBroadcast = async (audience: {
-        type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+        type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL" | "ALUMNI";
+            /** ALUMNI only — narrow to one batch. */
+            batchYear?: number;
         recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
         ids?: string[];
     }) => {
@@ -2323,7 +2325,9 @@ lookupParent = async (phone: string): Promise<{
         subject: string;
         body: string;
         audience: {
-            type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL";
+            type: "ALL" | "SESSION" | "CLASS" | "SECTION" | "COURSE" | "SUBJECT" | "TRANSPORT_ZONE" | "INDIVIDUAL" | "ALUMNI";
+            /** ALUMNI only — narrow to one batch. */
+            batchYear?: number;
             recipientType?: "STUDENTS" | "TEACHERS" | "BOTH";
             ids?: string[];
         };
@@ -3234,14 +3238,6 @@ lookupParent = async (phone: string): Promise<{
         (await apiClient.get('/management/alumni/unresolved', { params: { sessionId } }))
             .data as UnresolvedCount & { note?: string };
 
-    issueAlumniCredential = async (studentId: string, type: CredentialType) =>
-        (await apiClient.post(`/management/alumni/students/${studentId}/credentials`, { type }))
-            .data as { message: string; id: string; verificationToken: string };
-
-    revokeAlumniCredential = async (credentialId: string, reason: string) =>
-        (await apiClient.patch(`/management/alumni/credentials/${credentialId}/revoke`, { reason }))
-            .data as { message: string };
-
     /** "Where are they now" — the number a prospectus is written from. */
     getAlumniOutcomes = async () =>
         (await apiClient.get('/management/alumni/outcomes')).data as AlumniOutcomes;
@@ -3249,6 +3245,48 @@ lookupParent = async (phone: string): Promise<{
     getReunions = async (upcoming = false) =>
         (await apiClient.get('/management/alumni/reunions', { params: { upcoming } }))
             .data as { reunions: ManagementReunion[] };
+
+    /**
+     * Creates a REUNION event. It lands on the school calendar like any other
+     * event — what is different is the audience, which is why creation is
+     * behind the ALUMNI gate rather than on the events screen.
+     */
+    createReunion = async (body: {
+        title: string; description?: string | null; date: string; endDate?: string | null;
+    }) =>
+        (await apiClient.post('/management/alumni/reunions', body))
+            .data as { message: string; reunion: ManagementReunion };
+
+    // ── Donation campaigns ────────────────────────────────────────────────────
+
+    getCampaigns = async () =>
+        (await apiClient.get('/management/alumni/campaigns')).data as { campaigns: DonationCampaign[] };
+
+    createCampaign = async (body: {
+        title: string;
+        description?: string | null;
+        goalAmount?: number | null;
+        /** Without it, receipts state the gift is not tax-deductible. */
+        taxExemptionNumber?: string | null;
+        startsOn?: string | null;
+        endsOn?: string | null;
+    }) =>
+        (await apiClient.post('/management/alumni/campaigns', body))
+            .data as { message: string; campaign: DonationCampaign; warning?: string };
+
+    updateCampaign = async (id: string, body: Partial<{
+        title: string;
+        description: string | null;
+        goalAmount: number | null;
+        taxExemptionNumber: string | null;
+        isActive: boolean;
+    }>) =>
+        (await apiClient.patch(`/management/alumni/campaigns/${id}`, body))
+            .data as { message: string; campaign: DonationCampaign };
+
+    getDonations = async (params: { campaignId?: string; status?: string; limit?: number } = {}) =>
+        (await apiClient.get('/management/alumni/donations', { params }))
+            .data as { donations: DonationRow[]; totals: { totalRaised: number; donorCount: number } };
 
     getAlumniBroadcastAudience = async (batchYear?: number) =>
         (await apiClient.get('/management/alumni/broadcast-audience', { params: { batchYear } }))
@@ -3366,6 +3404,39 @@ export interface AlumniOutcomes {
     topInstitutions: Array<{ name: string; count: number }>;
     topEmployers: Array<{ name: string; count: number }>;
     note?: string;
+}
+
+export interface DonationCampaign {
+    id: string;
+    title: string;
+    description: string | null;
+    goalAmount: number | null;
+    isActive: boolean;
+    /**
+     * The school's 80(G) registration. NULL is legal but consequential:
+     * receipts then state the donation is not tax-deductible.
+     */
+    taxExemptionNumber: string | null;
+    /** PAID donations only — an abandoned checkout is not money. */
+    raisedAmount: number;
+    donorCount: number;
+    percentOfGoal: number | null;
+}
+
+export interface DonationRow {
+    id: string;
+    donorName: string;
+    isAnonymous: boolean;
+    amount: number;
+    status: 'INITIATED' | 'PAID' | 'FAILED' | 'REFUNDED';
+    receiptNo: string | null;
+    donorPan: string | null;
+    taxExemptionNumber: string | null;
+    paidAt: string | null;
+    message: string | null;
+    campaignTitle: string | null;
+    /** Needs BOTH the school's 80(G) number and the donor's PAN. */
+    taxDeductible: boolean;
 }
 
 export interface ManagementReunion {
