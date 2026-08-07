@@ -186,8 +186,21 @@ export default function StaffHome() {
                 </div>
             ) : (
                 <div data-testid="staff-list" className="space-y-2">
+                    {/* Rows carry a bare testid plus data attributes, matching how
+                        every other addressable row in the portal is exposed
+                        (hr-staff-row carries data-staff-name the same way). A row
+                        keyed only by an opaque id cannot be found by anyone who
+                        knows the person rather than their uuid. */}
                     {filtered.map(s => (
-                        <div key={s.id} data-testid={`staff-row-${s.id}`} className="p-4 bg-white border border-slate-200 rounded-2xl">
+                        <div
+                            key={s.id}
+                            data-testid="staff-row"
+                            data-id={s.id}
+                            data-phone={s.phone}
+                            data-name={[s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ')}
+                            data-role={s.role ?? ''}
+                            className="p-4 bg-white border border-slate-200 rounded-2xl"
+                        >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-slate-800">

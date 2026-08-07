@@ -258,7 +258,13 @@ const SportsEventDetail = () => {
                      (enrollmentsQuery.data ?? []).length === 0 ? <p className="text-slate-500 text-sm">No enrollments in this state.</p> :
                      <div className="space-y-2">
                         {(enrollmentsQuery.data ?? []).map((en: any) => (
-                            <div key={en.id} className="flex justify-between items-center p-3 bg-white border border-slate-200 rounded-lg">
+                            <div
+                                key={en.id}
+                                data-testid="sports-enrollment-row"
+                                data-enrollment-id={en.id}
+                                data-status={en.status}
+                                className="flex justify-between items-center p-3 bg-white border border-slate-200 rounded-lg"
+                            >
                                 <div>
                                     <div className="font-medium">{en.studentFirst} {en.studentLast}</div>
                                     <div className="text-xs text-slate-500">{en.className} Â· {en.sectionName} Â· {en.admissionId}</div>

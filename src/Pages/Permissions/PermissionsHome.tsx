@@ -242,6 +242,8 @@ export default function PermissionsHome() {
                             <div
                                 key={`${p.staffType}-${p.id}`}
                                 data-testid={`perm-person-${p.id}`}
+                                data-name={p.name}
+                                data-staff-type={p.staffType}
                                 className="p-4 bg-white border border-slate-200 rounded-2xl"
                             >
                                 <div className="flex items-start gap-3">
